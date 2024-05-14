@@ -1,0 +1,54 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "Item/EquippedObject.h"
+#include "Components/TimelineComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/SplineComponent.h"
+#include "Library/PHItemStructLibrary.h"
+
+// Sets default values
+AEquippedObject::AEquippedObject()
+{
+ 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = false;
+	// Create and set the default scene component as the root component
+	DefaultScene = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultScene"));
+	RootComponent = DefaultScene;
+
+	// Create other components
+	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
+	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
+	DamageSpline = CreateDefaultSubobject<USplineComponent>(TEXT("DamageSpline"));
+
+	// Attach other components to DefaultScene
+	StaticMesh->SetupAttachment(DefaultScene);
+	SkeletalMesh->SetupAttachment(DefaultScene);
+	DamageSpline->SetupAttachment(DefaultScene);
+
+	// Set properties for the StaticMesh
+	StaticMesh->SetStaticMesh(ItemInfo.StaticMesh);
+	if (StaticMesh)
+	{
+		StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+}
+
+void AEquippedObject::SetItemInfo(FItemInformation Info)
+{
+	ItemInfo = Info;
+}
+
+// Called when the game starts or when spawned
+void AEquippedObject::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (DefaultScene == NULL)
+	{
+		DefaultScene = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultScene"));
+		DefaultScene = RootComponent;
+	}
+	
+}
