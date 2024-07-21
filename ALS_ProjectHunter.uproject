@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.3",
+	"EngineAssociation": "{41958479-4D69-B261-E5C6-479F3DED3121}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -27,6 +27,10 @@
 		},
 		{
 			"Name": "GameplayAbilities",
+			"Enabled": true
+		},
+		{
+			"Name": "SkeletalMeshModelingTools",
 			"Enabled": true
 		}
 	]
