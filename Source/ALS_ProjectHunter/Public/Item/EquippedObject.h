@@ -46,6 +46,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Collison")
 	TObjectPtr<UTimelineComponent> DamageTraceTl;
 
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Collison")
 	TArray<FVector> PrevTracePoints;
 

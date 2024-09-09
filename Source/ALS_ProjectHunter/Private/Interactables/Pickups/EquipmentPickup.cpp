@@ -54,9 +54,3 @@ void AEquipmentPickup::HandleSimpleInteraction(APHBaseCharacter* Character) cons
 }
 
 
-UBaseItem* AEquipmentPickup::GetItemInformation() const
-{
-	UBaseItem* CreatedItem = NewObject<UBaseItem>(const_cast<AEquipmentPickup*>(this), UBaseItem::StaticClass());
-	CreatedItem->ItemInfo = ItemInfo;
-	return CreatedItem;
-}

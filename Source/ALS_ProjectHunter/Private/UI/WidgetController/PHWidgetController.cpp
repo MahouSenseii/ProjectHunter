@@ -13,6 +13,7 @@ void UPHWidgetController::SetWidgetControllerParams(const FWidgetControllerParam
 
 void UPHWidgetController::BroadcastInitialValues()
 {
+	
 }
 
 void UPHWidgetController::BindCallbacksToDependencies()

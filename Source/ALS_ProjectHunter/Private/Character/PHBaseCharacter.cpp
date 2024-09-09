@@ -5,12 +5,13 @@
 
 #include "AbilitySystem/PHAttributeSet.h"
 #include "Character/Player/State/PHPlayerState.h"
+#include "Components/EquipmentManager.h"
 
 class APHPlayerState;
 
 APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-
+	EquipmentManager = CreateDefaultSubobject<UEquipmentManager>(TEXT("EquipmentManager"));
 }
 
 UAbilitySystemComponent* APHBaseCharacter::GetAbilitySystemComponent() const

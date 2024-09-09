@@ -17,13 +17,14 @@ class ALS_PROJECTHUNTER_API AEquipmentPickup : public AItemPickup
 public:
 
 	AEquipmentPickup();
-	
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "ItemInfomation" )
 	FEquippableItemData EquipmentData;
 	
 	virtual bool InteractionHandle(AActor* Actor, bool WasHeld) const override;
 	virtual void HandleHeldInteraction(APHBaseCharacter* Character) const override;
 	virtual void HandleSimpleInteraction(APHBaseCharacter* Character) const override;
 
-	virtual UBaseItem* GetItemInformation() const override;
+	
 	
 };

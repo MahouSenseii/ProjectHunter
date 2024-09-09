@@ -44,7 +44,7 @@ public:
 	mutable UBaseItem* ObjItem;
 
 	UFUNCTION(BlueprintCallable)
-	virtual UBaseItem* GetItemInformation() const;
+	virtual UBaseItem* GenerateItem() const;
 
 	virtual bool InteractionHandle(AActor* Actor, bool WasHeld) const override;
 

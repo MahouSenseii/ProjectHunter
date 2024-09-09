@@ -16,6 +16,6 @@ class ALS_PROJECTHUNTER_API UWeaponItem : public UEquippableItem
 
 public:
 
-	UPROPERTY(EditAnywhere, Category = "Base")
+	UPROPERTY(EditAnywhere, Category = "ItemInfo")
 	FWeaponItemData WeaponItemData;
 };

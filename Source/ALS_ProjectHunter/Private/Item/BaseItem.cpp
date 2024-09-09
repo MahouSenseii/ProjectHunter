@@ -5,16 +5,17 @@
 #include "AbilitySystemBlueprintLibrary.h"
 
 
+
 FIntPoint UBaseItem::GetDimensions()
 {
 	if (Rotated)
 	{
 		// Return reversed dimensions if Rotated is true
-		return FIntPoint(ItemInfo.Dimensions.Y, ItemInfo.Dimensions.X);
+		return FIntPoint(ItemInfos.Dimensions.Y, ItemInfos.Dimensions.X);
 	}
 
 	// Return original dimensions if Rotated is false
-	return ItemInfo.Dimensions;
+	return ItemInfos.Dimensions;
 }
 
 
@@ -23,9 +24,9 @@ UMaterialInstance* UBaseItem::GetIcon()
 	if (Rotated)
 	{
 		// Return rotated image if available; otherwise, return original image
-		return ItemInfo.ItemImageRotated ? ItemInfo.ItemImageRotated : ItemInfo.ItemImage;
+		return ItemInfos.ItemImageRotated ? ItemInfos.ItemImageRotated : ItemInfos.ItemImage;
 	}
-	return ItemInfo.ItemImage ? ItemInfo.ItemImage : nullptr; // Return original image if available, or null if not
+	return ItemInfos.ItemImage ? ItemInfos.ItemImage : nullptr; // Return original image if available, or null if not
 }
 
 

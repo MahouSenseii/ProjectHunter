@@ -15,7 +15,28 @@ class ALS_PROJECTHUNTER_API UConsumableItem : public UBaseItem
 	GENERATED_BODY()
 
 public:
-	
-	UPROPERTY(EditAnywhere, Category = "Base")
-	FConsumableItemData ConsumableItemData;
+
+	virtual void Initialize(const FItemInformation& ItemInfo) override;
+
+	/** Use the consumable item, applying its effect */
+	UFUNCTION(BlueprintCallable, Category = "Consumable")
+	void UseItem(AActor* Target);
+
+	/** Sets the quantity of the consumable item */
+	UFUNCTION(BlueprintCallable, Category = "Consumable")
+	void SetQuantity(int NewQuantity);
+
+	/** Gets the current quantity of the consumable item */
+	UFUNCTION(BlueprintCallable, Category = "Consumable")
+	int GetQuantity() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Consumable")
+	FConsumableItemData GetConsumableData() const { return ConsumableData;}
+
+	UFUNCTION(BlueprintCallable, Category = "Consumable")
+	void SetConsumableData(FConsumableItemData Data) { ConsumableData = Data; }
+protected:
+	UPROPERTY(EditAnywhere,Category = "ItemInfo")
+	FConsumableItemData ConsumableData;
+
 };

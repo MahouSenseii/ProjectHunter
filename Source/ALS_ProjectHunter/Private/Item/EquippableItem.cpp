@@ -3,3 +3,11 @@
 
 #include "Item/EquippableItem.h"
 
+UEquippableItem::UEquippableItem()
+{
+}
+
+void UEquippableItem::Initialize(const FItemInformation& ItemInfo)
+{
+	Super::Initialize(ItemInfo);
+}

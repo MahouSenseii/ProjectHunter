@@ -61,7 +61,7 @@ void UInventoryManager::InitializeInventoryManager()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("OwnerCharacter is null."));
+		
 	}
 
 	// Resize Inventory Grid
@@ -214,40 +214,40 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
 
     // Helper lambda to handle mesh setup and common properties
     auto SetupPickup = [&](AItemPickup* Pickup) {
-        Pickup->ItemInfo = Item->ItemInfo;
-        Pickup->SetNewMesh(Item->ItemInfo.StaticMesh);
+        Pickup->ItemInfo = Item->ItemInfos;
+        Pickup->SetNewMesh(Item->ItemInfos.StaticMesh);
         Pickup->SetupMesh();
     };
 
     // Spawn the pickup actor based on the item type
     AItemPickup* CreatedPickup;
-    switch (Item->ItemInfo.ItemType)
+    switch (Item->ItemInfos.ItemType)
     {
     case EItemType::IS_Weapon:
-        CreatedPickup = World->SpawnActor<AWeaponPickup>(Item->ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+        CreatedPickup = World->SpawnActor<AWeaponPickup>(Item->ItemInfos.PickupClass, DropLocation, DropRotation, SpawnParams);
         if (const auto WeaponPickup = Cast<AWeaponPickup>(CreatedPickup))
         {
             WeaponPickup->WeaponData = Cast<UWeaponItem>(Item)->WeaponItemData;
-            WeaponPickup->EquipmentData = Cast<UWeaponItem>(Item)->EquippableItemData;
+            WeaponPickup->EquipmentData = Cast<UWeaponItem>(Item)->GetEquippableData();
         }
         break;
     case EItemType::IS_Armor:
     case EItemType::IS_Shield:
-        CreatedPickup = World->SpawnActor<AEquipmentPickup>(Item->ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+        CreatedPickup = World->SpawnActor<AEquipmentPickup>(Item->ItemInfos.PickupClass, DropLocation, DropRotation, SpawnParams);
         if (const auto EquipPickup = Cast<AEquipmentPickup>(CreatedPickup))
         {
-            EquipPickup->EquipmentData = Cast<UEquippableItem>(Item)->EquippableItemData;
+            EquipPickup->EquipmentData = Cast<UEquippableItem>(Item)->GetEquippableData();
         }
         break;
     case EItemType::IS_Consumable:
-        CreatedPickup = World->SpawnActor<AConsumablePickup>(Item->ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+        CreatedPickup = World->SpawnActor<AConsumablePickup>(Item->ItemInfos.PickupClass, DropLocation, DropRotation, SpawnParams);
         if (const auto ConsumablePickup = Cast<AConsumablePickup>(CreatedPickup))
         {
-            ConsumablePickup->ConsumableData = Cast<UConsumableItem>(Item)->ConsumableItemData;
+            ConsumablePickup->ConsumableData = Cast<UConsumableItem>(Item)->GetConsumableData();
         }
         break;
     default:
-        CreatedPickup = World->SpawnActor<AItemPickup>(Item->ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+        CreatedPickup = World->SpawnActor<AItemPickup>(Item->ItemInfos.PickupClass, DropLocation, DropRotation, SpawnParams);
         break;
     }
 
@@ -257,7 +257,7 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
         return true;
     }
 
-    UE_LOG(LogTemp, Error, TEXT("Failed to spawn pickup for item %s"), *Item->ItemInfo.ItemName.ToString());
+    UE_LOG(LogTemp, Error, TEXT("Failed to spawn pickup for item %s"), *Item->ItemInfos.ItemName.ToString());
     return false;
 }
 
@@ -384,7 +384,7 @@ bool UInventoryManager::TryToAddItemToInventory(UBaseItem* Item, const bool Chec
 // The AddItemAt function
 void UInventoryManager::AddItemAt(UBaseItem* Item, int32 TopLeftIndex)
 {
-	Item->ItemInfo.OwnerID = InventoryID;
+	Item->ItemInfos.OwnerID = InventoryID;
 	ForEachTile(Item, TopLeftIndex, [this, Item](FTile Tile)
 		{
 			if (const int32 Index = TileToIndex(Tile); InventoryList.IsValidIndex(Index))
@@ -528,8 +528,8 @@ switch (ItemInfo->ItemType)
 			{
 				const auto WeaponItem = Cast<UWeaponItem>(Item);
 				WeaponItem->WeaponItemData = *WeaponInfo;
-				WeaponItem->ItemInfo = *ItemInfo;
-				WeaponItem->EquippableItemData = *DataTable->FindRow<FEquippableItemData>(ItemName, TEXT("LookupItemInfo"));
+				WeaponItem->ItemInfos = *ItemInfo;
+				WeaponItem->SetEquippableData(*DataTable->FindRow<FEquippableItemData>(ItemName, TEXT("LookupItemInfo")));
 			}
 		}
 		break;
@@ -538,8 +538,8 @@ switch (ItemInfo->ItemType)
 		{
 			Item = NewObject<UEquippableItem>(this, UEquippableItem::StaticClass());
 			const auto EquippableItem = Cast<UEquippableItem>(Item);
-			EquippableItem->EquippableItemData = *DataTable->FindRow<FEquippableItemData>(ItemName, TEXT("LookupItemInfo"));
-			EquippableItem->ItemInfo = *ItemInfo;
+			EquippableItem->SetEquippableData(*DataTable->FindRow<FEquippableItemData>(ItemName, TEXT("LookupItemInfo")));
+			EquippableItem->ItemInfos = *ItemInfo;
 		}
 		break;
 	case EItemType::IS_Consumable:
@@ -549,8 +549,8 @@ switch (ItemInfo->ItemType)
 			if (ConsumableInfo && Item)
 			{
 				const auto ConsumableItem = Cast<UConsumableItem>(Item);
-				ConsumableItem->ConsumableItemData = *ConsumableInfo;
-				ConsumableItem->ItemInfo = *ItemInfo;
+				ConsumableItem->SetConsumableData(*ConsumableInfo);
+				ConsumableItem->ItemInfos = *ItemInfo;
 			}
 		}
 		break;
@@ -559,7 +559,7 @@ switch (ItemInfo->ItemType)
 		if (Item)
 		{
 			const auto BaseItem = Cast<UBaseItem>(Item);
-			BaseItem->ItemInfo = *ItemInfo;
+			BaseItem->ItemInfos = *ItemInfo;
 		}
 		break;
 	}
@@ -571,7 +571,7 @@ switch (ItemInfo->ItemType)
 	}
 
 	// Set the owner ID and try to add to inventory
-	Item->ItemInfo.OwnerID = InventoryID;
+	Item->ItemInfos.OwnerID = InventoryID;
 	if (!TryToAddItemToInventory(Item, true))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Could not add item %s to inventory"), *ItemName.ToString());

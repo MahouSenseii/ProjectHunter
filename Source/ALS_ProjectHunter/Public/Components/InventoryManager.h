@@ -46,6 +46,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
 	int32 Rows = 16;
 
+	/**
+	 * 
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
 	int32 Colums = 12;
 

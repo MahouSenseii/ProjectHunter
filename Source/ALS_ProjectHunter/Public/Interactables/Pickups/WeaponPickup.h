@@ -16,7 +16,7 @@ class ALS_PROJECTHUNTER_API AWeaponPickup : public AEquipmentPickup
 
 public:
 
-	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "ItemInfomation")
 	FWeaponItemData WeaponData;
 	
 };

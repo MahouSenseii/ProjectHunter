@@ -7,7 +7,7 @@
 #include "GameFramework/RotatingMovementComponent.h"
 #include "Library/InteractionEnumLibrary.h"
 #include "Particles/ParticleSystemComponent.h"
-#include "UI/InteractableWidget.h"
+
 
 AItemPickup::AItemPickup()
 {
@@ -40,14 +40,14 @@ void AItemPickup::BeginPlay()
 	}
 }
 
-UBaseItem* AItemPickup::GetItemInformation() const
+UBaseItem* AItemPickup::GenerateItem() const
 {
 	// Ensure we are operating within the correct world context
 	if (GetWorld())
 	{
 		if (UBaseItem* NewItem = NewObject<UBaseItem>(GetTransientPackage(), UBaseItem::StaticClass()))
 		{
-			NewItem->ItemInfo = ItemInfo;			
+			NewItem->ItemInfos = ItemInfo;			
 			// Initialize your item's properties here, if necessary
 			return NewItem;
 		}
@@ -60,7 +60,7 @@ bool AItemPickup::InteractionHandle(AActor* Actor, bool WasHeld) const
 	Super::InteractionHandle(Actor, WasHeld);
 
 	// Get item information once.
-	ObjItem = GetItemInformation();
+	ObjItem = GenerateItem();
 
 	if (IsValid(Actor))
 	{

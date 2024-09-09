@@ -27,12 +27,16 @@ public:
 
 	virtual int32 GetPlayerLevel() override;
 	/** End Combat Interface */
+
+	UFUNCTION(BlueprintCallable, Category = "Manager")
+	UInventoryManager* GetInventoryManager(){ return InventoryManager;}
 	
+protected:
+	
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager")
+	TObjectPtr<UInventoryManager> InventoryManager;
 private:
 
 	virtual void InitAbilityActorInfo() override;
 
-public:
-	
-	
 };

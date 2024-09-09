@@ -42,15 +42,12 @@ struct FConsumableItemData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable")
 	TSubclassOf<UGameplayEffect> GameplayEffectClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-	bool Stackable; // Indicates whether the item can be stacked in the inventory
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	int Quantity; // The quantity of the item in a stack
 
 	FConsumableItemData()
 		:GameplayEffectClass(nullptr),
-		Stackable(false),
 		Quantity(0)
 	{}
 };
@@ -87,9 +84,14 @@ struct FEquippableItemData
 	// Properties specific to equippable items
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	TSubclassOf<AEquippedObject> EquipClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	EEquipmentSlot  EquipSlot;
+
 	
-	FEquippableItemData()
-	{}
+	FEquippableItemData(): EquipSlot()
+	{
+	}
 };
 
 
@@ -101,7 +103,7 @@ struct FItemInformation : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
 	float BaseGradeValue;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
 	TSubclassOf<AItemPickup> PickupClass;
 
@@ -153,6 +155,10 @@ struct FItemInformation : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Text")
 	FText ItemDescription;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	bool Stackable; // Indicates whether the item can be stacked in the inventory
+
+
 	// Properties specific to consumable items
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable")
 	TSubclassOf<UGameplayEffect> GameplayEffectClass;
@@ -175,32 +181,9 @@ struct FItemInformation : public FTableRowBase
 		  IsTradeable(false),
 		  Dimensions(FIntPoint::ZeroValue),
 		  ItemDescription(FText::FromString("")),
+		  Stackable(false),
 		  GameplayEffectClass(nullptr)
 	{}
-};
-
-
-USTRUCT(BlueprintType)
-struct FUnifiedItemData : public FTableRowBase
-{
-	GENERATED_BODY()
-
-	// Base Item Info
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	FItemInformation ItemInfo;
-
-	// Weapon-specific data
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
-	FWeaponItemData WeaponInfo;
-
-	// Consumable-specific data
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable")
-	FConsumableItemData ConsumableInfo;
-
-	// Equippable-specific data
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equippable")
-	FEquippableItemData EquippableInfo;
-	
 };
 
 

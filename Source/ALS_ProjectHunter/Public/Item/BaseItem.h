@@ -19,7 +19,9 @@ class ALS_PROJECTHUNTER_API UBaseItem : public UObject
 	GENERATED_BODY()
 
 public:
-	
+
+	virtual void Initialize(const FItemInformation& ItemInfo) PURE_VIRTUAL(UItemData::Initialize, );
+
 	/** Returns the dimensions of the item, considering rotation */
 	UFUNCTION(BlueprintCallable)
 	FIntPoint GetDimensions();
@@ -32,19 +34,19 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void Rotate() { Rotated = !Rotated; }
 
-	UFUNCTION(BlueprintGetter)
-	virtual TSubclassOf<AItemPickup> GetPickupClass() const { return ItemInfo.PickupClass; }
 	
 	/** Returns the icon of the item, considering rotation */
 	UFUNCTION(BlueprintCallable)
 	UMaterialInstance* GetIcon();
+
+	
 
 	UFUNCTION()
 	static void ApplyEffectToTarget(AActor* Target, TSubclassOf<UGameplayEffect> GameplayEffectClass);
 	
 	/** Information related to the item */
 	UPROPERTY(BlueprintReadWrite, Category = "ItemInfo")
-	FItemInformation ItemInfo;
+	FItemInformation ItemInfos;
 	
 	/** Indicates the current slot of the item */
 	UPROPERTY(BlueprintReadWrite)
@@ -57,5 +59,6 @@ public:
 	/** Transform representing the item's position, rotation, and scale */
 	UPROPERTY(BlueprintReadWrite)
 	FTransform Transform;
+
 	
 };	

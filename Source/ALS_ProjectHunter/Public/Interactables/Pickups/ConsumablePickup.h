@@ -18,6 +18,7 @@ public:
 
 	virtual void BeginPlay() override;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "ItemInfomation")
 	FConsumableItemData ConsumableData;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)

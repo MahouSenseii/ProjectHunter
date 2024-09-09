@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "Character/ALSCharacter.h"
+#include "Components/EquipmentManager.h"
 #include "Interfaces/CombatSubInterface.h"
 #include "PHBaseCharacter.generated.h"
 
@@ -25,11 +26,14 @@ public:
 	// Constructor for APHBaseCharacter
 	APHBaseCharacter(const FObjectInitializer& ObjectInitializer);
 	
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Manager")
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	UFUNCTION(BlueprintCallable)
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
+
+	UFUNCTION(BlueprintCallable)
+	UEquipmentManager* GetEquipmentManager() const { return EquipmentManager;}
 	
 protected:
 
@@ -88,10 +92,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Vital")
 	TSubclassOf<UGameplayEffect> StaminaDegenEffect;
 	
+	
 	UFUNCTION(BlueprintCallable)
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const;
 	
-	void InitializeDefaultAttributes() const;	
+	void InitializeDefaultAttributes() const;
+	
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager")
+	TObjectPtr<UEquipmentManager> EquipmentManager;
 
 private:
 	
