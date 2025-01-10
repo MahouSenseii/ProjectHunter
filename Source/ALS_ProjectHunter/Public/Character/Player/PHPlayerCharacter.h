@@ -16,27 +16,14 @@ class ALS_PROJECTHUNTER_API APHPlayerCharacter : public APHBaseCharacter
 
 public:
 
-
+ 
 	
 	APHPlayerCharacter(const FObjectInitializer& ObjectInitializer);
-	virtual void PossessedBy(AController* NewController) override;
 
-	virtual void OnRep_PlayerState() override;
-
-	/** Combat Interface */
-
-	virtual int32 GetPlayerLevel() override;
-	/** End Combat Interface */
-
-	UFUNCTION(BlueprintCallable, Category = "Manager")
-	UInventoryManager* GetInventoryManager(){ return InventoryManager;}
 	
 protected:
-	
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager")
-	TObjectPtr<UInventoryManager> InventoryManager;
+
 private:
 
-	virtual void InitAbilityActorInfo() override;
-
 };
+

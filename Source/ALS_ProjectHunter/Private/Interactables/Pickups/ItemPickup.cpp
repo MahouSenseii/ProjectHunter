@@ -3,9 +3,12 @@
 
 #include "Interactables/Pickups/ItemPickup.h"
 
+#include "Character/Player/PHPlayerController.h"
 #include "Components/InteractableManager.h"
+#include "Components/InventoryManager.h"
 #include "GameFramework/RotatingMovementComponent.h"
 #include "Library/InteractionEnumLibrary.h"
+#include "Library/PHItemFunctionLibrary.h"
 #include "Particles/ParticleSystemComponent.h"
 
 
@@ -40,6 +43,15 @@ void AItemPickup::BeginPlay()
 	}
 }
 
+void AItemPickup::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)
+{
+	FItemInformation PassedItemInfo;
+	FEquippableItemData EquippableItemData;
+	FWeaponItemData WeaponItemData;
+	FConsumableItemData ConsumableItemData;
+	HandleInteraction(Interactor, WasHeld, PassedItemInfo,EquippableItemData, WeaponItemData,ConsumableItemData);
+}
+
 UBaseItem* AItemPickup::GenerateItem() const
 {
 	// Ensure we are operating within the correct world context
@@ -47,7 +59,7 @@ UBaseItem* AItemPickup::GenerateItem() const
 	{
 		if (UBaseItem* NewItem = NewObject<UBaseItem>(GetTransientPackage(), UBaseItem::StaticClass()))
 		{
-			NewItem->ItemInfos = ItemInfo;			
+			NewItem->SetItemInfo(ItemInfo);			
 			// Initialize your item's properties here, if necessary
 			return NewItem;
 		}
@@ -55,40 +67,67 @@ UBaseItem* AItemPickup::GenerateItem() const
 	return nullptr;
 }
 
-bool AItemPickup::InteractionHandle(AActor* Actor, bool WasHeld) const
+bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo, FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData, FConsumableItemData ConsumableItemData) const
 {
-	Super::InteractionHandle(Actor, WasHeld);
-
-	// Get item information once.
-	ObjItem = GenerateItem();
-
-	if (IsValid(Actor))
+	if (!IsValid(Actor))
 	{
-		// Cast to ALSBaseCharacter once.
-		APHBaseCharacter* Character = Cast<APHBaseCharacter>(Actor);
-		if (Character == nullptr)
+		return false;
+	}
+
+	APHPlayerController* PlayerController = Cast<APHPlayerController>(Actor);
+	
+	APHBaseCharacter* OwnerCharacter = Cast<APHBaseCharacter>(PlayerController->AcknowledgedPawn);
+	if (!OwnerCharacter)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Owner is not a valid APHBaseCharacter."));
+		return false;
+	}
+
+	// Get the item information
+	UBaseItem* ReturnItem = UPHItemFunctionLibrary::GetItemInformation( PassedItemInfo, EquippableItemData, WeaponItemData, ConsumableItemData);
+	if (!ReturnItem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Failed to create item from ItemInfo."));
+		return false;
+	}
+
+	// Set the Owner ID for the item
+	FItemInformation ReturnItemInfo = ReturnItem->GetItemInfo();
+	ReturnItemInfo.OwnerID = OwnerCharacter->GetInventoryManager()->GetID();
+	ReturnItem->SetItemInfo(ReturnItemInfo);
+
+	// If the interaction was held, try to equip the item
+	if (WasHeld)
+	{
+		if (OwnerCharacter->GetEquipmentManager()->IsItemEquippable(ReturnItem))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Actor is not an ALSBaseCharacter."));
-			return false;
+			OwnerCharacter->GetEquipmentManager()->TryToEquip(ReturnItem, true, ReturnItemInfo.EquipmentSlot);
 		}
-		
-		// Handle held interaction
-		if (WasHeld)
+		else
 		{
-			HandleHeldInteraction(Character);
+			OwnerCharacter->GetEquipmentManager()->TryToEquip(ReturnItem, false, ReturnItemInfo.EquipmentSlot);
 		}
-		else // Handle simple interaction
+
+		if (InteractableManager)
 		{
-			HandleSimpleInteraction(Character);
+			InteractableManager->RemoveInteraction();
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Invalid actor passed to InteractionHandle."));
-		return false;
+		// Otherwise, try to add the item to the inventory
+		if (OwnerCharacter->GetInventoryManager()->TryToAddItemToInventory(ReturnItem, true))
+		{
+			if (InteractableManager && InteractableManager->DestroyAfterInteract)
+			{
+				InteractableManager->RemoveInteraction();
+			}
+		}
 	}
-	return true;
+
+	return false;
 }
+
 
 void AItemPickup::HandleHeldInteraction(APHBaseCharacter* Character) const
 {

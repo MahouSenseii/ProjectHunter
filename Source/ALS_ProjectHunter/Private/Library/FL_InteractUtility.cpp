@@ -2,8 +2,9 @@
 
 #include "Library/FL_InteractUtility.h"
 
-#include "Character/Player/PHPlayerCharacter.h"
+#include "Character/PHBaseCharacter.h"
 #include "Components/InteractionManager.h"
+#include "Item/WeaponItem.h"
 
 
 UTexture2D* UFL_InteractUtility::GetGamepadIcon(const EGamepadIcon Input)
@@ -172,7 +173,44 @@ UTexture2D* UFL_InteractUtility::GetKeyboardIcon(const EKeyboardIcon Input)
 	}
 }
 
-UInteractableManager* UFL_InteractUtility::GetCurrentInteractableObject(const APHPlayerCharacter* OwningPlayer)
+bool UFL_InteractUtility::AreRequirementsMet(const UBaseItem* InItem, AActor* OwnerPlayer)
+{
+	if (!InItem) // Check if the Item pointer is valid
+	{
+		return false;
+	}
+
+	// Loop through each weapon requirement
+	for (const UWeaponItem* AsWeaponItem = Cast<UWeaponItem>(InItem); const auto& Elem : AsWeaponItem->GetWeaponData() .WeaponRequirementStats)
+	{
+		const EItemRequiredStatsCategory RequirementCategory = Elem.Key;
+
+		// Check if the requirement is met, if not, return false immediately
+		if (const float RequiredValue = Elem.Value; !CheckBasedOnCompare(RequirementCategory, RequiredValue, OwnerPlayer))
+		{
+			return false; // Requirement not met, return false
+		}
+	}
+
+	return true; // If loop completes, all requirements are met
+}
+
+bool UFL_InteractUtility::CheckBasedOnCompare(EItemRequiredStatsCategory RequiredStats, float RequiredValue,
+	AActor* OwnerPlayer)
+{
+	if (const APHBaseCharacter* Owner = Cast<APHBaseCharacter>(OwnerPlayer))
+	{
+		// Map the item's stat requirement to the character's stat identity
+		
+		// Compare the character's stat value against the item's required value
+		return false;
+	}
+
+	return false;
+}
+
+
+UInteractableManager* UFL_InteractUtility::GetCurrentInteractableObject(const APHBaseCharacter* OwningPlayer)
 {
 	if (UInteractionManager* ComponentClass = OwningPlayer->FindComponentByClass<UInteractionManager>();
 		IsValid(ComponentClass))

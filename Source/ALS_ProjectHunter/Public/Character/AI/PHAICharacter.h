@@ -16,18 +16,9 @@ class ALS_PROJECTHUNTER_API APHAICharacter : public APHBaseCharacter
 public:
 	APHAICharacter(const FObjectInitializer& ObjectInitializer);
 
-	/** Combat Interface */
-
-	virtual int32 GetPlayerLevel() override;
-	/** End Combat Interface */
 	
 protected:
 
 	virtual void BeginPlay() override;
 
-	virtual void InitAbilityActorInfo() override;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Defaults")
-	int32 Level = 1;
-	
 };

@@ -21,7 +21,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "ItemInfomation" )
 	FEquippableItemData EquipmentData;
 	
-	virtual bool InteractionHandle(AActor* Actor, bool WasHeld) const override;
+	virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo, FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData, FConsumableItemData ConsumableItemData) const override;
 	virtual void HandleHeldInteraction(APHBaseCharacter* Character) const override;
 	virtual void HandleSimpleInteraction(APHBaseCharacter* Character) const override;
 

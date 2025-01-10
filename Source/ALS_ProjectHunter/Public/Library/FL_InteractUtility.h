@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Character/Player/PHPlayerCharacter.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "FL_InteractUtility.generated.h"
 
@@ -102,8 +101,16 @@ public:
 	UFUNCTION(BlueprintGetter, Category = "Getter")
 	static UTexture2D* GetKeyboardIcon(EKeyboardIcon Input);
 
+	
+	UFUNCTION(BlueprintCallable, Category = "Checker")
+	static bool AreRequirementsMet(const UBaseItem* InItem, AActor* OwnerPlayer);
+
+	UFUNCTION(BlueprintCallable, Category = "Checker")
+	static bool CheckBasedOnCompare(EItemRequiredStatsCategory RequiredStats, float RequiredValue, AActor* OwnerPlayer);
+
+	
 	UFUNCTION(BlueprintGetter)
-	static UInteractableManager* GetCurrentInteractableObject(const APHPlayerCharacter* OwningPlayer);
+	static UInteractableManager* GetCurrentInteractableObject(const APHBaseCharacter* OwningPlayer);
 	static EGamepadIcon TranslateToGamepadIcon(const FKey& Key);
 	static EKeyboardIcon TranslateToKeyboardIcon(const FKey& Key);
 };

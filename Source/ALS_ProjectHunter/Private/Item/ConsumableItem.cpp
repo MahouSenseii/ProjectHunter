@@ -3,7 +3,6 @@
 
 #include "Item/ConsumableItem.h"
 
-#include "Character/Player/PHPlayerCharacter.h"
 #include "Components/InventoryManager.h"
 
 void UConsumableItem::Initialize(const FItemInformation& ItemInfo)
@@ -31,7 +30,7 @@ void UConsumableItem::UseItem(AActor* Target)
 	{
 		// Attempt to cast the Target to APHPlayerCharacter
 
-		if (APHPlayerCharacter* Player = Cast<APHPlayerCharacter>(Target))
+		if (APHBaseCharacter* Player = Cast<APHBaseCharacter>(Target))
 		{
 			Player->GetInventoryManager()->RemoveItemInInventory(this);
 		}

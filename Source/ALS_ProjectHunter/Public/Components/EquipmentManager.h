@@ -28,8 +28,7 @@ public:
 	// Sets default values for this component's properties
 	UEquipmentManager();
 
-	UFUNCTION()
-	void UpdateMesh(UBaseItem* Item, EEquipmentSlot Slot);
+
 
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	bool CheckSlot(UBaseItem* Item);
@@ -92,7 +91,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Owner")
 	TObjectPtr<AALSCharacter> OwnerCharacter;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Checker")
+	UPROPERTY(EditAnywhere,  BlueprintReadWrite, Category = "Checker")
 	TMap<EEquipmentSlot, UBaseItem*> EquipmentData;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Checker")

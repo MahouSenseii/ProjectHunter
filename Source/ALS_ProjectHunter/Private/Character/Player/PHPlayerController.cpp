@@ -43,25 +43,25 @@ void APHPlayerController::InitializeInteraction(UInteractableManager* Interactab
 	}
 }
 
-void APHPlayerController::StartInteractionWithObject_Implementation(UInteractableManager* Interactable)
+void APHPlayerController::StartInteractionWithObject_Implementation(UInteractableManager* Interactable, const bool WasHeld)
 {
 	if(IsValid(Interactable))
 	{
-		ServerStartInteractionWithObject(Interactable);
-		ClientStartInteractionWithObject(Interactable);
+		ServerStartInteractionWithObject(Interactable, WasHeld);
+		ClientStartInteractionWithObject(Interactable, WasHeld);
 	}
 }
 
 
 
-void APHPlayerController::ServerStartInteractionWithObject_Implementation(UInteractableManager* Interactable)
+void APHPlayerController::ServerStartInteractionWithObject_Implementation(UInteractableManager* Interactable, const bool WasHeld)
 {
-	StartInteraction(Interactable);
+ 	StartInteraction(Interactable, WasHeld);
 }
 
-void APHPlayerController::ClientStartInteractionWithObject_Implementation(UInteractableManager* Interactable)
+void APHPlayerController::ClientStartInteractionWithObject_Implementation(UInteractableManager* Interactable, const bool WasHeld)
 {
-	Interactable->ClientInteraction(this, false);
+		Interactable->ClientInteraction(this, WasHeld);
 }
 
 void APHPlayerController::EndInteractionWithObject_Implementation(UInteractableManager* Interactable)
@@ -111,11 +111,11 @@ void APHPlayerController::EndInteraction(const UInteractableManager* Interactabl
 	}
 }
 
-void APHPlayerController::StartInteraction(UInteractableManager* Interactable)
+void APHPlayerController::StartInteraction(UInteractableManager* Interactable, const bool WasHeld)
 {
 	if(IsValid(Interactable))
 	{
-		Interactable->Interaction(this, false);
+		Interactable->Interaction(this,  WasHeld);
 		
 	}
 }
@@ -140,3 +140,5 @@ void APHPlayerController::RemoveCurrentInteractable(UInteractableManager* Remove
 {
 	CurrentInteractable = nullptr;
 }
+
+

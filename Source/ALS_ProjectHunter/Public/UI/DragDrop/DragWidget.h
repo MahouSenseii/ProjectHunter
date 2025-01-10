@@ -13,5 +13,9 @@ UCLASS()
 class ALS_PROJECTHUNTER_API UDragWidget : public UDragDropOperation
 {
 	GENERATED_BODY()
-	
+
+public:
+
+	UPROPERTY(BlueprintReadWrite, Category = "DragDrop")
+	UObject* InPayload;	
 };

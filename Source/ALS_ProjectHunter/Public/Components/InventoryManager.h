@@ -25,7 +25,8 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnGemsChanged OnGemsChanged;
-
+	
+	
 	// Sets default values for this component's properties
 	// Constructor
 	UInventoryManager();
@@ -40,20 +41,23 @@ public:
 	TArray<UBaseItem*> InventoryList;
 
 	UFUNCTION(BlueprintCallable)
-	AALSCharacter* GetOwnerCharacter() const;
+	APHBaseCharacter* GetOwnerCharacter() const;
+
+	UFUNCTION(BlueprintCallable)
+	FString GetID() { return InventoryID;}
 
 	// Components and references
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
-	int32 Rows = 16;
+	int32 Rows = 7;
 
 	/**
 	 * 
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
-	int32 Colums = 12;
+	int32 Colums = 14;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
-	float TileSize = 60.0f;
+	float TileSize = 30.0f;
 
 	// State
 	UPROPERTY(BlueprintReadWrite, Category = "Checker")
@@ -115,7 +119,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	bool IsRoomAvailable(UBaseItem* Item, int32 TopLeftIndex);
 
-	bool ForEachTile(UBaseItem* Item, int32 TopLeftIndex, const TFunction<void(FTile)>& Func);
+	bool   ForEachTile(UBaseItem* Item, int32 TopLeftIndex, const TFunction<void(FTile)>& Func);
 
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	bool IsTileValid(FTile Tile) const;
@@ -132,8 +136,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Add")
 	bool TryToAddItemToInventoryRotated(UBaseItem* Item);
 	
-	static int32 CalculateValue(const FItemInformation& ItemData);
-
 	UFUNCTION(BlueprintCallable, Category = "Shop")
 	void RandomizeInventory();
 
@@ -155,8 +157,30 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Shop")
 	FVector2D MinMaxLootAmount;
 
+	// Gems
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintGetter, Category = "Shop")
+	int32 GetGems() const { return Gems; }
+
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	void AddGems(int32 InAmount) {  Gems =+ InAmount; };
+
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	void SubtractGems(int32 InAmount) { Gems =- InAmount; };
+
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	bool HasEnoughGems(UBaseItem* Item) const;
+
+	static int32 CalculateStackedItemValue(const FItemInformation& ItemData);
+	static int32 CalculateValue(const FItemInformation& ItemData);
+
+
 private:
 
+	
+	UPROPERTY()
+	int32 Gems = 1000;
+	
 	FString InventoryID = "";
 };
 

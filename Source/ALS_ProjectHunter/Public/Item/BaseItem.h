@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystem/PHAttributeSet.h"
+
 #include "Library/PHItemStructLibrary.h"
 #include "BaseItem.generated.h"
 
@@ -28,11 +28,14 @@ public:
 	
 	/** Check if the item is rotated */
 	UFUNCTION(BlueprintCallable)
-	bool IsRotated() const { return Rotated; }
+	bool IsRotated() const { return ItemInfos.Rotated; }
 
 	/** Toggles the rotation state of the item */
 	UFUNCTION(BlueprintCallable)
-	void Rotate() { Rotated = !Rotated; }
+	void Rotate() { ItemInfos.Rotated = !ItemInfos.Rotated; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetRotated(bool inBool) { ItemInfos.Rotated =  inBool ;}
 
 	
 	/** Returns the icon of the item, considering rotation */
@@ -43,22 +46,18 @@ public:
 
 	UFUNCTION()
 	static void ApplyEffectToTarget(AActor* Target, TSubclassOf<UGameplayEffect> GameplayEffectClass);
+
+	UFUNCTION(BlueprintCallable, Category = "Getter")
+	FItemInformation GetItemInfo() const {return  ItemInfos; }
+
+	UFUNCTION(BlueprintCallable, Category = "Setter")
+	void SetItemInfo(const FItemInformation NewItemInfo) { ItemInfos = NewItemInfo; }
+
+private:
 	
 	/** Information related to the item */
-	UPROPERTY(BlueprintReadWrite, Category = "ItemInfo")
+	UPROPERTY()
 	FItemInformation ItemInfos;
 	
-	/** Indicates the current slot of the item */
-	UPROPERTY(BlueprintReadWrite)
-	ECurrentItemSlot SavedSlot;
-
-	/** Indicates whether the item is rotated */
-	UPROPERTY(BlueprintReadWrite)
-	bool Rotated = false;
-
-	/** Transform representing the item's position, rotation, and scale */
-	UPROPERTY(BlueprintReadWrite)
-	FTransform Transform;
-
 	
 };	

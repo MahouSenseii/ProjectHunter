@@ -25,10 +25,6 @@ void UEquipmentManager::BeginPlay()
 	}
 }
 
-void UEquipmentManager::UpdateMesh(UBaseItem* Item, EEquipmentSlot Slot)
-{
-
-}
 
 bool UEquipmentManager::CheckSlot(UBaseItem* Item)
 {
@@ -52,7 +48,7 @@ TArray<UBaseItem*> UEquipmentManager::EquipmentCheck() const
 bool UEquipmentManager::IsItemEquippable(UBaseItem* Item)
 {
 	static const TSet<EItemType> EquippableTypes = { EItemType::IS_Armor, EItemType::IS_Weapon, EItemType::IS_Shield };
-	return EquippableTypes.Contains(Item->ItemInfos.ItemType);
+	return EquippableTypes.Contains(Item->GetItemInfo().ItemType);
 }
 
 bool UEquipmentManager::AddItemInSlotToInventory(UBaseItem* Item)
@@ -106,8 +102,14 @@ void UEquipmentManager::HandleHasMesh(UBaseItem* Item, EEquipmentSlot Slot)
 		}
 
 		// Attach the new item to the character and update the mesh.
-		AttachItem(Cast<UEquippableItem>(Item)->GetEquippableData().EquipClass, Item, Slot);
-		UpdateMesh(Item, Slot);
+		if(const UEquippableItem* EquipItem = Cast<UEquippableItem>(Item))
+		{
+			AttachItem(EquipItem->GetEquippableData().EquipClass, Item, Slot);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Equip Item came back null (Check EquipmentManager 107)"));
+		}
 	}
 }
 
@@ -171,7 +173,6 @@ void UEquipmentManager::RemoveItemInSlot(EEquipmentSlot Slot)
 
 	// Destroy the object, update the mesh, and remove the item from the mapping.
 	RetrievedItem->Destroy();
-	UpdateMesh(nullptr, Slot);
 	EquipmentData[Slot] = nullptr;
 	OnEquipmentChanged.Broadcast();
 }
@@ -194,11 +195,15 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 		const FRotator Rotation = FRotator(0.f, 0.f, 0.f);
 
 		// Spawn the actor
+		
 		AEquippedObject* SpawnedActor = World->SpawnActor<AEquippedObject>(Class, Location, Rotation, SpawnParams);
 
+		
+		
 		if (IsValid(SpawnedActor))
 		{
-			SpawnedActor->SetItemInfo(Item->ItemInfos);
+			// add item info to spawned actor 
+			SpawnedActor->SetItemInfo(Item->GetItemInfo());
 
 			// Check if the owner character is valid
 			if (IsValid(OwnerCharacter))
@@ -210,9 +215,18 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 					UE_LOG(LogTemp, Warning, TEXT("Socket doesnt exist."));
 
 				}
-
-				// Attach the spawned actor to the character's mesh
-				SpawnedActor->DefaultScene->AttachToComponent(OwnerCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SlotToAttachTo);
+				
+				// Set the mesh
+				if (UStaticMesh* Mesh = Item->GetItemInfo().StaticMesh)
+				{
+					SpawnedActor->SetMesh(Mesh);
+				}
+				else
+				{
+					UE_LOG(LogTemp, Error, TEXT("Mesh for item is null!"));
+					return;
+				}
+				SpawnedActor->AttachToComponent(OwnerCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SlotToAttachTo);
 				SpawnedActor->SetOwningCharacter(OwnerCharacter);
 
 				// Set additional properties, execute functions, etc.
@@ -234,7 +248,7 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 	}
 }
 
-FName UEquipmentManager::FindSlotName(EEquipmentSlot Slot)
+FName UEquipmentManager::FindSlotName(const EEquipmentSlot Slot)
 {
 	FName SlotToAttachTo;
 	switch (Slot)
@@ -300,7 +314,7 @@ bool UEquipmentManager::DropItem(UBaseItem* Item)
 	}
 
 	// Ensure Class is valid.
-	const TSubclassOf<AItemPickup> Class = Item->ItemInfos.PickupClass; 
+	const TSubclassOf<AItemPickup> Class = Item->GetItemInfo().PickupClass; 
 	if (!Class)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Class is null"));
@@ -320,9 +334,9 @@ bool UEquipmentManager::DropItem(UBaseItem* Item)
 	}
 
 	// Set properties of the spawned item.
-	DroppedItem->ItemInfo = Item->ItemInfos;
-	DroppedItem->SetNewMesh(Item->ItemInfos.StaticMesh);
-	DroppedItem->SetSkeletalMesh(Item->ItemInfos.SkeletalMesh);
+	DroppedItem->ItemInfo = Item->GetItemInfo();
+	DroppedItem->SetNewMesh(Item->GetItemInfo().StaticMesh);
+	DroppedItem->SetSkeletalMesh(Item->GetItemInfo().SkeletalMesh);
 
 	return true;
 }
@@ -369,7 +383,5 @@ FVector UEquipmentManager::GetGroundSpawnLocation() const
 		return CapsuleLocation;  // Return the original calculated location or a default.
 	}
 }
-
-
 
 

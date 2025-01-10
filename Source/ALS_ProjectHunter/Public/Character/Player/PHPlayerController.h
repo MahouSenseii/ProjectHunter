@@ -3,11 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Character/ALSPlayerController.h"
 #include "Components/InteractionManager.h"
 #include "Interfaces/InteractionProcessInterface.h"
 #include "PHPlayerController.generated.h"
 
+class UPHInputConfig;
 /**
  * 
  */
@@ -25,9 +27,9 @@ public:
 	UFUNCTION(Client, Reliable) void  ClientInitializeInteractionWithObject(UInteractableManager* Interactable);
 	UFUNCTION() void InitializeInteraction(UInteractableManager* Interactable);
 
-	virtual void StartInteractionWithObject_Implementation(UInteractableManager* Interactable) override;
-	UFUNCTION(Server, Reliable) void ServerStartInteractionWithObject(UInteractableManager* Interactable);
-	UFUNCTION(Client, Reliable) void ClientStartInteractionWithObject(UInteractableManager* Interactable);
+	virtual void StartInteractionWithObject_Implementation(UInteractableManager* Interactable,  bool WasHeld) override;
+	UFUNCTION(Server, Reliable) void ServerStartInteractionWithObject(UInteractableManager* Interactable,  bool WasHeld);
+	UFUNCTION(Client, Reliable) void ClientStartInteractionWithObject(UInteractableManager* Interactable,  bool WasHeld);
 
 	virtual void EndInteractionWithObject_Implementation(UInteractableManager* Interactable) override;
 	UFUNCTION(Server, Reliable) void ServerEndInteractionWithObject(UInteractableManager* Interactable);
@@ -42,7 +44,7 @@ public:
 protected:
 	
 	UFUNCTION() void EndInteraction(const UInteractableManager* Interactable);
-	UFUNCTION()void StartInteraction(UInteractableManager* Interactable);
+	UFUNCTION()void StartInteraction(UInteractableManager* Interactable, bool  WasHeld);
 	UFUNCTION()static void RemoveInteraction(UInteractableManager* Interactable);
 	UFUNCTION(BlueprintCallable) void SetCurrentInteractable(UInteractableManager* InInteractable);
 	UFUNCTION(BlueprintCallable) void RemoveCurrentInteractable(UInteractableManager* RemovedInteractable);
@@ -62,5 +64,8 @@ protected:
 	
 private:
 
+
 	
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UPHInputConfig> InputConfig;
 };

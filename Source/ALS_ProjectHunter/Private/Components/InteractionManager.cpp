@@ -3,7 +3,7 @@
 
 #include "Components/InteractionManager.h"
 
-#include "Character/Player/PHPlayerCharacter.h"
+#include "Character/PHBaseCharacter.h"
 #include "Math/Vector.h"
 #include "Components/InteractableManager.h"
 #include "Components/SphereComponent.h"
@@ -145,7 +145,7 @@ void UInteractionManager::AssignCurrentInteraction()
 	if (IsValid(OwnerController) && IsValid(OwnerController->PossessedCharacter))
 	{
 		TArray<float> DotProducts;
-		const APHPlayerCharacter* OwnerPawn = Cast<APHPlayerCharacter>(OwnerController->PossessedCharacter);
+		const APHBaseCharacter* OwnerPawn = Cast<APHBaseCharacter>(OwnerController->PossessedCharacter);
 		const FVector OwnerLocation = OwnerPawn ? OwnerPawn->GetRootComponent()->GetComponentLocation() : FVector::ZeroVector;
 	
 		// Calculate Dot Products for interactable objects only
@@ -216,7 +216,7 @@ bool UInteractionManager::ShouldUpdateInteraction()
 	if (IsValid(OwnerController) && IsValid(OwnerController->PossessedCharacter))
 	{
 		
-		const APHPlayerCharacter* OwnerPawn = Cast<APHPlayerCharacter>(OwnerController->PossessedCharacter);
+		const APHBaseCharacter* OwnerPawn = Cast<APHBaseCharacter>(OwnerController->PossessedCharacter);
 		const bool bCanUpdate = (! OwnerPawn->GetCharacterMovement()->IsFalling()) && (!InteractableList.IsEmpty());
 		if ( OwnerPawn->GetCharacterMovement()->IsFalling())
 		{

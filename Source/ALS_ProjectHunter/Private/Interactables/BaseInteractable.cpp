@@ -4,7 +4,7 @@
 #include "Interactables/BaseInteractable.h"
 
 #include "Character/ALSPlayerController.h"
-#include "Character/Player/PHPlayerCharacter.h"
+#include "Character/PHBaseCharacter.h"
 #include "Character/Player/PHPlayerController.h"
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
@@ -81,14 +81,17 @@ bool ABaseInteractable::InteractionHandle(AActor* Actor, bool WasHeld) const
 	if (WasHeld)
 	{
 		// override and do something if the interaction key was held
+		return true;
 
 	}
 	else
 	{
 		// override and do  something else if the interaction key was just pressed
+		return false;
 	}
 	return false;
 }
+
 
 // Called when the game starts or when spawned
 void ABaseInteractable::BeginPlay()
@@ -154,7 +157,7 @@ UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHi
 	ValidateComponents();
 	if(!InteractableManager->IsInteractable) { return;}
 	// Attempt to cast the OtherActor to your player character class.
-	if(const APHPlayerCharacter* CastCharacter = Cast<APHPlayerCharacter>(OtherActor))
+	if(const APHBaseCharacter* CastCharacter = Cast<APHBaseCharacter>(OtherActor))
 	{
 		// If the cast is successful, get the player character's controller and cast it to APHPlayerController.
 		if(const APHPlayerController* CastController = Cast<APHPlayerController>(CastCharacter->GetController()))
@@ -174,7 +177,7 @@ UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 	ValidateComponents();
 	if(!InteractableManager->IsInteractable) { return;}
 	// Attempt to cast the OtherActor to your player character class.
-	if(const APHPlayerCharacter* CastCharacter = Cast<APHPlayerCharacter>(OtherActor))
+	if(const APHBaseCharacter* CastCharacter = Cast<APHBaseCharacter>(OtherActor))
 	{
 		// If the cast is successful, get the player character's controller and cast it to APHPlayerController.
 		if(const APHPlayerController* CastController = Cast<APHPlayerController>(CastCharacter->GetController()))

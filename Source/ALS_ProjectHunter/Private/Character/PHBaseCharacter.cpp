@@ -3,20 +3,52 @@
 
 #include "Character/PHBaseCharacter.h"
 
+#include "AbilitySystem/PHAbilitySystemComponent.h"
 #include "AbilitySystem/PHAttributeSet.h"
+#include "Character/ALSPlayerController.h"
 #include "Character/Player/State/PHPlayerState.h"
+
 #include "Components/EquipmentManager.h"
+#include "Components/InventoryManager.h"
+#include "UI/HUD/PHHUD.h"
 
 class APHPlayerState;
 
 APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	EquipmentManager = CreateDefaultSubobject<UEquipmentManager>(TEXT("EquipmentManager"));
+	InventoryManager = CreateDefaultSubobject<UInventoryManager>(TEXT("InventoryManager"));
+	if(!bIsPlayer)
+	{
+		AbilitySystemComponent = CreateDefaultSubobject<UPHAbilitySystemComponent>("Ability System Component");
+		AbilitySystemComponent->SetIsReplicated(true);
+		AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
+		AttributeSet = CreateDefaultSubobject<UPHAttributeSet>("Attribute Set");	
+	}
+}
+
+auto APHBaseCharacter::PossessedBy(AController* NewController) -> void
+{
+	Super::PossessedBy(NewController);
+	InitAbilityActorInfo();
 }
 
 UAbilitySystemComponent* APHBaseCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+int32 APHBaseCharacter::GetPlayerLevel()
+{
+	if(bIsPlayer)
+	{
+		const APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
+		check(LocalPlayerState)
+		return  LocalPlayerState->GetPlayerLevel();
+	}
+
+	return Level;
+	
 }
 
 void APHBaseCharacter::BeginPlay()
@@ -146,16 +178,41 @@ void APHBaseCharacter::StaminaDegen(const float DeltaTime)
 
 void APHBaseCharacter::InitAbilityActorInfo()
 {
+	if (!bIsPlayer)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+		Cast<UPHAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
+	}
+	else
+	{
+		
+		APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
+		check(LocalPlayerState);
+		LocalPlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(LocalPlayerState, this);
+		Cast<UPHAbilitySystemComponent>(LocalPlayerState->GetAbilitySystemComponent())->AbilityActorInfoSet();
+		AbilitySystemComponent = LocalPlayerState->GetAbilitySystemComponent();
+		InitializeDefaultAttributes();
+		AttributeSet = LocalPlayerState->GetAttributeSet();
+
+		if (AALSPlayerController* PHPlayerController = Cast<AALSPlayerController>(GetController()))
+		{
+			if (APHHUD* LocalPHHUD = Cast<APHHUD>(PHPlayerController->GetHUD()))
+			{
+				// Initialize HUD overlay with necessary components
+				LocalPHHUD->InitOverlay(PHPlayerController, GetPlayerState<APHPlayerState>(), AbilitySystemComponent, AttributeSet);
+			}
+		}
+	}
 
 }
 
-void APHBaseCharacter::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const
+void APHBaseCharacter::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float InLevel) const
 {
 	check(IsValid(GetAbilitySystemComponent()));
 	check(GameplayEffectClass);
 	FGameplayEffectContextHandle ContextHandle =  GetAbilitySystemComponent()->MakeEffectContext();
 	ContextHandle.AddSourceObject(this);
-	const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(GameplayEffectClass, Level, ContextHandle);
+	const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(GameplayEffectClass, InLevel, ContextHandle);
 	GetAbilitySystemComponent()->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), GetAbilitySystemComponent());
 }
 

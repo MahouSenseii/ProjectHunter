@@ -25,6 +25,8 @@ public:
 
 	// Constructor for APHBaseCharacter
 	APHBaseCharacter(const FObjectInitializer& ObjectInitializer);
+
+	virtual void PossessedBy(AController* NewController) override;
 	
 	UFUNCTION(BlueprintCallable, Category = "Manager")
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
@@ -32,14 +34,25 @@ public:
 	UFUNCTION(BlueprintCallable)
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Manager")
 	UEquipmentManager* GetEquipmentManager() const { return EquipmentManager;}
+
+	UFUNCTION(BlueprintCallable, Category = "Manager")
+	UInventoryManager* GetInventoryManager(){ return InventoryManager;}
+
+	virtual int32 GetPlayerLevel() override;
 	
 protected:
 
 	virtual void BeginPlay() override;
 
 	virtual bool CanSprint() const override;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Defaults")
+	bool bIsPlayer = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Defaults")
+	int32 Level = 1;
 
 	//TimerHandles
 	FTimerHandle HealthRegenTimer;
@@ -68,33 +81,33 @@ protected:
 
 	virtual void InitAbilityActorInfo();
 	
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "GAS|Attributes")
 	TSubclassOf<UGameplayEffect> DefaultPrimaryAttributes;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "GAS|Attributes")
 	TSubclassOf<UGameplayEffect> DefaultSecondaryCurrentAttributes;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "GAS|Attributes")
 	TSubclassOf<UGameplayEffect> DefaultSecondaryMaxAttributes;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "GAS|Attributes")
 	TSubclassOf<UGameplayEffect> DefaultVitalAttributes;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Vital")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Vital")
 	TSubclassOf<UGameplayEffect> HealthRegenEffect;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Vital")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Vital")
 	TSubclassOf<UGameplayEffect> ManaRegenEffect;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Vital")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Vital")
 	TSubclassOf<UGameplayEffect> StaminaRegenEffect;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Vital")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Vital")
 	TSubclassOf<UGameplayEffect> StaminaDegenEffect;
 	
 	
 	UFUNCTION(BlueprintCallable)
-	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const;
+	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float InLevel) const;
 	
 	void InitializeDefaultAttributes() const;
 	
@@ -102,8 +115,11 @@ protected:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager")
 	TObjectPtr<UEquipmentManager> EquipmentManager;
 
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager")
+	TObjectPtr<UInventoryManager> InventoryManager;
+
 private:
-	
+
 	bool bIsInRecovery = false;
 	float TimeSinceLastRecovery = 0.0;
 };

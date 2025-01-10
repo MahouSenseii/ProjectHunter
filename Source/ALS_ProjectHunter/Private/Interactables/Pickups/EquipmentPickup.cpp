@@ -2,34 +2,44 @@
 
 
 #include "Interactables/Pickups/EquipmentPickup.h"
-
 #include "Components/InteractableManager.h"
 #include "Components/InventoryManager.h"
+#include  "Library/PHItemFunctionLibrary.h"
+#include "Library/FL_InteractUtility.h"
 
 AEquipmentPickup::AEquipmentPickup()
 {
 	
 }
 
-bool AEquipmentPickup::InteractionHandle(AActor* Actor, bool WasHeld) const
+
+bool AEquipmentPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo,
+	FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData,
+	FConsumableItemData ConsumableItemData) const
 {
-	return Super::InteractionHandle(Actor, WasHeld);
+	Super::InteractionHandle(Actor, WasHeld);
+
+	FItemInformation  PassedItemInformation = ItemInfo;
+	FEquippableItemData  PassedEquippableItemData = EquipmentData; // Assuming you have relevant equippable data
+	FWeaponItemData  PassedWeaponItemData = WeaponItemData;
+
+	return Super::HandleInteraction(Actor, WasHeld,   PassedItemInformation,  PassedEquippableItemData,  PassedWeaponItemData, FConsumableItemData());
 }
 
 void AEquipmentPickup::HandleHeldInteraction(APHBaseCharacter* Character) const
 {
 	Super::HandleHeldInteraction(Character);
 
-/*	if (Character->EquipmentManager->IsItemEquippable(ObjItem) && (UFL_InteractUtility::AreRequirementsMet(ObjItem, Character)))
+if (Character->GetEquipmentManager()->IsItemEquippable(ObjItem) && (UFL_InteractUtility::AreRequirementsMet(ObjItem, Character)))
 	{
-		Character->EquipmentManager->TryToEquip(ObjItem, true, ObjItem->ItemInfo.EquipmentSlot);
+		Character->GetEquipmentManager()->TryToEquip(ObjItem, true, ObjItem->GetItemInfo().EquipmentSlot);
 	}
 	else
 	{
 		// Attempt to get the Inventory Manager component from the ALSCharacter
-		if (UInventoryManager* OwnersInventory = Cast<UInventoryManager>(AlsCharacter->GetComponentByClass(UInventoryManager::StaticClass())))
+		if (UInventoryManager* OwnersInventory = Cast<UInventoryManager>(Owner->GetComponentByClass(UInventoryManager::StaticClass())))
 		{
-			// If the Inventory Manager exists, try to add the item to the inventory
+		// If the Inventory Manager exists, try to add the item to the inventory
 			OwnersInventory->TryToAddItemToInventory(ObjItem, true);
 		}
 		else
@@ -37,7 +47,7 @@ void AEquipmentPickup::HandleHeldInteraction(APHBaseCharacter* Character) const
 			UE_LOG(LogTemp, Warning, TEXT("ALSCharacter does not have an UInventoryManager component."));
 		}
 	}
-	InteractableManager->RemoveInteraction();*/
+	InteractableManager->RemoveInteraction();
 }
 
 void AEquipmentPickup::HandleSimpleInteraction(APHBaseCharacter* Character) const
@@ -52,5 +62,4 @@ void AEquipmentPickup::HandleSimpleInteraction(APHBaseCharacter* Character) cons
 		}
 	}
 }
-
 

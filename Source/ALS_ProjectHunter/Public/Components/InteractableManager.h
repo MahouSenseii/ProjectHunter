@@ -68,7 +68,7 @@ public:
 	
 	// On Interaction Start
 	UFUNCTION() void Interaction(AActor* Interactor, bool WasHeld);
-	UFUNCTION() void ClientInteraction(AActor* Interactor, bool WasHeld) const;
+	UFUNCTION() void  ClientInteraction(AActor* Interactor, bool WasHeld) const;
 	UFUNCTION() void AssociatedActorInteraction(AActor* Interactor);
 	UFUNCTION() void CheckForInteractionWithAssociate(AActor* Interactor);
 	UFUNCTION() bool IsTargetInteractableValue();

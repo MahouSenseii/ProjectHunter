@@ -8,7 +8,7 @@
 #include "Interfaces/InteractableObjectInterface.h"
 #include "BaseInteractable.generated.h"
 
-class APHPlayerCharacter;
+class APHBaseCharacter;
 class UInteractableManager;
 class UWidgetComponent;
 
@@ -27,7 +27,6 @@ public:
 	void CheckForActors();
 
 	virtual bool InteractionHandle(AActor* Actor, bool WasHeld) const;
-
 	virtual void BPIInitialize_Implementation() override;
 	virtual void BPIClientStartInteraction_Implementation(AActor* Interactor, bool bIsHeld) override;
 	virtual void BPIClientEndInteraction_Implementation(AActor* Interactor) override;
@@ -106,7 +105,7 @@ protected: // Property Members
 	TSet<UPrimitiveComponent*> MeshSet;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Interaction")
-	TObjectPtr<APHPlayerCharacter> InteractorOwner;
+	TObjectPtr<APHBaseCharacter> InteractorOwner;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Mesh")
 	bool bShouldStaticMeshBeSet = true;

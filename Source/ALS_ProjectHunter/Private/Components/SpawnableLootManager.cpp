@@ -6,6 +6,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Components/SpawnableLootManager.h"
+
+#include "AbilitySystem/PHAttributeSet.h"
 #include "Components/BoxComponent.h"
 #include "Interactables/Pickups/ItemPickup.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -64,7 +66,7 @@ int32 USpawnableLootManager::GenerateDropAmount(UPHAttributeSet* AttributeSet)
 
     // Apply LuckFactor to potentially increase the drop amount further
     LootAmountRoll += FMath::CeilToInt(LootAmountRoll * LuckFactor);
-
+    
     return LootAmountRoll;
 }
 

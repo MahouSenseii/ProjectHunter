@@ -132,7 +132,7 @@ void UInteractableManager::PreInteraction(AActor* Interactor)
 	case EInteractType::Single:
 		if(Interactor->GetClass()->ImplementsInterface(UInteractionProcessInterface::StaticClass()))
 		{
-			IInteractionProcessInterface::Execute_StartInteractionWithObject(Interactor,this);
+			IInteractionProcessInterface::Execute_StartInteractionWithObject(Interactor,this, false);
 		}
 		break;
 	case EInteractType::Holding:
@@ -243,14 +243,13 @@ void UInteractableManager::HoldingInputHandle()
 	{
 		return;  // Failed to cast to APlayerController.
 	}
-	float HeldDownTime = 0.0f;
-	if(const bool IsHolding = GetKeyTimeDown(HeldDownTime))
+	if(float HeldDownTime = 0.0f; GetKeyTimeDown(HeldDownTime))
 	{
 		const float FillValue = (HeldDownTime > MaxKeyTimeDown) ? 0.05f : HeldDownTime;
 		OnUpdateHoldingValue.Broadcast(FillValue);
 		if(HeldDownTime > MaxKeyTimeDown)
 		{
-			IInteractionProcessInterface::Execute_StartInteractionWithObject(RefInteractor, this);
+			IInteractionProcessInterface::Execute_StartInteractionWithObject(RefInteractor, this, true);
 		}
 	}
 	else
@@ -289,7 +288,7 @@ void UInteractableManager::DelayedStartInteraction()
 	if(RefInteractor )
 	{
 		
-		IInteractionProcessInterface::Execute_StartInteractionWithObject(RefInteractor, this);
+		IInteractionProcessInterface::Execute_StartInteractionWithObject(RefInteractor, this, false);
 	}
 }
 
@@ -324,14 +323,14 @@ bool UInteractableManager::MashingInput(float& Value)
 		}
 }
 
-void UInteractableManager::Interaction(AActor* Interactor, bool WasHeld)
+void UInteractableManager:: Interaction(AActor* Interactor, bool WasHeld)
 {
 	RefInteractor = Interactor;
 	AlreadyInteracted = true;
 	if (GetOwner()->GetClass()->ImplementsInterface(UInteractableObjectInterface::StaticClass()))
 	{
 		IInteractableObjectInterface::Execute_BPIInteraction(GetOwner(), Interactor,WasHeld);
-		RemoveInteractionByResponse();
+		//RemoveInteractionByResponse();
 	}
 }
 
@@ -520,7 +519,7 @@ void UInteractableManager::ToggleIsInteractable(const bool bCond)
 }
 
 void UInteractableManager::ToggleInteractionWidget(const bool Condition) const
-{
+{                              
 	if(IsInteractable && IsValid(InteractionWidgetRef))
 	{
 		InteractionWidgetRef->SetVisibility(Condition ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Hidden);

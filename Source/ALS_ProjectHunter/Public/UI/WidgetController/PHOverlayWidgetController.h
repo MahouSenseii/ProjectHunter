@@ -68,7 +68,6 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|XP")
 	FOnAttributeChangeSignature OnXPPercentChangeDelegate;
-
 	
 
 };

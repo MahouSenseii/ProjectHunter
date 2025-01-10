@@ -4,7 +4,7 @@
 #include "Interactables/Chest/BaseChest.h"
 
 #include "AbilitySystem/PHAttributeSet.h"
-#include "Character/Player/PHPlayerCharacter.h"
+#include "Character/PHBaseCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Components/InteractableManager.h"
 #include "Components/SpawnableLootManager.h"
@@ -73,7 +73,7 @@ void ABaseChest::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)
 		if (SpawnableLootManager->SpawnableItems)
 		{
 
-			if (const APHPlayerCharacter* AlsCharacter = Cast<APHPlayerCharacter>(CurrentInteractor))
+			if (const APHBaseCharacter* AlsCharacter = Cast<APHBaseCharacter>(CurrentInteractor))
 			{
 				SpawnableLootManager->GetSpawnItem(Cast<UPHAttributeSet>(AlsCharacter->GetAttributeSet()));
 				InteractableManager->RemoveInteraction();

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Character/AI/PHAICharacter.h"
+#include "Character/PHBaseCharacter.h"
 #include "Library/WidgetEnumLibrary.h"
 #include "UObject/Interface.h"
 #include "WidgetInterface.generated.h"
@@ -29,7 +29,7 @@ public:
 	virtual EWidgets GetActiveWidget(){return EWidgets::AW_None;}
 	virtual void CloseActiveWidget() {};
 	virtual void OpenNewWidget(EWidgets Widget){};
-	virtual void SwitchWidgetTo(const EWidgets NewWidget, APHAICharacter* Vendor) {};
+	virtual void SwitchWidgetTo(const EWidgets NewWidget, APHBaseCharacter* Vendor) {};
 	virtual void SetActiveTab(EWidgets Tab) {};
 	virtual EWidgets GetActiveTab(){return EWidgets::AW_None;}
 	virtual void SwitchTabTo(EWidgets NewTab) {};

@@ -29,11 +29,7 @@ void UPHOverlayWidgetController::BroadcastInitialValues()
 	OnMaxStaminaChange.Broadcast(PHAttributeSet->GetMaxStamina());
 	OnStaminaReservedChange.Broadcast(PHAttributeSet->GetReservedStamina());
 
-	
-	
 
-	
-	
 }
 
 void UPHOverlayWidgetController::BindCallbacksToDependencies()

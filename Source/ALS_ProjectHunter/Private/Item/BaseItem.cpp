@@ -3,12 +3,12 @@
 
 #include "Item/BaseItem.h"
 #include "AbilitySystemBlueprintLibrary.h"
-
+#include "AbilitySystemComponent.h"
 
 
 FIntPoint UBaseItem::GetDimensions()
 {
-	if (Rotated)
+	if (ItemInfos.Rotated)
 	{
 		// Return reversed dimensions if Rotated is true
 		return FIntPoint(ItemInfos.Dimensions.Y, ItemInfos.Dimensions.X);
@@ -21,7 +21,7 @@ FIntPoint UBaseItem::GetDimensions()
 
 UMaterialInstance* UBaseItem::GetIcon()
 {
-	if (Rotated)
+	if (ItemInfos.Rotated)
 	{
 		// Return rotated image if available; otherwise, return original image
 		return ItemInfos.ItemImageRotated ? ItemInfos.ItemImageRotated : ItemInfos.ItemImage;

@@ -24,8 +24,8 @@ class ALS_PROJECTHUNTER_API IInteractionProcessInterface
 public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
-	void StartInteractionWithObject(UInteractableManager* Interactable);
-	virtual void StartInteractionWithObject_Implementation(UInteractableManager* Interactable) {};
+	void StartInteractionWithObject(UInteractableManager* Interactable, bool WasHeld);
+	virtual void StartInteractionWithObject_Implementation(UInteractableManager* Interactable, bool WasHeld) {};
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
 	void EndInteractionWithObject(UInteractableManager* Interactable);

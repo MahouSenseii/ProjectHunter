@@ -54,7 +54,7 @@ enum class EEquipmentSlot : uint8
 	ES_Ring UMETA(DisplayName = "Ring"),
 	ES_Flask UMETA(DisplayName = "Flask"),
 	ES_Belt  UMETA(DisplayName = "Belt"),
-
+	ES_Cloak UMETA(DisplayName = "Cloak"),
 };
 
 UENUM(BlueprintType)
@@ -99,6 +99,13 @@ enum class ECurrentItemSlot : uint8
 	CIS_Ring1 UMETA(DisplayName = "Ring 1"),
 	CIS_Ring2 UMETA(DisplayName = "Ring 2"),
 	CIS_Ring3 UMETA(DisplayName = "Ring 3"),
+	CIS_Ring4 UMETA(DisplayName = "Ring 4"),
+	CIS_Ring5 UMETA(DisplayName = "Ring 5"),
+	CIS_Ring6 UMETA(DisplayName = "Ring 6"),
+	CIS_Ring7 UMETA(DisplayName = "Ring 7"),
+	CIS_Ring8 UMETA(DisplayName = "Ring 8"),
+	CIS_Ring9 UMETA(DisplayName = "Ring 9"),
+	CIS_Ring10 UMETA(DisplayName = "Ring 10"),
 	CIS_Flask UMETA(DisplayName = "Flask"),
 	CIS_Belt  UMETA(DisplayName = "Belt")
 };
@@ -120,4 +127,54 @@ enum class EItemStats : uint8
 	IS_StaminaCost UMETA(DisplayName = "Stamina Cost"),
 };
 
+
+UENUM(BlueprintType)
+enum class EItemRequiredStatsCategory : uint8
+{
+	ISC_None UMETA(DisplayName = "None"),
+	ISC_RequiredStrength UMETA(DisplayName = "Required Strength"),
+	ISC_RequiredDexterity UMETA(DisplayName = "Required Dexterity"),
+	ISC_RequiredIntelligence UMETA(DisplayName = "Required Intelligence"),
+	ISC_RequiredEndurance UMETA(DisplayName = "Required Endurance"),
+	ISC_RequiredAffliction UMETA(DisplayName = "Required Affliction"),
+	ISC_RequiredLuck UMETA(DisplayName = "Required Luck"),
+	ISC_RequiredCovenant UMETA(DisplayName = "Required Covenant"),
+
+};
+
+UENUM(BlueprintType)
+enum class EDefenseTypes : uint8
+{
+	DT_None UMETA(Display = "None"),
+	DT_Armor UMETA(Display = "Armor"),
+	DT_ManaShield UMETA(Display = "Mana Shield"),
+	DT_BlockReduction UMETA(Display = "Block Reduction"),
+
+	// Elemental Resistances
+	DT_DarkResistance UMETA(DisplayName = "Dark Resistance"),
+	DT_EarthResistance UMETA(DisplayName = "Earth Resistance"),
+	DT_FireResistance UMETA(DisplayName = "Fire Resistance"),
+	DT_IceResistance UMETA(DisplayName = "Ice Resistance"),
+	DT_LightResistance UMETA(DisplayName = "Light Resistance"),
+	DT_LightningResistance UMETA(DisplayName = "Lightning Resistance"),
+	DT_PoisonResistance UMETA(DisplayName = "Poison Resistance"),
+	DT_WindResistance UMETA(DisplayName = "Wind Resistance"),
+
+};
+
+
+UENUM(BlueprintType)
+enum class EDamageTypes : uint8
+{
+	DT_None UMETA(DisplayName = "None"),
+	DT_Dark UMETA(DisplayName = "Dark"),
+	DT_Earth UMETA(DisplayName = "Earth"),
+	DT_Fire UMETA(DisplayName = "Fire"),
+	DT_Ice UMETA(DisplayName = "Ice"),
+	DT_Light UMETA(DisplayName = "Light"),
+	DT_Lightning UMETA(DisplayName = "Lightning"),
+	DT_Poison UMETA(DisplayName = "Poison"),
+	DT_Wind UMETA(DisplayName = "Wind"),
+	DT_Physical UMETA(DisplayName = "Physical")
+};
 

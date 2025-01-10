@@ -26,7 +26,14 @@ public:
 	void SetItemInfo(FItemInformation Info);
 		
 	void SetOwningCharacter(AALSBaseCharacter* InOwner) { OwningCharacter = InOwner; }
-	
+
+	UFUNCTION(BlueprintCallable)
+	FItemInformation GetItemInfo() { return  ItemInfo;}
+
+	UFUNCTION(BlueprintCallable)
+	void SetItemInfoRotated(bool inBool);
+
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -53,6 +60,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Collison")
 	TArray<AActor*> CurrentActorHit;
 
+
+	// Function to set the mesh
+	void SetMesh(UStaticMesh* Mesh) const;
+	
 protected:
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Stats")

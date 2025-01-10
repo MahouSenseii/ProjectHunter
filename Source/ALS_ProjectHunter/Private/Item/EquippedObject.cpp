@@ -40,6 +40,9 @@ void AEquippedObject::SetItemInfo(FItemInformation Info)
 	ItemInfo = Info;
 }
 
+void AEquippedObject::SetItemInfoRotated(bool inBool)
+{ ItemInfo.Rotated = inBool; }
+
 // Called when the game starts or when spawned
 void AEquippedObject::BeginPlay()
 {
@@ -52,3 +55,12 @@ void AEquippedObject::BeginPlay()
 	}
 	
 }
+
+void AEquippedObject::SetMesh(UStaticMesh* Mesh) const
+{
+	if(StaticMesh)
+	{
+		StaticMesh->SetStaticMesh(Mesh);
+	}
+}
+

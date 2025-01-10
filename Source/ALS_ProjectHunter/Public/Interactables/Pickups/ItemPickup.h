@@ -43,10 +43,13 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ItemInfomation")
 	mutable UBaseItem* ObjItem;
 
+	virtual void BPIInteraction_Implementation(AActor* Interactor, bool WasHeld) override;
+	
 	UFUNCTION(BlueprintCallable)
 	virtual UBaseItem* GenerateItem() const;
 
-	virtual bool InteractionHandle(AActor* Actor, bool WasHeld) const override;
+	virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo,
+		FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData, FConsumableItemData ConsumableItemData) const;
 
 	UFUNCTION(BlueprintCallable)
 	virtual void HandleHeldInteraction(APHBaseCharacter* Character) const;

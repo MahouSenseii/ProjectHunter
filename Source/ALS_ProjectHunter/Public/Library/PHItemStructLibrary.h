@@ -13,6 +13,7 @@ class AEquippableItem;
 class APickup;
 class AConsumablePickup;
 class AEquippedObject;
+class AWeaponPickup;
 
 
 
@@ -53,12 +54,30 @@ struct FConsumableItemData
 };
 
 USTRUCT(BlueprintType)
+struct FMinMax
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
+	float Min;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
+	float Max;
+
+	FMinMax()
+		:Min(0),
+		Max(0)
+	{}
+	
+};
+
+USTRUCT(BlueprintType)
 struct FWeaponItemData
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	TSubclassOf<AConsumablePickup> PickupClass;
+	TSubclassOf<AWeaponPickup> PickupClass;
 
 	// Properties specific to weapons
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
@@ -69,6 +88,12 @@ struct FWeaponItemData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	FCollisionInfo CollisionInfo; // Information related to the item's collision behavior
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	TMap<EDamageTypes, FMinMax> DamageStats;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	TMap<EItemRequiredStatsCategory, float> WeaponRequirementStats;
 
 	FWeaponItemData(): WeaponHandle(EWeaponHandle::WH_None),
 	OverlayState(EALSOverlayState::Default),
@@ -88,6 +113,11 @@ struct FEquippableItemData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	EEquipmentSlot  EquipSlot;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	TMap<EDefenseTypes, float> DefenseStats;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	TMap<EItemStats, float>OverallStats;
 	
 	FEquippableItemData(): EquipSlot()
 	{
@@ -151,16 +181,30 @@ struct FItemInformation : public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Inventory")
 	FIntPoint Dimensions; // The dimensions of the item, e.g., in a grid-based inventory system
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Inventory")
+	EEquipmentSlot EquipmentSlot;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Text")
 	FText ItemDescription;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Inventory")
 	bool Stackable; // Indicates whether the item can be stacked in the inventory
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Inventory")
+	int Quantity;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Inventory")
+	bool Rotated;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Inventory")
+	ECurrentItemSlot LastSavedSlot;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Transform")
+	FTransform Transform;
 
 	// Properties specific to consumable items
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Consumable")
 	TSubclassOf<UGameplayEffect> GameplayEffectClass;
 	
 	FItemInformation()
@@ -180,30 +224,20 @@ struct FItemInformation : public FTableRowBase
 		  ValueModifier(0.0f),
 		  IsTradeable(false),
 		  Dimensions(FIntPoint::ZeroValue),
+		  EquipmentSlot(EEquipmentSlot::ES_None),
 		  ItemDescription(FText::FromString("")),
 		  Stackable(false),
+		  Quantity(0),
+		  Rotated(false),
+		  LastSavedSlot(ECurrentItemSlot::CIS_None),
+		  Transform(),
 		  GameplayEffectClass(nullptr)
-	{}
+	{
+	}
 };
 
 
-USTRUCT(BlueprintType)
-struct FMinMax
-{
-	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float Min;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float Max;
-
-	FMinMax()
-		:Min(0),
-		Max(0)
-	{}
-	
-};
 
 USTRUCT(BlueprintType)
 struct FDropTable : public FTableRowBase
