@@ -49,15 +49,18 @@ protected:
 
 public:	
 
-	UFUNCTION(BlueprintCallable, Category = "Interaction") UInteractableManager* GetCurrentInteractable() const { return CurrentInteractable; }
+	UFUNCTION(BlueprintCallable, Category = "Interaction")
+	UInteractableManager* GetCurrentInteractable() const { return CurrentInteractable; }
 
 	// Update the current interaction
 	UFUNCTION(BlueprintCallable, Category = "InteractionControl") void UpdateInteraction();
 
 	// Set the current interaction
-	UFUNCTION(BlueprintCallable, Category = "InteractionControl") void SetCurrentInteraction(UInteractableManager* NewInteractable);
+	UFUNCTION(BlueprintCallable, Category = "InteractionControl")
+	void SetCurrentInteraction(UInteractableManager* NewInteractable);
 
-	UFUNCTION(BlueprintCallable, Category = "Interaction") void AddInteraction(UInteractableManager* Interactable);
+	UFUNCTION(BlueprintCallable, Category = "Interaction")
+	void AddInteraction(UInteractableManager* Interactable);
 
 	// Find the maximum value in a float array and its index
 	/// Finds the maximum value in a given float array and its corresponding index

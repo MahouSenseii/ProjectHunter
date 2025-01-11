@@ -49,7 +49,7 @@ public:
 	virtual UBaseItem* GenerateItem() const;
 
 	virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo,
-		FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData, FConsumableItemData ConsumableItemData) const;
+	FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData, FConsumableItemData ConsumableItemData) const;
 
 	UFUNCTION(BlueprintCallable)
 	virtual void HandleHeldInteraction(APHBaseCharacter* Character) const;

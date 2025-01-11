@@ -26,7 +26,7 @@ protected:
 
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	TObjectPtr<UPHUserWidget> OverlayWidget;
 
 private:
