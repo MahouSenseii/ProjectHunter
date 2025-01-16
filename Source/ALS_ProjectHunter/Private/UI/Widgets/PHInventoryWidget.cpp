@@ -34,6 +34,7 @@ bool UPHInventoryWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDr
 	if (Owner && GetInventoryManager())
 	{
 		UBaseItem* DroppedItem = Cast<UBaseItem>(InOperation->Payload);
+		
 		GetInventoryManager()->DropItemInInventory(DroppedItem);
 		return  true;
 	}

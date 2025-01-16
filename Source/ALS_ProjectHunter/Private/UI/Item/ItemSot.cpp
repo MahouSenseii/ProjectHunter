@@ -6,17 +6,39 @@
 #include "Blueprint/DragDropOperation.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
+#include "Character/Player/PHPlayerCharacter.h"
 #include "Components/CanvasPanel.h"
 #include "Components/InventoryManager.h"
 #include "Item/EquippedObject.h"
 #include "Library/PHItemFunctionLibrary.h"
 #include "UI/Item/ItemWidget.h"
+#include "UI/Widgets/PHInventoryWidget.h"
 #include "Util/ColorConstants.h"
 
 void UItemSot::NativeConstruct()
 {
 	Super::NativeConstruct();
-	Refresh();
+	//get owner to add equipment manager 
+	APHBaseCharacter* Owner = Cast<APHBaseCharacter>(GetOwningPlayerPawn());
+	if(!Owner)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Owner not set. : Itemslot line 24"));
+	}
+	else
+	{
+		// added equipment manager
+		Equipment = Owner->GetEquipmentManager();
+		Inventory = Owner->GetInventoryManager();
+		Refresh();
+	}
+	if(EquipmentSlot!= EEquipmentSlot::ES_None)
+	{
+		SlotData.EquipmentSlot = EquipmentSlot;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Equipment slot not set please set in BP_Inventory"));
+	}
 }
 
 void UItemSot::NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
@@ -55,25 +77,11 @@ bool UItemSot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& I
 		FItemInformation TempItemInformation = CastedItem->GetItemInfo();
     	TempItemInformation.Rotated = true;
     	CastedItem->SetItemInfo(TempItemInformation);
+    	if(ItemWidgetClass)
+    	{
+    		CreateChildContent();
+    	}
     	
-        // Create the item widget if it doesn't exist
-        ChildContent = CreateWidget<UItemWidget>(GetOwningPlayer(), ItemWidgetClass);
-        if (ChildContent)
-        {
-            // Add dynamic delegate for removing items
-            ChildContent->OnRemoved.AddDynamic(this, &UItemSot::RemoveItem);
-            CanvasPanel->AddChild(ChildContent);
-
-            // Set up the position and size of the widget in the canvas
-            if (UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(ChildContent))
-            {
-                const FVector2D InSize(50.0f, 50.0f);    // Set to desired item size
-                const FVector2D InPosition(55.0f, 55.0f); // Set to desired position
-
-                CanvasSlot->SetSize(InSize);
-                CanvasSlot->SetPosition(InPosition);
-            }
-
             // Try equipping the item
             Equipment->TryToEquip(CastedItem, true, EquipmentSlot);
 
@@ -82,7 +90,7 @@ bool UItemSot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& I
             {
                 Item_Button->SetBackgroundColor(FLinearColor::White);
             }
-        }
+        
     }
     else
     {
@@ -95,7 +103,7 @@ bool UItemSot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& I
             Item_Button->SetBackgroundColor(FLinearColor::White);
         }
     }
-
+	this->Refresh();
     // Drop handled successfully, no need to call Super::NativeOnDrop
     return true;
 }
@@ -118,13 +126,14 @@ bool UItemSot::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEven
 
 	if (UPHItemFunctionLibrary::AreItemSlotsEqual(AsItemObj->GetItemInfo(), SlotData))
 	{
-		// Set color to red-ish with slight transparency to indicate item can be placed
-		Color = FLinearColor(1.0f, 0.027752f, 0.0f, 0.25f);
+		// Set color to green-ish with slight transparency to indicate item can be placed
+		Color = FLinearColor(0.0f, 1.0f, 0.080762f, 0.25f);
 	}
 	else
 	{
-		// Set color to green-ish with slight transparency to indicate item cannot be placed
-		Color = FLinearColor(0.0f, 1.0f, 0.080762f, 0.25f);
+		// Set color to red-ish with slight transparency to indicate item cannot be placed
+		FLinearColor(1.0f, 0.0f, 0.0f, 0.60f);
+
 	}
 
 	// Set button background color
@@ -153,33 +162,40 @@ void UItemSot::Refresh()
 		return; // Exit early if any essential component is missing
 	}
 	
+	CreateChildContent();
+}
+
+void UItemSot::CreateChildContent()
+{
 	if (UBaseItem** pRetrievedItem = Equipment->EquipmentData.Find(EquipmentSlot))
 	{
 		if (*pRetrievedItem)
 		{
 			UBaseItem* RetrievedItem = *pRetrievedItem;
-			RetrievedItem->SetRotated(true);
+			RetrievedItem->SetRotated(false);
 
 			if (UItemWidget* CreatedWidget = CreateWidget<UItemWidget>(GetOwningPlayer(), ItemWidgetClass))
 			{
-				CreatedWidget->TileSize = 10.0f;
+				CreatedWidget->TileSize = 25.0f;
+				CreatedWidget->SetAnchorsInViewport(FAnchors(1,1));
 				CreatedWidget->ItemObject = RetrievedItem;
 				CreatedWidget->OwnerInventory = Inventory;
 				CreatedWidget->OnRemoved.AddDynamic(this, &UItemSot::RemoveItem);
+				
 
 				CanvasPanel->AddChild(CreatedWidget);
-
+		
 				if (UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(CreatedWidget))
 				{
-					const FVector2D InSize(50.0f, 50.0f); // Set to desired size
-					const FVector2D InPosition(55.0f, 55.0f); // Set to desired position
+					const FVector2D InSize(100.0f, 100.0f); // Set to desired size
+					const FVector2D InPosition(1.0f, 1.0f); // Set to desired position
 
 					CanvasSlot->SetSize(InSize);
 					CanvasSlot->SetPosition(InPosition);
 				}
 			}
 
-			Equipment->TryToEquip(RetrievedItem, true, EquipmentSlot);
+			//Equipment->TryToEquip(RetrievedItem, true, EquipmentSlot);
 
 			if (Item_Button)
 			{
@@ -256,4 +272,9 @@ void UItemSot::RemoveItem(UBaseItem* Item)
 	{
 		Equipment->RemoveEquippedItem(Item, EquipmentSlot);
 	}
+}
+
+void UItemSot::SetEquipmentManager(UEquipmentManager* InEquipmentManager)
+{
+	Equipment = InEquipmentManager;
 }

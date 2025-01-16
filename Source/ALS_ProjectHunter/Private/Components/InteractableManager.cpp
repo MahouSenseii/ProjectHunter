@@ -18,7 +18,20 @@ class UEnhancedInputLocalPlayerSubsystem;
 UInteractableManager::UInteractableManager()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	SetIsReplicatedByDefault(true); 
+	SetIsReplicatedByDefault(true);
+
+	static ConstructorHelpers::FClassFinder<UInteractableWidget> WidgetFinder(
+	TEXT("/Game/PeojectHunter/UI/PopUps/WBP_InteractableWidget")
+);
+
+	if (WidgetFinder.Succeeded())
+	{
+		WidgetClass = WidgetFinder.Class;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to find widget class at the specified path."));
+	}
 }
 
 void UInteractableManager::BeginPlay()
@@ -153,10 +166,10 @@ void UInteractableManager::DurationPress(AActor* Interactor)
 	{
 		World->GetTimerManager().SetTimer(KeyDownTimer, this, &UInteractableManager::IsKeyDown, 0.05f, true);
 	}
-	// Define a default key to check for the interaction if not set already.
+	
 	if (!PressedInteractionKey.IsValid())
 	{
-		PressedInteractionKey = EKeys::E; // Use the FKey representation for the default key.
+		PressedInteractionKey = EKeys::E; // replace this later to use variable not set key .
 	}
 
 	// Attempt to update the PressedInteractionKey if a specific action is detected.

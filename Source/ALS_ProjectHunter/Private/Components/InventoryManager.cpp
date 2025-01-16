@@ -4,6 +4,7 @@
 #include "Components/InventoryManager.h"
 
 #include "CharacterMovementComponentAsync.h"
+#include "Components/InteractableManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Interactables/Pickups/ConsumablePickup.h"
 #include "Interactables/Pickups/ItemPickup.h"
@@ -219,7 +220,10 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
     };
 
     // Spawn the pickup actor based on the item type
-    AItemPickup* CreatedPickup;
+    AItemPickup* CreatedPickup = nullptr;
+
+
+	
     switch (Item->GetItemInfo().ItemType)
     {
     case EItemType::IS_Weapon:
@@ -247,6 +251,7 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
         break;
     default:
         CreatedPickup = World->SpawnActor<AItemPickup>(Item->GetItemInfo().PickupClass, DropLocation, DropRotation, SpawnParams);
+
         break;
     }
 

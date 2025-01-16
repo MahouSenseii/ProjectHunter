@@ -8,6 +8,7 @@
 #include "Item/BaseItem.h"
 #include "InventoryManager.generated.h"
 
+class UInteractableWidget;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGemsChanged);
 
@@ -45,6 +46,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FString GetID() { return InventoryID;}
+
+	UFUNCTION(BlueprintCallable)
+	int32 GetTileSize() { return TileSize;}
 
 	// Components and references
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
@@ -87,7 +91,6 @@ protected:
 	UFUNCTION()
 	FVector GetSpawnLocation() const;
 
-
 public:
 	
 
@@ -112,6 +115,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Remove")
 	bool DropItemInInventory(UBaseItem* Item);
+	
 
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	bool GetItemAtTile(int32 Index, UBaseItem*& RetrievedItem);
@@ -156,6 +160,7 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Shop")
 	FVector2D MinMaxLootAmount;
+
 
 	// Gems
 

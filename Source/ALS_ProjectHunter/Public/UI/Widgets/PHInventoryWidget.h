@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/PHBaseCharacter.h"
+#include "UI/InteractableWidget.h"
 #include "UI/Widgets/PHUserWidget.h"
 #include "PHInventoryWidget.generated.h"
 
@@ -43,5 +44,8 @@ public:
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
 	UInventoryGrid* InventoryGrid;
-
+	
+	UPROPERTY(BlueprintReadWrite)
+	UEquipmentManager* EquipmentManager;
+	
 };

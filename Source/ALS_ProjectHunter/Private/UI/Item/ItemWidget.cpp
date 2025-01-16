@@ -91,8 +91,15 @@ void UItemWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
 
 void UItemWidget::InitializeComponents()
 {
-    BtnItem->OnHovered.AddDynamic(this, &UItemWidget::EventHovered);
-    BtnItem->OnUnhovered.AddDynamic(this, &UItemWidget::EventMouseUnHovered);
+    if (!BtnItem->OnHovered.IsAlreadyBound(this, &UItemWidget::EventHovered))
+    {
+        BtnItem->OnHovered.AddDynamic(this, &UItemWidget::EventHovered);
+    }
+    
+    if (!BtnItem->OnUnhovered.IsAlreadyBound(this, &UItemWidget::EventMouseUnHovered))
+    {
+        BtnItem->OnUnhovered.AddDynamic(this, &UItemWidget::EventMouseUnHovered);
+    }
 }
 FSlateBrush UItemWidget::GetIcon() const
 {

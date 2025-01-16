@@ -104,6 +104,7 @@ void UEquipmentManager::HandleHasMesh(UBaseItem* Item, EEquipmentSlot Slot)
 		// Attach the new item to the character and update the mesh.
 		if(const UEquippableItem* EquipItem = Cast<UEquippableItem>(Item))
 		{
+			Item->SetRotated(false);
 			AttachItem(EquipItem->GetEquippableData().EquipClass, Item, Slot);
 		}
 		else

@@ -30,6 +30,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool IsRotated() const { return ItemInfos.Rotated; }
 
+	
 	/** Toggles the rotation state of the item */
 	UFUNCTION(BlueprintCallable)
 	void Rotate() { ItemInfos.Rotated = !ItemInfos.Rotated; }

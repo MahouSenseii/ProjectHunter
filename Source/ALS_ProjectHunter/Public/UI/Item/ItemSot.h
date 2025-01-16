@@ -67,6 +67,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Utility")
 	void Refresh();
 
+	void CreateChildContent();
+
 	UFUNCTION(BlueprintCallable, Category = "Getter")
 	FSlateBrush GetItemImageBrush();
 
@@ -76,9 +78,15 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintGetter, Category = "Getter")
 	UEquipmentManager* GetEquipmentManager() {return  Equipment; }
 
+	UFUNCTION(BlueprintCallable, BlueprintSetter, Category = "Setter")
+	void SetEquipmentManager(UEquipmentManager* InEquipmentManager);
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
 	UCanvasPanel* CanvasPanel;
 
+	//UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
+	//UItemWidget* ItemWidget;
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	UItemWidget* ChildContent;
 

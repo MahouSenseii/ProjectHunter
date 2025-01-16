@@ -22,7 +22,7 @@ bool AEquipmentPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInfor
 	FItemInformation  PassedItemInformation = ItemInfo;
 	FEquippableItemData  PassedEquippableItemData = EquipmentData; // Assuming you have relevant equippable data
 	FWeaponItemData  PassedWeaponItemData = WeaponItemData;
-
+	
 	return Super::HandleInteraction(Actor, WasHeld,   PassedItemInformation,  PassedEquippableItemData,  PassedWeaponItemData, FConsumableItemData());
 }
 

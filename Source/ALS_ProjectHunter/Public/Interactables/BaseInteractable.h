@@ -42,7 +42,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetSkeletalMesh(USkeletalMesh* InMesh) { SkeletalMesh->SetSkinnedAssetAndUpdate(InMesh); }
+	
 
+	UInteractableManager* GetInteractableManager(){return InteractableManager;}
+	
 	// Initialization Functions
 	void SetupMeshVisibility() const;
 	void SetupOverlapEvents();
@@ -61,8 +64,8 @@ protected:
 
 	UFUNCTION()
 	void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-	
 
+	
 	// Validation Functions
 	void ValidateComponents() const;
 	
