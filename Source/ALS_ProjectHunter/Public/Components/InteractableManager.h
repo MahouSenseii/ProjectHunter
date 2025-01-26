@@ -47,7 +47,7 @@ public:
 	//Before Interaction  Start 
 	// Set up references for interactable components
 
-	UFUNCTION() void SetupInteractableReferences(USphereComponent*& InInteractableArea, UWidgetComponent*& InInteractionWidget, const TSet<UPrimitiveComponent*>& InHighlightableObject);
+	UFUNCTION(BlueprintCallable) void SetupInteractableReferences(USphereComponent* InInteractableArea, UWidgetComponent* InInteractionWidget, const TSet<UPrimitiveComponent*> InHighlightableObject);
 	UFUNCTION() void SetupHighlightableObjects(TSet<UPrimitiveComponent*> InHighlightableObject);
 	UFUNCTION(BlueprintCallable) void ToggleHighlight(bool Highlight, AActor* Interactor);
 	UFUNCTION() void SetWidgetLocalOwner(APlayerController* OwnerPlayerController);
@@ -96,7 +96,10 @@ public:
 
 	UFUNCTION(BlueprintCallable) void SetHasInteracted(const bool bValue) {DoOnce = bValue;}
 
-		
+	UFUNCTION(BlueprintCallable) void SetInteractionText(const FText  NewText) { InteractionText = NewText;}
+	UFUNCTION(BlueprintCallable) void SetInteractionType(const EInteractType  InInteractType) {  InputType = InInteractType;}
+	UFUNCTION(BlueprintCallable) void SetInteractableResponse(const EInteractableResponseType InInteractableResponse) { InteractableResponse = InInteractableResponse;}
+	UFUNCTION(BlueprintCallable) void SetIsDestroyable(bool InResponse) {DestroyAfterInteract = InResponse;}
 private:
 	UFUNCTION() void RemoveInteractionByResponse();
 	UFUNCTION() void DecreaseMashingProgress();
@@ -113,10 +116,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere) // Must set
 	UInputAction* ActionToCheckForInteract;
 	
-	UPROPERTY(BlueprintReadOnly, Category = "Components")
+	UPROPERTY(BlueprintReadWrite, Category = "Components")
 	USphereComponent* InteractableArea;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Components")
+	UPROPERTY(BlueprintReadWrite, Category = "Components")
 	UWidgetComponent* InteractionWidget;
 
 	// is object interactable.
@@ -138,7 +141,7 @@ public:
 	FName InteractableTag = "Interactable";
 
 	// An array holding references to primitive components that should be highlighted during gameplay.
-	UPROPERTY(BlueprintReadOnly, Category = "Interaction")
+	UPROPERTY(BlueprintReadWrite, Category = "Interaction")
 	TArray<UPrimitiveComponent*> ObjectsToHighlight;
 
 	// A map holding references to actors that should associated with the main interactable object.

@@ -7,6 +7,7 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayEffectExtension.h"
 #include "Library/AttributeStructsLibrary.h"
+#include "Library/PHCharacterEnumLibrary.h"
 #include "PHAttributeSet.generated.h"
 
 
@@ -15,6 +16,8 @@
 	GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangeSignature, float, NewValue);
 
 template<class T>
 using TStaticFuncPtr = TBaseStaticDelegateInstance<FGameplayAttribute(), FDefaultTSDelegateUserPolicy>::FFuncPtr;
@@ -32,6 +35,16 @@ public:
 	UPHAttributeSet();
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	UFUNCTION(BlueprintCallable, Category = "Combat Alignment")
+	ECombatAlignment GetCombatAlignmentBP() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Combat Alignment")
+	void SetCombatAlignmentBP(ECombatAlignment NewAlignment);
+
+	UPROPERTY(BlueprintAssignable, Category = "Combat Alignment")
+	FOnAttributeChangeSignature OnCombatAlignmentChange;
+	
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
@@ -39,7 +52,15 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	TMap<FGameplayTag, FGameplayTag> TagsMinMax;
-	
+
+
+	/*
+	 *Combat Indecatorss 
+	 */
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat Alignment", ReplicatedUsing = OnRep_CombatAlignment)
+	FGameplayAttributeData CombatAlignment;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, CombatAlignment)
  
 	/*
 	 * Primary Attributes 
@@ -227,7 +248,13 @@ public:
 	 * Meta Attributes
 	 */
 
-	
+	/*
+	 *Combat Indicators
+	 */
+
+	UFUNCTION()
+	void OnRep_CombatAlignment(const FGameplayAttributeData& OldCombatAlignment) const;
+
 	
 	// Health 
 	UFUNCTION()
@@ -360,5 +387,6 @@ public:
 
 private:
 	static void SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props);
+	
 	void SetAttributeValue(const FGameplayAttribute& Attribute, float NewValue);
 };

@@ -3,10 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystem/PHAttributeSet.h"
 #include "UI/WidgetController/PHWidgetController.h"
 #include "PHOverlayWidgetController.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangeSignature, float, NewValue);
 
 /**
  * 

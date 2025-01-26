@@ -85,8 +85,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "InteractionControl") bool ShouldUpdateInteraction();
 
 	UFUNCTION(BlueprintGetter) TArray<UInteractableManager*> GetInteractableList() const { return InteractableList; }
-	UFUNCTION() void AddToInteractionList(UInteractableManager* InInteractable);
-	UFUNCTION() void RemoveFromInteractionList(UInteractableManager* InInteractable);
+	UFUNCTION(BlueprintCallable) void AddToInteractionList(UInteractableManager* InInteractable);
+	UFUNCTION(BlueprintCallable) void RemoveFromInteractionList(UInteractableManager* InInteractable);
 	
 		
 };

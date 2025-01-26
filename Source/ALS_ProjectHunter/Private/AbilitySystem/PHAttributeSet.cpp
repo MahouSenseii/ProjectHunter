@@ -6,6 +6,7 @@
 #include "GameplayEffectExtension.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Library/PHCharacterEnumLibrary.h"
 #include "PHGameplayTags.h"
 #include "Net/UnrealNetwork.h"
 
@@ -89,9 +90,14 @@ UPHAttributeSet::UPHAttributeSet()
 	
 }
 
+
+
 void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	//Indicators
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CombatAlignment, COND_None, REPNOTIFY_Always);
 
 	// Primary Attribute
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Strength, COND_None, REPNOTIFY_Always);
@@ -136,6 +142,14 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedStamina, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PercentageReservedStamina, COND_None, REPNOTIFY_Always);
 
+	//Utilities
+	/*DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AttackRange, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaximumLife, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaximumMana, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, GlobalDefences, COND_None, REPNOTIFY_Always);*/
+	
+	
+
 
 	//Secondary Current Attribute
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Health, COND_None, REPNOTIFY_Always);
@@ -145,6 +159,24 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Gems, COND_None, REPNOTIFY_Always);
 	
+}
+
+// for use in BP will show enum not float values 
+ECombatAlignment UPHAttributeSet::GetCombatAlignmentBP() const
+{
+	// Convert the float value stored in CombatAlignment to the ECombatAlignment enum
+	return static_cast<ECombatAlignment>(CombatAlignment.GetCurrentValue());
+}
+
+
+// for use in BP will show enum not float values 
+void UPHAttributeSet::SetCombatAlignmentBP(ECombatAlignment NewAlignment)
+{
+	// Set the CombatAlignment value using the float representation of the enum
+	SetCombatAlignment(static_cast<float>(NewAlignment));
+
+	// Broadcast the change
+	OnCombatAlignmentChange.Broadcast(static_cast<float>(NewAlignment));
 }
 
 void UPHAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -235,6 +267,15 @@ void UPHAttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData& 
 		Props.TargetCharacter = Cast<ACharacter>(Props.TargetAvatarActor);
 		Props.TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Props.TargetAvatarActor);
 	}
+}
+
+//
+void UPHAttributeSet::OnRep_CombatAlignment(const FGameplayAttributeData& OldCombatAlignment) const
+{
+	// Notify listeners of the attribute change
+	OnCombatAlignmentChange.Broadcast(GetCombatAlignment());
+	
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet, CombatAlignment, OldCombatAlignment);
 }
 
 //Health

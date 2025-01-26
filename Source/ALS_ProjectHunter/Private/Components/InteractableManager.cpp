@@ -20,9 +20,7 @@ UInteractableManager::UInteractableManager()
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
 
-	static ConstructorHelpers::FClassFinder<UInteractableWidget> WidgetFinder(
-	TEXT("/Game/PeojectHunter/UI/PopUps/WBP_InteractableWidget")
-);
+	static ConstructorHelpers::FClassFinder<UInteractableWidget> WidgetFinder(TEXT("/Game/PeojectHunter/UI/PopUps/WBP_InteractableWidget"));
 
 	if (WidgetFinder.Succeeded())
 	{
@@ -60,13 +58,17 @@ void UInteractableManager::Initialize()
 	}
 }
 
-void UInteractableManager::SetupInteractableReferences(USphereComponent*& InInteractableArea,UWidgetComponent*& InInteractionWidget, const TSet<UPrimitiveComponent*>& InHighlightableObject)
+void UInteractableManager::SetupInteractableReferences(USphereComponent* InInteractableArea,UWidgetComponent* InInteractionWidget, const TSet<UPrimitiveComponent*> InHighlightableObject)
 {
 	if (!IsValid(InInteractableArea) || !IsValid(InInteractionWidget) || InHighlightableObject.Num() == 0)
 	{UE_LOG(LogTemp, Error, TEXT("One or more input parameters are null or empty.")); return;}
 
 	InteractableArea = InInteractableArea;
-	InteractionWidget = InInteractionWidget;
+	if(InInteractionWidget)
+	{
+		InteractionWidget = InInteractionWidget;
+	}
+	
 	SetupHighlightableObjects(InHighlightableObject);
 }
 
