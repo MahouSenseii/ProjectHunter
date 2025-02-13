@@ -206,6 +206,11 @@ struct FItemInformation : public FTableRowBase
 	// Properties specific to consumable items
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Consumable")
 	TSubclassOf<UGameplayEffect> GameplayEffectClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Consumable")
+	bool bHasNameBeenGenerated;
+	
+	
 	
 	FItemInformation()
 		: BaseGradeValue(0),
@@ -231,9 +236,9 @@ struct FItemInformation : public FTableRowBase
 		  Rotated(false),
 		  LastSavedSlot(ECurrentItemSlot::CIS_None),
 		  Transform(),
-		  GameplayEffectClass(nullptr)
-	{
-	}
+		  GameplayEffectClass(nullptr),
+	      bHasNameBeenGenerated(false)
+	{}
 };
 
 
@@ -286,4 +291,71 @@ struct FTileLoopInfo
 
 	UPROPERTY(BlueprintReadWrite, Category = "TileLoopInfo")
 	bool bIsTileAvailable;
+};
+
+USTRUCT(BlueprintType)
+struct FPHItemText
+{
+	GENERATED_BODY()
+public:	
+	FString Text;
+	float Min;
+	float Max;
+};
+
+USTRUCT(BlueprintType)
+struct FPHAttributeData : public FTableRowBase
+{
+	GENERATED_BODY()
+
+public:
+	/** Name of the Attribute (e.g., "Strength", "Fire Damage", etc.) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName AttributeName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EPrefixSuffix PrefixSuffix;
+
+	/** The Gameplay Attribute being modified */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FGameplayAttribute StatChanged;
+
+	/** Minimum change applied to the attribute */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MinStatChanged;
+
+	/** Maximum change applied to the attribute */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MaxStatChanged;
+
+	/** Determines if the attribute is displayed as a range (e.g., "2 TO 3 FIRE DAMAGE") */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsRange;
+
+	/** Determines if the stat has been identified if not it will show up as ?????*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsIdentified;
+
+	/** The format string that defines how the attribute should be displayed */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EAttributeDisplayFormat DisplayFormat;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ERankPoints RankPoints;
+};
+
+USTRUCT(BlueprintType)
+struct FPHItemStats
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	bool bHasGenerated = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	TArray<FPHAttributeData> PrefixStats;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	TArray<FPHAttributeData> SuffixStats;
 };

@@ -13,55 +13,111 @@
 UPHAttributeSet::UPHAttributeSet()
 {
 	const FPHGameplayTags& GameplayTags = FPHGameplayTags::Get();
-	
-	//Primary 
-	TagsToAttributes.Add(GameplayTags.Attributes_Primary_Strength, GetStrengthAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Primary_Intelligence, GetIntelligenceAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Primary_Endurance, GetEnduranceAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Primary_Affliction, GetAfflictionAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Primary_Dexterity, GetDexterityAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Primary_Luck, GetLuckAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Primary_Covenant, GetCovenantAttribute);
+	if(TagsToAttributes.IsEmpty())
+	{
+		// Combat Alignment
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Misc_CombatAlignment, GetCombatAlignmentAttribute); 
 
-	
-	//Secondary
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_HealthRegenRate, GetHealthRegenRateAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_HealthRegenAmount, GetHealthRegenAmountAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxHealthRegenRate, GetMaxHealthRegenRateAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxHealthRegenAmount, GetMaxHealthRegenAmountAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_HealthReservedAmount, GetReservedHealthAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxHealthReservedAmount, GetMaxReservedHealthAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_HealthFlatReservedAmount, GetFlatReservedHealthAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_HealthPercentageReserved, GetPercentageReservedHealthAttribute);
-	
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_ManaRegenRate, GetManaRegenRateAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_ManaRegenAmount, GetManaRegenAmountAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxManaRegenRate, GetMaxManaRegenRateAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxManaRegenAmount, GetMaxManaRegenAmountAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_ManaReservedAmount, GetReservedManaAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxManaReservedAmount, GetMaxReservedManaAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_ManaFlatReservedAmount, GetFlatReservedManaAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_ManaPercentageReserved, GetPercentageReservedManaAttribute);
-	
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_StaminaRegenRate, GetStaminaRegenRateAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_StaminaRegenAmount, GetStaminaRegenAmountAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxStaminaRegenRate, GetMaxStaminaRegenRateAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxStaminaRegenAmount, GetMaxStaminaRegenAmountAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_StaminaReservedAmount, GetReservedStaminaAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxStaminaReservedAmount, GetMaxReservedStaminaAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_StaminaFlatReservedAmount, GetFlatReservedStaminaAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_StaminaPercentageReserved, GetPercentageReservedStaminaAttribute);
+		// Primary Attributes
+		TagsToAttributes.Add(GameplayTags.Attributes_Primary_Strength, GetStrengthAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Primary_Intelligence, GetIntelligenceAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Primary_Endurance, GetEnduranceAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Primary_Affliction, GetAfflictionAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Primary_Dexterity, GetDexterityAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Primary_Luck, GetLuckAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Primary_Covenant, GetCovenantAttribute);
 
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxHealth,  GetMaxHealthAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxEffectiveHealth,  GetMaxEffectiveHealthAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxStamina, GetMaxStaminaAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxEffectiveStamina,  GetMaxEffectiveStaminaAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxMana, GetMaxManaAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxEffectiveMana,  GetMaxEffectiveManaAttribute);
+		// Secondary Vital Attributes
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxHealth, GetMaxHealthAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxEffectiveHealth, GetMaxEffectiveHealthAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxStamina, GetMaxStaminaAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxEffectiveStamina, GetMaxEffectiveStaminaAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxMana, GetMaxManaAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxEffectiveMana, GetMaxEffectiveManaAttribute);
 
-	TagsToAttributes.Add(GameplayTags.Attributes_Vital_Health,  GetHealthAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Vital_Stamina, GetStaminaAttribute);
-	TagsToAttributes.Add(GameplayTags.Attributes_Vital_Mana, GetManaAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Vital_Health, GetHealthAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Vital_Stamina, GetStaminaAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Vital_Mana, GetManaAttribute);
+
+		// Regeneration Attributes
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_HealthRegenRate, GetHealthRegenRateAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_HealthRegenAmount, GetHealthRegenAmountAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxHealthRegenRate, GetMaxHealthRegenRateAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxHealthRegenAmount, GetMaxHealthRegenAmountAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_HealthReservedAmount, GetReservedHealthAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxHealthReservedAmount, GetMaxReservedHealthAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_HealthFlatReservedAmount, GetFlatReservedHealthAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_HealthPercentageReserved, GetPercentageReservedHealthAttribute);
+
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_ManaRegenRate, GetManaRegenRateAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_ManaRegenAmount, GetManaRegenAmountAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxManaRegenRate, GetMaxManaRegenRateAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxManaRegenAmount, GetMaxManaRegenAmountAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_ManaReservedAmount, GetReservedManaAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxManaReservedAmount, GetMaxReservedManaAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_ManaFlatReservedAmount, GetFlatReservedManaAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_ManaPercentageReserved, GetPercentageReservedManaAttribute);
+
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_StaminaRegenRate, GetStaminaRegenRateAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_StaminaRegenAmount, GetStaminaRegenAmountAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxStaminaRegenRate, GetMaxStaminaRegenRateAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxStaminaRegenAmount, GetMaxStaminaRegenAmountAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_StaminaReservedAmount, GetReservedStaminaAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_MaxStaminaReservedAmount, GetMaxReservedStaminaAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_StaminaFlatReservedAmount, GetFlatReservedStaminaAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Vital_StaminaPercentageReserved, GetPercentageReservedStaminaAttribute);
+
+		// Damage Attributes
+
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_PhysicalDamage, GetPhysicalDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_FireDamage, GetFireDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_IceDamage, GetIceDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_LightningDamage, GetLightningDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_LightDamage, GetLightDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_CorruptionDamage, GetCorruptionDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_EarthDamage, GetEarthDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_WindDamage, GetWindDamageAttribute);
+
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_GlobalDamages, GetGlobalDamagesAttribute);
+
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_PhysicalFlatBonus, GetPhysicalFlatBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_FireFlatBonus, GetFireFlatBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_IceFlatBonus, GetIceFlatBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_LightningFlatBonus, GetLightningFlatBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_LightFlatBonus, GetLightFlatBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_CorruptionFlatBonus, GetCorruptionFlatBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_EarthFlatBonus, GetEarthFlatBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_WindFlatBonus, GetWindFlatBonusAttribute);
+
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_PhysicalPercentBonus, GetPhysicalPercentBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_FirePercentBonus, GetFirePercentBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_IcePercentBonus, GetIcePercentBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_LightningPercentBonus, GetLightningPercentBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_LightPercentBonus, GetLightPercentBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_CorruptionPercentBonus, GetCorruptionPercentBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_EarthPercentBonus, GetEarthPercentBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_WindPercentBonus, GetWindPercentBonusAttribute);
+
+		// Misc Attributes
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Misc_Poise, GetPoiseAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Misc_StunRecovery, GetStunRecoveryAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Misc_ManaCostChanges, GetManaCostChangesAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Misc_LifeOnHit, GetLifeOnHitAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Misc_ManaOnHit, GetManaOnHitAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Misc_StaminaOnHit, GetStaminaOnHitAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Misc_StaminaCostChanges, GetStaminaCostChangesAttribute);
+
+		// Resistances
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_GlobalDefenses, GetGlobalDefensesAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_Armour, GetArmourAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_FireResistance, GetFireResistanceAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_LightResistance, GetLightResistanceAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_EarthResistance, GetEarthResistanceAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_LightningResistance, GetLightningResistanceAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_CorruptionResistance, GetCorruptionResistanceAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_IceResistance, GetIceResistanceAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_WindResistance, GetWindResistanceAttribute);
+	}
 
 
 
@@ -75,22 +131,107 @@ UPHAttributeSet::UPHAttributeSet()
 	TagsMinMax.Add(GameplayTags.Attributes_Primary_Covenant, GameplayTags.Attributes_Primary_Covenant);
 
 	// Adding secondary attribute tags
-	TagsMinMax.Add(GameplayTags.Attributes_Secondary_HealthReservedAmount, GameplayTags.Attributes_Secondary_MaxHealthReservedAmount);
-	TagsMinMax.Add(GameplayTags.Attributes_Secondary_HealthRegenRate, GameplayTags.Attributes_Secondary_MaxHealthRegenRate);
-	TagsMinMax.Add(GameplayTags.Attributes_Secondary_HealthRegenAmount, GameplayTags.Attributes_Secondary_MaxHealthRegenAmount);
-	TagsMinMax.Add(GameplayTags.Attributes_Secondary_ManaRegenRate, GameplayTags.Attributes_Secondary_MaxManaRegenRate);
-	TagsMinMax.Add(GameplayTags.Attributes_Secondary_ManaRegenAmount, GameplayTags.Attributes_Secondary_MaxManaRegenAmount);
-	TagsMinMax.Add(GameplayTags.Attributes_Secondary_ManaReservedAmount, GameplayTags.Attributes_Secondary_MaxManaReservedAmount);
-	TagsMinMax.Add(GameplayTags.Attributes_Secondary_StaminaRegenRate, GameplayTags.Attributes_Secondary_MaxStaminaRegenRate);
-	TagsMinMax.Add(GameplayTags.Attributes_Secondary_StaminaRegenAmount, GameplayTags.Attributes_Secondary_MaxStaminaRegenAmount);
-	TagsMinMax.Add(GameplayTags.Attributes_Secondary_StaminaReservedAmount, GameplayTags.Attributes_Secondary_MaxStaminaReservedAmount);
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_HealthReservedAmount, GameplayTags.Attributes_Secondary_Vital_MaxHealthReservedAmount);
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_HealthRegenRate, GameplayTags.Attributes_Secondary_Vital_MaxHealthRegenRate);
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_HealthRegenAmount, GameplayTags.Attributes_Secondary_Vital_MaxHealthRegenAmount);
+	
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_ManaRegenRate, GameplayTags.Attributes_Secondary_Vital_MaxManaRegenRate);
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_ManaRegenAmount, GameplayTags.Attributes_Secondary_Vital_MaxManaRegenAmount);
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_ManaReservedAmount, GameplayTags.Attributes_Secondary_Vital_MaxManaReservedAmount);
+	
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_StaminaRegenRate, GameplayTags.Attributes_Secondary_Vital_MaxStaminaRegenRate);
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_StaminaRegenAmount, GameplayTags.Attributes_Secondary_Vital_MaxStaminaRegenAmount);
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_StaminaReservedAmount, GameplayTags.Attributes_Secondary_Vital_MaxStaminaReservedAmount);
+	
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_ArcaneShieldRegenRate, GameplayTags.Attributes_Secondary_Vital_MaxArcaneShieldRegenRate);
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_ArcaneShieldRegenAmount, GameplayTags.Attributes_Secondary_Vital_MaxArcaneShieldRegenAmount);
+	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_ArcaneShieldReservedAmount, GameplayTags.Attributes_Secondary_Vital_MaxArcaneShieldReservedAmount);
 
-	
-	
-	
+	BaseDamageAttributesMap.Add("Physical", GetPhysicalDamageAttribute());
+	BaseDamageAttributesMap.Add("Fire", GetFireDamageAttribute());
+	BaseDamageAttributesMap.Add("Ice", GetIceDamageAttribute());
+	BaseDamageAttributesMap.Add("Lightning", GetLightningDamageAttribute());
+	BaseDamageAttributesMap.Add("Light", GetLightDamageAttribute());
+	BaseDamageAttributesMap.Add("Corruption", GetCorruptionDamageAttribute());
+	BaseDamageAttributesMap.Add("Earth", GetEarthDamageAttribute());
+	BaseDamageAttributesMap.Add("Wind", GetWindDamageAttribute());
+
+	FlatDamageAttributesMap.Add("Physical", GetPhysicalDamageAttribute());
+	FlatDamageAttributesMap.Add("Fire", GetFireFlatBonusAttribute());
+	FlatDamageAttributesMap.Add("Ice", GetIceFlatBonusAttribute());
+	FlatDamageAttributesMap.Add("Lightning", GetLightningFlatBonusAttribute());
+	FlatDamageAttributesMap.Add("Light", GetLightFlatBonusAttribute());
+	FlatDamageAttributesMap.Add("Corruption", GetCorruptionFlatBonusAttribute());
+	FlatDamageAttributesMap.Add("Earth", GetEarthFlatBonusAttribute());
+	FlatDamageAttributesMap.Add("Wind", GetWindFlatBonusAttribute());
+
+	PercentDamageAttributesMap.Add("Physical", GetPhysicalPercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Fire", GetFirePercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Ice", GetIcePercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Lightning", GetLightningPercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Light", GetLightPercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Corruption", GetCorruptionPercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Earth", GetEarthPercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Wind", GetWindPercentBonusAttribute());
+{
+    // Primary Attributes
+    AllAttributesMap.Add("Strength", GetStrengthAttribute());
+    AllAttributesMap.Add("Intelligence", GetIntelligenceAttribute());
+    AllAttributesMap.Add("Dexterity", GetDexterityAttribute());
+    AllAttributesMap.Add("Endurance", GetEnduranceAttribute());
+    AllAttributesMap.Add("Affliction", GetAfflictionAttribute());
+    AllAttributesMap.Add("Luck", GetLuckAttribute());
+    AllAttributesMap.Add("Covenant", GetCovenantAttribute());
+
+    // Damage Attributes
+    AllAttributesMap.Add("Physical Damage", GetPhysicalDamageAttribute());
+    AllAttributesMap.Add("Fire Damage", GetFireDamageAttribute());
+    AllAttributesMap.Add("Ice Damage", GetIceDamageAttribute());
+    AllAttributesMap.Add("Lightning Damage", GetLightningDamageAttribute());
+    AllAttributesMap.Add("Light Damage", GetLightDamageAttribute());
+    AllAttributesMap.Add("Corruption Damage", GetCorruptionDamageAttribute());
+    AllAttributesMap.Add("Earth Damage", GetEarthDamageAttribute());
+    AllAttributesMap.Add("Wind Damage", GetWindDamageAttribute());
+
+    // Flat Bonuses
+    AllAttributesMap.Add("Physical Flat Bonus", GetPhysicalFlatBonusAttribute());
+    AllAttributesMap.Add("Fire Flat Bonus", GetFireFlatBonusAttribute());
+    AllAttributesMap.Add("Ice Flat Bonus", GetIceFlatBonusAttribute());
+    AllAttributesMap.Add("Lightning Flat Bonus", GetLightningFlatBonusAttribute());
+    AllAttributesMap.Add("Light Flat Bonus", GetLightFlatBonusAttribute());
+    AllAttributesMap.Add("Corruption Flat Bonus", GetCorruptionFlatBonusAttribute());
+    AllAttributesMap.Add("Earth Flat Bonus", GetEarthFlatBonusAttribute());
+    AllAttributesMap.Add("Wind Flat Bonus", GetWindFlatBonusAttribute());
+
+    // Percent Bonuses
+    AllAttributesMap.Add("Physical Percent Bonus", GetPhysicalPercentBonusAttribute());
+    AllAttributesMap.Add("Fire Percent Bonus", GetFirePercentBonusAttribute());
+    AllAttributesMap.Add("Ice Percent Bonus", GetIcePercentBonusAttribute());
+    AllAttributesMap.Add("Lightning Percent Bonus", GetLightningPercentBonusAttribute());
+    AllAttributesMap.Add("Light Percent Bonus", GetLightPercentBonusAttribute());
+    AllAttributesMap.Add("Corruption Percent Bonus", GetCorruptionPercentBonusAttribute());
+    AllAttributesMap.Add("Earth Percent Bonus", GetEarthPercentBonusAttribute());
+    AllAttributesMap.Add("Wind Percent Bonus", GetWindPercentBonusAttribute());
+
+    // Resistances
+    AllAttributesMap.Add("Fire Resistance", GetFireResistanceAttribute());
+    AllAttributesMap.Add("Ice Resistance", GetIceResistanceAttribute());
+    AllAttributesMap.Add("Lightning Resistance", GetLightningResistanceAttribute());
+    AllAttributesMap.Add("Earth Resistance", GetEarthResistanceAttribute());
+    AllAttributesMap.Add("Corruption Resistance", GetCorruptionResistanceAttribute());
+    AllAttributesMap.Add("Wind Resistance", GetWindResistanceAttribute());
+
+    // Misc Attributes
+    AllAttributesMap.Add("Poise", GetPoiseAttribute());
+    AllAttributesMap.Add("Stun Recovery", GetStunRecoveryAttribute());
+    AllAttributesMap.Add("Mana Cost Changes", GetManaCostChangesAttribute());
+    AllAttributesMap.Add("Life On Hit", GetLifeOnHitAttribute());
+    AllAttributesMap.Add("Mana On Hit", GetManaOnHitAttribute());
+    AllAttributesMap.Add("Stamina On Hit", GetStaminaOnHitAttribute());
 }
 
-
+	
+}
 
 void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -142,14 +283,135 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedStamina, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PercentageReservedStamina, COND_None, REPNOTIFY_Always);
 
-	//Utilities
-	/*DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AttackRange, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaximumLife, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaximumMana, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, GlobalDefences, COND_None, REPNOTIFY_Always);*/
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArcaneShieldRegenRate, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,ArcaneShieldRegenAmount, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArcaneShieldRegenRate, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedArcaneShield, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedArcaneShield, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedArcaneShield, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PercentageReservedArcaneShield, COND_None, REPNOTIFY_Always);
+
+	//Damages
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, GlobalDamages, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PhysicalDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FireDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, EarthDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, WindDamage, COND_None, REPNOTIFY_Always);
 	
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PhysicalFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FireFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, EarthFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, WindFlatBonus, COND_None, REPNOTIFY_Always);
+	
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PhysicalPercentBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FirePercentBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightPercentBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, EarthPercentBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPercentBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionPercentBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IcePercentBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, WindPercentBonus, COND_None, REPNOTIFY_Always);
+	
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, DamageBonusWhileAtFullHP, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, DamageBonusWhileAtLowHP, COND_None, REPNOTIFY_Always);
+
+	// Other Offensive Stats
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AreaDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AreaOfEffect, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AttackRange, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AttackSpeed, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CastSpeed, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CritChance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CritMultiplier, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, DamageOverTime, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ElementalDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, SpellsCritChance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, SpellsCritMultiplier, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MeleeDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ProjectileCount, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ProjectileSpeed, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  RangedDamage, COND_None, REPNOTIFY_Always);
+
+
+	//Duration
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, BurnDuration, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, BleedDuration, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FreezeDuration, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionDuration, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ShockDuration, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,PetrifyBuildUpDuration, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  PurifyDuration, COND_None, REPNOTIFY_Always);
+
 	
 
+	//Resistances
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, GlobalDefenses, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Armour, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourPercentBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FireResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, EarthResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  WindResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  BlockStrength, COND_None, REPNOTIFY_Always);
+
+	
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxFireResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxEarthResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightningResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxCorruptionResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  MaxIceResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  MaxWindResistance, COND_None, REPNOTIFY_Always);
+
+
+
+	//Piercing
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourPiercing, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FirePiercing, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPiercing, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, EarthPiercing, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPiercing, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionPiercing, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  IcePiercing, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  WindPiercing, COND_None, REPNOTIFY_Always);
+
+	//Chance to apply
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToBleed, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToCorrupt, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToFreeze, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToIgnite, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToPetrify, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToPurify, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToShock, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToStun, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToKnockBack, COND_None, REPNOTIFY_Always);
+
+	//Misc
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ComboCounter, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CoolDown, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LifeLeech, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaLeech, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MovementSpeed, COND_None, REPNOTIFY_Always);
+
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Poise, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StunRecovery, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaCostChanges, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LifeOnHit, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaOnHit, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaOnHit, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaCostChanges, COND_None, REPNOTIFY_Always);
 
 	//Secondary Current Attribute
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Health, COND_None, REPNOTIFY_Always);
@@ -161,13 +423,32 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	
 }
 
+float UPHAttributeSet::GetAttributeValue(const FGameplayAttribute& Attribute) const 
+{
+	if (const UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent())
+	{
+		return ASC->GetNumericAttribute(Attribute);
+	}
+	return 0.0f;
+}
+
+float UPHAttributeSet::GetAttributeValue(FGameplayAttribute& Attribute) const
+{
+	// Get the Ability System Component that owns this Attribute Set
+	if (const UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent())
+	{
+		return ASC->GetNumericAttribute(Attribute);
+	}
+    
+	return 0.0f; // Default return value
+}
+
 // for use in BP will show enum not float values 
 ECombatAlignment UPHAttributeSet::GetCombatAlignmentBP() const
 {
 	// Convert the float value stored in CombatAlignment to the ECombatAlignment enum
 	return static_cast<ECombatAlignment>(CombatAlignment.GetCurrentValue());
 }
-
 
 // for use in BP will show enum not float values 
 void UPHAttributeSet::SetCombatAlignmentBP(ECombatAlignment NewAlignment)
@@ -454,7 +735,62 @@ void UPHAttributeSet::OnRep_PercentageReservedMana(const FGameplayAttributeData&
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , PercentageReservedMana,OldAmount)
 }
 
+void UPHAttributeSet::OnRep_ArcaneShield(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , ArcaneShield ,OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxArcaneShield(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , MaxArcaneShield ,OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxEffectiveArcaneShield(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , MaxEffectiveArcaneShield ,OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ArcaneShieldRegenRate(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , ArcaneShieldRegenRate ,OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxArcaneShieldRegenRate(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , MaxArcaneShieldRegenRate ,OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ArcaneShieldRegenAmount(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , ArcaneShieldRegenAmount ,OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxArcaneShieldRegenAmount(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , MaxArcaneShieldRegenAmount ,OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ReservedArcaneShield(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , ReservedArcaneShield ,OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxReservedArcaneShield(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , MaxReservedArcaneShield ,OldAmount)
+}
+
+void UPHAttributeSet::OnRep_FlatReservedArcaneShield(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , FlatReservedArcaneShield ,OldAmount)
+}
+
 //Mana End
+
+void UPHAttributeSet::OnRep_PercentageReservedArcaneShield(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , PercentageReservedArcaneShield ,OldAmount)
+}
 
 //Gems
 void UPHAttributeSet::OnRep_Gems(const FGameplayAttributeData& OldGems) const
@@ -495,5 +831,495 @@ void UPHAttributeSet::OnRep_Luck(const FGameplayAttributeData& OldAmount) const
 void UPHAttributeSet::OnRep_Covenant(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,Covenant, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_GlobalDamages(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,GlobalDamages, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_CorruptionDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CorruptionDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_CorruptionFlatBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CorruptionFlatBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_CorruptionPercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CorruptionPercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_EarthDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,EarthDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_EarthFlatBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,EarthFlatBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_EarthPercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,EarthPercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_FireDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,FireDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_FireFlatBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,FireFlatBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_FirePercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,FirePercentBonus, OldAmount)
+}
+
+
+void UPHAttributeSet::OnRep_IceDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,IceDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_IceFlatBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,IceFlatBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_IcePercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,IcePercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LightDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LightFlatBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightFlatBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LightPercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightPercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LightningDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightningDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LightningFlatBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightningFlatBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LightningPercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightningPercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_PhysicalDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,PhysicalDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_PhysicalFlatBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,PhysicalFlatBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_PhysicalPercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,PhysicalPercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_WindDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,WindDamage, OldAmount)
+}
+void UPHAttributeSet::OnRep_WindFlatBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,WindFlatBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_WindPercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,WindPercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_AreaDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,AreaDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_AreaOfEffect(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,AreaOfEffect, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_AttackRange(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,AttackRange, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_AttackSpeed(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,AttackSpeed, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_CastSpeed(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CastSpeed, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_CritChance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CritChance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_CritMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CritMultiplier, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_DamageOverTime(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,DamageOverTime, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ElementalDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ElementalDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_SpellsCritChance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,SpellsCritChance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_SpellsCritMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,SpellsCritMultiplier, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_DamageBonusWhileAtFullHP(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,DamageBonusWhileAtFullHP, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxCorruptionResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxCorruptionResistance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ArmourPiercing(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ArmourPiercing, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_FirePiercing(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , FirePiercing, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_EarthPiercing(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,EarthPiercing, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LightPiercing(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightPiercing, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LightningPiercing(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightningPiercing, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_CorruptionPiercing(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CorruptionPiercing, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_IcePiercing(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,IcePiercing, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_WindPiercing(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,WindPiercing, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxEarthResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxEarthResistance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxFireResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxFireResistance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxIceResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxIceResistance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxLightResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxLightResistance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxLightningResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxLightningResistance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxWindResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxWindResistance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_DamageBonusWhileAtLowHP(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,DamageBonusWhileAtLowHP, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MeleeDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MeleeDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ProjectileCount(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ProjectileCount, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ProjectileSpeed(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ProjectileSpeed, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_RangedDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,RangedDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_GlobalDefenses(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,GlobalDefenses, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_Armour(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,Armour, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ArmourFlatBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ArmourFlatBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ArmourPercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ArmourPercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_CorruptionResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CorruptionResistance, OldAmount)
+}
+
+
+void UPHAttributeSet::OnRep_EarthResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,EarthResistance, OldAmount)
+}
+
+
+void UPHAttributeSet::OnRep_FireResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,FireResistance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_IceResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,IceResistance, OldAmount)
+}
+
+
+void UPHAttributeSet::OnRep_LightResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightResistance, OldAmount)
+}
+
+
+
+void UPHAttributeSet::OnRep_LightningResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightningResistance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_WindResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,WindResistance, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_BlockStrength(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,BlockStrength, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ComboCounter(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ComboCounter, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_CoolDown(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CoolDown, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LifeLeech(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LifeLeech, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ManaLeech(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ManaLeech, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MovementSpeed(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MovementSpeed, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_Poise(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,Poise, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_StunRecovery(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,StunRecovery, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ManaCostChanges(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ManaCostChanges, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LifeOnHit(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LifeOnHit, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ManaOnHit(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ManaOnHit, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_StaminaOnHit(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,StaminaOnHit, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_StaminaCostChanges(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,StaminaCostChanges, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ChanceToBleed(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ChanceToBleed, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ChanceToCorrupt(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ChanceToCorrupt, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ChanceToFreeze(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ChanceToFreeze, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ChanceToIgnite(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ChanceToIgnite, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ChanceToKnockBack(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ChanceToKnockBack, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ChanceToPetrify(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ChanceToPetrify, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ChanceToShock(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ChanceToShock, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ChanceToStun(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ChanceToStun, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ChanceToPurify(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ChanceToPurify, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_BurnDuration(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,BurnDuration, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_BleedDuration(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,BleedDuration, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_FreezeDuration(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,FreezeDuration, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_CorruptionDuration(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CorruptionDuration, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_ShockDuration(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ShockDuration, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_PetrifyBuildUpDuration(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,PetrifyBuildUpDuration, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_PurifyDuration(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,PurifyDuration, OldAmount)
 }
 

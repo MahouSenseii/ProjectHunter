@@ -178,3 +178,31 @@ enum class EDamageTypes : uint8
 	DT_Physical UMETA(DisplayName = "Physical")
 };
 
+UENUM(BlueprintType)
+enum class EAttributeDisplayFormat : uint8
+{
+	//add more as needed 
+	Additive          UMETA(DisplayName = "+{0} TO ATTRIBUTE"),        // "+10 TO STRENGTH"
+	Percent          UMETA(DisplayName = "+{0}% TO ATTRIBUTE"),       // "+20% TO FIRE RESISTANCE"
+	MinMax          UMETA(DisplayName = "ADD {0} TO {1} DAMAGE"),     // "ADD 5 TO 10 FIRE DAMAGE"
+};
+
+UENUM(BlueprintType)
+enum class EPrefixSuffix
+{
+	Prefix        UMETA(DisplayName = "Preffix"),
+	Suffix        UMETA(DisplayName = "Suffix"), 
+};
+
+UENUM(BlueprintType)
+enum class ERankPoints : uint8
+{
+	RP_5  UMETA(DisplayName = "5"),
+	RP_10 UMETA(DisplayName = "10"),
+	RP_15 UMETA(DisplayName = "15"),
+	RP_20 UMETA(DisplayName = "20"),
+	RP_25 UMETA(DisplayName = "25"),
+	RP_30 UMETA(DisplayName = "30")
+};
+
+

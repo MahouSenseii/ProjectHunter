@@ -27,8 +27,8 @@ void UInteractionManager::BeginPlay()
 
 	// Initialize a timer to call UpdateInteraction method
 	FTimerHandle UpdateInteractionTimerHandle;
-	const float LoopInterval = 0.1f; // Time between each call to UpdateInteraction
-	const float InitialDelay = 1.0f; // Initial delay before the timer starts
+	constexpr float LoopInterval = 0.1f; // Time between each call to UpdateInteraction
+	constexpr float InitialDelay = 1.0f; // Initial delay before the timer starts
 
 	// Set the timer to call UpdateInteraction. This timer will call UpdateInteraction every 0.1 seconds after a 1.0 second delay.
 	GetWorld()->GetTimerManager().SetTimer(UpdateInteractionTimerHandle, this,

@@ -3,7 +3,7 @@
 
  #include "Item/WeaponItem.h"
 
-void UWeaponItem::SetWeaponData(FWeaponItemData NewWeaponItemData)
+void UWeaponItem::SetWeaponData(const FWeaponItemData& NewWeaponItemData)
 {
  WeaponItemData = NewWeaponItemData;
 }

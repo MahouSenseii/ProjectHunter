@@ -20,7 +20,7 @@ class ALS_PROJECTHUNTER_API UBaseItem : public UObject
 
 public:
 
-	virtual void Initialize(const FItemInformation& ItemInfo) PURE_VIRTUAL(UItemData::Initialize, );
+	virtual void Initialize(FItemInformation& ItemInfo) PURE_VIRTUAL(UItemData::Initialize, );
 
 	/** Returns the dimensions of the item, considering rotation */
 	UFUNCTION(BlueprintCallable)
@@ -41,7 +41,7 @@ public:
 	
 	/** Returns the icon of the item, considering rotation */
 	UFUNCTION(BlueprintCallable)
-	UMaterialInstance* GetIcon();
+	UMaterialInstance* GetIcon() const;
 
 	
 
@@ -49,7 +49,7 @@ public:
 	static void ApplyEffectToTarget(AActor* Target, TSubclassOf<UGameplayEffect> GameplayEffectClass);
 
 	UFUNCTION(BlueprintCallable, Category = "Getter")
-	FItemInformation GetItemInfo() const {return  ItemInfos; }
+	FItemInformation& GetItemInfo() {return  ItemInfos; }
 
 	UFUNCTION(BlueprintCallable, Category = "Setter")
 	void SetItemInfo(const FItemInformation NewItemInfo) { ItemInfos = NewItemInfo; }

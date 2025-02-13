@@ -7,15 +7,33 @@
 #include  "Library/PHItemFunctionLibrary.h"
 #include "Library/FL_InteractUtility.h"
 
-AEquipmentPickup::AEquipmentPickup()
+AEquipmentPickup::AEquipmentPickup(): StatsDataTable(nullptr)
 {
-	
+	// Set Location (X, Y, Z)
+	MeshTransform.SetLocation(FVector(0.0f, 0.0f, 80.0f));
+
+	// Set Rotation (Pitch, Yaw, Roll)
+	MeshTransform.SetRotation(FQuat(FRotator(0.0f, 180.0f, 0.0f)));
+
+	// Set Scale (X, Y, Z)
+	MeshTransform.SetScale3D(FVector(1.0f, 1.0f, 1.0f));
+}
+
+void AEquipmentPickup::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if(!ItemStats.bHasGenerated)
+	{
+		ItemStats = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
+		ItemInfo =  UPHItemFunctionLibrary::GenerateItemName(ItemStats,ItemInfo);
+	}
 }
 
 
 bool AEquipmentPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo,
-	FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData,
-	FConsumableItemData ConsumableItemData) const
+                                         FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData,
+                                         FConsumableItemData ConsumableItemData) const
 {
 	Super::InteractionHandle(Actor, WasHeld);
 

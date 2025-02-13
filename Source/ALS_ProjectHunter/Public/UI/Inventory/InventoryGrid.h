@@ -113,7 +113,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void BuySellLogic(UBaseItem* Item, bool& WasAdded);
-	static void ProcessTransaction(const UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer);
+	static void ProcessTransaction(UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer);
 
 	static void HandleFailedTransaction(UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer);
 	UFUNCTION(BlueprintCallable, BlueprintPure)

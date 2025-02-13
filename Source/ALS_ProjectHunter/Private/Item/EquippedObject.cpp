@@ -5,6 +5,7 @@
 #include "Components/TimelineComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SplineComponent.h"
+#include "Library/PHItemFunctionLibrary.h"
 #include "Library/PHItemStructLibrary.h"
 
 // Sets default values
@@ -32,6 +33,13 @@ AEquippedObject::AEquippedObject()
 	{
 		StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
+
+	if(!ItemStats.bHasGenerated)
+	{
+		ItemStats = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
+		ItemInfo = UPHItemFunctionLibrary::GenerateItemName(ItemStats,ItemInfo);
+	}
+		
 
 }
 

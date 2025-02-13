@@ -16,7 +16,7 @@ class ALS_PROJECTHUNTER_API UConsumableItem : public UBaseItem
 
 public:
 
-	virtual void Initialize(const FItemInformation& ItemInfo) override;
+	virtual void Initialize( FItemInformation& ItemInfo) override;
 
 	/** Use the consumable item, applying its effect */
 	UFUNCTION(BlueprintCallable, Category = "Consumable")

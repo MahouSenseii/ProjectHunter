@@ -2,8 +2,6 @@
 
 
 #include "Interactables/BaseInteractable.h"
-
-#include "Character/ALSPlayerController.h"
 #include "Character/PHBaseCharacter.h"
 #include "Character/Player/PHPlayerController.h"
 #include "Components/SphereComponent.h"
@@ -89,7 +87,6 @@ bool ABaseInteractable::InteractionHandle(AActor* Actor, bool WasHeld) const
 		// override and do  something else if the interaction key was just pressed
 		return false;
 	}
-	return false;
 }
 
 

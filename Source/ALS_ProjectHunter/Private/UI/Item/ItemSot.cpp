@@ -116,7 +116,7 @@ bool UItemSot::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEven
 		return Super::NativeOnDragOver(InGeometry, InDragDropEvent, InOperation);
 	}
 
-	const UBaseItem* AsItemObj = Cast<UBaseItem>(InOperation->Payload);
+	UBaseItem* AsItemObj = Cast<UBaseItem>(InOperation->Payload);
 	if (!AsItemObj || !Item_Button)
 	{
 		return Super::NativeOnDragOver(InGeometry, InDragDropEvent, InOperation);

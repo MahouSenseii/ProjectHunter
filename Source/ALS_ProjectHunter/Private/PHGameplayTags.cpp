@@ -42,107 +42,107 @@ void FPHGameplayTags::InitializeNativeGameplayTags()
 	//Secondary gameplay tags
 
 	/** Regen Start */
-	GameplayTags.Attributes_Secondary_HealthRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_HealthRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.HealthRegenRate"),
 	FString("How fast health is regen."));
 
-	GameplayTags.Attributes_Secondary_HealthRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_HealthRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.HealthRegenAmount"),
 	FString("How much health is regen."));
 
-	GameplayTags.Attributes_Secondary_MaxHealthRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxHealthRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxHealthRegenAmount"),
 	FString("Max amount health that  can be regen"));
 
-	GameplayTags.Attributes_Secondary_HealthReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_HealthReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.HealthReservedAmount"),
 	FString("Reserved Amount of Health"));
 
-	GameplayTags.Attributes_Secondary_MaxHealthReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxHealthReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxHealthReservedAmount"),
 	FString("MaxReserved Amount of Health"));
 
-	GameplayTags.Attributes_Secondary_MaxHealthRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxHealthRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxHealthRegenRate"),
 	FString("Max speed health can regen."));
 
-	GameplayTags.Attributes_Secondary_ManaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_ManaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.ManaRegenAmount"),
 	FString("How much mana is regen"));
 
-	GameplayTags.Attributes_Secondary_MaxManaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxManaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxManaRegenAmount"),
 	FString("Max amount mana that can be regen "));
 
-	GameplayTags.Attributes_Secondary_ManaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_ManaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.ManaReservedAmount"),
 	FString("Reserved Amount of Mana"));
 
-	GameplayTags.Attributes_Secondary_MaxManaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxManaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxManaReservedAmount"),
 	FString("Max Reserved Amount of Mana"));
 
-	GameplayTags.Attributes_Secondary_ManaRegenRate= UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_ManaRegenRate= UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.ManaRegenRate"),
 	FString("How fast mana can be regen."));
 
-	GameplayTags.Attributes_Secondary_MaxManaRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxManaRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxManaRegenRate"),
 	FString("Max speed mana can be regen."));
 
-	GameplayTags.Attributes_Secondary_StaminaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_StaminaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.StaminaRegenAmount"),
 	FString("How much stamina is regen."));
 
-	GameplayTags.Attributes_Secondary_MaxStaminaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxStaminaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxStaminaRegenAmount"),
 	FString("Max amount stamina that can be regen "));
 	
-	GameplayTags.Attributes_Secondary_StaminaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_StaminaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.StaminaReservedAmount"),
 	FString("Reserved Amount of Stamina"));
 
-	GameplayTags.Attributes_Secondary_MaxStaminaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxStaminaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
     (FName("Attribute.Secondary.MaxStaminaReservedAmount"),
     FString("Max Reserved Amount of Stamina"));
 
-	GameplayTags.Attributes_Secondary_StaminaRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_StaminaRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.StaminaRegenRate"),
 	FString("How fast stamina can be regen."));
 
-	GameplayTags.Attributes_Secondary_MaxStaminaRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxStaminaRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxStaminaRegenRate"),
 	FString("Max speed mana can be regen."));
 	/** Regen End */
 	/** Defenses Start*/
-	GameplayTags.Attributes_Secondary_Armor = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Resistances_Armour = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.Armor"),
 	FString("Reduces damage taken from physical damage."));
 	/** Defenses End*/
 
 	/** Max Vital Start*/
-	GameplayTags.Attributes_Secondary_MaxHealth = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxHealth = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxHealth"),
 	FString("Max amount of health."));
 
-	GameplayTags.Attributes_Secondary_MaxEffectiveHealth = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxEffectiveHealth = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxEffectiveHealth"),
 	FString("Max amount of health after reserved health is calculated."));
 	
-	GameplayTags.Attributes_Secondary_MaxMana = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxMana = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxMana"),
 	FString("Max amount of Mana."));
 
-	GameplayTags.Attributes_Secondary_MaxEffectiveMana = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxEffectiveMana = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxEffectiveMana"),
 	FString("Max amount of mana after reserved mana is calculated."));
 	
-	GameplayTags.Attributes_Secondary_MaxStamina  = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxStamina  = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxStamina"),
 	FString("Max amount of stamina"));
 
 
-	GameplayTags.Attributes_Secondary_MaxEffectiveStamina = UGameplayTagsManager::Get().AddNativeGameplayTag
+	GameplayTags.Attributes_Secondary_Vital_MaxEffectiveStamina = UGameplayTagsManager::Get().AddNativeGameplayTag
 	(FName("Attribute.Secondary.MaxEffectiveHealth"),
 	FString("Max amount of stamina after reserved stamina is calculated."));
 

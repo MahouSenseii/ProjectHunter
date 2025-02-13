@@ -79,6 +79,9 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	int32 LootAmountRoll = 0;
 
+	UPROPERTY(BlueprintReadWrite)
+	TObjectPtr<UInventoryManager> OtherInventory = nullptr;
+	
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

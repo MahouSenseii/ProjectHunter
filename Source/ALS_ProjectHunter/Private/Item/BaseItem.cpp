@@ -19,7 +19,7 @@ FIntPoint UBaseItem::GetDimensions()
 }
 
 
-UMaterialInstance* UBaseItem::GetIcon()
+UMaterialInstance* UBaseItem::GetIcon() const
 {
 	if (ItemInfos.Rotated)
 	{

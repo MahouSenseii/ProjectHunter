@@ -23,6 +23,8 @@ class ALS_PROJECTHUNTER_API APHBaseCharacter : public AALSCharacter, public IAbi
 
 public:
 
+	
+	
 	// Constructor for APHBaseCharacter
 	APHBaseCharacter(const FObjectInitializer& ObjectInitializer);
 

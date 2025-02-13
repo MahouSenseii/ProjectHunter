@@ -3,11 +3,22 @@
 
 #include "Item/EquippableItem.h"
 
-UEquippableItem::UEquippableItem()
+#include "Library/PHItemFunctionLibrary.h"
+
+UEquippableItem::UEquippableItem(): StatsDataTable(nullptr)
 {
 }
 
-void UEquippableItem::Initialize(const FItemInformation& ItemInfo)
+void UEquippableItem::Initialize( FItemInformation& ItemInfo)
 {
 	Super::Initialize(ItemInfo);
+
+	if(!ItemStats.bHasGenerated)
+	{
+		ItemStats = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
+		ItemInfo = UPHItemFunctionLibrary::GenerateItemName(ItemStats, ItemInfo);
+
+
+
+	}
 }

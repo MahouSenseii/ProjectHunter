@@ -104,8 +104,7 @@ void APHBaseCharacter::SetRegenerationTimer(FTimerHandle& TimerHandle, void(APHB
 
 void APHBaseCharacter::HealthRegenRateChange()
 {
-	const UPHAttributeSet* AttributeSetPtr = AbilitySystemComponent->GetSet<UPHAttributeSet>();
-	if (AttributeSetPtr)
+	if (const UPHAttributeSet* AttributeSetPtr = AbilitySystemComponent->GetSet<UPHAttributeSet>())
 	{
 		SetRegenerationTimer(HealthRegenTimer, &APHBaseCharacter::HealthRegeneration, AttributeSetPtr->GetHealthRegenRate());
 	}
@@ -113,8 +112,7 @@ void APHBaseCharacter::HealthRegenRateChange()
 
 void APHBaseCharacter::ManaRegenRateChange()
 {
-	const UPHAttributeSet* AttributeSetPtr = AbilitySystemComponent->GetSet<UPHAttributeSet>();
-	if (AttributeSetPtr)
+	if (const UPHAttributeSet* AttributeSetPtr = AbilitySystemComponent->GetSet<UPHAttributeSet>())
 	{
 		SetRegenerationTimer(ManaRegenTimer, &APHBaseCharacter::ManaRegeneration, AttributeSetPtr->GetManaRegenRate());
 	}
@@ -122,8 +120,7 @@ void APHBaseCharacter::ManaRegenRateChange()
 
 void APHBaseCharacter::StaminaRegenRateChange()
 {
-	const UPHAttributeSet* AttributeSetPtr = AbilitySystemComponent->GetSet<UPHAttributeSet>();
-	if (AttributeSetPtr)
+	if (const UPHAttributeSet* AttributeSetPtr = AbilitySystemComponent->GetSet<UPHAttributeSet>())
 	{
 		SetRegenerationTimer(StaminaRegenTimer, &APHBaseCharacter::StaminaRegeneration, AttributeSetPtr->GetStaminaRegenRate());
 	}
@@ -151,7 +148,7 @@ void APHBaseCharacter::StaminaRegeneration() const
 void APHBaseCharacter::StaminaDegen(const float DeltaTime)
 {
 	check(StaminaDegenEffect);
-	if(const UPHAttributeSet* PHAttributeSet = Cast<UPHAttributeSet>(AttributeSet); !bIsInRecovery && PHAttributeSet->GetStamina() <= 0)
+	if(const UPHAttributeSet* PhAttributeSet = Cast<UPHAttributeSet>(AttributeSet); !bIsInRecovery && PhAttributeSet->GetStamina() <= 0)
 	{
 		bIsInRecovery = true;
 	}

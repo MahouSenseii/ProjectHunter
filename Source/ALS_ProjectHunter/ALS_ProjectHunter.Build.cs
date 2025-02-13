@@ -19,7 +19,8 @@ public class ALS_ProjectHunter : ModuleRules
 			"PhysicsCore",
 			"Niagara",
 			"EnhancedInput",
-			"ALSV4_CPP"
+			"ALSV4_CPP",
+			"Paper2D" 
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

@@ -400,7 +400,7 @@ FSlateBrush UInteractableWidget::GetInteractionIcon()
 	FSlateBrush MyBrush;
 	const APHPlayerController* PC = Cast<APHPlayerController>(GetOwningPlayer());
 	
-	/*if (const ULocalPlayer* LocalPlayer = PC ? PC->GetLocalPlayer() : nullptr)
+	if (const ULocalPlayer* LocalPlayer = PC ? PC->GetLocalPlayer() : nullptr)
 	{
 		if (const UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer->GetSubsystem<
 			UEnhancedInputLocalPlayerSubsystem>())
@@ -430,7 +430,8 @@ FSlateBrush UInteractableWidget::GetInteractionIcon()
 				}
 			}
 		}
-	}*/ // Add back after implementing save inputs
+	}
+	
 	if(IsUsingGamepad())
 	{
 		MyBrush.SetResourceObject(MyUtilityInstance->GetGamepadIcon(EGamepadIcon::GI_FaceButtonLeft));

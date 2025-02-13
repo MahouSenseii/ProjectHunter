@@ -45,3 +45,4 @@ struct FPHAttributeInfo
 	UPROPERTY(BlueprintReadOnly)
 	float AttributeValue = 0.0f;
 };
+

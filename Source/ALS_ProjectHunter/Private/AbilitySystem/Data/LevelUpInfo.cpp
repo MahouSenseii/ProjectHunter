@@ -24,8 +24,7 @@ int32 ULevelUpInfo::LevelUp(const int32 XP , int32 Level)
 {
 	if(LevelUpInformation[Level].LevelUpRequirement <= XP)
 	{
-
-			LevelUpInformation[Level].AttributePointAward =+ 1;
+		LevelUpInformation[Level].AttributePointAward += 2; // Increase attribute points per level
 		return XP - LevelUpInformation[Level].LevelUpRequirement;
 	}
 	return 0;

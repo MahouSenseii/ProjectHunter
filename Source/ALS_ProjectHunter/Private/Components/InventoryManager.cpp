@@ -220,7 +220,7 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
     };
 
     // Spawn the pickup actor based on the item type
-    AItemPickup* CreatedPickup = nullptr;
+    AItemPickup* CreatedPickup;
 
 
 	

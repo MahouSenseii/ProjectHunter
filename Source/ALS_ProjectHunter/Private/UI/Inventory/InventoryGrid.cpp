@@ -550,7 +550,7 @@ void UInventoryGrid::BuySellLogic(UBaseItem* Item, bool& WasAdded)
 
 	 // Determine the seller and buyer explicitly
     UInventoryManager* Seller = Item->GetItemInfo().OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->
-                                                                           GetID()
+                                                                               GetID()
 	                                ? OwnerInventory
 	                                : OtherInventory;
     UInventoryManager* Buyer = Seller == OwnerInventory ? OtherInventory : OwnerInventory;
@@ -591,7 +591,7 @@ void UInventoryGrid::BuySellLogic(UBaseItem* Item, bool& WasAdded)
 }
 
 
-auto UInventoryGrid::ProcessTransaction(const UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer) -> void
+auto UInventoryGrid::ProcessTransaction(UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer) -> void
 {
 	const int32 OriginalValue = Seller->CalculateValue(Item-> GetItemInfo());
 	int32 TransactionValue = OriginalValue;

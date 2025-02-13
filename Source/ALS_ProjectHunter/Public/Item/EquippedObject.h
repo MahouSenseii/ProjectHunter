@@ -78,4 +78,11 @@ protected:
 	UPROPERTY(BlueprintReadWrite,  EditAnywhere, Category = "Components")
 	TObjectPtr<USkeletalMeshComponent> SkeletalMesh;
 
+	// Set in BP will be all stats that the item can generate
+	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")
+	UDataTable* StatsDataTable;
+	
+	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")
+	FPHItemStats ItemStats;
+
 };
