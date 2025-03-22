@@ -22,5 +22,5 @@ public:
 	static UPHOverlayWidgetController* GetOverlayWidgetController(const UObject* WorldContextObject);
 
 	UFUNCTION(BlueprintPure, Category = "PH AbilitySystemLibrary|WidgetController")
-	static UAttributeMenuWidgetController* GetAttibuteMenuWidgetController(const UObject* WorldContextObject);
+	static UAttributeMenuWidgetController* GetAttributeMenuWidgetController(const UObject* WorldContextObject);
 };

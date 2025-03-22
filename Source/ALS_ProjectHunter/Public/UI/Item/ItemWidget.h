@@ -59,11 +59,11 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FVector2D Size;
 	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	/*UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TObjectPtr<UToolTip> ItemToolTip;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	TSubclassOf<UToolTip> ToolTipClass;
+	TSubclassOf<UToolTip> ToolTipClass;*/
 
 
 	UPROPERTY()

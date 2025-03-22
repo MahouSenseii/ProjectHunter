@@ -37,14 +37,18 @@ public:
 	FOnPlayerStatChanged OnAttributePointsChangedDelegate;
 	FOnPlayerStatChanged OnMaxAttributePointsChangedDelegate;
 
-	UPROPERTY(EditDefaultsOnly)
-	const TObjectPtr<ULevelUpInfo> LevelUpInfo;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Leveling")
+	TObjectPtr<ULevelUpInfo> LevelUpInfo;
+
+	UFUNCTION(BlueprintCallable, Category = "Leveling")
+	bool TryLevelUp();
+
 
 	FORCEINLINE int32 GetPlayerLevel() const { return Level; }
 	FORCEINLINE int32 GetXP() const { return XP; }
 	FORCEINLINE int32 GetAttributePoints() const { return AttributePoints; }
 	FORCEINLINE int32 GetMaxAttributePoints() const { return MaxAttributePoints; }
-
+	FORCEINLINE int32 GetXPForNextLevel() const;
 	void AddToXP(int32 InXp);
 	void SetXP(int32 InXP);
 
@@ -70,13 +74,13 @@ private:
 	int32 MaxAttributePoints = 0;
 
 	UFUNCTION()
-	void OnRep_Level(int32 OldLevel);
+	void OnRep_Level(int32 OldLevel) const;
 
 	UFUNCTION()
-	void OnRep_XP(int32 OldXP);
+	void OnRep_XP(int32 OldXP) const;
 
 	UFUNCTION()
-	void OnRep_AttributePoints(int32 InPoints);
+	void OnRep_AttributePoints(int32 InPoints) const;
 
 	UFUNCTION()
 	void OnRep_MaxAttributePoints(int32 InPoints);

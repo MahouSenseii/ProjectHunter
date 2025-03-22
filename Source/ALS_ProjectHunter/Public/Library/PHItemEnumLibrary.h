@@ -6,37 +6,90 @@
 UENUM(BlueprintType)
 enum class EItemType : uint8
 {
-	IS_None UMETA(DisplayName = "None"),
-	IS_Armor UMETA(DisplayName = "Armor"),
-	IS_Weapon UMETA(DisplayName = "Weapon"),
-	IS_Shield UMETA(DisplayName = "Shield"),
-	IS_Consumable UMETA(DisplayName = "Consumable"),
-	IS_QuestItem UMETA(DisplayName = "Quest Item"),
-	IS_Ingredient UMETA(DisplayName = "Ingredient"),
-	IS_Currency UMETA(DisplayName = "Currency"),
-	IS_OtherRecipe UMETA(DisplayName = "Other Recipe"),
-	IS_Other UMETA(DisplayName = "Other")
+	IT_None         UMETA(DisplayName = "None"),
 
+	/* === Equipment === */
+	IT_Weapon       UMETA(DisplayName = "Weapon"),
+	IT_Armor        UMETA(DisplayName = "Armor"),
+	IT_Shield       UMETA(DisplayName = "Shield"),
+	IT_Accessory    UMETA(DisplayName = "Accessory"), // Rings, Amulets, Belts
+
+	/* === Consumables === */
+	IT_Consumable   UMETA(DisplayName = "Consumable"), // Potions, Food
+	IT_Flask        UMETA(DisplayName = "Flask"),      // Refillable effects
+
+	/* === Progression === */
+	IT_QuestItem    UMETA(DisplayName = "Quest Item"),
+	IT_KeyItem      UMETA(DisplayName = "Key Item"),
+
+	/* === Crafting & Economy === */
+	IT_Ingredient   UMETA(DisplayName = "Ingredient"),
+	IT_Currency     UMETA(DisplayName = "Currency"),
+	IT_Recipe       UMETA(DisplayName = "Recipe"),
+
+	IT_Other        UMETA(DisplayName = "Other")
 };
+
 
 
 UENUM(BlueprintType)
 enum class EItemSubType : uint8
 {
 	IST_None UMETA(DisplayName = "None"),
-	IST_Other UMETA(DisplayName = "None"),
-	IST_LongSword UMETA(DisplayName = "Long Sword"),
-	IST_WarHammer UMETA(DisplayName = "WarHammer"),
-	IST_Katana UMETA(DisplayName = "Katana"),
-	IST_GreatSword UMETA(DisplayName = "Great Sword"),
-	IST_Spear UMETA(DisplayName = "Spear"),
-	IST_Claws UMETA(DisplayName = "Claws"),
-	IST_Fist UMETA(DisplayName = "Fist"),
-	IST_Bow UMETA(DisplayName = "Bow"),
-	IST_Staff UMETA(DisplayName = "Staff"),
-	IST_Rapier UMETA(DisplayName = "Rapier"),
-	IST_Potion  UMETA(DisplayName = "Potion"),
+
+	/* === Weapon Subtypes (for IS_Weapon) === */
+	IST_Sword       UMETA(DisplayName = "Sword"),
+	IST_GreatSword  UMETA(DisplayName = "Great Sword"),
+	IST_Katana      UMETA(DisplayName = "Katana"),
+	IST_Hammer      UMETA(DisplayName = "Warhammer"),
+	IST_Axe         UMETA(DisplayName = "Axe"),
+	IST_Bow         UMETA(DisplayName = "Bow"),
+	IST_Staff       UMETA(DisplayName = "Staff"),
+	IST_Wand        UMETA(DisplayName = "Wand"),
+	IST_Dagger      UMETA(DisplayName = "Dagger"),
+	IST_Fist        UMETA(DisplayName = "Fist Weapon"),
+
+	/* === Armor Subtypes (for IS_Armor) === */
+	IST_Helmet      UMETA(DisplayName = "Helmet"),
+	IST_Chest       UMETA(DisplayName = "Chestplate"),
+	IST_Gloves      UMETA(DisplayName = "Gloves"),
+	IST_Legs        UMETA(DisplayName = "Leggings"),
+	IST_Boots       UMETA(DisplayName = "Boots"),
+	IST_Cloak       UMETA(DisplayName = "Cloak"),
+
+	/* === Shield Subtypes (for IS_Shield) === */
+	IST_Buckler     UMETA(DisplayName = "Buckler"),
+	IST_TowerShield UMETA(DisplayName = "Tower Shield"),
+
+	/* === Accessory Subtypes (for IS_Accessory) === */
+	IST_Ring        UMETA(DisplayName = "Ring"),
+	IST_Amulet      UMETA(DisplayName = "Amulet"),
+	IST_Belt        UMETA(DisplayName = "Belt"),
+
+	/* === Consumable Subtypes (for IS_Consumable/IS_Flask) === */
+	IST_HealthPotion UMETA(DisplayName = "Health Potion"),
+	IST_ManaPotion   UMETA(DisplayName = "Mana Potion"),
+	IST_StaminaFood  UMETA(DisplayName = "Stamina Food"),
+	IST_RefillableFlask UMETA(DisplayName = "Refillable Flask"),
+
+	/* === Quest/Key Subtypes (for IS_QuestItem, IS_KeyItem) === */
+	IST_Key         UMETA(DisplayName = "Key"),
+	IST_QuestScroll UMETA(DisplayName = "Quest Scroll"),
+
+	/* === Ingredient/Crafting Subtypes (for IS_Ingredient, IS_Recipe) === */
+	IST_Herb        UMETA(DisplayName = "Herb"),
+	IST_Metal       UMETA(DisplayName = "Metal"),
+	IST_AlchemyBook UMETA(DisplayName = "Alchemy Recipe"),
+
+	/* === Currency Subtypes (for IS_Currency) === */
+	IST_Gold        UMETA(DisplayName = "Gold"),
+	IST_Silver      UMETA(DisplayName = "Silver"),
+	IST_GemShard    UMETA(DisplayName = "Gem Shard"),
+
+	/* === Catch-All === */
+	IST_Other       UMETA(DisplayName = "Other")
 };
+
 
 
 UENUM(BlueprintType)
@@ -132,6 +185,7 @@ UENUM(BlueprintType)
 enum class EItemRequiredStatsCategory : uint8
 {
 	ISC_None UMETA(DisplayName = "None"),
+	ISC_RequiredLevel UMETA(DisplayName = "Required Level"),
 	ISC_RequiredStrength UMETA(DisplayName = "Required Strength"),
 	ISC_RequiredDexterity UMETA(DisplayName = "Required Dexterity"),
 	ISC_RequiredIntelligence UMETA(DisplayName = "Required Intelligence"),
@@ -142,6 +196,7 @@ enum class EItemRequiredStatsCategory : uint8
 
 };
 
+
 UENUM(BlueprintType)
 enum class EDefenseTypes : uint8
 {
@@ -151,32 +206,30 @@ enum class EDefenseTypes : uint8
 	DT_BlockReduction UMETA(Display = "Block Reduction"),
 
 	// Elemental Resistances
-	DT_DarkResistance UMETA(DisplayName = "Dark Resistance"),
-	DT_EarthResistance UMETA(DisplayName = "Earth Resistance"),
-	DT_FireResistance UMETA(DisplayName = "Fire Resistance"),
-	DT_IceResistance UMETA(DisplayName = "Ice Resistance"),
-	DT_LightResistance UMETA(DisplayName = "Light Resistance"),
-	DT_LightningResistance UMETA(DisplayName = "Lightning Resistance"),
-	DT_PoisonResistance UMETA(DisplayName = "Poison Resistance"),
-	DT_WindResistance UMETA(DisplayName = "Wind Resistance"),
-
+	DT_FireResistance          UMETA(DisplayName = "FireResistance"),
+	DT_IceResistance           UMETA(DisplayName = "IceResistance"),
+	DT_LightResistance         UMETA(DisplayName = "LightResistance"),
+	DT_LightningResistance     UMETA(DisplayName = "LightningResistance"),
+	DT_PhysicalResistance      UMETA(DisplayName = "PhysicalResistance"),
+	DT_PoisonResistance        UMETA(DisplayName = "CorruptionResistance"),
 };
 
 
 UENUM(BlueprintType)
 enum class EDamageTypes : uint8
 {
-	DT_None UMETA(DisplayName = "None"),
-	DT_Dark UMETA(DisplayName = "Dark"),
-	DT_Earth UMETA(DisplayName = "Earth"),
-	DT_Fire UMETA(DisplayName = "Fire"),
-	DT_Ice UMETA(DisplayName = "Ice"),
-	DT_Light UMETA(DisplayName = "Light"),
-	DT_Lightning UMETA(DisplayName = "Lightning"),
-	DT_Poison UMETA(DisplayName = "Poison"),
-	DT_Wind UMETA(DisplayName = "Wind"),
-	DT_Physical UMETA(DisplayName = "Physical")
+	DT_None         UMETA(DisplayName = "None"),
+
+	DT_Earth        UMETA(DisplayName = "Earth"),
+	DT_Fire         UMETA(DisplayName = "Fire"),
+	DT_Ice          UMETA(DisplayName = "Ice"),
+	DT_Light        UMETA(DisplayName = "Light"),
+	DT_Lightning    UMETA(DisplayName = "Lightning"),
+	DT_Physical     UMETA(DisplayName = "Physical"),
+	DT_Corruption   UMETA(DisplayName = "Corruption"),
+	DT_Wind         UMETA(DisplayName = "Wind")
 };
+
 
 UENUM(BlueprintType)
 enum class EAttributeDisplayFormat : uint8

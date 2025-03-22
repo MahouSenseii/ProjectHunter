@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright@2024 Quentin Davis
 
 #pragma once
 
@@ -8,8 +8,10 @@
 
 class UPHAttributeSet;
 class AItemPickup;
+class UBoxComponent;
+class UDataTable;
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API USpawnableLootManager : public UActorComponent
 {
 	GENERATED_BODY()
@@ -23,44 +25,56 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
-
-	UFUNCTION(BlueprintCallable, BlueprintCallable)
+	/** Generates the number of items that should drop, influenced by attributes */
+	UFUNCTION(BlueprintCallable, Category = "Loot|Drop System")
 	int32 GenerateDropAmount(UPHAttributeSet* AttributeSet);
+	
 
-	UFUNCTION(BlueprintCallable, BlueprintCallable)
-	FTransform GetSpawnLocation();
+	/** Gets a random spawn location within the designated spawn box */
+	UFUNCTION(BlueprintCallable, Category = "Loot|Drop System")
+	FTransform GetSpawnLocation() const;
 
-	UFUNCTION(BlueprintGetter, BlueprintCallable)
+	/** Retrieves the currently assigned SpawnBox */
+	UFUNCTION(BlueprintGetter, Category = "Loot|Drop System")
 	UBoxComponent* GetSpawnBox() const { return SpawnBox; }
 
-	UFUNCTION(BlueprintCallable)
+	/** Assigns a new SpawnBox for determining item drop locations */
+	UFUNCTION(BlueprintCallable, Category = "Loot|Drop System")
 	void SetSpawnBox(UBoxComponent* InBox) { SpawnBox = InBox; }
 
-	UFUNCTION(BlueprintCallable)
-	void SpawnItemByName(FName ItemName, UDataTable* DataTable, FTransform SpawnTransform);
+	/** Spawns an item by its name from the given DataTable */
+	UFUNCTION(BlueprintCallable, Category = "Loot|Drop System")
+	void SpawnItemByName(const FName ItemName, UDataTable* DataTable, const FTransform SpawnTransform);
 
-	UFUNCTION(BlueprintCallable)
+	/** Determines and spawns the appropriate loot based on the player's attributes */
+	UFUNCTION(BlueprintCallable, Category = "Loot|Drop System")
 	void GetSpawnItem(UPHAttributeSet* AttributeSet);
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	/** Defines the minimum and maximum possible loot drops */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot|Drop Settings")
 	FVector2D MinMaxLootAmount;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot")
+	/** Data table defining all potential spawnable items */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot|Drop Tables")
 	UDataTable* SpawnableItems;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot")
+	/** Master data table containing all item definitions */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot|Drop Tables")
 	UDataTable* MasterDropList;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot")
-	float MinThreshold = .75;
+	/** Minimum threshold probability for rolling the lowest amount of loot */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot|Drop Settings")
+	float MinThreshold = 0.75f;
 
 private:
-
+	/** The class of pickup item to spawn */
 	TSubclassOf<AItemPickup> PickUpClass;
 
+	/** The designated spawn area for item drops */
 	UPROPERTY()
-	UBoxComponent* SpawnBox;
+	UBoxComponent* SpawnBox = nullptr;
 
+	/** Tracks whether loot has already been claimed */
 	UPROPERTY()
-	bool Looted = false;
+	bool bLooted = false;
 };

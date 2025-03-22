@@ -9,6 +9,8 @@
 #include "Interfaces/InteractionProcessInterface.h"
 #include "PHPlayerController.generated.h"
 
+class UWidgetManager;
+class APHBaseCharacter;
 class UPHInputConfig;
 /**
  * 
@@ -21,7 +23,7 @@ class ALS_PROJECTHUNTER_API APHPlayerController : public AALSPlayerController, p
 public:
 
 	APHPlayerController(const FObjectInitializer& ObjectInitializer);
-	
+	virtual void BeginPlay() override;
 	virtual AActor* GetCurrentInteractableObject_Implementation() override;
 	virtual void InitializeInteractionWithObject_Implementation(UInteractableManager* Interactable) override;
 	UFUNCTION(Client, Reliable) void  ClientInitializeInteractionWithObject(UInteractableManager* Interactable);
@@ -38,8 +40,8 @@ public:
 	virtual void RemoveInteractionFromObject_Implementation(UInteractableManager* Interactable) override;
 	UFUNCTION(Server, Reliable) void ServerRemoveInteractionFromObject(UInteractableManager* Interactable);
 	UFUNCTION(Client, Reliable) void ClientRemoveInteractionFromObject(UInteractableManager* Interactable);
-
-
+	
+	UFUNCTION(BlueprintCallable, Category = "Manager") UWidgetManager* GetWidgetManager() const { return WidgetManager;}
 	
 protected:
 	
@@ -50,6 +52,8 @@ protected:
 	UFUNCTION(BlueprintCallable) void RemoveCurrentInteractable(UInteractableManager* RemovedInteractable);
 
 
+	// Inputs 
+	UFUNCTION() void Menu(const FInputActionValue& Value) const;
 	
 private:
 
@@ -60,11 +64,8 @@ public:
 protected:
 	
 	UPROPERTY(BlueprintReadOnly) TObjectPtr<UInteractableManager> CurrentInteractable;
-
-	
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager") TObjectPtr<UWidgetManager> WidgetManager;
 private:
-
-
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UPHInputConfig> InputConfig;

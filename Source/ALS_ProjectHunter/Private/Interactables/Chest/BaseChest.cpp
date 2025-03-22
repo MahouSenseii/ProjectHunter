@@ -11,39 +11,33 @@
 
 ABaseChest::ABaseChest()
 {
-	// Load the Skeletal Mesh
+	// Override parent logic to ensure SkeletalMesh is used instead of StaticMesh
+	StaticMesh = nullptr;
+	
+
+	// Load and assign skeletal mesh asset
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Game/Loot_Anim_Set/Props/TreasureChest/TreasureChest_SkelMesh.TreasureChest_SkelMesh"));
 	if (MeshAsset.Succeeded())
 	{
-		SkeletalMesh->SetSkeletalMesh(MeshAsset.Object);
-	}
-	StaticMesh = nullptr;
-	// Check if the SkeletalMeshAsset is valid
-	if (SkeletalMesh && SkeletalMeshAsset)
-	{
-		SkeletalMesh->SetSkeletalMesh(SkeletalMeshAsset);
+		SkeletalMeshAsset = MeshAsset.Object;
+		if (SkeletalMesh)
+		{
+			SkeletalMesh->SetSkeletalMesh(SkeletalMeshAsset);
+		}
 	}
 
-	// Check if the ItemSpawnBox component has not been created
-	if (!ItemSpawnBox)
-	{
-		// Create the ItemSpawnBox component and name it
-		ItemSpawnBox = CreateDefaultSubobject<UBoxComponent>(TEXT("ItemSpawnBox"));
-		// Attach the ItemSpawnBox to the RootComponent
-		ItemSpawnBox->SetupAttachment(RootComponent);
+	// Setup ItemSpawnBox if not already created
+	ItemSpawnBox = CreateDefaultSubobject<UBoxComponent>(TEXT("ItemSpawnBox"));
+	ItemSpawnBox->SetupAttachment(RootComponent);
+	const FVector Location(0.0f, -305.0f, 60.0f);
+	const FRotator Rotation(0.0f, 0.0f, 0.0f);
+	const FVector Scale(3.0f, 2.0f, 0.5f);
+	ItemSpawnBox->SetRelativeTransform(FTransform(Rotation, Location, Scale));
 
-		// Define the relative location, rotation, and scale for the ItemSpawnBox
-		const FVector Location(0.0f, -305.0f, 60.0f);
-		const FRotator Rotation(0.0f, 0.0f, 0.0f);
-		const FVector Scale(3.0f, 2.0f, 0.5f);
-		const FTransform NewTransform(Rotation, Location, Scale);
-
-		// Set the relative transform of the ItemSpawnBox
-		ItemSpawnBox->SetRelativeTransform(NewTransform);
-	}
-
-	SpawnableLootManager = CreateDefaultSubobject<USpawnableLootManager>("LootManager");
+	// Create Loot Manager
+	SpawnableLootManager = CreateDefaultSubobject<USpawnableLootManager>(TEXT("LootManager"));
 }
+
 
 void ABaseChest::BeginPlay()
 {
@@ -76,7 +70,11 @@ void ABaseChest::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)
 			if (const APHBaseCharacter* AlsCharacter = Cast<APHBaseCharacter>(CurrentInteractor))
 			{
 				SpawnableLootManager->GetSpawnItem(Cast<UPHAttributeSet>(AlsCharacter->GetAttributeSet()));
-				InteractableManager->RemoveInteraction();
+
+				if (InteractableManager)
+				{
+					InteractableManager->RemoveInteraction();
+				}
 			}
 		}
 	}
@@ -84,6 +82,9 @@ void ABaseChest::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)
 
 void ABaseChest::GetAnimation(UAnimationAsset* NewAnimToPlay) const
 {
-	SkeletalMesh->PlayAnimation(NewAnimToPlay, false);
+	if (SkeletalMesh && NewAnimToPlay)
+	{
+		SkeletalMesh->PlayAnimation(NewAnimToPlay, false);
+	}
 }
 

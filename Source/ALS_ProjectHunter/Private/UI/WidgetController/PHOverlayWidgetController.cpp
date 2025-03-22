@@ -129,28 +129,16 @@ void UPHOverlayWidgetController::BindCallbacksToDependencies()
 
 void UPHOverlayWidgetController::OnXPChange(int32 NewXP) const
 {
-	APHPlayerState* PHPlayerState = CastChecked<APHPlayerState>(PlayerState);
+	const APHPlayerState* PHPlayerState = CastChecked<APHPlayerState>(PlayerState);
+	const ULevelUpInfo* LevelUpInfo = PHPlayerState->LevelUpInfo;
 
-	//Get Level up info 
-	ULevelUpInfo* LevelUpInfo = PHPlayerState->LevelUpInfo;
-	checkf(LevelUpInfo, TEXT("Unable to find LevelUpInfo. Please fill out in PlayerState Blueprint."))
+	checkf(LevelUpInfo, TEXT("LevelUpInfo missing on PlayerState!"))
 
 	const int32 CurrentLevel = PHPlayerState->GetPlayerLevel();
+	const int32 XPNeededToLevel = LevelUpInfo->GetXpNeededForLevelUp(CurrentLevel);
+	const int32 ClampedXP = FMath::Clamp(NewXP, 0, XPNeededToLevel);
 
-	if(const int32 MaxLevel =  LevelUpInfo->LevelUpInformation.Num(); CurrentLevel <= MaxLevel && CurrentLevel > 0 )
-	{
-		const int32 LevelUpRequirement = LevelUpInfo->LevelUpInformation[CurrentLevel].LevelUpRequirement;
-
-		int32 XPNeededToLevel  = LevelUpInfo->GetXpNeededForLevelUp(CurrentLevel);
-		int32 FinalXP  = NewXP; 
-		if( FinalXP <= XPNeededToLevel )
-		{
-			FinalXP =  LevelUpInfo->LevelUp(NewXP, CurrentLevel);
-			PHPlayerState->AddToLevel();
-			XPNeededToLevel  =  LevelUpInfo->GetXpNeededForLevelUp(CurrentLevel);
-		}
-		const float XPBarPercent =  static_cast<float>(FinalXP)  / static_cast<float>(XPNeededToLevel);
-		OnXPPercentChangeDelegate.Broadcast(XPBarPercent);
-	}
-	
+	const float XPBarPercent = static_cast<float>(ClampedXP) / static_cast<float>(XPNeededToLevel);
+	OnXPPercentChangeDelegate.Broadcast(XPBarPercent);
 }
+

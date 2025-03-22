@@ -136,6 +136,7 @@ void AItemPickup::HandleHeldInteraction(APHBaseCharacter* Character) const
 
 void AItemPickup::HandleSimpleInteraction(APHBaseCharacter* Character) const
 {
+	
 }
 
 void AItemPickup::SetWidgetRarity()
@@ -146,3 +147,4 @@ void AItemPickup::SetWidgetRarity()
 		SetWidgetRarity();
 	}
 }
+

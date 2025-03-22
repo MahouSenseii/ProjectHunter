@@ -2,15 +2,14 @@
 
 
 #include "Components/InteractableManager.h"
-
 #include "EnhancedInputSubsystems.h"
-
 #include "Components/TextBlock.h"
 #include "Interfaces/InteractionProcessInterface.h"
 #include "Library/InteractionEnumLibrary.h"
 #include "InputCoreTypes.h"
 #include "Character/Player/PHPlayerController.h"
 #include "Interfaces/InteractableObjectInterface.h"
+#include "Net/UnrealNetwork.h"
 #include "UI/InteractableWidget.h"
 
 class UEnhancedInputLocalPlayerSubsystem;
@@ -20,6 +19,7 @@ UInteractableManager::UInteractableManager()
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
 
+	// Attempt to load the default widget class from assets
 	static ConstructorHelpers::FClassFinder<UInteractableWidget> WidgetFinder(TEXT("/Game/PeojectHunter/UI/PopUps/WBP_InteractableWidget"));
 
 	if (WidgetFinder.Succeeded())
@@ -32,103 +32,112 @@ UInteractableManager::UInteractableManager()
 	}
 }
 
+
+
+
 void UInteractableManager::BeginPlay()
 {
 	Super::BeginPlay();
-	//Call Event Initialize and set appropriate Tags to Component Owners.
 	SetIsReplicated(true);
 	Initialize();
-	GetOwner()->Tags.AddUnique(InteractableTag);
-	if(DestroyAfterInteract)
+
+	if (AActor* Owner = GetOwner())
 	{
-		GetOwner()->Tags.AddUnique(DestroyableTag);
+		Owner->Tags.AddUnique(InteractableTag);
+		if (DestroyAfterInteract)
+		{
+			Owner->Tags.AddUnique(DestroyableTag);
+		}
 	}
 }
+
+
 
 void UInteractableManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(UInteractableManager, IsInteractable);
+	DOREPLIFETIME(UInteractableManager, InteractableValue);
 }
+
 
 void UInteractableManager::Initialize()
 {
-	if (GetOwner()->GetClass()->ImplementsInterface(UInteractableObjectInterface::StaticClass()))
+	if (GetOwner()->Implements<UInteractableObjectInterface>())
 	{
 		IInteractableObjectInterface::Execute_BPIInitialize(GetOwner());
 	}
 }
 
-void UInteractableManager::SetupInteractableReferences(USphereComponent* InInteractableArea,UWidgetComponent* InInteractionWidget, const TSet<UPrimitiveComponent*> InHighlightableObject)
+void UInteractableManager::SetupInteractableReferences(USphereComponent* InInteractableArea, UWidgetComponent* InInteractionWidget, const TSet<UPrimitiveComponent*> InHighlightableObject)
 {
 	if (!IsValid(InInteractableArea) || !IsValid(InInteractionWidget) || InHighlightableObject.Num() == 0)
-	{UE_LOG(LogTemp, Error, TEXT("One or more input parameters are null or empty.")); return;}
+	{
+		UE_LOG(LogTemp, Error, TEXT("One or more input parameters are null or empty."));
+		return;
+	}
 
 	InteractableArea = InInteractableArea;
-	if(InInteractionWidget)
-	{
-		InteractionWidget = InInteractionWidget;
-	}
-	
+	InteractionWidget = InInteractionWidget;
 	SetupHighlightableObjects(InHighlightableObject);
 }
 
 void UInteractableManager::SetupHighlightableObjects(TSet<UPrimitiveComponent*> InHighlightableObject)
 {
-	// Clear any existing HighlightableObjects
 	ObjectsToHighlight.Empty();
-
-	// Loop through each component in the incoming set
 	for (UPrimitiveComponent* Component : InHighlightableObject)
 	{
-		// Check if the component is valid before proceeding
 		if (IsValid(Component))
 		{
-			// Set collision properties and add to HighlightableObjects
 			Component->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Block);
 			ObjectsToHighlight.Add(Component);
 		}
 		else
 		{
-			// Log a warning but continue processing other components
 			UE_LOG(LogTemp, Warning, TEXT("Invalid Component in Highlightable Objects."));
-			continue;
 		}
 	}
-	
 }
 
 void UInteractableManager::ToggleHighlight(bool Highlight, AActor* Interactor)
 {
+	// Toggle visibility of the interaction widget
 	InteractionWidget->SetVisibility(Highlight);
+
+	// Iterate through highlightable components and toggle their custom depth rendering
 	for (UPrimitiveComponent* Component : ObjectsToHighlight)
 	{
 		Component->SetRenderCustomDepth(Highlight);
 	}
+
+	// If the interactor is a valid player controller, assign it as the widget owner
 	if (APHPlayerController* AlsPlayerController = Cast<APHPlayerController>(Interactor))
 	{
 		SetWidgetLocalOwner(AlsPlayerController);
 	}
 }
 
+
 void UInteractableManager::SetWidgetLocalOwner(APlayerController* OwnerPlayerController)
 {
-	// Ensure the player controller is a local player controller
-	if (OwnerPlayerController && OwnerPlayerController->IsLocalPlayerController())
+	if (!OwnerPlayerController || !OwnerPlayerController->IsLocalPlayerController())
 	{
-		InteractionWidgetRef = CreateWidget<UInteractableWidget>(OwnerPlayerController, WidgetClass);
-		if (InteractionWidgetRef)
-		{
-			InteractionWidgetRef->Text = InteractionText;
-			InteractionWidgetRef->InteractableManager = this;
-			InteractionWidgetRef->InteractionDescription->SetText(InteractionText);
+		return;
+	}
 
-			InteractionWidgetRef->InputType = InputType;
-			
-			if (InteractionWidget)
-			{
-				InteractionWidget->SetWidget(InteractionWidgetRef);
-				InteractionWidget->SetOwnerPlayer(OwnerPlayerController->GetLocalPlayer());
-			}
+	InteractionWidgetRef = CreateWidget<UInteractableWidget>(OwnerPlayerController, WidgetClass);
+	if (InteractionWidgetRef)
+	{
+		InteractionWidgetRef->Text = InteractionText;
+		InteractionWidgetRef->InteractableManager = this;
+		InteractionWidgetRef->InteractionDescription->SetText(InteractionText);
+		InteractionWidgetRef->InputType = InputType;
+
+		if (InteractionWidget)
+		{
+			InteractionWidget->SetWidget(InteractionWidgetRef);
+			InteractionWidget->SetOwnerPlayer(OwnerPlayerController->GetLocalPlayer());
 		}
 	}
 }
@@ -137,17 +146,18 @@ void UInteractableManager::SetWidgetLocalOwner(APlayerController* OwnerPlayerCon
 void UInteractableManager::PreInteraction(AActor* Interactor)
 {
 	RefInteractor = Interactor;
-	if (GetOwner()->GetClass()->ImplementsInterface(UInteractableObjectInterface::StaticClass()))
+
+	if (GetOwner()->Implements<UInteractableObjectInterface>())
 	{
 		IInteractableObjectInterface::Execute_BPIClientPreInteraction(GetOwner(), Interactor);
 	}
-	
+
 	switch (InputType)
 	{
 	case EInteractType::Single:
-		if(Interactor->GetClass()->ImplementsInterface(UInteractionProcessInterface::StaticClass()))
+		if (Interactor->Implements<UInteractionProcessInterface>())
 		{
-			IInteractionProcessInterface::Execute_StartInteractionWithObject(Interactor,this, false);
+			IInteractionProcessInterface::Execute_StartInteractionWithObject(Interactor, this, false);
 		}
 		break;
 	case EInteractType::Holding:
@@ -159,25 +169,22 @@ void UInteractableManager::PreInteraction(AActor* Interactor)
 	}
 }
 
+
 void UInteractableManager::DurationPress(AActor* Interactor)
 {
-	// Initialize the timer to periodically check the key status.
 	const UWorld* World = GetWorld();
 	check(World);
-	if (const FTimerManager& TimerManager = World->GetTimerManager(); !TimerManager.IsTimerActive(KeyDownTimer))
+
+	if (!World->GetTimerManager().IsTimerActive(KeyDownTimer))
 	{
 		World->GetTimerManager().SetTimer(KeyDownTimer, this, &UInteractableManager::IsKeyDown, 0.05f, true);
 	}
-	
-	if (!PressedInteractionKey.IsValid())
-	{
-		PressedInteractionKey = EKeys::E; // replace this later to use variable not set key .
-	}
 
-	// Attempt to update the PressedInteractionKey if a specific action is detected.
-	if (FKey TempKey; GetPressedByAction(ActionToCheckForInteract, Interactor, TempKey))
+	PressedInteractionKey = EKeys::E;
+
+	FKey TempKey;
+	if (GetPressedByAction(ActionToCheckForInteract, Interactor, TempKey))
 	{
-		// Update the PressedInteractionKey with the one detected by GetPressedByAction.
 		PressedInteractionKey = TempKey;
 	}
 }
@@ -185,35 +192,33 @@ void UInteractableManager::DurationPress(AActor* Interactor)
 
 void UInteractableManager::IsKeyDown()
 {
-	// First, check if RefInteractor is valid and implements the interaction interface.
-	if (RefInteractor && RefInteractor->GetClass()->ImplementsInterface(UInteractionProcessInterface::StaticClass()))
+	// Only proceed if we have a valid interactor that supports interaction
+	if (!RefInteractor || !RefInteractor->Implements<UInteractionProcessInterface>())
 	{
-		// Attempt to get the current interactable object from the RefInteractor.
+		ClearInteractionTimer(); // Stop checking key input
+		return;
+	}
 
-		const APlayerController* PlayerController = Cast<APlayerController>(RefInteractor);
-		if(!PlayerController->IsInputKeyDown(PressedInteractionKey)){ ClearInteractionTimer(); return;}
-		
-		// Validate the found object and check if it's the same as this manager's owner.
-		if (const AActor* FoundInteractableObject = IInteractionProcessInterface::Execute_GetCurrentInteractableObject(RefInteractor);
-			IsValid(FoundInteractableObject) && GetOwner() == FoundInteractableObject)
-		{
-			HoldingInputHandle();
-		}
-		else
-		{
-			// If the object is not valid or doesn't match, clear the timer.
-			ClearInteractionTimer();
-		}
-			
+	// Cast interactor to PlayerController and check if the interaction key is still held
+	const APlayerController* PlayerController = Cast<APlayerController>(RefInteractor);
+	if (!PlayerController->IsInputKeyDown(PressedInteractionKey))
+	{
+		ClearInteractionTimer(); // Player released key early
+		return;
+	}
+
+	// Confirm the interactor is still targeting this interactable
+	if (const AActor* FoundInteractableObject = IInteractionProcessInterface::Execute_GetCurrentInteractableObject(RefInteractor);
+		IsValid(FoundInteractableObject) && GetOwner() == FoundInteractableObject)
+	{
+		HoldingInputHandle(); // Continue holding progress
 	}
 	else
 	{
-		// If RefInteractor is not valid or does not implement the required interface, clear the timer.
-		ClearInteractionTimer();
+		ClearInteractionTimer(); // Interaction target changed
 	}
 }
 
-;
 
 void UInteractableManager::ClearInteractionTimer()
 {
@@ -223,56 +228,55 @@ void UInteractableManager::ClearInteractionTimer()
 	}
 }
 
-
 bool UInteractableManager::GetPressedByAction(const UInputAction* Action, AActor* Interactor, FKey& OutKey)
 {
 	const APlayerController* PlayerController = Cast<APlayerController>(Interactor);
-	if (PlayerController == nullptr || Action == nullptr) 
-	{
-		return false; // Return if Controller or Action is null 
-	}
+	if (!PlayerController || !Action) return false;
 
-	const UEnhancedInputLocalPlayerSubsystem* EnhancedInputSubsystem = PlayerController->GetLocalPlayer()->GetSubsystem<
-		UEnhancedInputLocalPlayerSubsystem>();
-	if (EnhancedInputSubsystem == nullptr) 
-	{ 
-		return false; // Return if Subsystem is null
-	}
+	const UEnhancedInputLocalPlayerSubsystem* EnhancedInputSubsystem = PlayerController->GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+	if (!EnhancedInputSubsystem) return false;
 
 	TArray<FKey> KeysMappedToAction = EnhancedInputSubsystem->QueryKeysMappedToAction(Action);
-	for (int32 Index = 0; Index < KeysMappedToAction.Num(); ++Index)
+	for (const FKey& Key : KeysMappedToAction)
 	{
-		if (const FKey CurrentKey = KeysMappedToAction[Index]; PlayerController->WasInputKeyJustPressed(CurrentKey))
+		if (PlayerController->WasInputKeyJustPressed(Key))
 		{
-			OutKey = CurrentKey;
-			return true; // Key was just pressed, return true
+			OutKey = Key;
+			return true;
 		}
 	}
-    
-	return false; // No keys were just pressed, return false
+
+	return false;
 }
 
-void UInteractableManager::HoldingInputHandle() 
+void UInteractableManager::HoldingInputHandle()
 {
 	if (const APlayerController* PlayerController = Cast<APlayerController>(RefInteractor); !PlayerController)
 	{
-		return;  // Failed to cast to APlayerController.
+		return;  // Cannot process input without a valid player controller
 	}
-	if(float HeldDownTime = 0.0f; GetKeyTimeDown(HeldDownTime))
+
+	float HeldDownTime = 0.0f;
+
+	// Check how long the input key has been held down
+	if (GetKeyTimeDown(HeldDownTime))
 	{
-		const float FillValue = (HeldDownTime > MaxKeyTimeDown) ? 0.05f : HeldDownTime;
-		OnUpdateHoldingValue.Broadcast(FillValue);
-		if(HeldDownTime > MaxKeyTimeDown)
+		// Update visual feedback for holding interaction
+		OnUpdateHoldingValue.Broadcast(FMath::Clamp(HeldDownTime / MaxKeyTimeDown, 0.f, 1.f));
+
+		// Once time is exceeded, start interaction
+		if (HeldDownTime >= MaxKeyTimeDown)
 		{
 			IInteractionProcessInterface::Execute_StartInteractionWithObject(RefInteractor, this, true);
 		}
 	}
 	else
 	{
+		// Reset holding UI if no valid key duration
 		OnUpdateHoldingValue.Broadcast(0.0f);
 	}
-
 }
+
 
 bool UInteractableManager::GetKeyTimeDown(float& TimeDown) const
 {

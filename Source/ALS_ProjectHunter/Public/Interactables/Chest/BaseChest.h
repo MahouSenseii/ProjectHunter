@@ -33,7 +33,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 	USkeletalMesh* SkeletalMeshAsset;
 
-
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	UAnimationAsset* AnimToPlay;
 

@@ -24,7 +24,7 @@ UPHOverlayWidgetController* UPHAbilitySystemLibrary::GetOverlayWidgetController(
 	return nullptr;
 }
 
-UAttributeMenuWidgetController* UPHAbilitySystemLibrary::GetAttibuteMenuWidgetController(const UObject* WorldContextObject)
+UAttributeMenuWidgetController* UPHAbilitySystemLibrary::GetAttributeMenuWidgetController(const UObject* WorldContextObject)
 {
 	if(APlayerController* PC =  UGameplayStatics::GetPlayerController(WorldContextObject, 0))
 	{

@@ -7,7 +7,7 @@
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Materials/MaterialInstance.h"
-#include "UI/ToolTip/ToolTip.h"
+#include "..\..\..\Public\UI\ToolTip\EquippableToolTip.h"
 
 
 void UItemWidget::NativeConstruct()
@@ -42,11 +42,13 @@ void UItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPoint
     if (UDragWidget* DragOp = NewObject<UDragWidget>())
     {
         DragOp->Payload = ItemObject;
+        this->SetRenderScale(FVector2D(0.4f, 0.4f));
         DragOp->DefaultDragVisual = this;
-        DragOp->Pivot = EDragPivot::CenterCenter;
-        DragOp->Offset = FVector2D(0, 0);
+        DragOp->Pivot = EDragPivot::MouseDown;
+        DragOp->Offset = FVector2D(-0.25, -0.25);
         OutOperation = DragOp;
         UE_LOG(LogTemp, Log, TEXT("Drag operation created."));
+        
 
         OnRemoved.Broadcast(ItemObject);
         RemoveFromParent();
@@ -56,6 +58,8 @@ void UItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPoint
         UE_LOG(LogTemp, Warning, TEXT("Failed to create a new DragOp."));
     }
 }
+
+
 
 FReply UItemWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
@@ -158,7 +162,7 @@ void UItemWidget::Refresh()
     Size.Y = ItemDimensions.Y * TileSize;
 
     // Determine the appropriate material instance (rotated or default)
-    UMaterialInstance* MaterialInstance = nullptr;
+    UMaterialInstance* MaterialInstance;
     if (ItemObject->IsRotated())
     {
         MaterialInstance = ItemObject->GetItemInfo().ItemImageRotated;
@@ -208,15 +212,15 @@ void UItemWidget::Refresh()
 void UItemWidget::EventHovered()
 {
     // Check if the tooltip is not already created to prevent memory leaks and redundant creation.
-    if (!ItemToolTip && ToolTipClass)
+   /* if (!ItemToolTip && ToolTipClass)
     {
         CreateToolTip();
-    }
+    }*/
 }
 
 void UItemWidget::CreateToolTip()
     {
-        if (!ItemToolTip && ToolTipClass)
+     /*   if (!ItemToolTip && ToolTipClass)
         {
             if (UUserWidget* CreatedWidget = CreateWidget<UUserWidget>(GetOwningPlayer(), ToolTipClass))
             {
@@ -234,7 +238,7 @@ void UItemWidget::CreateToolTip()
                 CreatedWidget->SetPositionInViewport(DesiredPosition);
                 CreatedWidget->AddToViewport(1);
             }
-        }
+        }*/
     }
 
 void UItemWidget::EventMouseUnHovered()
@@ -244,11 +248,11 @@ void UItemWidget::EventMouseUnHovered()
 
 void UItemWidget::RemoveToolTip()
 {
-    if (IsValid(ItemToolTip))
+   /* if (IsValid(ItemToolTip))
     {
         ItemToolTip->RemoveFromParent();
         ItemToolTip = nullptr;
-    }
+    }*/
 }
 
 FVector2D UItemWidget::CalculateTooltipPosition() const

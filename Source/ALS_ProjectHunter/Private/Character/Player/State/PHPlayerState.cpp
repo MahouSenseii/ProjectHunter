@@ -5,6 +5,7 @@
 
 #include "AbilitySystem/PHAbilitySystemComponent.h"
 #include "AbilitySystem/PHAttributeSet.h"
+#include "AbilitySystem/Data/LevelUpInfo.h"
 #include "Net/UnrealNetwork.h"
 
 
@@ -16,6 +17,7 @@ APHPlayerState::APHPlayerState()
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	AttributeSet = CreateDefaultSubobject<UPHAttributeSet>("Attribute Set");
 	NetUpdateFrequency = 100.0f;
+	LevelUpInfo = CreateDefaultSubobject<ULevelUpInfo>("Level up");
 }
 
 void APHPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -32,6 +34,33 @@ void APHPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 UAbilitySystemComponent* APHPlayerState::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+bool APHPlayerState::TryLevelUp()
+{
+	if (!LevelUpInfo) return false;
+
+	const FLevelUpResult Result = LevelUpInfo->TryLevelUp(XP, Level);
+	if (!Result.bLeveledUp) return false;
+
+	// Apply changes
+	XP = Result.XPLeft;
+	Level += 1;
+	AttributePoints += Result.AttributePointsAwarded;
+	MaxAttributePoints += Result.AttributePointsAwarded;
+
+	OnLevelChangedDelegate.Broadcast(Level, true);
+	OnXPChangedDelegate.Broadcast(XP);
+	OnAttributePointsChangedDelegate.Broadcast(AttributePoints);
+	OnMaxAttributePointsChangedDelegate.Broadcast(MaxAttributePoints);
+
+	return true;
+}
+
+int32 APHPlayerState::GetXPForNextLevel() const
+{
+	
+	return (LevelUpInfo->GetXpNeededForLevelUp(Level));
 }
 
 void APHPlayerState::AddToXP(int32 InXp)
@@ -65,21 +94,21 @@ void APHPlayerState::SetAttributePoints(int32 InPoints)
 
 void APHPlayerState::SetMaxAttributePoints(int32 InPoints)
 {
-	AttributePoints = InPoints;
+	MaxAttributePoints = InPoints;
 	OnMaxAttributePointsChangedDelegate.Broadcast(MaxAttributePoints);
 }
 
-void APHPlayerState::OnRep_Level(int32 OldLevel)
+void APHPlayerState::OnRep_Level(int32 OldLevel) const
 {
 	OnLevelChangedDelegate.Broadcast(Level, true);
 }
 
-void APHPlayerState::OnRep_XP(int32 OldXP)
+void APHPlayerState::OnRep_XP(int32 OldXP) const
 {
 	OnXPChangedDelegate.Broadcast(XP);
 }
 
-void APHPlayerState::OnRep_AttributePoints(int32 InPoints)
+void APHPlayerState::OnRep_AttributePoints(int32 InPoints) const
 {
 	OnAttributePointsChangedDelegate.Broadcast(AttributePoints);
 }

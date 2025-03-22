@@ -45,5 +45,6 @@ public:
 	static int32 GetRankPointsValue(ERankPoints Rank);
 	static EItemRarity DetermineWeaponRank(int32 BaseRankPoints, const FPHItemStats& Stats);
 	static FItemInformation GenerateItemName(const FPHItemStats& ItemStats, FItemInformation& ItemInfo);
+	
 
 };

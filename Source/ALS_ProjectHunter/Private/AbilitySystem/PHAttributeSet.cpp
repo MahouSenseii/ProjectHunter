@@ -69,14 +69,19 @@ UPHAttributeSet::UPHAttributeSet()
 
 		// Damage Attributes
 
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_PhysicalDamage, GetPhysicalDamageAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_FireDamage, GetFireDamageAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_IceDamage, GetIceDamageAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_LightningDamage, GetLightningDamageAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_LightDamage, GetLightDamageAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_CorruptionDamage, GetCorruptionDamageAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_EarthDamage, GetEarthDamageAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_WindDamage, GetWindDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MinPhysicalDamage, GetMinPhysicalDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MinFireDamage, GetMinFireDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MinIceDamage, GetMinIceDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MinLightningDamage, GetMinLightningDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MinLightDamage, GetMinLightDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MinCorruptionDamage, GetMinCorruptionDamageAttribute);
+
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MaxPhysicalDamage, GetMaxPhysicalDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MaxFireDamage, GetMaxFireDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MaxIceDamage, GetMaxIceDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MaxLightningDamage, GetMaxLightningDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MaxLightDamage, GetMaxLightDamageAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Damages_MaxCorruptionDamage, GetMaxCorruptionDamageAttribute);
 
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_GlobalDamages, GetGlobalDamagesAttribute);
 
@@ -86,8 +91,6 @@ UPHAttributeSet::UPHAttributeSet()
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_LightningFlatBonus, GetLightningFlatBonusAttribute);
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_LightFlatBonus, GetLightFlatBonusAttribute);
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_CorruptionFlatBonus, GetCorruptionFlatBonusAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_EarthFlatBonus, GetEarthFlatBonusAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_WindFlatBonus, GetWindFlatBonusAttribute);
 
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_PhysicalPercentBonus, GetPhysicalPercentBonusAttribute);
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_FirePercentBonus, GetFirePercentBonusAttribute);
@@ -95,8 +98,6 @@ UPHAttributeSet::UPHAttributeSet()
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_LightningPercentBonus, GetLightningPercentBonusAttribute);
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_LightPercentBonus, GetLightPercentBonusAttribute);
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_CorruptionPercentBonus, GetCorruptionPercentBonusAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_EarthPercentBonus, GetEarthPercentBonusAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BonusDamage_WindPercentBonus, GetWindPercentBonusAttribute);
 
 		// Misc Attributes
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Misc_Poise, GetPoiseAttribute);
@@ -110,13 +111,18 @@ UPHAttributeSet::UPHAttributeSet()
 		// Resistances
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_GlobalDefenses, GetGlobalDefensesAttribute);
 		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_Armour, GetArmourAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_FireResistance, GetFireResistanceAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_LightResistance, GetLightResistanceAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_EarthResistance, GetEarthResistanceAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_LightningResistance, GetLightningResistanceAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_CorruptionResistance, GetCorruptionResistanceAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_IceResistance, GetIceResistanceAttribute);
-		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_WindResistance, GetWindResistanceAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_FireResistanceFlat, GetFireResistanceFlatBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_LightResistanceFlat, GetLightResistanceFlatBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_LightningResistanceFlat, GetLightningResistanceFlatBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_CorruptionResistanceFlat, GetCorruptionResistanceFlatBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_IceResistanceFlat, GetIceResistanceFlatBonusAttribute);
+
+
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_FireResistancePercentage, GetFireResistancePercentBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_LightResistancePercentage, GetLightResistancePercentBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_LightningResistancePercentage, GetLightningResistancePercentBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_CorruptionResistancePercentage, GetCorruptionResistancePercentBonusAttribute);
+		TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Resistances_IceResistancePercentage, GetIceResistancePercentBonusAttribute);
 	}
 
 
@@ -147,32 +153,33 @@ UPHAttributeSet::UPHAttributeSet()
 	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_ArcaneShieldRegenAmount, GameplayTags.Attributes_Secondary_Vital_MaxArcaneShieldRegenAmount);
 	TagsMinMax.Add(GameplayTags.Attributes_Secondary_Vital_ArcaneShieldReservedAmount, GameplayTags.Attributes_Secondary_Vital_MaxArcaneShieldReservedAmount);
 
-	BaseDamageAttributesMap.Add("Physical", GetPhysicalDamageAttribute());
-	BaseDamageAttributesMap.Add("Fire", GetFireDamageAttribute());
-	BaseDamageAttributesMap.Add("Ice", GetIceDamageAttribute());
-	BaseDamageAttributesMap.Add("Lightning", GetLightningDamageAttribute());
-	BaseDamageAttributesMap.Add("Light", GetLightDamageAttribute());
-	BaseDamageAttributesMap.Add("Corruption", GetCorruptionDamageAttribute());
-	BaseDamageAttributesMap.Add("Earth", GetEarthDamageAttribute());
-	BaseDamageAttributesMap.Add("Wind", GetWindDamageAttribute());
+	BaseDamageAttributesMap.Add("Min Physical", GetMinPhysicalDamageAttribute());
+	BaseDamageAttributesMap.Add("Min Fire", GetMinFireDamageAttribute());
+	BaseDamageAttributesMap.Add("Min Ice", GetMinIceDamageAttribute());
+	BaseDamageAttributesMap.Add("Min Lightning", GetMinLightningDamageAttribute());
+	BaseDamageAttributesMap.Add("Min Light", GetMinLightDamageAttribute());
+	BaseDamageAttributesMap.Add("Min Corruption", GetMinCorruptionDamageAttribute());
 
-	FlatDamageAttributesMap.Add("Physical", GetPhysicalDamageAttribute());
-	FlatDamageAttributesMap.Add("Fire", GetFireFlatBonusAttribute());
-	FlatDamageAttributesMap.Add("Ice", GetIceFlatBonusAttribute());
-	FlatDamageAttributesMap.Add("Lightning", GetLightningFlatBonusAttribute());
-	FlatDamageAttributesMap.Add("Light", GetLightFlatBonusAttribute());
-	FlatDamageAttributesMap.Add("Corruption", GetCorruptionFlatBonusAttribute());
-	FlatDamageAttributesMap.Add("Earth", GetEarthFlatBonusAttribute());
-	FlatDamageAttributesMap.Add("Wind", GetWindFlatBonusAttribute());
+	BaseDamageAttributesMap.Add("Max Physical", GetMaxPhysicalDamageAttribute());
+	BaseDamageAttributesMap.Add("Max Fire", GetMaxFireDamageAttribute());
+	BaseDamageAttributesMap.Add("Max Ice", GetMaxIceDamageAttribute());
+	BaseDamageAttributesMap.Add("Max Lightning", GetMaxLightningDamageAttribute());
+	BaseDamageAttributesMap.Add("Max Light", GetMaxLightDamageAttribute());
+	BaseDamageAttributesMap.Add("Max Corruption", GetMaxCorruptionDamageAttribute());
 
-	PercentDamageAttributesMap.Add("Physical", GetPhysicalPercentBonusAttribute());
-	PercentDamageAttributesMap.Add("Fire", GetFirePercentBonusAttribute());
-	PercentDamageAttributesMap.Add("Ice", GetIcePercentBonusAttribute());
-	PercentDamageAttributesMap.Add("Lightning", GetLightningPercentBonusAttribute());
-	PercentDamageAttributesMap.Add("Light", GetLightPercentBonusAttribute());
-	PercentDamageAttributesMap.Add("Corruption", GetCorruptionPercentBonusAttribute());
-	PercentDamageAttributesMap.Add("Earth", GetEarthPercentBonusAttribute());
-	PercentDamageAttributesMap.Add("Wind", GetWindPercentBonusAttribute());
+	FlatDamageAttributesMap.Add("Physical Flat Damage ", GetPhysicalFlatBonusAttribute());
+	FlatDamageAttributesMap.Add("Fire Flat Damage", GetFireFlatBonusAttribute());
+	FlatDamageAttributesMap.Add("Ice Flat Damage", GetIceFlatBonusAttribute());
+	FlatDamageAttributesMap.Add("Lightning Flat Damage", GetLightningFlatBonusAttribute());
+	FlatDamageAttributesMap.Add("Light Flat Damage", GetLightFlatBonusAttribute());
+	FlatDamageAttributesMap.Add("Corruption Flat Damage", GetCorruptionFlatBonusAttribute());
+
+	PercentDamageAttributesMap.Add("Physical Percent Damage", GetPhysicalPercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Fire Percent Damage", GetFirePercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Ice Percent Damage", GetIcePercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Lightning Percent Damage", GetLightningPercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Light Percent Damage", GetLightPercentBonusAttribute());
+	PercentDamageAttributesMap.Add("Corruption Percent Damage", GetCorruptionPercentBonusAttribute());
 {
     // Primary Attributes
     AllAttributesMap.Add("Strength", GetStrengthAttribute());
@@ -183,15 +190,20 @@ UPHAttributeSet::UPHAttributeSet()
     AllAttributesMap.Add("Luck", GetLuckAttribute());
     AllAttributesMap.Add("Covenant", GetCovenantAttribute());
 
-    // Damage Attributes
-    AllAttributesMap.Add("Physical Damage", GetPhysicalDamageAttribute());
-    AllAttributesMap.Add("Fire Damage", GetFireDamageAttribute());
-    AllAttributesMap.Add("Ice Damage", GetIceDamageAttribute());
-    AllAttributesMap.Add("Lightning Damage", GetLightningDamageAttribute());
-    AllAttributesMap.Add("Light Damage", GetLightDamageAttribute());
-    AllAttributesMap.Add("Corruption Damage", GetCorruptionDamageAttribute());
-    AllAttributesMap.Add("Earth Damage", GetEarthDamageAttribute());
-    AllAttributesMap.Add("Wind Damage", GetWindDamageAttribute());
+    // Min Damage Attributes
+    AllAttributesMap.Add("Min Physical Damage", GetMinPhysicalDamageAttribute());
+    AllAttributesMap.Add("Min Fire Damage", GetMinFireDamageAttribute());
+    AllAttributesMap.Add("Min Ice Damage", GetMinIceDamageAttribute());
+    AllAttributesMap.Add("Min Lightning Damage", GetMinLightningDamageAttribute());
+    AllAttributesMap.Add("Min Light Damage", GetMinLightDamageAttribute());
+
+
+	// Max Damage Attributes
+    AllAttributesMap.Add("Min Physical Damage", GetMinPhysicalDamageAttribute());
+    AllAttributesMap.Add("Min Fire Damage", GetMinFireDamageAttribute());
+    AllAttributesMap.Add("Min Ice Damage", GetMinIceDamageAttribute());
+    AllAttributesMap.Add("Min Lightning Damage", GetMinLightningDamageAttribute());
+    AllAttributesMap.Add("Min Light Damage", GetMinLightDamageAttribute());
 
     // Flat Bonuses
     AllAttributesMap.Add("Physical Flat Bonus", GetPhysicalFlatBonusAttribute());
@@ -200,8 +212,6 @@ UPHAttributeSet::UPHAttributeSet()
     AllAttributesMap.Add("Lightning Flat Bonus", GetLightningFlatBonusAttribute());
     AllAttributesMap.Add("Light Flat Bonus", GetLightFlatBonusAttribute());
     AllAttributesMap.Add("Corruption Flat Bonus", GetCorruptionFlatBonusAttribute());
-    AllAttributesMap.Add("Earth Flat Bonus", GetEarthFlatBonusAttribute());
-    AllAttributesMap.Add("Wind Flat Bonus", GetWindFlatBonusAttribute());
 
     // Percent Bonuses
     AllAttributesMap.Add("Physical Percent Bonus", GetPhysicalPercentBonusAttribute());
@@ -210,16 +220,12 @@ UPHAttributeSet::UPHAttributeSet()
     AllAttributesMap.Add("Lightning Percent Bonus", GetLightningPercentBonusAttribute());
     AllAttributesMap.Add("Light Percent Bonus", GetLightPercentBonusAttribute());
     AllAttributesMap.Add("Corruption Percent Bonus", GetCorruptionPercentBonusAttribute());
-    AllAttributesMap.Add("Earth Percent Bonus", GetEarthPercentBonusAttribute());
-    AllAttributesMap.Add("Wind Percent Bonus", GetWindPercentBonusAttribute());
 
     // Resistances
-    AllAttributesMap.Add("Fire Resistance", GetFireResistanceAttribute());
-    AllAttributesMap.Add("Ice Resistance", GetIceResistanceAttribute());
-    AllAttributesMap.Add("Lightning Resistance", GetLightningResistanceAttribute());
-    AllAttributesMap.Add("Earth Resistance", GetEarthResistanceAttribute());
-    AllAttributesMap.Add("Corruption Resistance", GetCorruptionResistanceAttribute());
-    AllAttributesMap.Add("Wind Resistance", GetWindResistanceAttribute());
+    AllAttributesMap.Add("Flat Fire Resistance", GetFireResistanceFlatBonusAttribute());
+    AllAttributesMap.Add("Flat Ice Resistance", GetIceResistanceFlatBonusAttribute());
+    AllAttributesMap.Add("Flat Lightning Resistance", GetLightningResistanceFlatBonusAttribute());
+    AllAttributesMap.Add("Flat Corruption Resistance", GetCorruptionResistanceFlatBonusAttribute());
 
     // Misc Attributes
     AllAttributesMap.Add("Poise", GetPoiseAttribute());
@@ -293,32 +299,33 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 	//Damages
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, GlobalDamages, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PhysicalDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FireDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, EarthDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, WindDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinPhysicalDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinFireDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinLightDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinLightningDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinCorruptionDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinIceDamage, COND_None, REPNOTIFY_Always);
+
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxPhysicalDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxFireDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightningDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxCorruptionDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxIceDamage, COND_None, REPNOTIFY_Always);
 	
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PhysicalFlatBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FireFlatBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, EarthFlatBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningFlatBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionFlatBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, WindFlatBonus, COND_None, REPNOTIFY_Always);
 	
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PhysicalPercentBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FirePercentBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightPercentBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, EarthPercentBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPercentBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionPercentBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IcePercentBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, WindPercentBonus, COND_None, REPNOTIFY_Always);
 	
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, DamageBonusWhileAtFullHP, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, DamageBonusWhileAtLowHP, COND_None, REPNOTIFY_Always);
@@ -357,23 +364,19 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Armour, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourFlatBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourPercentBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FireResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, EarthResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  WindResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FireResistanceFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightResistanceFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningResistanceFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionResistanceFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceResistanceFlatBonus, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  BlockStrength, COND_None, REPNOTIFY_Always);
 
 	
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxFireResistance, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxEarthResistance, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightningResistance, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxCorruptionResistance, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  MaxIceResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  MaxWindResistance, COND_None, REPNOTIFY_Always);
 
 
 
@@ -381,11 +384,9 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourPiercing, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FirePiercing, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPiercing, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, EarthPiercing, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPiercing, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionPiercing, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  IcePiercing, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  WindPiercing, COND_None, REPNOTIFY_Always);
 
 	//Chance to apply
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToBleed, COND_None, REPNOTIFY_Always);
@@ -522,12 +523,12 @@ void UPHAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 void UPHAttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props)
 {
 	Props.EffectContextHandle = Data.EffectSpec.GetContext();
-	Props.SourceASC = Props.EffectContextHandle.GetOriginalInstigatorAbilitySystemComponent();
+	Props.SourceAsc = Props.EffectContextHandle.GetOriginalInstigatorAbilitySystemComponent();
 
-	if(IsValid(Props.SourceASC) && Props.SourceASC->AbilityActorInfo.IsValid() && Props.SourceASC->AbilityActorInfo->AvatarActor.IsValid())
+	if(IsValid(Props.SourceAsc) && Props.SourceAsc->AbilityActorInfo.IsValid() && Props.SourceAsc->AbilityActorInfo->AvatarActor.IsValid())
 	{
-		Props.SourceAvatarActor = Props.SourceASC->AbilityActorInfo->AvatarActor.Get();
-		Props.SourceController = Props.SourceASC->AbilityActorInfo->PlayerController.Get();
+		Props.SourceAvatarActor = Props.SourceAsc->AbilityActorInfo->AvatarActor.Get();
+		Props.SourceController = Props.SourceAsc->AbilityActorInfo->PlayerController.Get();
 		if(Props.SourceController == nullptr && Props.SourceAvatarActor == nullptr)
 		{
 			if(const APawn* Pawn = Cast<APawn>(Props.SourceAvatarActor))
@@ -838,9 +839,14 @@ void UPHAttributeSet::OnRep_GlobalDamages(const FGameplayAttributeData& OldAmoun
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,GlobalDamages, OldAmount)
 }
 
-void UPHAttributeSet::OnRep_CorruptionDamage(const FGameplayAttributeData& OldAmount) const
+void UPHAttributeSet::OnRep_MinCorruptionDamage(const FGameplayAttributeData& OldAmount) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CorruptionDamage, OldAmount)
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MinCorruptionDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxCorruptionDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxCorruptionDamage, OldAmount)
 }
 
 void UPHAttributeSet::OnRep_CorruptionFlatBonus(const FGameplayAttributeData& OldAmount) const
@@ -853,24 +859,14 @@ void UPHAttributeSet::OnRep_CorruptionPercentBonus(const FGameplayAttributeData&
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CorruptionPercentBonus, OldAmount)
 }
 
-void UPHAttributeSet::OnRep_EarthDamage(const FGameplayAttributeData& OldAmount) const
+void UPHAttributeSet::OnRep_MinFireDamage(const FGameplayAttributeData& OldAmount) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,EarthDamage, OldAmount)
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MinFireDamage, OldAmount)
 }
 
-void UPHAttributeSet::OnRep_EarthFlatBonus(const FGameplayAttributeData& OldAmount) const
+void UPHAttributeSet::OnRep_MaxFireDamage(const FGameplayAttributeData& OldAmount) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,EarthFlatBonus, OldAmount)
-}
-
-void UPHAttributeSet::OnRep_EarthPercentBonus(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,EarthPercentBonus, OldAmount)
-}
-
-void UPHAttributeSet::OnRep_FireDamage(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,FireDamage, OldAmount)
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxFireDamage, OldAmount)
 }
 
 void UPHAttributeSet::OnRep_FireFlatBonus(const FGameplayAttributeData& OldAmount) const
@@ -884,9 +880,14 @@ void UPHAttributeSet::OnRep_FirePercentBonus(const FGameplayAttributeData& OldAm
 }
 
 
-void UPHAttributeSet::OnRep_IceDamage(const FGameplayAttributeData& OldAmount) const
+void UPHAttributeSet::OnRep_MinIceDamage(const FGameplayAttributeData& OldAmount) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,IceDamage, OldAmount)
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MinIceDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxIceDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxIceDamage, OldAmount)
 }
 
 void UPHAttributeSet::OnRep_IceFlatBonus(const FGameplayAttributeData& OldAmount) const
@@ -899,9 +900,14 @@ void UPHAttributeSet::OnRep_IcePercentBonus(const FGameplayAttributeData& OldAmo
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,IcePercentBonus, OldAmount)
 }
 
-void UPHAttributeSet::OnRep_LightDamage(const FGameplayAttributeData& OldAmount) const
+void UPHAttributeSet::OnRep_MinLightDamage(const FGameplayAttributeData& OldAmount) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightDamage, OldAmount)
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MinLightDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxLightDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxLightDamage, OldAmount)
 }
 
 void UPHAttributeSet::OnRep_LightFlatBonus(const FGameplayAttributeData& OldAmount) const
@@ -914,9 +920,14 @@ void UPHAttributeSet::OnRep_LightPercentBonus(const FGameplayAttributeData& OldA
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightPercentBonus, OldAmount)
 }
 
-void UPHAttributeSet::OnRep_LightningDamage(const FGameplayAttributeData& OldAmount) const
+void UPHAttributeSet::OnRep_MinLightningDamage(const FGameplayAttributeData& OldAmount) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightningDamage, OldAmount)
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MinLightningDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxLightningDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxLightningDamage, OldAmount)
 }
 
 void UPHAttributeSet::OnRep_LightningFlatBonus(const FGameplayAttributeData& OldAmount) const
@@ -929,9 +940,14 @@ void UPHAttributeSet::OnRep_LightningPercentBonus(const FGameplayAttributeData& 
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightningPercentBonus, OldAmount)
 }
 
-void UPHAttributeSet::OnRep_PhysicalDamage(const FGameplayAttributeData& OldAmount) const
+void UPHAttributeSet::OnRep_MinPhysicalDamage(const FGameplayAttributeData& OldAmount) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,PhysicalDamage, OldAmount)
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MinPhysicalDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_MaxPhysicalDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxPhysicalDamage, OldAmount)
 }
 
 void UPHAttributeSet::OnRep_PhysicalFlatBonus(const FGameplayAttributeData& OldAmount) const
@@ -942,20 +958,6 @@ void UPHAttributeSet::OnRep_PhysicalFlatBonus(const FGameplayAttributeData& OldA
 void UPHAttributeSet::OnRep_PhysicalPercentBonus(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,PhysicalPercentBonus, OldAmount)
-}
-
-void UPHAttributeSet::OnRep_WindDamage(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,WindDamage, OldAmount)
-}
-void UPHAttributeSet::OnRep_WindFlatBonus(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,WindFlatBonus, OldAmount)
-}
-
-void UPHAttributeSet::OnRep_WindPercentBonus(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,WindPercentBonus, OldAmount)
 }
 
 void UPHAttributeSet::OnRep_AreaDamage(const FGameplayAttributeData& OldAmount) const
@@ -1033,11 +1035,6 @@ void UPHAttributeSet::OnRep_FirePiercing(const FGameplayAttributeData& OldAmount
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , FirePiercing, OldAmount)
 }
 
-void UPHAttributeSet::OnRep_EarthPiercing(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,EarthPiercing, OldAmount)
-}
-
 void UPHAttributeSet::OnRep_LightPiercing(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightPiercing, OldAmount)
@@ -1056,16 +1053,6 @@ void UPHAttributeSet::OnRep_CorruptionPiercing(const FGameplayAttributeData& Old
 void UPHAttributeSet::OnRep_IcePiercing(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,IcePiercing, OldAmount)
-}
-
-void UPHAttributeSet::OnRep_WindPiercing(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,WindPiercing, OldAmount)
-}
-
-void UPHAttributeSet::OnRep_MaxEarthResistance(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxEarthResistance, OldAmount)
 }
 
 void UPHAttributeSet::OnRep_MaxFireResistance(const FGameplayAttributeData& OldAmount) const
@@ -1088,11 +1075,6 @@ void UPHAttributeSet::OnRep_MaxLightningResistance(const FGameplayAttributeData&
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxLightningResistance, OldAmount)
 }
 
-void UPHAttributeSet::OnRep_MaxWindResistance(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxWindResistance, OldAmount)
-}
-
 void UPHAttributeSet::OnRep_DamageBonusWhileAtLowHP(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,DamageBonusWhileAtLowHP, OldAmount)
@@ -1101,6 +1083,11 @@ void UPHAttributeSet::OnRep_DamageBonusWhileAtLowHP(const FGameplayAttributeData
 void UPHAttributeSet::OnRep_MeleeDamage(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MeleeDamage, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_SpellDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet , SpellDamage, OldAmount);
 }
 
 void UPHAttributeSet::OnRep_ProjectileCount(const FGameplayAttributeData& OldAmount) const
@@ -1138,44 +1125,57 @@ void UPHAttributeSet::OnRep_ArmourPercentBonus(const FGameplayAttributeData& Old
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,ArmourPercentBonus, OldAmount)
 }
 
-void UPHAttributeSet::OnRep_CorruptionResistance(const FGameplayAttributeData& OldAmount) const
+void UPHAttributeSet::OnRep_CorruptionResistanceFlatBonus(const FGameplayAttributeData& OldAmount) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CorruptionResistance, OldAmount)
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CorruptionResistanceFlatBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_FireResistanceFlatBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,FireResistanceFlatBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_IceResistanceFlatBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,IceResistanceFlatBonus, OldAmount)
 }
 
 
-void UPHAttributeSet::OnRep_EarthResistance(const FGameplayAttributeData& OldAmount) const
+void UPHAttributeSet::OnRep_LightResistanceFlatBonus(const FGameplayAttributeData& OldAmount) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,EarthResistance, OldAmount)
-}
-
-
-void UPHAttributeSet::OnRep_FireResistance(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,FireResistance, OldAmount)
-}
-
-void UPHAttributeSet::OnRep_IceResistance(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,IceResistance, OldAmount)
-}
-
-
-void UPHAttributeSet::OnRep_LightResistance(const FGameplayAttributeData& OldAmount) const
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightResistance, OldAmount)
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightResistanceFlatBonus, OldAmount)
 }
 
 
 
-void UPHAttributeSet::OnRep_LightningResistance(const FGameplayAttributeData& OldAmount) const
+void UPHAttributeSet::OnRep_LightningResistanceFlatBonus(const FGameplayAttributeData& OldAmount) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightningResistance, OldAmount)
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightningResistanceFlatBonus, OldAmount)
 }
 
-void UPHAttributeSet::OnRep_WindResistance(const FGameplayAttributeData& OldAmount) const
+void UPHAttributeSet::OnRep_CorruptionResistancePercentBonus(const FGameplayAttributeData& OldAmount) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,WindResistance, OldAmount)
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,CorruptionResistancePercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_FireResistancePercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,FireResistancePercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_IceResistancePercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,IceResistancePercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LightResistancePercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightResistancePercentBonus, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_LightningResistancePercentBonus(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,LightningResistancePercentBonus, OldAmount)
 }
 
 void UPHAttributeSet::OnRep_BlockStrength(const FGameplayAttributeData& OldAmount) const
@@ -1211,6 +1211,11 @@ void UPHAttributeSet::OnRep_MovementSpeed(const FGameplayAttributeData& OldAmoun
 void UPHAttributeSet::OnRep_Poise(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,Poise, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_PoiseResistance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,PoiseResistance, OldAmount)
 }
 
 void UPHAttributeSet::OnRep_StunRecovery(const FGameplayAttributeData& OldAmount) const

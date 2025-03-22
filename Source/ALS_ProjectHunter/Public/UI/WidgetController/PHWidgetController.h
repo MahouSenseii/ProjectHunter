@@ -52,6 +52,9 @@ public:
 	UFUNCTION()
 	virtual void BindCallbacksToDependencies();
 
+	UFUNCTION()
+	APlayerController* GetPlayerController() const { return PlayerController; }
+
 protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = " WidgetController")

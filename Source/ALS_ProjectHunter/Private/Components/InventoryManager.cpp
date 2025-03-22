@@ -4,7 +4,6 @@
 #include "Components/InventoryManager.h"
 
 #include "CharacterMovementComponentAsync.h"
-#include "Components/InteractableManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Interactables/Pickups/ConsumablePickup.h"
 #include "Interactables/Pickups/ItemPickup.h"
@@ -15,7 +14,7 @@
 #include "Kismet/KismetMathLibrary.h"
 
 // Sets default values for this component's properties
-UInventoryManager::UInventoryManager(): OwnerCharacter(nullptr), SpawnableItems(nullptr), MasterDropList(nullptr)
+UInventoryManager::UInventoryManager(): SpawnableItems(nullptr), MasterDropList(nullptr), OwnerCharacter(nullptr)
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
@@ -226,7 +225,7 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
 	
     switch (Item->GetItemInfo().ItemType)
     {
-    case EItemType::IS_Weapon:
+    case EItemType::IT_Weapon:
         CreatedPickup = World->SpawnActor<AWeaponPickup>(Item->GetItemInfo().PickupClass, DropLocation, DropRotation, SpawnParams);
         if (const auto WeaponPickup = Cast<AWeaponPickup>(CreatedPickup))
         {
@@ -234,15 +233,15 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
             WeaponPickup->EquipmentData = Cast<UWeaponItem>(Item)->GetEquippableData();
         }
         break;
-    case EItemType::IS_Armor:
-    case EItemType::IS_Shield:
+    case EItemType::IT_Armor:
+    case EItemType::IT_Shield:
         CreatedPickup = World->SpawnActor<AEquipmentPickup>(Item->GetItemInfo().PickupClass, DropLocation, DropRotation, SpawnParams);
         if (const auto EquipPickup = Cast<AEquipmentPickup>(CreatedPickup))
         {
             EquipPickup->EquipmentData = Cast<UEquippableItem>(Item)->GetEquippableData();
         }
         break;
-    case EItemType::IS_Consumable:
+    case EItemType::IT_Consumable:
         CreatedPickup = World->SpawnActor<AConsumablePickup>(Item->GetItemInfo().PickupClass, DropLocation, DropRotation, SpawnParams);
         if (const auto ConsumablePickup = Cast<AConsumablePickup>(CreatedPickup))
         {
@@ -506,84 +505,79 @@ int32 UInventoryManager::GetGeneratedItemAmount() const
 
 bool UInventoryManager::SpawnItemByName(const FName ItemName, const UDataTable* DataTable)
 {
-	// Check if the item exists in the data table
-	const FItemInformation* ItemInfo = DataTable->FindRow<FItemInformation>(ItemName, TEXT("LookupItemInfo"));
+	if (!DataTable) return false;
 
-	if (ItemInfo == nullptr)
+	const FItemInformation* ItemInfo = DataTable->FindRow<FItemInformation>(ItemName, TEXT("SpawnItem"));
+	if (!ItemInfo) return false;
+
+	UBaseItem* Item = nullptr;
+
+	switch (ItemInfo->ItemType)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Item %s not found in DataTable"), *ItemName.ToString());
-		return false;
+	case EItemType::IT_Weapon:
+	case EItemType::IT_Armor:
+	case EItemType::IT_Shield:
+	case EItemType::IT_Accessory:
+	{
+		UEquippableItem* EquipItem = NewObject<UEquippableItem>(this, UEquippableItem::StaticClass());
+		if (!EquipItem) return false;
+
+		EquipItem->SetItemInfo(*ItemInfo);
+
+		if (const FEquippableItemData* EquipData = DataTable->FindRow<FEquippableItemData>(ItemName, TEXT("LookupEquipData"))) EquipItem->SetEquippableData(*EquipData);
+
+		if (const FWeaponItemData* WeaponData = DataTable->FindRow<FWeaponItemData>(ItemName, TEXT("LookupWeaponData"))) EquipItem->SetWeaponData(*WeaponData);
+
+		Item = EquipItem;
+		break;
 	}
 
-		// Create a base pointer for item creation
-	UBaseItem* Item;
-
-	// Determine the item type and create accordingly
-switch (ItemInfo->ItemType)
+	case EItemType::IT_Consumable:
+	case EItemType::IT_Flask:
 	{
-	case EItemType::IS_Weapon:
-		{
-			const FWeaponItemData* WeaponInfo = DataTable->FindRow<FWeaponItemData>(ItemName, TEXT("LookupItemInfo"));
-			Item = NewObject<UWeaponItem>(this, UWeaponItem::StaticClass());
-			if (WeaponInfo && Item)
-			{
-				const auto WeaponItem = Cast<UWeaponItem>(Item);
-				WeaponItem->SetWeaponData(*WeaponInfo);
-				WeaponItem->SetItemInfo(*ItemInfo);
-				WeaponItem->SetEquippableData(*DataTable->FindRow<FEquippableItemData>(ItemName, TEXT("LookupItemInfo")));
-			}
-		}
+		UConsumableItem* ConsumableItem = NewObject<UConsumableItem>(this, UConsumableItem::StaticClass());
+		if (!ConsumableItem) return false;
+
+		ConsumableItem->SetItemInfo(*ItemInfo);
+
+		const FConsumableItemData* ConsumableData = DataTable->FindRow<FConsumableItemData>(ItemName, TEXT("LookupConsumableData"));
+		if (ConsumableData) ConsumableItem->SetConsumableData(*ConsumableData);
+
+		Item = ConsumableItem;
 		break;
-	case EItemType::IS_Armor:
-	case EItemType::IS_Shield:
-		{
-			Item = NewObject<UEquippableItem>(this, UEquippableItem::StaticClass());
-			const auto EquippableItem = Cast<UEquippableItem>(Item);
-			EquippableItem->SetEquippableData(*DataTable->FindRow<FEquippableItemData>(ItemName, TEXT("LookupItemInfo")));
-			EquippableItem->SetItemInfo(*ItemInfo);
-		}
-		break;
-	case EItemType::IS_Consumable:
-		{
-			const FConsumableItemData* ConsumableInfo = DataTable->FindRow<FConsumableItemData>(ItemName, TEXT("LookupItemInfo"));
-			Item = NewObject<UConsumableItem>(this, UConsumableItem::StaticClass());
-			if (ConsumableInfo && Item)
-			{
-				const auto ConsumableItem = Cast<UConsumableItem>(Item);
-				ConsumableItem->SetConsumableData(*ConsumableInfo);
-				ConsumableItem->SetItemInfo(*ItemInfo);
-			}
-		}
-		break;
+	}
+
+	case EItemType::IT_QuestItem:
+	case EItemType::IT_Ingredient:
+	case EItemType::IT_Currency:
+	case EItemType::IT_Other:
 	default:
+	{
 		Item = NewObject<UBaseItem>(this, UBaseItem::StaticClass());
-		if (Item)
-		{
-			const auto BaseItem = Cast<UBaseItem>(Item);
-			BaseItem->SetItemInfo(*ItemInfo);
-		}
+		if (!Item) return false;
+
+		Item->SetItemInfo(*ItemInfo);
 		break;
 	}
-
-	if (!Item)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to create item instance for %s"), *ItemName.ToString());
-		return false;
 	}
 
-	// Set the owner ID and try to add to inventory
-	FItemInformation TempItemInfo = Item->GetItemInfo();
-	TempItemInfo.OwnerID = InventoryID;
-	Item->SetItemInfo(TempItemInfo);
+	// Finalize and add to inventory
+	if (!Item) return false;
+
+	FItemInformation UpdatedInfo = Item->GetItemInfo();
+	UpdatedInfo.OwnerID = InventoryID;
+	Item->SetItemInfo(UpdatedInfo);
+
 	if (!TryToAddItemToInventory(Item, true))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Could not add item %s to inventory"), *ItemName.ToString());
-		Item->ConditionalBeginDestroy(); // Properly dispose of the item if not added to inventory
+		Item->ConditionalBeginDestroy();
 		return false;
 	}
 
-	return true; // Item was successfully created and added
+	return true;
 }
+
+
 
 bool UInventoryManager::HasEnoughGems(UBaseItem* Item) const
 {

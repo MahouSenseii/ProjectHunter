@@ -57,6 +57,8 @@ UEquippableItem* UPHItemFunctionLibrary::CreateEquippableItem(const FItemInforma
     UEquippableItem* NewEquipItem = NewObject<UEquippableItem>();
     NewEquipItem->SetItemInfo(ItemInfo);
     NewEquipItem->SetEquippableData(EquippableItemData);
+    NewEquipItem->GetEquippableData().ArmorAttributes = EquippableItemData.ArmorAttributes;
+
     return NewEquipItem;
 }
 

@@ -1,36 +1,65 @@
 // Copyright@2024 Quentin Davis 
 
-
 #include "Character/PHBaseCharacter.h"
-
 #include "AbilitySystem/PHAbilitySystemComponent.h"
 #include "AbilitySystem/PHAttributeSet.h"
 #include "Character/ALSPlayerController.h"
+#include "Character/Player/PHPlayerController.h"
 #include "Character/Player/State/PHPlayerState.h"
-
 #include "Components/EquipmentManager.h"
 #include "Components/InventoryManager.h"
+#include "Components/SceneCaptureComponent2D.h"
+#include "Components/CombatManager.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Interactables/Pickups/ConsumablePickup.h"
+#include "Interactables/Pickups/EquipmentPickup.h"
+#include "Net/UnrealNetwork.h"
+#include "UI/ToolTip/ConsumableToolTip.h"
 #include "UI/HUD/PHHUD.h"
 
 class APHPlayerState;
+
+/* =========================== */
+/* === Constructor & Setup === */
+/* =========================== */
 
 APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	EquipmentManager = CreateDefaultSubobject<UEquipmentManager>(TEXT("EquipmentManager"));
 	InventoryManager = CreateDefaultSubobject<UInventoryManager>(TEXT("InventoryManager"));
-	if(!bIsPlayer)
+	CombatManager = CreateDefaultSubobject<UCombatManager>(TEXT("Combat Manager"));
+
+	// GAS Setup
+	if (!bIsPlayer)
 	{
 		AbilitySystemComponent = CreateDefaultSubobject<UPHAbilitySystemComponent>("Ability System Component");
 		AbilitySystemComponent->SetIsReplicated(true);
 		AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
-		AttributeSet = CreateDefaultSubobject<UPHAttributeSet>("Attribute Set");	
+		AttributeSet = CreateDefaultSubobject<UPHAttributeSet>("Attribute Set");
 	}
+
+	// Mini-map
+	MiniMapIndicator = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Mini-Map Indicator"));
 }
 
-auto APHBaseCharacter::PossessedBy(AController* NewController) -> void
+void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(APHBaseCharacter, CurrentPoiseDamage);
+}
+	
+void APHBaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	InitAbilityActorInfo();
+
+	{
+		if (const APHPlayerController* CurrentController = Cast<APHPlayerController>(NewController))
+		{
+			CurrentController->InteractionManager->OnNewInteractableAssigned.AddDynamic(this, &APHBaseCharacter::OpenToolTip);
+			CurrentController->InteractionManager->OnRemoveCurrentInteractable.AddDynamic(this, &APHBaseCharacter::CloseToolTip);
+		}
+	}
 }
 
 UAbilitySystemComponent* APHBaseCharacter::GetAbilitySystemComponent() const
@@ -38,34 +67,26 @@ UAbilitySystemComponent* APHBaseCharacter::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
-int32 APHBaseCharacter::GetPlayerLevel()
-{
-	if(bIsPlayer)
-	{
-		const APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
-		check(LocalPlayerState)
-		return  LocalPlayerState->GetPlayerLevel();
-	}
-
-	return Level;
-	
-}
-
 void APHBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	if(AbilitySystemComponent)
+
+	if (AbilitySystemComponent)
 	{
 		if (const UPHAttributeSet* AttributeSetPtr = AbilitySystemComponent->GetSet<UPHAttributeSet>())
 		{
-			// Use the new helper function to set up the timers.
+			// Setup regeneration timers
 			SetRegenerationTimer(HealthRegenTimer, &APHBaseCharacter::HealthRegeneration, AttributeSetPtr->GetHealthRegenRate());
 			SetRegenerationTimer(ManaRegenTimer, &APHBaseCharacter::ManaRegeneration, AttributeSetPtr->GetManaRegenRate());
 			SetRegenerationTimer(StaminaRegenTimer, &APHBaseCharacter::StaminaRegeneration, AttributeSetPtr->GetStaminaRegenRate());
 		}
-
 	}
+}
+
+void APHBaseCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	StaminaDegen(DeltaSeconds);
 }
 
 bool APHBaseCharacter::CanSprint() const
@@ -80,13 +101,38 @@ bool APHBaseCharacter::CanSprint() const
 	return bReturnValue;
 }
 
+/* =========================== */
+/* === Ability System (GAS) === */
+/* =========================== */
 
-void APHBaseCharacter::Tick(float DeltaSeconds)
+void APHBaseCharacter::InitAbilityActorInfo()
 {
-	Super::Tick(DeltaSeconds);
-	StaminaDegen(DeltaSeconds);
-}
+	if (!bIsPlayer)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+		Cast<UPHAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
+	}
+	else
+	{
+		APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
+		check(LocalPlayerState);
 
+		
+		AbilitySystemComponent = LocalPlayerState->GetAbilitySystemComponent();
+		AbilitySystemComponent->InitAbilityActorInfo(LocalPlayerState, this);
+		Cast<UPHAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
+		InitializeDefaultAttributes();
+		AttributeSet = LocalPlayerState->GetAttributeSet();
+
+		if (AALSPlayerController* PHPlayerController = Cast<AALSPlayerController>(GetController()))
+		{
+			if (APHHUD* LocalPHHUD = Cast<APHHUD>(PHPlayerController->GetHUD()))
+			{
+				LocalPHHUD->InitOverlay(PHPlayerController, GetPlayerState<APHPlayerState>(), AbilitySystemComponent, AttributeSet);
+			}
+		}
+	}
+}
 
 void APHBaseCharacter::SetRegenerationTimer(FTimerHandle& TimerHandle, void(APHBaseCharacter::* RegenFunction)() const, float RegenRate)
 {
@@ -169,45 +215,14 @@ void APHBaseCharacter::StaminaDegen(const float DeltaTime)
 			TimeSinceLastRecovery = 0.0f;
 		}
 	}
-	
-
-}
-
-void APHBaseCharacter::InitAbilityActorInfo()
-{
-	if (!bIsPlayer)
-	{
-		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-		Cast<UPHAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
-	}
-	else
-	{
-		
-		APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
-		check(LocalPlayerState);
-		LocalPlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(LocalPlayerState, this);
-		Cast<UPHAbilitySystemComponent>(LocalPlayerState->GetAbilitySystemComponent())->AbilityActorInfoSet();
-		AbilitySystemComponent = LocalPlayerState->GetAbilitySystemComponent();
-		InitializeDefaultAttributes();
-		AttributeSet = LocalPlayerState->GetAttributeSet();
-
-		if (AALSPlayerController* PHPlayerController = Cast<AALSPlayerController>(GetController()))
-		{
-			if (APHHUD* LocalPHHUD = Cast<APHHUD>(PHPlayerController->GetHUD()))
-			{
-				// Initialize HUD overlay with necessary components
-				LocalPHHUD->InitOverlay(PHPlayerController, GetPlayerState<APHPlayerState>(), AbilitySystemComponent, AttributeSet);
-			}
-		}
-	}
-
 }
 
 void APHBaseCharacter::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float InLevel) const
 {
 	check(IsValid(GetAbilitySystemComponent()));
 	check(GameplayEffectClass);
-	FGameplayEffectContextHandle ContextHandle =  GetAbilitySystemComponent()->MakeEffectContext();
+	
+	FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
 	ContextHandle.AddSourceObject(this);
 	const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(GameplayEffectClass, InLevel, ContextHandle);
 	GetAbilitySystemComponent()->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), GetAbilitySystemComponent());
@@ -219,5 +234,119 @@ void APHBaseCharacter::InitializeDefaultAttributes() const
 	ApplyEffectToSelf(DefaultSecondaryMaxAttributes,1.f);
 	ApplyEffectToSelf(DefaultSecondaryCurrentAttributes,1.f);
 	ApplyEffectToSelf(DefaultVitalAttributes, 1.f);
+}
 
+void APHBaseCharacter::OnRep_PoiseDamage()
+{
+}
+
+/* =========================== */
+/* === Poise System === */
+/* =========================== */
+
+float APHBaseCharacter::GetPoisePercentage() const
+{
+	const UPHAttributeSet* Attributes = Cast<UPHAttributeSet>(GetAttributeSet());
+	if (!Attributes) return 100.0f; // Assume full poise if attributes not found
+
+	const float PoiseThreshold = Attributes->GetPoise();
+	const float CurrentPoise = GetCurrentPoiseDamage();
+
+	return (PoiseThreshold > 0.0f) ? FMath::Clamp((1.0f - (CurrentPoise / PoiseThreshold)) * 100.0f, 0.0f, 100.0f) : 0.0f;
+}
+
+UAnimMontage* APHBaseCharacter::GetStaggerAnimation()
+{
+	return  StaggerMontage;
+}
+
+void APHBaseCharacter::ApplyPoiseDamage(float PoiseDamage)
+{
+	if (!HasAuthority()) return; // Server-side only
+
+	CurrentPoiseDamage = FMath::Max(0.0f, CurrentPoiseDamage + PoiseDamage);
+	TimeSinceLastPoiseHit = 0.0f; // Reset timer
+
+	ForceNetUpdate(); // Ensure replication
+}
+
+/* =========================== */
+/* === UI & MiniMap === */
+/* =========================== */
+
+int32 APHBaseCharacter::GetPlayerLevel()
+{
+	if(bIsPlayer)
+	{
+		const APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
+		check(LocalPlayerState)
+		return  LocalPlayerState->GetPlayerLevel();
+	}
+
+	return Level;
+}
+
+void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
+{
+	if (!InteractableManager) return;
+	AItemPickup* PickupItem = Cast<AItemPickup>(InteractableManager->GetOwner());
+	if (!PickupItem) return;
+
+	UBaseItem* ItemObject = NewObject<UBaseItem>(this);
+	if (!ItemObject) return;
+
+	ItemObject->SetItemInfo(PickupItem->ItemInfo);
+	ItemObject->SetRotated(PickupItem->ItemInfo.Rotated);
+
+	if (Cast<AEquipmentPickup>(PickupItem) && EquippableToolTipClass)
+	{
+		CurrentToolTip = CreateWidget<UEquippableToolTip>(GetWorld(), EquippableToolTipClass);
+	}
+	else if (Cast<AConsumablePickup>(PickupItem) && ConsumableToolTipClass)
+	{
+		CurrentToolTip = CreateWidget<UConsumableToolTip>(GetWorld(), ConsumableToolTipClass);
+	}
+
+	if (CurrentToolTip)
+	{
+		CurrentToolTip->SetItemObj(ItemObject);
+		CurrentToolTip->AddToViewport();
+	}
+}
+
+void APHBaseCharacter::CloseToolTip(UInteractableManager* InteractableManager)
+{
+	if (IsValid(CurrentToolTip))
+	{
+		CurrentToolTip->RemoveFromParent();
+	}
+}
+
+void APHBaseCharacter::SetupMiniMapCamera()
+{
+	MiniMapSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("MiniMapSpringArm"));
+	MiniMapSpringArm->SetupAttachment(RootComponent);
+	MiniMapCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("MiniMapCapture"));
+	MiniMapCapture->SetupAttachment(MiniMapSpringArm);
+
+	MiniMapSpringArm->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
+	MiniMapSpringArm->TargetArmLength = 600.f;
+	MiniMapSpringArm->bDoCollisionTest = false;
+	MiniMapCapture->ProjectionType = ECameraProjectionMode::Orthographic;
+	MiniMapCapture->OrthoWidth = 1500.f;
+}
+
+float APHBaseCharacter::GetCurrentPoiseDamage() const
+{
+	return CurrentPoiseDamage;
+}
+
+float APHBaseCharacter::GetTimeSinceLastPoiseHit() const
+{
+	return TimeSinceLastPoiseHit;
+}
+
+void APHBaseCharacter::SetTimeSinceLastPoiseHit(float NewTime)
+{
+	TimeSinceLastPoiseHit = NewTime;
 }

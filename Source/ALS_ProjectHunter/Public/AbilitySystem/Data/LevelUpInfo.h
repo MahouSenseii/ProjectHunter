@@ -16,21 +16,24 @@ class ALS_PROJECTHUNTER_API ULevelUpInfo : public UDataAsset
 	GENERATED_BODY()
 
 public:
-
-	ULevelUpInfo();
 	
+	ULevelUpInfo();
+
 	UPROPERTY(EditDefaultsOnly)
 	TArray<FPHLevelUpInfo> LevelUpInformation;
 
 	UFUNCTION(BlueprintCallable)
-	int32 GetXpNeededForLevelUp(const int32 Level);
+	int32 GetXpNeededForLevelUp(const int32 Level) const;
 
-	UFUNCTION()
-	int32 LevelUp(const int32 XP, int32 Level);
+	UFUNCTION(BlueprintCallable)
+	bool HasLeveledUp(const int32 XP, const int32 Level) const;
+
+	UFUNCTION(BlueprintCallable)
+	FLevelUpResult TryLevelUp(const int32 XP, const int32 Level);
 
 private:
 
-	UPROPERTY()
+	UPROPERTY(EditDefaultsOnly)
 	float BaseExpMultiplier = 100.0f;
 		
 };

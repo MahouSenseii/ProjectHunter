@@ -9,6 +9,7 @@
 #include "Components/SphereComponent.h"
 #include "Character/Player/PHPlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Item/EquippableItem.h"
 
 // Sets default values for this component's properties
 UInteractionManager::UInteractionManager()

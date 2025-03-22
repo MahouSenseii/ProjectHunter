@@ -64,6 +64,7 @@ void AEquippedObject::BeginPlay()
 	
 }
 
+
 void AEquippedObject::SetMesh(UStaticMesh* Mesh) const
 {
 	if(StaticMesh)

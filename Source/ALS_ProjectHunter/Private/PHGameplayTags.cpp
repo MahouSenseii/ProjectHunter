@@ -1,163 +1,159 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright@2024 Quentin Davis 
 
 #include "PHGameplayTags.h"
 #include "GameplayTagsManager.h"
 
-FPHGameplayTags  FPHGameplayTags::GameplayTags;
+// Initialize the static singleton instance
+FPHGameplayTags FPHGameplayTags::GameplayTags;
 
-//ToDo You can add a new tag by copying this GameplayTags.Attributes_"Primary/Secondary"_"Name" = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Name"), FString("description"));
+/* ============================= */
+/* === Initialize Gameplay Tags === */
+/* ============================= */
 void FPHGameplayTags::InitializeNativeGameplayTags()
 {
+	UGameplayTagsManager& TagsManager = UGameplayTagsManager::Get();
 
-	// Primary gameplay tags
-	GameplayTags.Attributes_Primary_Strength = UGameplayTagsManager::Get().AddNativeGameplayTag(
-	FName("Attribute.Primary.Strength"),
-	FString("Increases physical damage  and slightly increase health."));
+	/* ========================== */
+	/* === Primary Attributes === */
+	/* ========================== */
+	GameplayTags.Attributes_Primary_Strength = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Primary.Strength"), 
+		FString("Increases physical damage and slightly increases health."));
 
-	GameplayTags.Attributes_Primary_Intelligence = UGameplayTagsManager::Get().AddNativeGameplayTag(
-	FName("Attribute.Primary.Intelligence"),
-	FString("Increases Mana and slightly increase elemental damage."));
+	GameplayTags.Attributes_Primary_Intelligence = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Primary.Intelligence"), 
+		FString("Increases mana and slightly increases elemental damage."));
 
-	GameplayTags.Attributes_Primary_Dexterity = UGameplayTagsManager::Get().AddNativeGameplayTag(
-	FName("Attribute.Primary.Dexterity"),
-	FString("Increases critical multiplier  and slightly attack and cast speed."));
+	GameplayTags.Attributes_Primary_Dexterity = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Primary.Dexterity"), 
+		FString("Increases critical multiplier and slightly increases attack and cast speed."));
 
-	GameplayTags.Attributes_Primary_Endurance = UGameplayTagsManager::Get().AddNativeGameplayTag(
-	FName("Attribute.Primary.Endurance"),
-	FString(" Increases Stamina and slightly increases resistances."));
+	GameplayTags.Attributes_Primary_Endurance = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Primary.Endurance"), 
+		FString("Increases stamina and slightly increases resistances."));
 
-	GameplayTags.Attributes_Primary_Affliction = UGameplayTagsManager::Get().AddNativeGameplayTag(
-	FName("Attribute.Primary.Affliction"),
-	FString("Increases DOT and slightly duration."));
+	GameplayTags.Attributes_Primary_Affliction = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Primary.Affliction"), 
+		FString("Increases DOT (Damage Over Time) and slightly increases duration."));
 
-	GameplayTags.Attributes_Primary_Luck = UGameplayTagsManager::Get().AddNativeGameplayTag(
-	FName("Attribute.Primary.Luck"),
-	FString("Increases chance to apply and drop chance."));
+	GameplayTags.Attributes_Primary_Luck = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Primary.Luck"), 
+		FString("Increases chance to apply effects and item drop rate."));
 
-	GameplayTags.Attributes_Primary_Covenant = UGameplayTagsManager::Get().AddNativeGameplayTag(
-	FName("Attribute.Primary.Covenant"),
-	FString("Increases minions health and damage."));
+	GameplayTags.Attributes_Primary_Covenant = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Primary.Covenant"), 
+		FString("Increases minion health and damage."));
 
-	//Secondary gameplay tags
+	/* =========================== */
+	/* === Secondary Attributes === */
+	/* =========================== */
 
-	/** Regen Start */
-	GameplayTags.Attributes_Secondary_Vital_HealthRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.HealthRegenRate"),
-	FString("How fast health is regen."));
+	/** === Defenses === */
+	GameplayTags.Attributes_Secondary_Defenses_Armor = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.Armor"), 
+		FString("Reduces physical damage taken."));
 
-	GameplayTags.Attributes_Secondary_Vital_HealthRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.HealthRegenAmount"),
-	FString("How much health is regen."));
+	/** === Health & Regen === */
+	GameplayTags.Attributes_Secondary_Vital_MaxHealth = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MaxHealth"), 
+		FString("Maximum amount of health."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxHealthRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxHealthRegenAmount"),
-	FString("Max amount health that  can be regen"));
+	GameplayTags.Attributes_Secondary_Vital_HealthRegenRate = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.HealthRegenRate"), 
+		FString("Determines how fast health regenerates."));
 
-	GameplayTags.Attributes_Secondary_Vital_HealthReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.HealthReservedAmount"),
-	FString("Reserved Amount of Health"));
+	GameplayTags.Attributes_Secondary_Vital_HealthRegenAmount = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.HealthRegenAmount"), 
+		FString("Determines how much health is regenerated per tick."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxHealthReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxHealthReservedAmount"),
-	FString("MaxReserved Amount of Health"));
+	GameplayTags.Attributes_Secondary_Vital_MaxHealthRegenAmount = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MaxHealthRegenAmount"), 
+		FString("Max amount of health that can be regenerated."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxHealthRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxHealthRegenRate"),
-	FString("Max speed health can regen."));
+	GameplayTags.Attributes_Secondary_Vital_MaxEffectiveHealth = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MaxEffectiveHealth"), 
+		FString("Max health after reserved health is calculated."));
 
-	GameplayTags.Attributes_Secondary_Vital_ManaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.ManaRegenAmount"),
-	FString("How much mana is regen"));
+	/** === Mana & Regen === */
+	GameplayTags.Attributes_Secondary_Vital_MaxMana = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MaxMana"), 
+		FString("Maximum amount of mana."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxManaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxManaRegenAmount"),
-	FString("Max amount mana that can be regen "));
+	GameplayTags.Attributes_Secondary_Vital_ManaRegenRate = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.ManaRegenRate"), 
+		FString("Determines how fast mana regenerates."));
 
-	GameplayTags.Attributes_Secondary_Vital_ManaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.ManaReservedAmount"),
-	FString("Reserved Amount of Mana"));
+	GameplayTags.Attributes_Secondary_Vital_ManaRegenAmount = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.ManaRegenAmount"), 
+		FString("Determines how much mana is regenerated per tick."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxManaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxManaReservedAmount"),
-	FString("Max Reserved Amount of Mana"));
+	GameplayTags.Attributes_Secondary_Vital_MaxManaRegenAmount = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MaxManaRegenAmount"), 
+		FString("Max amount of mana that can be regenerated."));
 
-	GameplayTags.Attributes_Secondary_Vital_ManaRegenRate= UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.ManaRegenRate"),
-	FString("How fast mana can be regen."));
+	GameplayTags.Attributes_Secondary_Vital_MaxEffectiveMana = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MaxEffectiveMana"), 
+		FString("Max mana after reserved mana is calculated."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxManaRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxManaRegenRate"),
-	FString("Max speed mana can be regen."));
+	/** === Stamina & Regen === */
+	GameplayTags.Attributes_Secondary_Vital_MaxStamina = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MaxStamina"), 
+		FString("Maximum amount of stamina."));
 
-	GameplayTags.Attributes_Secondary_Vital_StaminaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.StaminaRegenAmount"),
-	FString("How much stamina is regen."));
+	GameplayTags.Attributes_Secondary_Vital_MaxEffectiveStamina = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MaxEffectiveStamina"), 
+		FString("Max stamina after reserved stamina is calculated."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxStaminaRegenAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxStaminaRegenAmount"),
-	FString("Max amount stamina that can be regen "));
-	
-	GameplayTags.Attributes_Secondary_Vital_StaminaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.StaminaReservedAmount"),
-	FString("Reserved Amount of Stamina"));
+	GameplayTags.Attributes_Secondary_Vital_StaminaRegenRate = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.StaminaRegenRate"), 
+		FString("Determines how fast stamina regenerates."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxStaminaReservedAmount = UGameplayTagsManager::Get().AddNativeGameplayTag
-    (FName("Attribute.Secondary.MaxStaminaReservedAmount"),
-    FString("Max Reserved Amount of Stamina"));
+	GameplayTags.Attributes_Secondary_Vital_StaminaRegenAmount = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.StaminaRegenAmount"), 
+		FString("Determines how much stamina is regenerated per tick."));
 
-	GameplayTags.Attributes_Secondary_Vital_StaminaRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.StaminaRegenRate"),
-	FString("How fast stamina can be regen."));
+	GameplayTags.Attributes_Secondary_Vital_MaxStaminaRegenAmount = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MaxStaminaRegenAmount"), 
+		FString("Max amount of stamina that can be regenerated."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxStaminaRegenRate = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxStaminaRegenRate"),
-	FString("Max speed mana can be regen."));
-	/** Regen End */
-	/** Defenses Start*/
-	GameplayTags.Attributes_Secondary_Resistances_Armour = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.Armor"),
-	FString("Reduces damage taken from physical damage."));
-	/** Defenses End*/
+	/* =================== */
+	/* === Damage Tags === */
+	/* =================== */
+	GameplayTags.Attributes_Secondary_Damages_MinPhysicalDamage = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MinPhysicalDamage"), 
+		FString("Minimum base physical damage dealt."));
 
-	/** Max Vital Start*/
-	GameplayTags.Attributes_Secondary_Vital_MaxHealth = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxHealth"),
-	FString("Max amount of health."));
+	GameplayTags.Attributes_Secondary_Damages_MaxPhysicalDamage = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MaxPhysicalDamage"), 
+		FString("Maximum base physical damage dealt."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxEffectiveHealth = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxEffectiveHealth"),
-	FString("Max amount of health after reserved health is calculated."));
-	
-	GameplayTags.Attributes_Secondary_Vital_MaxMana = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxMana"),
-	FString("Max amount of Mana."));
+	/* ======================= */
+	/* === Resistance Tags === */
+	/* ======================= */
+	GameplayTags.Attributes_Secondary_Resistances_Armour = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.Armour"), 
+		FString("Reduces physical damage taken."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxEffectiveMana = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxEffectiveMana"),
-	FString("Max amount of mana after reserved mana is calculated."));
-	
-	GameplayTags.Attributes_Secondary_Vital_MaxStamina  = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxStamina"),
-	FString("Max amount of stamina"));
+	GameplayTags.Attributes_Secondary_Resistances_GlobalDefenses = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.GlobalDefenses"), 
+		FString("Provides general damage mitigation."));
 
+	GameplayTags.Attributes_Secondary_Resistances_BlockStrength = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.BlockStrength"), 
+		FString("Determines the effectiveness of blocking attacks."));
 
-	GameplayTags.Attributes_Secondary_Vital_MaxEffectiveStamina = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Secondary.MaxEffectiveHealth"),
-	FString("Max amount of stamina after reserved stamina is calculated."));
+	/* ============================= */
+	/* === Miscellaneous Gameplay Tags === */
+	/* ============================= */
+	GameplayTags.Attributes_Secondary_Misc_Poise = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.Poise"), 
+		FString("Prevents staggering when taking damage until it is depleted."));
 
-	/** Max Vital End*/
+	GameplayTags.Attributes_Secondary_Misc_StunRecovery = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.StunRecovery"), 
+		FString("Reduces the duration of stuns."));
 
-	/** Vital Start*/
-	GameplayTags.Attributes_Vital_Health = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Vital.MaxHealth"),
-	FString("Amount of health."));
-	GameplayTags.Attributes_Vital_Mana = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Vital.Mana"),
-	FString("Amount of Mana."));
-	GameplayTags.Attributes_Vital_Stamina  = UGameplayTagsManager::Get().AddNativeGameplayTag
-	(FName("Attribute.Vital.Stamina"),
-	FString("Amount of stamina"));
-	/** Vital End*/
-	
+	GameplayTags.Attributes_Secondary_Misc_MovementSpeed = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.MovementSpeed"), 
+		FString("Affects how fast the character moves."));
 }

@@ -25,12 +25,32 @@ class ALS_PROJECTHUNTER_API IWidgetInterface
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 
-	virtual void SetActiveWidget(EWidgets Widget){};
-	virtual EWidgets GetActiveWidget(){return EWidgets::AW_None;}
-	virtual void CloseActiveWidget() {};
-	virtual void OpenNewWidget(EWidgets Widget){};
-	virtual void SwitchWidgetTo(const EWidgets NewWidget, APHBaseCharacter* Vendor) {};
-	virtual void SetActiveTab(EWidgets Tab) {};
-	virtual EWidgets GetActiveTab(){return EWidgets::AW_None;}
-	virtual void SwitchTabTo(EWidgets NewTab) {};
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Widget Manager")
+	void SetActiveWidget(EWidgets Widget);
+	virtual void SetActiveWidget_Implementation(EWidgets Widget){};
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Widget Manager")
+	 EWidgets GetActiveWidget();
+	virtual  EWidgets GetActiveWidget_Implementation(){return EWidgets::AW_None;}
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Widget Manager")
+	void OpenNewWidget(EWidgets Widget, bool IsStorageInArea);
+	virtual void OpenNewWidget_Implementation(EWidgets Widget, bool IsStorageInArea){};
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Widget Manager")
+	void CloseActiveWidget();
+	virtual void CloseActiveWidget_Implementation() {};
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Widget Manager")
+	void SwitchWidgetTo(const EWidgets NewWidget,EWidgetsSwitcher Tab, APHBaseCharacter* Vendor);
+	virtual void SwitchWidgetTo_Implementation(const EWidgets NewWidget, EWidgetsSwitcher Tab, APHBaseCharacter* Vendor) {};
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Widget Manager")
+	void SetActiveTab(EWidgetsSwitcher Tab);
+	virtual void SetActiveTab_Implementation(EWidgetsSwitcher Tab) {};
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Widget Manager")
+	EWidgetsSwitcher GetActiveTab();
+	virtual EWidgetsSwitcher GetActiveTab_Implementation(){return EWidgetsSwitcher::WS_None;}
+
 };

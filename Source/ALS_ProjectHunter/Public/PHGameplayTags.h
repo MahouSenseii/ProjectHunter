@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright@2024 Quentin Davis 
 
 #pragma once
 
@@ -6,23 +6,21 @@
 #include "GameplayTagContainer.h"
 #include "NativeGameplayTags.h"
 
-
 /**
- * Gameplay tags
- * Singleton containing native gameplay tags 
+ * Singleton containing all native gameplay tags.
  */
-
 struct FPHGameplayTags
 {
 public:
+	/** Retrieves the singleton instance of gameplay tags. */
+	static const FPHGameplayTags& Get() { return GameplayTags; }
 
-	static  const FPHGameplayTags& Get() {return GameplayTags;}
+	/** Initializes all native gameplay tags. */
 	static void InitializeNativeGameplayTags();
 
-	//Combat Alignment
-	FGameplayTag Attributes_Secondary_Misc_CombatAlignment;
-
-	// primary attributes 
+	/* ========================== */
+	/* === Primary Attributes === */
+	/* ========================== */
 	FGameplayTag Attributes_Primary_Strength;
 	FGameplayTag Attributes_Primary_Intelligence;
 	FGameplayTag Attributes_Primary_Dexterity;
@@ -31,181 +29,168 @@ public:
 	FGameplayTag Attributes_Primary_Luck;
 	FGameplayTag Attributes_Primary_Covenant;
 
-	//secondary attributes
+	/* =========================== */
+	/* === Secondary Attributes === */
+	/* =========================== */
+
+	/** Defenses */
 	FGameplayTag Attributes_Secondary_Defenses_Armor;
+
+	/** Health & Regen */
+	FGameplayTag Attributes_Secondary_Vital_MaxHealth;
 	FGameplayTag Attributes_Secondary_Vital_HealthRegenRate;
 	FGameplayTag Attributes_Secondary_Vital_HealthRegenAmount;
-	FGameplayTag Attributes_Secondary_Vital_MaxHealthRegenRate;
 	FGameplayTag Attributes_Secondary_Vital_MaxHealthRegenAmount;
+	FGameplayTag Attributes_Secondary_Vital_MaxHealthRegenRate;
 	FGameplayTag Attributes_Secondary_Vital_HealthReservedAmount;
 	FGameplayTag Attributes_Secondary_Vital_MaxHealthReservedAmount;
 	FGameplayTag Attributes_Secondary_Vital_HealthFlatReservedAmount;
 	FGameplayTag Attributes_Secondary_Vital_HealthPercentageReserved;
+	FGameplayTag Attributes_Secondary_Vital_MaxEffectiveHealth;
 
+	/** Mana & Regen */
+	FGameplayTag Attributes_Secondary_Vital_MaxMana;
 	FGameplayTag Attributes_Secondary_Vital_ManaRegenRate;
 	FGameplayTag Attributes_Secondary_Vital_ManaRegenAmount;
 	FGameplayTag Attributes_Secondary_Vital_MaxManaRegenRate;
 	FGameplayTag Attributes_Secondary_Vital_MaxManaRegenAmount;
 	FGameplayTag Attributes_Secondary_Vital_ManaReservedAmount;
+	FGameplayTag Attributes_Secondary_Vital_MaxManaRRegenAmount;
 	FGameplayTag Attributes_Secondary_Vital_MaxManaReservedAmount;
 	FGameplayTag Attributes_Secondary_Vital_ManaFlatReservedAmount;
 	FGameplayTag Attributes_Secondary_Vital_ManaPercentageReserved;
+	FGameplayTag Attributes_Secondary_Vital_MaxEffectiveMana;
 
+	/** Stamina & Regen */
+	FGameplayTag Attributes_Secondary_Vital_MaxStamina;
+	FGameplayTag Attributes_Secondary_Vital_MaxEffectiveStamina;
 	FGameplayTag Attributes_Secondary_Vital_StaminaRegenRate;
 	FGameplayTag Attributes_Secondary_Vital_StaminaRegenAmount;
 	FGameplayTag Attributes_Secondary_Vital_MaxStaminaRegenRate;
+	FGameplayTag Attributes_Secondary_Vital_StaminaFlatReservedAmount;
+	FGameplayTag Attributes_Secondary_Vital_StaminaPercentageReserved;
 	FGameplayTag Attributes_Secondary_Vital_MaxStaminaRegenAmount;
 	FGameplayTag Attributes_Secondary_Vital_StaminaReservedAmount;
 	FGameplayTag Attributes_Secondary_Vital_MaxStaminaReservedAmount;
-	FGameplayTag Attributes_Secondary_Vital_StaminaFlatReservedAmount;
-	FGameplayTag Attributes_Secondary_Vital_StaminaPercentageReserved;
-	
-	
-	FGameplayTag Attributes_Secondary_Vital_MaxHealth;
-	FGameplayTag Attributes_Secondary_Vital_MaxEffectiveHealth;
-	FGameplayTag Attributes_Secondary_Vital_MaxMana;
-	FGameplayTag Attributes_Secondary_Vital_MaxEffectiveMana;
-	FGameplayTag Attributes_Secondary_Vital_MaxStamina;
-	FGameplayTag Attributes_Secondary_Vital_MaxEffectiveStamina;
 
-
+	/** Arcane Shield */
 	FGameplayTag Attributes_Secondary_Vital_ArcaneShield;
 	FGameplayTag Attributes_Secondary_Vital_ArcaneShieldRegenRate;
-	FGameplayTag Attributes_Secondary_Vital_ArcaneShieldRegenAmount;
 	FGameplayTag Attributes_Secondary_Vital_MaxArcaneShieldRegenRate;
 	FGameplayTag Attributes_Secondary_Vital_MaxArcaneShieldRegenAmount;
-	FGameplayTag Attributes_Secondary_Vital_ArcaneShieldReservedAmount;
 	FGameplayTag Attributes_Secondary_Vital_MaxArcaneShieldReservedAmount;
+	FGameplayTag Attributes_Secondary_Vital_ArcaneShieldReservedAmount;
+	FGameplayTag Attributes_Secondary_Vital_ArcaneShieldRegenAmount;
 	FGameplayTag Attributes_Secondary_Vital_ArcaneShieldFlatReservedAmount;
 	FGameplayTag Attributes_Secondary_Vital_ArcaneShieldPercentageReserved;
-		
-	//Vitals
-	FGameplayTag Attributes_Vital_Health;
-	FGameplayTag Attributes_Vital_Mana;
-	FGameplayTag Attributes_Vital_Stamina;
 
-	//Damages
-	FGameplayTag Attributes_Secondary_Damages_PhysicalDamage;
-	FGameplayTag Attributes_Secondary_Damages_FireDamage;
-	FGameplayTag Attributes_Secondary_Damages_IceDamage;
-	FGameplayTag Attributes_Secondary_Damages_LightDamage;
-	FGameplayTag Attributes_Secondary_Damages_LightningDamage;
-	FGameplayTag Attributes_Secondary_Damages_CorruptionDamage;
-	FGameplayTag Attributes_Secondary_Damages_WindDamage;
-	FGameplayTag Attributes_Secondary_Damages_EarthDamage;
+	/* =================== */
+	/* === Damage Tags === */
+	/* =================== */
 
-	// Percent Bonus 
+	/** Min Damage */
+	FGameplayTag Attributes_Secondary_Damages_MinPhysicalDamage;
+	FGameplayTag Attributes_Secondary_Damages_MinFireDamage;
+	FGameplayTag Attributes_Secondary_Damages_MinIceDamage;
+	FGameplayTag Attributes_Secondary_Damages_MinLightDamage;
+	FGameplayTag Attributes_Secondary_Damages_MinLightningDamage;
+	FGameplayTag Attributes_Secondary_Damages_MinCorruptionDamage;
+
+	/** Max Damage */
+	FGameplayTag Attributes_Secondary_Damages_MaxPhysicalDamage;
+	FGameplayTag Attributes_Secondary_Damages_MaxFireDamage;
+	FGameplayTag Attributes_Secondary_Damages_MaxIceDamage;
+	FGameplayTag Attributes_Secondary_Damages_MaxLightDamage;
+	FGameplayTag Attributes_Secondary_Damages_MaxLightningDamage;
+	FGameplayTag Attributes_Secondary_Damages_MaxCorruptionDamage;
+
+	/** Damage Bonuses */
 	FGameplayTag Attributes_Secondary_BonusDamage_GlobalDamages;
 	FGameplayTag Attributes_Secondary_BonusDamage_PhysicalPercentBonus;
-	FGameplayTag Attributes_Secondary_BonusDamage_FirePercentBonus;
-	FGameplayTag Attributes_Secondary_BonusDamage_IcePercentBonus;
-	FGameplayTag Attributes_Secondary_BonusDamage_LightPercentBonus;
-	FGameplayTag Attributes_Secondary_BonusDamage_LightningPercentBonus;
-	FGameplayTag Attributes_Secondary_BonusDamage_CorruptionPercentBonus;
-	FGameplayTag Attributes_Secondary_BonusDamage_WindPercentBonus;
-	FGameplayTag Attributes_Secondary_BonusDamage_EarthPercentBonus;
-
-	//Flat Bonus
 	FGameplayTag Attributes_Secondary_BonusDamage_PhysicalFlatBonus;
+	FGameplayTag Attributes_Secondary_BonusDamage_FirePercentBonus;
 	FGameplayTag Attributes_Secondary_BonusDamage_FireFlatBonus;
+	FGameplayTag Attributes_Secondary_BonusDamage_IcePercentBonus;
 	FGameplayTag Attributes_Secondary_BonusDamage_IceFlatBonus;
+	FGameplayTag Attributes_Secondary_BonusDamage_LightPercentBonus;
 	FGameplayTag Attributes_Secondary_BonusDamage_LightFlatBonus;
+	FGameplayTag Attributes_Secondary_BonusDamage_LightningPercentBonus;
 	FGameplayTag Attributes_Secondary_BonusDamage_LightningFlatBonus;
+	FGameplayTag Attributes_Secondary_BonusDamage_CorruptionPercentBonus;
 	FGameplayTag Attributes_Secondary_BonusDamage_CorruptionFlatBonus;
-	FGameplayTag Attributes_Secondary_BonusDamage_WindFlatBonus;
-	FGameplayTag Attributes_Secondary_BonusDamage_EarthFlatBonus;
 
-	//Misc Bonus
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_DamageBonusWhileAtFullHP;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_DamageBonusWhileAtLowHP;
-
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_AreaDamage;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_AreaOfEffect;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_AttackRange;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_AttackSpeed;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_CastSpeed;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_CritChance;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_CritMultiplier;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_DamageOverTime;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_ElementalDamage;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_SpellsCritChance;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_SpellsCritMultiplier;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_MeleeDamage;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_ProjectileCount;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_ProjectileSpeed;
-	FGameplayTag Attributes_Secondary_BonusDamage_Misc_RangedDamage;
-	
-
-	
-	//Resistance
+	/* ======================= */
+	/* === Resistance Tags === */
+	/* ======================= */
 	FGameplayTag Attributes_Secondary_Resistances_GlobalDefenses;
 	FGameplayTag Attributes_Secondary_Resistances_Armour;
 	FGameplayTag Attributes_Secondary_Resistances_ArmourFlatBonus;
 	FGameplayTag Attributes_Secondary_Resistances_ArmourPercentBonus;
-	FGameplayTag Attributes_Secondary_Resistances_FireResistance;
-	FGameplayTag Attributes_Secondary_Resistances_IceResistance;
-	FGameplayTag Attributes_Secondary_Resistances_LightResistance;
-	FGameplayTag Attributes_Secondary_Resistances_LightningResistance;
-	FGameplayTag Attributes_Secondary_Resistances_CorruptionResistance;
-	FGameplayTag Attributes_Secondary_Resistances_WindResistance;
-	FGameplayTag Attributes_Secondary_Resistances_EarthResistance;
 
+	FGameplayTag Attributes_Secondary_Resistances_FireResistanceFlat;
+	FGameplayTag Attributes_Secondary_Resistances_IceResistanceFlat;
+	FGameplayTag Attributes_Secondary_Resistances_LightResistanceFlat;
+	FGameplayTag Attributes_Secondary_Resistances_LightningResistanceFlat;
+	FGameplayTag Attributes_Secondary_Resistances_CorruptionResistanceFlat;
+
+	FGameplayTag Attributes_Secondary_Resistances_FireResistancePercentage;
+	FGameplayTag Attributes_Secondary_Resistances_IceResistancePercentage;
+	FGameplayTag Attributes_Secondary_Resistances_LightResistancePercentage;
+	FGameplayTag Attributes_Secondary_Resistances_LightningResistancePercentage;
+	FGameplayTag Attributes_Secondary_Resistances_CorruptionResistancePercentage;
 
 	FGameplayTag Attributes_Secondary_Resistances_MaxFireResistance;
 	FGameplayTag Attributes_Secondary_Resistances_MaxIceResistance;
 	FGameplayTag Attributes_Secondary_Resistances_MaxLightResistance;
 	FGameplayTag Attributes_Secondary_Resistances_MaxLightningResistance;
 	FGameplayTag Attributes_Secondary_Resistances_MaxCorruptionResistance;
-	FGameplayTag Attributes_Secondary_Resistances_MaxWindResistance;
-	FGameplayTag Attributes_Secondary_Resistances_MaxEarthResistance;
+
 	FGameplayTag Attributes_Secondary_Resistances_BlockStrength;
 
-	//Piercing
-	FGameplayTag Attributes_Secondary_Piercing_ArmourPiercing;
-	FGameplayTag Attributes_Secondary_Piercing_FirePiercing;
-	FGameplayTag Attributes_Secondary_Piercing_IcePiercing;
-	FGameplayTag Attributes_Secondary_Piercing_LightPiercing;
-	FGameplayTag Attributes_Secondary_Piercing_LightningPiercing;
-	FGameplayTag Attributes_Secondary_Piercing_CorruptionPiercing;
-	FGameplayTag Attributes_Secondary_Piercing_WindPiercing;
-	FGameplayTag Attributes_Secondary_Piercing_EarthPiercing;
+	/* ============================= */
+	/* === Chance & Duration Tags === */
+	/* ============================= */
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToBleed;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToIgnite;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToFreeze;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToShock;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToStun;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToKnockBack;
 
-	//Duration
 	FGameplayTag Attributes_Secondary_Duration_BurnDuration;
 	FGameplayTag Attributes_Secondary_Duration_BleedDuration;
 	FGameplayTag Attributes_Secondary_Duration_FreezeDuration;
 	FGameplayTag Attributes_Secondary_Duration_CorruptionDuration;
 	FGameplayTag Attributes_Secondary_Duration_ShockDuration;
-	FGameplayTag Attributes_Secondary_Duration_PetrifyBuildUpDuration;
-	FGameplayTag Attributes_Secondary_Duration_PurifyDuration;
 
-	//ChanceToApply
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToBleed;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToCorrupt;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToFreeze;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToIgnite;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToPetrify;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToPurify;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToShock;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToStun;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToKnockBack;
-
-	//Misc
+	/* ==================== */
+	/* === Miscellaneous === */
+	/* ==================== */
+	FGameplayTag Attributes_Secondary_Misc_Poise;
+	FGameplayTag Attributes_Secondary_Misc_StunRecovery;
+	FGameplayTag Attributes_Secondary_Misc_ManaCostChanges;
 	FGameplayTag Attributes_Secondary_Misc_CoolDown;
 	FGameplayTag Attributes_Secondary_Misc_LifeLeech;
 	FGameplayTag Attributes_Secondary_Misc_ManaLeech;
 	FGameplayTag Attributes_Secondary_Misc_MovementSpeed;
-	FGameplayTag Attributes_Secondary_Misc_Poise;
-	FGameplayTag Attributes_Secondary_Misc_StunRecovery;
-	FGameplayTag Attributes_Secondary_Misc_ManaCostChanges;
 	FGameplayTag Attributes_Secondary_Misc_LifeOnHit;
 	FGameplayTag Attributes_Secondary_Misc_ManaOnHit;
 	FGameplayTag Attributes_Secondary_Misc_StaminaOnHit;
 	FGameplayTag Attributes_Secondary_Misc_StaminaCostChanges;
 	FGameplayTag Attributes_Secondary_Money_Gems;
+	FGameplayTag Attributes_Secondary_Misc_CombatAlignment;
+
+	/* ==================== */
+	/* === Vitals === */
+	/* ==================== */
+
+	FGameplayTag Attributes_Vital_Health;
+	FGameplayTag Attributes_Vital_Stamina;
+	FGameplayTag Attributes_Vital_Mana;
+
 protected:
- 
 
 private:
-	static  FPHGameplayTags GameplayTags;
+	/** Singleton instance */
+	static FPHGameplayTags GameplayTags;
 };

@@ -16,12 +16,6 @@ class ALS_PROJECTHUNTER_API UWeaponItem : public UEquippableItem
 
 public:
 
-	UFUNCTION(Blueprintable)
-	void SetWeaponData(const FWeaponItemData& NewWeaponItemData);
 
-	UFUNCTION(Blueprintable)
-	FWeaponItemData GetWeaponData()const;
-private:
-	UPROPERTY(EditAnywhere, Category = "ItemInfo")
-	FWeaponItemData WeaponItemData;
+
 };

@@ -57,16 +57,22 @@ USTRUCT(BlueprintType)
 struct FMinMax
 {
 	GENERATED_BODY()
-
+	
+public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
 	float Min;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
 	float Max;
 
+	// Default Constructor
 	FMinMax()
-		:Min(0),
-		Max(0)
+		: Min(0), Max(0)
+	{}
+
+	// Custom Constructor
+	FMinMax(float InMin, float InMax)
+		: Min(InMin), Max(InMax)
 	{}
 	
 };
@@ -101,29 +107,94 @@ struct FWeaponItemData
 	{}
 };
 
+
 USTRUCT(BlueprintType)
-struct FEquippableItemData
+struct FDamageRange
 {
 	GENERATED_BODY()
 
-	// Properties specific to equippable items
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-	TSubclassOf<AEquippedObject> EquipClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Min = 0.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-	EEquipmentSlot  EquipSlot;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Max = 0.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	TMap<EDefenseTypes, float> DefenseStats;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	TMap<EItemStats, float>OverallStats;
-	
-	FEquippableItemData(): EquipSlot()
+	FDamageRange& operator+=(const FDamageRange& Other)
 	{
+		Min += Other.Min;
+		Max += Other.Max;
+		return *this;
+	}
+
+	FDamageRange& operator*=(float Scale)
+	{
+		Min *= Scale;
+		Max *= Scale;
+		return *this;
+	}
+
+	friend FDamageRange operator*(const FDamageRange& Range, float Scale)
+	{
+		FDamageRange Result = Range;
+		Result *= Scale;
+		return Result;
 	}
 };
 
+
+USTRUCT(BlueprintType)
+struct FDefenseStats
+{
+	GENERATED_BODY()
+
+	/** Flat Resistance Values */
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float ArmorFlat = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float FireResistanceFlat = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float IceResistanceFlat = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float LightningResistanceFlat = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float LightResistanceFlat = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float CorruptionResistanceFlat = 0.0f;
+
+	/** Percent Resistance Values */
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float ArmorPercent = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float FireResistancePercent = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float IceResistancePercent = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float LightningResistancePercent = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float LightResistancePercent = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float CorruptionResistancePercent = 0.0f;
+
+	/** Global Defense and Block Strength */
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float GlobalDefenses = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Defense")
+	float BlockStrength = 0.0f;
+
+	/** Default Constructor */
+	FDefenseStats() = default;
+};
 
 
 USTRUCT(BlueprintType)
@@ -138,59 +209,59 @@ struct FItemInformation : public FTableRowBase
 	TSubclassOf<AItemPickup> PickupClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Mesh")
-	UStaticMesh* StaticMesh; // The static mesh representation of the item
+	UStaticMesh* StaticMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Mesh")
-	USkeletalMesh* SkeletalMesh; // The skeletal mesh representation of the item, if it has moving parts
+	USkeletalMesh* SkeletalMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Owner")
-	FString OwnerID; // The unique identifier for the owner of the item
+	FString OwnerID;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	FText ItemName; // The displayed name of the item
+	FText ItemName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	FText Description; // A textual description of the item
+	FText Description;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	FName ItemTag; // A tag for categorizing or filtering the item
+	FName ItemTag;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	UMaterialInstance* ItemImage; // The image icon representing the item in the inventory or UI
+	UMaterialInstance* ItemImage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	UMaterialInstance* ItemImageRotated; // The rotated image icon of the item
+	UMaterialInstance* ItemImageRotated;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	EItemType ItemType; // The general type of the item (e.g., weapon, armor)
+	EItemType ItemType;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	EItemSubType ItemSubType; // The specific subtype within the main type
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	EItemRarity ItemRarity; // The rarity or grade of the item
+	EItemSubType ItemSubType;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	int Value; // The monetary value of the item
+	EItemRarity ItemRarity;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	float ValueModifier; // A modifier that might affect the item's value
+	int Value;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	bool IsTradeable; // Indicates whether the item can be traded between players
-	
+	float ValueModifier;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
+	bool IsTradeable;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Inventory")
-	FIntPoint Dimensions; // The dimensions of the item, e.g., in a grid-based inventory system
+	FIntPoint Dimensions;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Inventory")
 	EEquipmentSlot EquipmentSlot;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Text")
 	FText ItemDescription;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Inventory")
-	bool Stackable; // Indicates whether the item can be stacked in the inventory
-	
+	bool Stackable;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Inventory")
 	int Quantity;
 
@@ -203,15 +274,12 @@ struct FItemInformation : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Transform")
 	FTransform Transform;
 
-	// Properties specific to consumable items
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Consumable")
 	TSubclassOf<UGameplayEffect> GameplayEffectClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base|Consumable")
 	bool bHasNameBeenGenerated;
-	
-	
-	
+
 	FItemInformation()
 		: BaseGradeValue(0),
 		  StaticMesh(nullptr),
@@ -222,7 +290,7 @@ struct FItemInformation : public FTableRowBase
 		  ItemTag(""),
 		  ItemImage(nullptr),
 		  ItemImageRotated(nullptr),
-		  ItemType(EItemType::IS_None),
+		  ItemType(EItemType::IT_None),
 		  ItemSubType(EItemSubType::IST_None),
 		  ItemRarity(EItemRarity::IR_None),
 		  Value(0),
@@ -358,4 +426,115 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	TArray<FPHAttributeData> SuffixStats;
+};
+
+/** Struct that defines stat requirements for equipping an item */
+USTRUCT(BlueprintType)
+struct FItemStatRequirement
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirements")
+	float RequiredLevel = 0.0f;
+	
+	/** Minimum Strength required */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirements")
+	float RequiredStrength = 0.0f;
+
+	/** Minimum Intelligence required */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirements")
+	float RequiredIntelligence = 0.0f;
+
+	/** Minimum Dexterity required */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirements")
+	float RequiredDexterity = 0.0f;
+
+	/** Minimum Endurance required */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirements")
+	float RequiredEndurance = 0.0f;
+
+	/** Minimum Affliction required */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirements")
+	float RequiredAffliction = 0.0f;
+
+	/** Minimum Luck required */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirements")
+	float RequiredLuck = 0.0f;
+
+	/** Minimum Covenant required */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirements")
+	float RequiredCovenant = 0.0f;
+};
+
+USTRUCT(BlueprintType)
+struct FItemPassiveEffectInfo
+{
+	GENERATED_BODY()
+
+	/** GameplayEffect class to apply */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<UGameplayEffect> EffectClass;
+
+	/** Level of the effect (for scaling) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Level = 1.0f;
+
+	/** Should this effect be applied permanently or only under conditions? */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bPersistent = true;
+};
+
+USTRUCT(BlueprintType)
+struct FEquippableItemData
+{
+	GENERATED_BODY()
+
+	// Properties specific to equippable items
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	TSubclassOf<AEquippedObject> EquipClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	EEquipmentSlot  EquipSlot;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	FName ItemName;
+
+	/** Requirements to equip this item */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Requirements")
+	FItemStatRequirement StatRequirements;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	TArray<FPHAttributeData> ArmorAttributes;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Passive Effects")
+	TArray<FItemPassiveEffectInfo> PassiveEffects;
+	
+	FEquippableItemData(): EquipSlot()
+	{
+	}
+};
+
+USTRUCT()
+struct FAppliedStats
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FPHAttributeData> Stats;
+
+	UPROPERTY()
+	TArray<float> RolledValues; 
+};
+
+
+
+USTRUCT()
+struct FPassiveEffectHandleList
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FActiveGameplayEffectHandle> Handles;
 };

@@ -6,6 +6,7 @@
 #include "Components/InventoryManager.h"
 #include  "Library/PHItemFunctionLibrary.h"
 #include "Library/FL_InteractUtility.h"
+#include "..\..\..\Public\UI\ToolTip\EquippableToolTip.h"
 
 AEquipmentPickup::AEquipmentPickup(): StatsDataTable(nullptr)
 {
@@ -79,5 +80,25 @@ void AEquipmentPickup::HandleSimpleInteraction(APHBaseCharacter* Character) cons
 			InteractableManager->RemoveInteraction();
 		}
 	}
+}
+
+void AEquipmentPickup::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	Super::OnOverlapBegin(OverlappedComponent,OtherActor,OtherComp, OtherBodyIndex, bFromSweep,SweepResult);
+
+	if( APHBaseCharacter* BaseCharacter =  Cast<APHBaseCharacter>(OtherActor))
+	{
+		if(BaseCharacter->IsPlayerControlled())
+		{
+		}
+	}
+}
+
+void AEquipmentPickup::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	Super::OnOverlapEnd(OverlappedComponent,OtherActor,OtherComp,OtherBodyIndex);
+	
 }
 

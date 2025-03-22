@@ -3,9 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "Item/BaseItem.h"
 #include "EquippableItem.generated.h"
 
+class APHBaseCharacter;
 /**
  * 
  */
@@ -18,18 +20,26 @@ class ALS_PROJECTHUNTER_API UEquippableItem : public UBaseItem
 public:	
 	// Sets default values for this actor's properties
 	UEquippableItem();
-
-	
 	
 	virtual void Initialize(FItemInformation& ItemInfo) override;
+
+	UFUNCTION(BlueprintCallable)
+	bool CanEquipItem(const APHBaseCharacter* Character) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Base")
 	FEquippableItemData GetEquippableData() const { return EquippableData;}
 
 	UFUNCTION(BlueprintCallable, Category = "Base")
 	void SetEquippableData(FEquippableItemData Data) { EquippableData = Data; }
-
 	
+	UFUNCTION(Blueprintable)
+	void SetWeaponData(const FWeaponItemData& NewWeaponItemData){ WeaponItemData = NewWeaponItemData;}
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	FItemStatRequirement GetStatRequirements() const;
+
+	UFUNCTION(Blueprintable)
+	FWeaponItemData GetWeaponData() const { return WeaponItemData;}
 	
 protected:
 	UPROPERTY(EditAnywhere, Category = "ItemInfo")
@@ -41,4 +51,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")
 	FPHItemStats ItemStats;
+
+	
+	UPROPERTY(EditAnywhere, Category = "ItemInfo")
+	FWeaponItemData WeaponItemData;
 };

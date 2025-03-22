@@ -19,7 +19,7 @@ class ALS_PROJECTHUNTER_API APHHUD : public AHUD
 public:
 
 
-	UAttributeMenuWidgetController* GetAttributeWidgetController(const FWidgetControllerParams& WCParams);
+	UAttributeMenuWidgetController*  GetAttributeWidgetController(const FWidgetControllerParams& WCParams);
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 	UPHOverlayWidgetController* GetOverlayWidgetController(const FWidgetControllerParams& WCParams);	
 protected:

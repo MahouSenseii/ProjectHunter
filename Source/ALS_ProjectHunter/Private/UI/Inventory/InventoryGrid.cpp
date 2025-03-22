@@ -9,168 +9,151 @@
 #include "Character/PHBaseCharacter.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/InventoryManager.h"
+#include "Slate/SlateBrushAsset.h"
 #include "UI/Item/ItemWidget.h"
+
+/* ============================= */
+/* === Initialization Header === */
+/* ============================= */
 
 void UInventoryGrid::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	// Ensure all pointers are valid before proceeding
-	if (CanvasPanel && GridBorder && GridCanvas)
+	if (!CanvasPanel || !GridBorder || !GridCanvas)
 	{
-		// Add GridBorder and GridCanvas as children to CanvasPanel
-		CanvasPanel->AddChild(GridBorder);
-		GridBorder->AddChild(GridCanvas);
-		if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(GridCanvas->Slot))
-		{
-			CanvasSlot->SetZOrder(-1); // Set to lower value
-		}
-		// Optional: Position and size your GridBorder and GridCanvas as required.
-		// This is where you'd use methods to set anchors, offsets, etc.
-
-	}
-	else
-	{
-		// Debug log for nullptr cases
 		UE_LOG(LogTemp, Warning, TEXT("CanvasPanel, GridBorder, or GridCanvas is null."));
+		return;
 	}
 
+	CanvasPanel->AddChild(GridBorder);
+	GridBorder->AddChild(GridCanvas);
+
+	if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(GridCanvas->Slot))
+	{
+		CanvasSlot->SetZOrder(-1);
+	}
 }
 
-int32 UInventoryGrid::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, 
-	int32 LayerId,const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
+/* ============================= */
+/* === Painting and Drawing === */
+/* ============================= */
+
+int32 UInventoryGrid::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
+	const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements,
+	int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
-	// Call the parent class's NativePaint method
 	const int32 NewLayer = Super::NativePaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle, bParentEnabled);
-
-	// Store paint geometry for reuse
-	const auto PaintGeometry = AllottedGeometry.ToPaintGeometry();
-
-	const FPaintContext Context(AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle, bParentEnabled);
-
-	// Draw lines on the grid
-	DrawGridLines(PaintGeometry, OutDrawElements, NewLayer);
+	const FPaintContext Context(AllottedGeometry, MyCullingRect, OutDrawElements, NewLayer, InWidgetStyle, bParentEnabled);
+	DrawGridLines(AllottedGeometry.ToPaintGeometry(), OutDrawElements, NewLayer);
 
 	if (DrawDropLocation && UWidgetBlueprintLibrary::IsDragDropping())
 	{
-		// Draw box based on drag and drop payload
-		DrawDragDropBox(Context, PaintGeometry, OutDrawElements, NewLayer);
+		DrawDragDropBox(Context, AllottedGeometry.ToPaintGeometry(), OutDrawElements, NewLayer);
 	}
 
-	// Return the new layer id
 	return NewLayer;
-
 }
 
-// Draw lines on the grid
 void UInventoryGrid::DrawGridLines(const FPaintGeometry& PaintGeometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
 {
-	// Check if GridBorder is valid
 	if (!GridBorder)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("GridBorder is null."));
 		return;
 	}
-	for (const auto& [Start, End] : Lines)
+
+	const FVector2D LocalTopLeft = USlateBlueprintLibrary::GetLocalTopLeft(GridBorder->GetCachedGeometry());
+
+	for (const FLine& Line : Lines)
 	{
-		// Calculate absolute positions using USlateBlueprintLibrary::GetLocalTopLeft()
-		FVector2D LocalTopLeft = USlateBlueprintLibrary::GetLocalTopLeft(GridBorder->GetCachedGeometry());
-		const FVector2D PositionA = Start + LocalTopLeft;
-		const FVector2D PositionB = End + LocalTopLeft;
-
-		// Create points array and custom color
-		TArray<FVector2D> Points { PositionA, PositionB };
-		FLinearColor CustomColor(1.0f, 1.0f, 1.0f, 1.0f); // R, G, B, A
-
-		// Draw the line
-		FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 1 , PaintGeometry, Points, ESlateDrawEffect::None, CustomColor, true, 3.0f);
+		TArray<FVector2D> Points{ Line.Start + LocalTopLeft, Line.End + LocalTopLeft };
+		FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 1, PaintGeometry, Points, ESlateDrawEffect::None, FLinearColor::White, true, 3.0f);
 	}
 }
+
+
 
 
 void UInventoryGrid::DrawDragDropBox(FPaintContext Context, const FPaintGeometry& PaintGeometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
 {
 	UBaseItem* Payload = const_cast<UInventoryGrid*>(this)->GetPayload(UWidgetBlueprintLibrary::GetDragDroppingContent());
+	if (!Payload) return;
+
 	const bool bIsRoom = IsRoomAvailableforPayload(Payload);
-	FLinearColor Color;
-	if(bIsRoom)
+	const FLinearColor Color = bIsRoom ? FLinearColor(0.0f, 1.0f, 0.0f, 0.25f) : FLinearColor(1.0f, 0.0f, 0.0f, 0.25f);
+
+	const FVector2D Position(DraggedItemTopLeft.X * TileSize, DraggedItemTopLeft.Y * TileSize);
+	const FVector2D Size(Payload->GetDimensions().X * TileSize, Payload->GetDimensions().Y * TileSize);
+	if (!Brush || !Brush->Brush.GetResourceObject())
 	{
-		Color = FLinearColor(0.0f,1.0f,0.0f,0.25);
-	}
-	else
-	{
-		Color = FLinearColor(1.0f, 0.0f, 0.0f, .25f);
+		UE_LOG(LogTemp, Warning, TEXT("DrawDragDropBox: No valid brush set!"));
+		return;
 	}
 
-	FIntPoint CreatedIntPoint;
-	CreatedIntPoint.X = (DraggedItemTopLeft.X * TileSize) - 0.0f;
-	CreatedIntPoint.Y = (DraggedItemTopLeft.Y * TileSize) - 0.0f;
-
-	FVector2D CreatedVector2D;
-	CreatedVector2D.X = Payload->GetDimensions().X * TileSize;
-	CreatedVector2D.Y = Payload->GetDimensions().Y * TileSize;
-
-
-	UWidgetBlueprintLibrary::DrawBox(Context, CreatedIntPoint, CreatedVector2D, Brush, Color);
+	UWidgetBlueprintLibrary::DrawBox(Context, Position, Size, Brush, Color);
 }
 
 
-void UInventoryGrid::NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
-	UDragDropOperation* InOperation)
+
+/* ============================= */
+/* === Drag and Drop Events === */
+/* ============================= */
+
+void UInventoryGrid::NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
 	Super::NativeOnDragEnter(InGeometry, InDragDropEvent, InOperation);
-
 	DrawDropLocation = true;
 }
+
 
 void UInventoryGrid::NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
 	Super::NativeOnDragLeave(InDragDropEvent, InOperation);
-
 	DrawDropLocation = false;
 }
 
 FReply UInventoryGrid::NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
-	if (InKeyEvent.GetKey() == EKeys::R)  
+	if (InKeyEvent.GetKey() == EKeys::R)
 	{
-		if (UDragDropOperation* CurrentOperation = UWidgetBlueprintLibrary::GetDragDroppingContent())  // Check if it's valid
+		if (UDragDropOperation* CurrentOperation = UWidgetBlueprintLibrary::GetDragDroppingContent())
 		{
-			if (UBaseItem* OutPayload = GetPayload(CurrentOperation))  // Check if the payload is valid
+			if (UBaseItem* OutPayload = GetPayload(CurrentOperation))
 			{
-				OutPayload->Rotate();  // Perform rotation
-				Cast<UItemWidget>(CurrentOperation->DefaultDragVisual)->Refresh();
+				OutPayload->Rotate();
+				if (UItemWidget* DragVisual = Cast<UItemWidget>(CurrentOperation->DefaultDragVisual))
+				{
+					CurrentOperation->Offset = FVector2D (0.5f,0.5f);
+					DragVisual->Refresh();
+						CurrentOperation->Offset = FVector2D (-0.25f,-0.25f);
+				}
 			}
 		}
 	}
-	return Super::NativeOnPreviewKeyDown(InGeometry, InKeyEvent);  // Added missing semicolon
+	return Super::NativeOnPreviewKeyDown(InGeometry, InKeyEvent);
 }
 
-bool UInventoryGrid::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
-	UDragDropOperation* InOperation)
+bool UInventoryGrid::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
 	UBaseItem* Payload = GetPayload(InOperation);
-	if (!Payload)
-	{
-		return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation); // Early return if no payload
-	}
+	if (!Payload) return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
 
 	const FTile InTile{ DraggedItemTopLeft.X, DraggedItemTopLeft.Y };
 	const int32 Index = OwnerInventory->TileToIndex(InTile);
 
-	if (const APHBaseCharacter* Character = Cast<APHBaseCharacter>(OwnerInventory->GetOwner()); Character && Payload->GetItemInfo().OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID())
+	if (Payload->GetItemInfo().OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID())
 	{
-		HandleOwnedItemDrop(Payload, Index); // Handle drop for owned items
-
+		HandleOwnedItemDrop(Payload, Index);
 	}
 	else
 	{
-		HandleUnownedItemDrop(Payload, Index);// Handle drop for unowned items
-
+		HandleUnownedItemDrop(Payload, Index);
 	}
 
-	return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation); // Early return if no payload
+	return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
 }
+
 
 
 bool UInventoryGrid::HandleOwnedItemDrop(UBaseItem* Payload, const int32 Index) const
@@ -451,7 +434,7 @@ void UInventoryGrid::AddItemToGrid(UBaseItem* Item, const FTile TopLeftTile)
 	UPanelSlot* ReturnValue = GridCanvas->AddChild(CreatedWidget);
 	if (UCanvasPanelSlot* RefSlot = Cast<UCanvasPanelSlot>(ReturnValue))
 	{
-		RefSlot->SetZOrder(1);
+		RefSlot->SetZOrder(100);
 		RefSlot->SetAutoSize(true);
 
 		FVector2D Position;

@@ -138,7 +138,7 @@ protected:
 
 	UFUNCTION()
 	void DebugOverlayMenuCycleAction(const FInputActionValue& Value);
-
+	
 	UFUNCTION(BlueprintCallable)
 	float GetElapsedSeconds(const UInputAction* Action) const;
 

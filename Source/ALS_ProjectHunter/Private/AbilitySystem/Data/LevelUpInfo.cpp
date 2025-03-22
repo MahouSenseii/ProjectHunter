@@ -15,19 +15,26 @@ ULevelUpInfo::ULevelUpInfo()
 		}
 }
 
-int32 ULevelUpInfo::GetXpNeededForLevelUp(const int32 Level)
+FLevelUpResult ULevelUpInfo::TryLevelUp(const int32 XP, const int32 Level)
+{
+	FLevelUpResult Result;
+
+	if (HasLeveledUp(XP, Level))
+	{
+		Result.bLeveledUp = true;
+		Result.XPLeft = XP - LevelUpInformation[Level].LevelUpRequirement;
+		Result.AttributePointsAwarded = LevelUpInformation[Level].AttributePointAward;
+	}
+
+	return Result;
+}
+
+int32 ULevelUpInfo::GetXpNeededForLevelUp(const int32 Level) const
 {
 	return LevelUpInformation[Level].LevelUpRequirement;
 }
 
-int32 ULevelUpInfo::LevelUp(const int32 XP , int32 Level)
+bool ULevelUpInfo::HasLeveledUp(const int32 XP, const int32 Level) const
 {
-	if(LevelUpInformation[Level].LevelUpRequirement <= XP)
-	{
-		LevelUpInformation[Level].AttributePointAward += 2; // Increase attribute points per level
-		return XP - LevelUpInformation[Level].LevelUpRequirement;
-	}
-	return 0;
+	return XP >= GetXpNeededForLevelUp(Level);
 }
-
-

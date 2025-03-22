@@ -59,8 +59,7 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Collison")
 	TArray<AActor*> CurrentActorHit;
-
-
+	
 	// Function to set the mesh
 	void SetMesh(UStaticMesh* Mesh) const;
 	
@@ -84,5 +83,4 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")
 	FPHItemStats ItemStats;
-
 };
