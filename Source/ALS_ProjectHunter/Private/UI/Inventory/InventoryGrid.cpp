@@ -127,6 +127,7 @@ FReply UInventoryGrid::NativeOnPreviewKeyDown(const FGeometry& InGeometry, const
 					CurrentOperation->Offset = FVector2D (0.5f,0.5f);
 					DragVisual->Refresh();
 						CurrentOperation->Offset = FVector2D (-0.25f,-0.25f);
+					
 				}
 			}
 		}

@@ -3,12 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AttributeSet.h"
 #include "GameplayTagContainer.h"
 #include "NativeGameplayTags.h"
 
 /**
  * Singleton containing all native gameplay tags.
  */
+
+
+
 struct FPHGameplayTags
 {
 public:
@@ -17,6 +21,14 @@ public:
 
 	/** Initializes all native gameplay tags. */
 	static void InitializeNativeGameplayTags();
+
+	void RegisterStatusEffectAttributes();
+	void RegisterMinMaxTagMap();
+	static void RegisterFlatDamageAttributes();
+	static void RegisterPercentDamageAttributes();
+	static void RegisterBaseDamageAttributes();
+	static void RegisterAllAttributes();
+	void RegisterAllAttribute();
 
 	/* ========================== */
 	/* === Primary Attributes === */
@@ -147,22 +159,6 @@ public:
 
 	FGameplayTag Attributes_Secondary_Resistances_BlockStrength;
 
-	/* ============================= */
-	/* === Chance & Duration Tags === */
-	/* ============================= */
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToBleed;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToIgnite;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToFreeze;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToShock;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToStun;
-	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToKnockBack;
-
-	FGameplayTag Attributes_Secondary_Duration_BurnDuration;
-	FGameplayTag Attributes_Secondary_Duration_BleedDuration;
-	FGameplayTag Attributes_Secondary_Duration_FreezeDuration;
-	FGameplayTag Attributes_Secondary_Duration_CorruptionDuration;
-	FGameplayTag Attributes_Secondary_Duration_ShockDuration;
-
 	/* ==================== */
 	/* === Miscellaneous === */
 	/* ==================== */
@@ -188,7 +184,42 @@ public:
 	FGameplayTag Attributes_Vital_Stamina;
 	FGameplayTag Attributes_Vital_Mana;
 
-protected:
+	/* ============================= */
+	/* === Status Effect Chances === */
+	/* ============================= */
+
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToBleed;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToIgnite;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToFreeze;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToShock;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToStun;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToKnockBack;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToPetrify;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToPurify;
+	FGameplayTag Attributes_Secondary_ChanceToApply_ChanceToCorrupt;
+
+	/* ============================= */
+	/* === Status Effect Durations === */
+	/* ============================= */
+
+	FGameplayTag Attributes_Secondary_Duration_BleedDuration;
+	FGameplayTag Attributes_Secondary_Duration_BurnDuration;
+	FGameplayTag Attributes_Secondary_Duration_FreezeDuration;
+	FGameplayTag Attributes_Secondary_Duration_ShockDuration;
+	FGameplayTag Attributes_Secondary_Duration_CorruptionDuration;
+	FGameplayTag Attributes_Secondary_Duration_PetrifyBuildUpDuration;
+	FGameplayTag Attributes_Secondary_Duration_PurifyDuration;
+
+	/* ============================= */
+	/* === Tag-to-Attribute Mapping === */
+	/* ============================= */
+
+	static TMap<FGameplayTag, FGameplayAttribute> StatusEffectTagToAttributeMap;
+	static TMap<FGameplayTag, FGameplayTag> TagsMinMax;
+	static  TMap<FString, FGameplayAttribute> BaseDamageToAttributesMap;
+	static  TMap<FString, FGameplayAttribute> FlatDamageToAttributesMap;
+	static TMap<FString, FGameplayAttribute> PercentDamageToAttributesMap;
+	static TMap<FString, FGameplayAttribute> AllAttributesMap;
 
 private:
 	/** Singleton instance */

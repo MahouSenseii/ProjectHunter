@@ -6,6 +6,7 @@
 #include "Character/PHBaseCharacter.h"
 #include "Item/ConsumableItem.h"
 #include "AbilitySystemComponent.h"
+#include "PHGameplayTags.h"
 #include "Item/WeaponItem.h"
 
 bool UPHItemFunctionLibrary::AreItemSlotsEqual(FItemInformation FirstItem, FItemInformation SecondItem)
@@ -102,7 +103,7 @@ TMap<FString, int> UPHItemFunctionLibrary::CalculateTotalDamage(const int MinDam
     const float GlobalDamage = OwnerAttributeSet->GetGlobalDamages();
 
     // Loop through all damage types dynamically
-    for (const TPair<FString, FGameplayAttribute>& Pair : OwnerAttributeSet->BaseDamageAttributesMap)
+    for (const TPair<FString, FGameplayAttribute>& Pair : FPHGameplayTags::BaseDamageToAttributesMap)
     {
         FString DamageType = Pair.Key;
 
@@ -113,14 +114,14 @@ TMap<FString, int> UPHItemFunctionLibrary::CalculateTotalDamage(const int MinDam
         const float ElementalBonus = OwnerAttributeSet->GetElementalDamage();
 
         // Check if keys exist in maps to prevent crashes
-        if (OwnerAttributeSet->FlatDamageAttributesMap.Contains(DamageType))
+        if ( FPHGameplayTags::FlatDamageToAttributesMap.Contains(DamageType))
         {
-            FlatBonus = OwnerAttributeSet->GetAttributeValue(OwnerAttributeSet->FlatDamageAttributesMap[DamageType]);
+            FlatBonus = OwnerAttributeSet->GetAttributeValue( FPHGameplayTags::FlatDamageToAttributesMap[DamageType]);
         }
 
-        if (OwnerAttributeSet->PercentDamageAttributesMap.Contains(DamageType))
+        if ( FPHGameplayTags::PercentDamageToAttributesMap.Contains(DamageType))
         {
-            PercentBonus = OwnerAttributeSet->GetAttributeValue(OwnerAttributeSet->PercentDamageAttributesMap[DamageType]);
+            PercentBonus = OwnerAttributeSet->GetAttributeValue( FPHGameplayTags::PercentDamageToAttributesMap[DamageType]);
         }
 
         // Random weapon damage in range from MinDamage to MaxDamage

@@ -181,8 +181,6 @@ FCombatHitResult UCombatManager::CalculateFinalDamage(const APHBaseCharacter* At
 
 	if (!Attacker || !Defender) return Result;
 
-	const UPHAttributeSet* Attributes = Cast<UPHAttributeSet>(Attacker->GetAttributeSet());
-
 	// === 1. Roll Weapon + Attribute Damage ===
 	const float WeaponBase = GetAllDamageByType(Attacker, Weapon).GetTotalDamageByType(PrimaryDamageType);
 	const float StatBonus = CalculateBaseDamage(Attacker, AttackType);

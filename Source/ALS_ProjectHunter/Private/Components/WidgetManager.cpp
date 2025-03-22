@@ -56,7 +56,7 @@ void UWidgetManager::OpenNewWidget_Implementation(EWidgets Widget, const bool bI
 		UE_LOG(LogTemp, Warning, TEXT("UWidgetManager::OpenNewWidget: OwnerCharacter is null"));
 		return;
 	}
-
+	
 	Execute_CloseActiveWidget(this);
 	Execute_SetActiveWidget(this, Widget);
 	bStorageInArea = bIsStorageInArea;

@@ -30,18 +30,31 @@ void UMenuButton::PHInitialize() const
 		}
 	}
 
-
-	if (MenuTextBlock && MenuTextBlock->Slot)
+	if (MenuTextBlock)
 	{
-		// Attempt to cast the Slot to UButtonSlot (assuming the parent is indeed a UButton).
-		if (UButtonSlot* ButtonSlot = Cast<UButtonSlot>(MenuTextBlock->Slot))
-		{
-			// Set 4px left/right padding and 2px top/bottom padding
-			ButtonSlot->SetPadding(FMargin(4.f, 2.f, 4.f, 2.f));
+		// Set Font Settings here
+		FSlateFontInfo FontInfo;
+		FontInfo.FontObject = LoadObject<UObject>(nullptr, TEXT("/Engine/EngineFonts/Roboto"));
+		FontInfo.TypefaceFontName = FName("Bold"); // Or "Regular", "Italic", etc.
+		FontInfo.Size = 18; // Consistent size across all buttons
 
-			// Center the text horizontally and vertically
-			ButtonSlot->SetHorizontalAlignment(HAlign_Center);
-			ButtonSlot->SetVerticalAlignment(VAlign_Center);
+		MenuTextBlock->SetFont(FontInfo);
+
+		MenuTextBlock->SetJustification(ETextJustify::Center);
+		MenuTextBlock->SetAutoWrapText(false); // Optional, depending on UI needs
+
+		if (MenuTextBlock && MenuTextBlock->Slot)
+		{
+			// Attempt to cast the Slot to UButtonSlot (assuming the parent is indeed a UButton).
+			if (UButtonSlot* ButtonSlot = Cast<UButtonSlot>(MenuTextBlock->Slot))
+			{
+				// Set 4px left/right padding and 2px top/bottom padding
+				ButtonSlot->SetPadding(FMargin(4.f, 2.f, 4.f, 2.f));
+
+				// Center the text horizontally and vertically
+				ButtonSlot->SetHorizontalAlignment(HAlign_Center);
+				ButtonSlot->SetVerticalAlignment(VAlign_Center);
+			}
 		}
 	}
 }

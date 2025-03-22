@@ -106,9 +106,20 @@ void UPHWidgetSwitcher::BuildTabPanel(EWidgetsSwitcher SwitcherType,  TArray<FMe
         {
             HBox->AddChild(Widget);
             LocalButtons.Add(Info.MenuButton);
+
+            // Update original ButtonMapper reference
+            for (FMenuWidgetStuct& Original : ButtonMapper)
+            {
+                if (Original.Widget == Info.Widget)
+                {
+                    Original.MenuButton = Info.MenuButton;
+                    break;
+                }
+            }
         }
     }
 
+    
     HBox->AddChild(CreateRBButton());
 
     FMenuButtonArray Struct;
@@ -120,7 +131,7 @@ void UPHWidgetSwitcher::BuildTabPanel(EWidgetsSwitcher SwitcherType,  TArray<FMe
     SizeBox->AddChild(Canvas);
     ScaleBox->AddChild(SizeBox);
     Switcher->AddChild(ScaleBox);
-
+    
     SwitcherPanels.Add(SwitcherType, Canvas);
 }
 
@@ -134,168 +145,6 @@ void UPHWidgetSwitcher::BuildTabsAndButtons()
     }
 }
 
-
-
-/*void UPHWidgetSwitcher::BuildTabsAndButtons()
-{
-    // Group our ButtonMapper items by EWidgetsSwitcher
-    TMap<EWidgetsSwitcher, TArray<FMenuWidgetStuct>> MapperGroups;
-    for (const FMenuWidgetStuct& Item : ButtonMapper)
-    {
-        if (Item.WidgetsSwitcher == EWidgetsSwitcher::WS_None)
-        {
-            continue;
-        }
-        MapperGroups.FindOrAdd(Item.WidgetsSwitcher).Add(Item);
-    }
-
-    // For each group (sub-tab) create a CanvasPanel/HBox and populate with LB + middle buttons + RB
-    for (const TPair<EWidgetsSwitcher, TArray<FMenuWidgetStuct>>& Pair : MapperGroups)
-    {
-        const EWidgetsSwitcher SwitcherType = Pair.Key;
-        
-
-        // Create ScaleBox
-        UScaleBox* ScaleBox = WidgetTree->ConstructWidget<UScaleBox>(UScaleBox::StaticClass());
-
-        // Create SizeBox and set desired size
-        USizeBox* SizeBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
-        SizeBox->ClearWidthOverride(); 
-
-
-
-        // Create NewTabPanel
-        UCanvasPanel* NewTabPanel = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass());
-
-        // Ensure NewTabPanel respects SizeBox constraints
-        if (USizeBoxSlot* SizeBoxSlot = Cast<USizeBoxSlot>(NewTabPanel->Slot))
-        {
-            SizeBoxSlot->SetHorizontalAlignment(EHorizontalAlignment::HAlign_Fill);
-            SizeBoxSlot->SetVerticalAlignment(EVerticalAlignment::VAlign_Fill);
-        }
-        
-        // Create HBox
-        UHorizontalBox* HBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
-
-        // Center the HBox in NewTabPanel
-        if (UCanvasPanelSlot* HBoxSlot = Cast<UCanvasPanelSlot>(NewTabPanel->AddChild(HBox)))
-        {
-            HBoxSlot->SetAnchors(FAnchors(0.5f, 0.5f, 0.5f, 0.5f)); // Center the HBox
-            HBoxSlot->SetAlignment(FVector2D(0.5f, 0.5f)); // Ensure proper alignment
-        }
-
-        // Create LB button
-        {
-            UButton* LBButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass());
-            LBButton->SetBackgroundColor(FLinearColor(0, 0, 0, 0));
-
-            // Actually create the Image widget
-            UImage* LeftButtonImage = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass());
-            LBButton->AddChild(LeftButtonImage); // Now LeftButtonImage is valid
-            if (UButtonSlot* ButtonSlot = Cast<UButtonSlot>(LeftButtonImage->Slot))
-            {
-                ButtonSlot->SetHorizontalAlignment(HAlign_Center);
-                ButtonSlot->SetVerticalAlignment(VAlign_Center);
-            }
-
-            // Load the texture
-            if(UTexture2D* LBLoadedTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(),
-                nullptr, TEXT("/Game/Images/Buttons/Gamepad/T_Gamepad_LB.T_Gamepad_LB"))))
-            {
-                // Apply the texture to the Image widget
-                LeftButtonImage->SetBrushFromTexture(LBLoadedTex);
-            }
-
-            // Add click handling
-            LBButton->OnClicked.AddDynamic(this, &UPHWidgetSwitcher::OnLBClicked);
-
-            // Add this button to your layout
-            HBox->AddChild(LBButton);
-        }
-        
-        TArray<TObjectPtr<UMenuButton>> LocalButtons;
-        for (FMenuWidgetStuct& MenuInfo : ButtonMapper)  // Use a reference to modify the original struct
-        {
-            if (!MapperGroups.Contains(MenuInfo.WidgetsSwitcher))
-            {
-                continue;
-            }
-
-            if (!MenuInfo.MenuButtonClass)
-            {
-                continue;
-            }
-
-            UMenuButton* CreatedButton = CreateWidget<UMenuButton>(GetWorld(), MenuInfo.MenuButtonClass);
-            if (!CreatedButton)
-            {
-                continue;
-            }
-
-            // Configure the button
-            CreatedButton->MenuTextBlock->SetText(FText::FromString(MenuInfo.MenuText));
-            CreatedButton->WidgetType     = MenuInfo.Widget;
-            CreatedButton->WidgetSwitcher = MenuInfo.WidgetsSwitcher;
-            BindMenuButtonDelegates(CreatedButton);
-            
-
-            HBox->AddChild(CreatedButton);
-            MenuInfo.MenuButton = CreatedButton;
-            LocalButtons.Add(CreatedButton);
-
-            if (UScaleBoxSlot* ScaleBoxSlot = Cast<UScaleBoxSlot>(SizeBox->Slot))
-            {
-                ScaleBoxSlot->SetHorizontalAlignment(EHorizontalAlignment::HAlign_Fill);
-                ScaleBoxSlot->SetVerticalAlignment(EVerticalAlignment::VAlign_Fill);
-            }
-
-
-            // Add to local array
-            LocalButtons.Add(CreatedButton);
-        }
-
-        // Wrap LocalButtons into our struct
-        FMenuButtonArray ButtonArrayStruct;
-        ButtonArrayStruct.Buttons = LocalButtons;
-
-        // Store the array of middle buttons & a default focus index
-        TabButtons.Add(SwitcherType, ButtonArrayStruct);
-        TabFocusedIndex.Add(SwitcherType, 0);
-
-        // Create RB button
-        {
-            UButton* RBButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass());
-            RBButton->SetBackgroundColor(FLinearColor(0,0,0,0));
-            UImage* RightButtonImage = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass());
-            // Once the image is added as a child, grab the slot and set the alignment
-            if (UButtonSlot* ButtonSlot = Cast<UButtonSlot>(RightButtonImage->Slot))
-            {
-                ButtonSlot->SetHorizontalAlignment(HAlign_Center);
-                ButtonSlot->SetVerticalAlignment(VAlign_Center);
-            }
-            RBButton->AddChild(RightButtonImage);   // Make the Image a child of the button
-            if(UTexture2D* RBLoadedTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(),
-               nullptr, TEXT("/Game/Images/Buttons/Gamepad/T_Gamepad_RB.T_Gamepad_RB"))))
-            {
-                RightButtonImage->SetBrushFromTexture(RBLoadedTex);
-            }
-            RBButton->OnClicked.AddDynamic(this, &UPHWidgetSwitcher::OnRBClicked);
-            HBox->AddChild(RBButton);
-        }
-
-        // Add NewTabPanel to SizeBox
-        SizeBox->AddChild(NewTabPanel);
-
-        // Add SizeBox to ScaleBox
-        ScaleBox->AddChild(SizeBox);
-
-        // Finally, add ScaleBox to the Switcher
-        Switcher->AddChild(ScaleBox);
-
-        // Store references
-        SwitcherPanels.Add(SwitcherType, NewTabPanel);
-    }
-}*/
 
 void UPHWidgetSwitcher::BindMenuButtonDelegates(const UMenuButton* InButton)
 {
@@ -390,6 +239,8 @@ UWidget* UPHWidgetSwitcher::CreateMenuButton(FMenuWidgetStuct& MenuInfo)
 
     BindMenuButtonDelegates(Button);
     MenuInfo.MenuButton = Button;
+
+    Button->PHInitialize();
 
     USizeBox* Wrapper = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
     Wrapper->SetWidthOverride(ButtonWidth);
