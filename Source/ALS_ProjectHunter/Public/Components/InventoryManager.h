@@ -139,13 +139,13 @@ public:
 	TArray<UBaseItem*> InventoryList;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
-	int32 Rows = 7;
+	int32 Rows = 10;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
 	int32 Colums = 14;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
-	float TileSize = 50.0f;
+	float TileSize = 20.0f;
 
 	UPROPERTY(BlueprintReadWrite, Category = "Checker")
 	bool Generated = false;

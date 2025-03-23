@@ -12,17 +12,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/Content/Imports/CombatImports/Material/M_PHPannerGradient.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/Imports/CombatImports/Material/M_SquarFlicker.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/PeojectHunter/UI/NewFolder/WBP_EquipmentInfo.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/PeojectHunter/UI/Inventory/BP_InventoryGrid.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/PeojectHunter/UI/Inventory/BP_InventoryGrid.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/PeojectHunter/UI/NewFolder/WBP_BasicInfo.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/PeojectHunter/UI/NewFolder/WBP_BasicInfo.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/PeojectHunter/UI/NewFolder/WBP_Content.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/PeojectHunter/UI/NewFolder/WBP_Content.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/PeojectHunter/UI/NewFolder/WBP_Equipment.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/PeojectHunter/UI/NewFolder/WBP_Equipment.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/PHAttributeSet.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/PHAttributeSet.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/CombatManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/CombatManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/WidgetManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/WidgetManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Library/PHItemFunctionLibrary.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Library/PHItemFunctionLibrary.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Inventory/InventoryGrid.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Inventory/InventoryGrid.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/MenuButton.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/MenuButton.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/PHWidgetSwitcher.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/PHWidgetSwitcher.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/PHGameplayTags.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/PHGameplayTags.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/InventoryManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/InventoryManager.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -100,6 +98,9 @@
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="cidr-memory-view://11" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.36.32532/include/atomic" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.36.32532/include/cmath" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ALS_ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/PHAttributeSet.cpp" root0="SKIP_HIGHLIGHTING" />
@@ -532,7 +533,7 @@
       <workItem from="1742402100343" duration="47518000" />
       <workItem from="1742517444007" duration="30348000" />
       <workItem from="1742554334323" duration="37838000" />
-      <workItem from="1742651834172" duration="6472000" />
+      <workItem from="1742651834172" duration="9785000" />
     </task>
     <servers />
   </component>
@@ -560,15 +561,6 @@
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
   </component>
   <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/PHWidgetSwitcher.cpp</url>
-          <line>189</line>
-          <option name="timeStamp" value="10" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
     <watches-manager>
       <configuration name="CppProject">
         <watch expression="@ ALREADY PREPROCESSED @TagsToAttributes" />
