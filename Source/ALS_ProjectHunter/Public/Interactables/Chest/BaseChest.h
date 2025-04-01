@@ -22,13 +22,15 @@ public:
 
 	ABaseChest();
 
+	virtual void OnConstruction(const FTransform& Transform) override;
+
 	virtual void BeginPlay() override;
 
 	virtual void BPIClientEndInteraction_Implementation(AActor* Interactor) override;
 
 	virtual void BPIInteraction_Implementation(AActor* Interactor, bool WasHeld) override;
 
-	void GetAnimation(UAnimationAsset* NewAnimToPlay) const;
+	void GetAnimationToPlay(UAnimationAsset* NewAnimToPlay) const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 	USkeletalMesh* SkeletalMeshAsset;

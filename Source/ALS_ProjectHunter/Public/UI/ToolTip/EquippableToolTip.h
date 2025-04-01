@@ -8,6 +8,7 @@
 #include "Components/HorizontalBox.h"
 #include "Components/Image.h"
 #include "Components/SizeBox.h"
+#include "Item/EquippableItem.h"
 #include "UI/ToolTip/PHBaseToolTip.h"
 #include "UI/ToolTip/EquippableStatsBox.h"
 #include "EquippableToolTip.generated.h"
@@ -52,51 +53,25 @@ struct FStatRequirementInfo
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UTextBlock* TextBlock;
 };
-UCLASS()
+UCLASS(BlueprintType)
 class ALS_PROJECTHUNTER_API UEquippableToolTip : public UPHBaseToolTip
 {
 	GENERATED_BODY()
-	public:
+	
+public:
 
 	virtual void NativeConstruct() override;
 	virtual void InitializeToolTip() override;
+	virtual void SetItemInfo(const FItemInformation& Item) override;
 
-protected:
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	EDamageTypes DamageStats;
-
+	void CreateAffixBox(); 
+	
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
 	UTextBlock* LoreText;
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* PrefixStat1;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* PrefixStat2;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* PrefixStat3;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* SuffixStat1;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* SuffixStat2;
-	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* SuffixStat3;
-
-	
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UImage* Spacer1;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UImage* Spacer2;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UImage* Spacer3;
+	UVerticalBox* AffixBoxContainer;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
 	UEquippableStatsBox* StatsBox;

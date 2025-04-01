@@ -50,11 +50,7 @@ public:
 	/** Checks if an equipment slot is empty */
 	UFUNCTION(BlueprintCallable)
 	bool IsSocketEmpty(EEquipmentSlot Slot) const ;
-
-	/** Finds the associated socket name for an equipment slot */
-	UFUNCTION(BlueprintCallable)
-	FName FindSlotName(EEquipmentSlot Slot);
-
+	
 	/* ============================= */
 	/* === Equipment Handling === */
 	/* ============================= */

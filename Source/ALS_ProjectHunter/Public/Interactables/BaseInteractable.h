@@ -22,6 +22,7 @@ public:
 	// Sets default values for this actor's properties
 	ABaseInteractable();
 	void InitializeComponent();
+	void DestroyAllCreatedComponents();
 	virtual void OnConstruction(const FTransform& Transform) override;
 	
 	void CheckForActors();

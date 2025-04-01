@@ -16,8 +16,10 @@ class ULevelUpInfo;
  * 
  */
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChanged, int32 /*StatValue*/)
-DECLARE_MULTICAST_DELEGATE_TwoParams(FOnLevelChanged, int32 /*StatValue*/, bool /*bLevelUp*/)
+// Must use DYNAMIC version for Blueprint binding
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChanged, int32, StatValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnLevelChanged, int32, StatValue, bool, bLevelUp);
+
 
 UCLASS()
 class ALS_PROJECTHUNTER_API APHPlayerState : public APlayerState, public  IAbilitySystemInterface
@@ -31,13 +33,21 @@ public:
 
 	UFUNCTION(BlueprintCallable) virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UFUNCTION(BlueprintCallable) UAttributeSet* GetAttributeSet() const { return AttributeSet;}
-	
+
+	UPROPERTY(BlueprintAssignable)
 	FOnPlayerStatChanged OnXPChangedDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPlayerStatChanged OnPlayerStatChangedDelegate;
+
+	UPROPERTY(BlueprintAssignable)
 	FOnLevelChanged OnLevelChangedDelegate;
+	
 	FOnPlayerStatChanged OnAttributePointsChangedDelegate;
+	
 	FOnPlayerStatChanged OnMaxAttributePointsChangedDelegate;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Leveling")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Leveling")
 	TObjectPtr<ULevelUpInfo> LevelUpInfo;
 
 	UFUNCTION(BlueprintCallable, Category = "Leveling")
@@ -49,6 +59,7 @@ public:
 	FORCEINLINE int32 GetAttributePoints() const { return AttributePoints; }
 	FORCEINLINE int32 GetMaxAttributePoints() const { return MaxAttributePoints; }
 	FORCEINLINE int32 GetXPForNextLevel() const;
+	
 	void AddToXP(int32 InXp);
 	void SetXP(int32 InXP);
 

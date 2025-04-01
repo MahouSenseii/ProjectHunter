@@ -8,6 +8,7 @@
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
+#include "Library/PHItemStructLibrary.h"
 #include "UI/Widgets/PHUserWidget.h"
 #include "RequirementsBox.generated.h"
 
@@ -21,9 +22,11 @@ class ALS_PROJECTHUNTER_API URequirementsBox : public UPHUserWidget
 
 public:
 
-	UFUNCTION()
-	void GetItemRequirements(const UEquippableItem* Item, APHBaseCharacter* Character) const;
+	UPROPERTY(EditAnywhere, Category = "Item")
+	FEquippableItemData ItemData;
+
 	
+
 public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UHorizontalBox* RequirementsBox;
@@ -46,4 +49,5 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* LUCKValue;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* LVLValue;
 	
+	void SetItemRequirements(const FEquippableItemData& PassedItemData, APHBaseCharacter* Character);
 };

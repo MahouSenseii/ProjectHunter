@@ -36,6 +36,8 @@ public:
 	// Sets default values for this component's properties
 	UInteractableManager();
 
+	void ResetInteractable();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

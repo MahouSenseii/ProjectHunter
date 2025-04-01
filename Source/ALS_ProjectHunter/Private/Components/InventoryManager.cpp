@@ -60,7 +60,8 @@ void UInventoryManager::InitializeInventoryManager()
 	}
 	else
 	{
-		
+		UE_LOG(LogTemp, Error, TEXT("InventoryManager: InitializeInventoryManager :Failed to  Get Owner  ."));
+		return;
 	}
 
 	// Resize Inventory Grid
@@ -84,6 +85,7 @@ APHBaseCharacter* UInventoryManager::GetOwnerCharacter() const
 
 FVector UInventoryManager::GetSpawnLocation() const
 {
+	check(OwnerCharacter);
 	// Get the forward vector of the OwnerCharacter and create a random direction vector from it
 	FVector ForwardVector = OwnerCharacter->GetActorForwardVector();
 	FVector RandomUnitVector = UKismetMathLibrary::RandomUnitVector() * FVector(1.f, 1.f, 0.f); // Zero out Z to keep it horizontal
@@ -171,23 +173,31 @@ TMap<UBaseItem*, FTile> UInventoryManager::GetAllItems()
 
 void UInventoryManager::RemoveItemInInventory(UBaseItem* Item)
 {
-	if (IsValid(Item))
+	if (!IsValid(Item)) return;
+
+	for (int32 i = 0; i < InventoryList.Num(); ++i)
 	{
-		int32 ArrayIndex = 0; // Initialize index counter
-		for (const UBaseItem* CurrentItem : InventoryList)
+		if (InventoryList[i] == Item)
 		{
-			if (CurrentItem == Item)
-			{
-				InventoryList[ArrayIndex] = nullptr; // Set the item to null
-				OnInventoryChanged.Broadcast(); // Notify that the inventory changed, if needed
-			}
-			ArrayIndex++; // Increment the index counter
+			InventoryList[i] = nullptr;
 		}
 	}
-	else
+
+	// Clean from TopLeftItemMap
+	TArray<FTile> KeysToRemove;
+	for (const auto& Elem : TopLeftItemMap)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Item to remove is not valid"));
+		if (Elem.Value == Item)
+		{
+			KeysToRemove.Add(Elem.Key);
+		}
 	}
+	for (const FTile& Tile : KeysToRemove)
+	{
+		TopLeftItemMap.Remove(Tile);
+	}
+
+	OnInventoryChanged.Broadcast();
 }
 
 bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
@@ -229,7 +239,6 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
         CreatedPickup = World->SpawnActor<AWeaponPickup>(Item->GetItemInfo().PickupClass, DropLocation, DropRotation, SpawnParams);
         if (const auto WeaponPickup = Cast<AWeaponPickup>(CreatedPickup))
         {
-            WeaponPickup->WeaponData = Cast<UWeaponItem>(Item)->GetWeaponData();
             WeaponPickup->EquipmentData = Cast<UWeaponItem>(Item)->GetEquippableData();
         }
         break;
@@ -388,15 +397,22 @@ bool UInventoryManager::TryToAddItemToInventory(UBaseItem* Item, const bool Chec
 void UInventoryManager::AddItemAt(UBaseItem* Item, int32 TopLeftIndex)
 {
 	Item->GetItemInfo().OwnerID = InventoryID;
-	ForEachTile(Item, TopLeftIndex, [this, Item](FTile Tile)
-		{
-			if (const int32 Index = TileToIndex(Tile); InventoryList.IsValidIndex(Index))
-			{
-				InventoryList[Index] = Item;  // Add item at index
-			}
-		});
 
-	// When completed, broadcast (if needed)
+	FTile TopLeftTile;
+	IndexToTile(TopLeftIndex, TopLeftTile);
+
+	// Save top-left for fast lookup
+	TopLeftItemMap.Add(TopLeftTile, Item);
+
+	// Fill the tile slots
+	ForEachTile(Item, TopLeftIndex, [this, Item](FTile Tile)
+	{
+		if (const int32 Index = TileToIndex(Tile); InventoryList.IsValidIndex(Index))
+		{
+			InventoryList[Index] = Item;
+		}
+	});
+
 	OnInventoryChanged.Broadcast();
 }
 
@@ -526,8 +542,6 @@ bool UInventoryManager::SpawnItemByName(const FName ItemName, const UDataTable* 
 
 		if (const FEquippableItemData* EquipData = DataTable->FindRow<FEquippableItemData>(ItemName, TEXT("LookupEquipData"))) EquipItem->SetEquippableData(*EquipData);
 
-		if (const FWeaponItemData* WeaponData = DataTable->FindRow<FWeaponItemData>(ItemName, TEXT("LookupWeaponData"))) EquipItem->SetWeaponData(*WeaponData);
-
 		Item = EquipItem;
 		break;
 	}
@@ -540,8 +554,7 @@ bool UInventoryManager::SpawnItemByName(const FName ItemName, const UDataTable* 
 
 		ConsumableItem->SetItemInfo(*ItemInfo);
 
-		const FConsumableItemData* ConsumableData = DataTable->FindRow<FConsumableItemData>(ItemName, TEXT("LookupConsumableData"));
-		if (ConsumableData) ConsumableItem->SetConsumableData(*ConsumableData);
+		if (const FConsumableItemData* ConsumableData = DataTable->FindRow<FConsumableItemData>(ItemName, TEXT("LookupConsumableData"))) ConsumableItem->SetConsumableData(*ConsumableData);
 
 		Item = ConsumableItem;
 		break;
@@ -598,8 +611,134 @@ int32 UInventoryManager::CalculateValue(const FItemInformation& ItemData)
 	return UKismetMathLibrary::Round(ItemData.Value * ItemData.ValueModifier);
 }
 
+bool UInventoryManager::ExecuteItemTrade(const TArray<UBaseItem*>& Items, UInventoryManager* Seller,
+	UInventoryManager* Buyer, const TArray<int32>& OptionalTargetTileIndices, FString& OutMessage)
+{
+	OutMessage = TEXT("");
+
+	if (Items.Num() == 0 || !IsValid(Seller) || !IsValid(Buyer))
+	{
+		OutMessage = TEXT("Trade failed: Invalid items or inventory reference.");
+		return false;
+	}
+
+	int32 TotalCost = 0;
+	TArray<int32> ValidIndices;
+
+	if (!CanBuyerAffordItems(Items, Seller, TotalCost, OutMessage)) return false;
+	if (!FindPlacementIndices(Items, Buyer, OptionalTargetTileIndices, ValidIndices, OutMessage)) return false;
+
+	if (Buyer->Gems < TotalCost)
+	{
+		OutMessage = TEXT("Trade failed: Buyer lacks sufficient gems.");
+		return false;
+	}
+
+	FinalizeTrade(Items, Seller, Buyer, ValidIndices, TotalCost);
+	OutMessage = TEXT("Trade completed successfully.");
+	return true;
+}
+
+bool UInventoryManager::CanBuyerAffordItems(const TArray<UBaseItem*>& Items, UInventoryManager* Seller,
+	int32& OutTotalCost, FString& OutMessage) const
+{
+	OutTotalCost = 0;
+
+	for (UBaseItem* Item : Items)
+	{
+		if (!IsValid(Item))
+		{
+			OutMessage = TEXT("Trade failed: Invalid item in list.");
+			return false;
+		}
+
+		int32 Value = CalculateValue(Item->GetItemInfo());
+		if (Seller->GetOwnerCharacter() && Seller->GetOwnerCharacter()->IsPlayerControlled())
+		{
+			Value /= 2;
+		}
+		OutTotalCost += Value;
+	}
+
+	return true;
+}
+
+bool UInventoryManager::FindPlacementIndices(const TArray<UBaseItem*>& Items, UInventoryManager* Buyer,
+	const TArray<int32>& OptionalTargetTileIndices, TArray<int32>& OutValidIndices, FString& OutMessage) const
+{
+	OutValidIndices.Empty();
+
+	for (int32 i = 0; i < Items.Num(); ++i)
+	{
+		UBaseItem* Item = Items[i];
+		int32 TargetIndex = INDEX_NONE;
+
+		if (OptionalTargetTileIndices.IsValidIndex(i) && Buyer->IsRoomAvailable(Item, OptionalTargetTileIndices[i]))
+		{
+			TargetIndex = OptionalTargetTileIndices[i];
+		}
+		else
+		{
+			for (int32 t = 0; t < Buyer->InventoryList.Num(); ++t)
+			{
+				if (Buyer->IsRoomAvailable(Item, t))
+				{
+					TargetIndex = t;
+					break;
+				}
+			}
+		}
+
+		if (TargetIndex == INDEX_NONE)
+		{
+			OutMessage = FString::Printf(TEXT("Trade failed: No space for item %s."), *Item->GetItemInfo().ItemName.ToString());
+			return false;
+		}
+
+		OutValidIndices.Add(TargetIndex);
+	}
+
+	return true;
+}
+
+void UInventoryManager::FinalizeTrade(const TArray<UBaseItem*>& Items, UInventoryManager* Seller,
+	UInventoryManager* Buyer, const TArray<int32>& ValidIndices, int32 TotalCost)
+{
+	for (int32 i = 0; i < Items.Num(); ++i)
+	{
+		UBaseItem* Item = Items[i];
+		int32 Index = ValidIndices[i];
+
+		int32 TransactionValue = CalculateValue(Item->GetItemInfo());
+		if (Seller->GetOwnerCharacter() && Seller->GetOwnerCharacter()->IsPlayerControlled())
+		{
+			TransactionValue /= 2;
+		}
+
+		Seller->RemoveItemInInventory(Item);
+		Buyer->AddItemAt(Item, Index);
+		Buyer->SubtractGems(TransactionValue);
+		Seller->AddGems(TransactionValue);
+	}
+}
 
 
+void UInventoryManager::RebuildTopLeftMap()
+{
+	TopLeftItemMap.Empty();
+	FTile Tile;
+	for (int32 Index = 0; Index < InventoryList.Num(); ++Index)
+	{
+		if (UBaseItem* Item = InventoryList[Index])
+		{
+			IndexToTile(Index, Tile);
+			if (!TopLeftItemMap.Contains(Tile))
+			{
+				TopLeftItemMap.Add(Tile, Item);
+			}
+		}
+	}
+}
 
 
 

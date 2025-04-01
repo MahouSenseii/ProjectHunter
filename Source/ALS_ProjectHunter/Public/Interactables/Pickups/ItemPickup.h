@@ -23,7 +23,8 @@ public:
 
 	AItemPickup();
 
-
+	UFUNCTION(BlueprintCallable)
+	virtual UBaseItem* CreateItemObject(UObject* Outer);
 protected:
 
 	virtual void BeginPlay() override;
@@ -49,7 +50,7 @@ public:
 	virtual UBaseItem* GenerateItem() const;
 
 	virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo,
-	FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData, FConsumableItemData ConsumableItemData) const;
+	FEquippableItemData EquippableItemData, FConsumableItemData ConsumableItemData) const;
 
 	UFUNCTION(BlueprintCallable)
 	virtual void HandleHeldInteraction(APHBaseCharacter* Character) const;

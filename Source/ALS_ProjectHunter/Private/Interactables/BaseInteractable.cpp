@@ -18,10 +18,19 @@ ABaseInteractable::ABaseInteractable()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
-
-
 	InitializeComponent();
 	SetupMesh();
+
+	if (InteractableManager)
+	{
+		InteractableManager->InteractableValue = FMath::RandRange(0, InteractableManager->InteractableLimitValue);
+	}
+		
+	ValidateComponents();
+	SetupMeshVisibility();
+	SetupUI();
+	SetupTrigger();
+	SetupOverlapEvents();
 }
 
 void ABaseInteractable::InitializeComponent()
@@ -50,15 +59,49 @@ void ABaseInteractable::InitializeComponent()
 	InteractionWidget->SetDrawSize(FVector2D(125.0f,125.0f));
 }
 
+void ABaseInteractable::DestroyAllCreatedComponents()
+{
+	if (InteractionWidget)
+	{
+		InteractionWidget->DestroyComponent();
+		InteractionWidget = nullptr;
+	}
+
+	if (InteractableArea)
+	{
+		InteractableArea->DestroyComponent();
+		InteractableArea = nullptr;
+	}
+
+	if (SkeletalMesh)
+	{
+		SkeletalMesh->DestroyComponent();
+		SkeletalMesh = nullptr;
+	}
+
+	if (StaticMesh)
+	{
+		StaticMesh->DestroyComponent();
+		StaticMesh = nullptr;
+	}
+
+	if (InteractableManager)
+	{
+		InteractableManager->DestroyComponent();
+		InteractableManager = nullptr;
+	}
+
+	if (Scene)
+	{
+		Scene->DestroyComponent();
+		Scene = nullptr;
+	}
+}
+
+
 void ABaseInteractable::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-	ValidateComponents();
-	SetupMeshVisibility();
-	SetupUI();
-	SetupTrigger();
-	SetupMesh();
-	SetupOverlapEvents();
 }
 
 void ABaseInteractable::CheckForActors()
@@ -74,7 +117,7 @@ void ABaseInteractable::CheckForActors()
 	}
 }
 
-bool ABaseInteractable::InteractionHandle(AActor* Actor, bool WasHeld) const
+bool ABaseInteractable::	InteractionHandle(AActor* Actor, bool WasHeld) const
 {
 	if (WasHeld)
 	{
@@ -94,10 +137,17 @@ bool ABaseInteractable::InteractionHandle(AActor* Actor, bool WasHeld) const
 void ABaseInteractable::BeginPlay()
 {
 	Super::BeginPlay();
-	
 	// Delay duration in seconds
 	check(InteractionWidget)
 	InteractionWidget->SetVisibility(false, true);
+	
+	if (InteractableManager && InteractableManager->InteractableLimitValue > 0)
+	{
+		InteractableManager->InteractableValue = FMath::RandRange(0, InteractableManager->InteractableLimitValue);
+	}
+	
+
+	
 }
 
 void ABaseInteractable::SetupMeshVisibility() const
@@ -145,6 +195,11 @@ void ABaseInteractable::SetupMesh() const
 		StaticMesh->SetStaticMesh(NewMesh);
 		StaticMesh->SetRelativeTransform(MeshTransform);
 	}
+
+	if(SkeletalMesh != nullptr)
+	{
+		SkeletalMesh->SetRelativeTransform(MeshTransform);
+	}
 }
 
 
@@ -152,6 +207,7 @@ void ABaseInteractable::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent,
 UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	ValidateComponents();
+	
 	if(!InteractableManager->IsInteractable) { return;}
 	// Attempt to cast the OtherActor to your player character class.
 	if(const APHBaseCharacter* CastCharacter = Cast<APHBaseCharacter>(OtherActor))
@@ -192,23 +248,23 @@ UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 void ABaseInteractable::BPIInitialize_Implementation()
 {
 	IInteractableObjectInterface::BPIInitialize_Implementation();
-	
-	// Check for null pointers before using them
-	if (SkeletalMesh)
-	{
-		MeshSet.Add(SkeletalMesh);
-	}
 
-	if (StaticMesh)
-	{
-		MeshSet.Add(StaticMesh);
-	}
+	MeshSet.Empty(); 
+	if (SkeletalMesh) MeshSet.Add(SkeletalMesh);
+	if (StaticMesh) MeshSet.Add(StaticMesh);
 
-
-	// Setup InteractableManager if it's valid
 	check(InteractableManager);
+
+	// This sets up area + mesh highlighting
 	InteractableManager->SetupInteractableReferences(InteractableArea, InteractionWidget, MeshSet);
+
+	//forcefully wipe any old widget assignments from copy/paste
+	if (InteractionWidget)
+	{
+		InteractionWidget->SetWidget(nullptr);
+	}
 }
+
 
 void ABaseInteractable::BPIClientStartInteraction_Implementation(AActor* Interactor, const bool bIsHeld)
 {

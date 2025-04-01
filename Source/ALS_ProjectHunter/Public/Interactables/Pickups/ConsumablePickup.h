@@ -19,7 +19,7 @@ public:
 	virtual void BeginPlay() override;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "ItemInfomation")
 	FConsumableItemData ConsumableData;
-virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo, FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData, FConsumableItemData ConsumableItemData) const override;
+virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo, FEquippableItemData EquippableItemData, FConsumableItemData ConsumableItemData) const override;
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void OnUse();
 

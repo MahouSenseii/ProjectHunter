@@ -29,7 +29,6 @@ public:
 	/** Check if the item is rotated */
 	UFUNCTION(BlueprintCallable)
 	bool IsRotated() const { return ItemInfos.Rotated; }
-
 	
 	/** Toggles the rotation state of the item */
 	UFUNCTION(BlueprintCallable)
@@ -53,7 +52,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Setter")
 	void SetItemInfo(const FItemInformation NewItemInfo) { ItemInfos = NewItemInfo; }
-
+	
 private:
 	
 	/** Information related to the item */

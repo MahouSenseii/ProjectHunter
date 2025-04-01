@@ -7,6 +7,7 @@
 #include "Interactables/Pickups/ItemPickup.h"
 #include "Item/EquippedObject.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Library/PHItemFunctionLibrary.h"
 
 UEquipmentManager::UEquipmentManager() { }
 
@@ -27,7 +28,7 @@ bool UEquipmentManager::CheckSlot(UBaseItem* Item)
 {
 	if (!IsValid(Item)) return false;
 
-	// Check if the item is equippable and has a valid slot
+	// Check if the item's target slot exists in the EquipmentData map
 	UEquippableItem* EquippableItem = Cast<UEquippableItem>(Item);
 	if (!EquippableItem) return false;
 
@@ -105,10 +106,10 @@ void UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh, EEquipmentSlot
 	{
 		if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(GetOwner()))
 		{
+			// Apply all affix and passive bonuses
 			ApplyItemStatBonuses(EquipItem, Character);
 		}
 	}
-
 	OnEquipmentChanged.Broadcast();
 }
 
@@ -165,24 +166,28 @@ void UEquipmentManager::HandleNoMesh(UBaseItem* Item, EEquipmentSlot Slot)
 
 	// Equip the new item.
 	EquipmentData.Add(Slot, Item);
-	OnEquipmentChanged.Broadcast();
 }
 
 void UEquipmentManager::RemoveEquippedItem(UBaseItem* Item, EEquipmentSlot Slot)
 {
 	if (!IsValid(Item)) return;
 
-	RemoveItemInSlot(Slot); // This ensures the item is unequipped properly.
+	RemoveItemInSlot(Slot); // Handles detaching from the equipment slot
 
-	// Set character overlay back to default (if applicable).
 	if (OwnerCharacter)
 	{
 		OwnerCharacter->SetOverlayState(EALSOverlayState::Default);
-	}
 
-	// Notify UI or other systems about the equipment change.
-	RemoveItemStatBonuses(Cast<UEquippableItem>(Item), Cast<APHBaseCharacter>(GetOwner()));
-	OnEquipmentChanged.Broadcast();
+		// Safely cast to equippable and remove flat stats
+		if (UEquippableItem* Equip = Cast<UEquippableItem>(Item))
+		{
+			if (APHBaseCharacter* PHCharacter = Cast<APHBaseCharacter>(OwnerCharacter))
+			{
+				// Optional: remove passive effects
+				RemoveItemStatBonuses(Equip, PHCharacter);
+			}
+		}
+	}
 }
 
 void UEquipmentManager::RemoveItemInSlot(EEquipmentSlot Slot)
@@ -194,8 +199,6 @@ void UEquipmentManager::RemoveItemInSlot(EEquipmentSlot Slot)
 	// Destroy the object and remove it from the mapping.
 	(*pRetrievedItem)->Destroy();
 	EquipmentData.Remove(Slot);
-
-	OnEquipmentChanged.Broadcast();
 }
 
 bool UEquipmentManager::IsSocketEmpty(EEquipmentSlot Slot) const
@@ -230,7 +233,7 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 		SpawnedActor->SetItemInfo(Item->GetItemInfo());
 
 		// Find the correct socket name and attach the actor
-		const FName SlotToAttachTo = FindSlotName(Slot);
+		const FName SlotToAttachTo = UPHItemFunctionLibrary::GetSocketNameForSlot(Slot);
 		if (!OwnerCharacter->GetMesh()->DoesSocketExist(SlotToAttachTo))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Socket %s does not exist on character"), *SlotToAttachTo.ToString());
@@ -255,9 +258,6 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 		// Update equipment mappings
 		EquipmentData.Add(Slot, Item);
 		EquipmentItem.Add(Slot, SpawnedActor);
-
-		// Notify equipment change
-		OnEquipmentChanged.Broadcast();
 	}
 }
 
@@ -265,11 +265,7 @@ void UEquipmentManager::ApplyAllEquipmentStatsToAttributes(APHBaseCharacter* Cha
 {
 	if (!Character) return;
 
-	UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
-	if (!ASC) return;
-
-	// Optional: reset all stats you intend to recalculate
-	// (you can cache which ones were modified for optimization)
+	if (const UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent(); !ASC) return;
 
 	TMap<FGameplayAttribute, float> ModifiedAttributes;
 
@@ -277,38 +273,29 @@ void UEquipmentManager::ApplyAllEquipmentStatsToAttributes(APHBaseCharacter* Cha
 	{
 		if (const UEquippableItem* Equip = Cast<UEquippableItem>(Item))
 		{
-			const auto& Stats = Equip->GetEquippableData().ArmorAttributes;
+			const FPHItemStats& Stats = Equip->GetFullItemStats();  // Presumed getter
 
-			for (const FPHAttributeData& Attr : Stats)
+			for (const TArray<FPHAttributeData> AllStats = Stats.GetAllStats();
+				const FPHAttributeData& Attr : AllStats)
 			{
-				const float Rolled = FMath::RandRange(Attr.MinStatChanged, Attr.MaxStatChanged);
-				const FGameplayAttribute& TargetAttr = Attr.StatChanged;
-
+				const FGameplayAttribute& TargetAttr = Attr.ModifiedAttribute;
 				if (!TargetAttr.IsValid()) continue;
 
-				// Accumulate the stat bonus before applying
-				if (ModifiedAttributes.Contains(TargetAttr))
-				{
-					ModifiedAttributes[TargetAttr] += Rolled;
-				}
-				else
-				{
-					ModifiedAttributes.Add(TargetAttr, Rolled);
-				}
+				const float Rolled = Attr.RolledStatValue;
+
+				ModifiedAttributes.FindOrAdd(TargetAttr) += Rolled;
 			}
 		}
 	}
 
-	// Apply final accumulated stats
+	// Apply all accumulated modifiers
 	for (const auto& Pair : ModifiedAttributes)
 	{
-		const FGameplayAttribute& Attr = Pair.Key;
-		const float TotalBonus = Pair.Value;
-
-		const float OriginalValue = ASC->GetNumericAttribute(Attr);
-		ASC->SetNumericAttributeBase(Attr, OriginalValue + TotalBonus);
+		Character->ApplyFlatStatModifier(Pair.Key, Pair.Value);
 	}
 }
+
+
 
 void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character)
 {
@@ -317,21 +304,22 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
 	UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
 	if (!ASC) return;
 
-	// === Apply Attribute Bonuses ===
-	const TArray<FPHAttributeData>& Stats = Item->GetEquippableData().ArmorAttributes;
+	// === Apply Attribute Bonuses from FPHItemStats ===
+	const FPHItemStats& ItemStats = Item->GetEquippableData().Affixes;
+	const TArray<FPHAttributeData>& Stats = ItemStats.GetAllStats();
 
 	FAppliedStats AppliedStats;
 	AppliedStats.Stats = Stats;
 
 	for (const FPHAttributeData& Attr : Stats)
 	{
-		if (!Attr.StatChanged.IsValid()) continue;
+		if (!Attr.ModifiedAttribute.IsValid()) continue;
 
-		const float Rolled = FMath::RandRange(Attr.MinStatChanged, Attr.MaxStatChanged);
+		const float Rolled = Attr.RolledStatValue;
 		AppliedStats.RolledValues.Add(Rolled);
 
-		const float CurrentValue = ASC->GetNumericAttribute(Attr.StatChanged);
-		ASC->SetNumericAttributeBase(Attr.StatChanged, CurrentValue + Rolled);
+		const float CurrentValue = ASC->GetNumericAttribute(Attr.ModifiedAttribute);
+		ASC->SetNumericAttributeBase(Attr.ModifiedAttribute, CurrentValue + Rolled);
 	}
 
 	if (AppliedStats.Stats.Num() > 0)
@@ -364,8 +352,6 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
 	}
 }
 
-
-
 void UEquipmentManager::RemoveItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character)
 {
 	if (!Item || !Character) return;
@@ -381,11 +367,12 @@ void UEquipmentManager::RemoveItemStatBonuses(UEquippableItem* Item, APHBaseChar
 		for (int32 i = 0; i < Stats.Stats.Num(); ++i)
 		{
 			const FPHAttributeData& Attr = Stats.Stats[i];
-			if (!Attr.StatChanged.IsValid()) continue;
+			if (!Attr.ModifiedAttribute.IsValid()) continue;
 
 			const float Rolled = Stats.RolledValues.IsValidIndex(i) ? Stats.RolledValues[i] : 0.0f;
-			const float CurrentValue = ASC->GetNumericAttribute(Attr.StatChanged);
-			ASC->SetNumericAttributeBase(Attr.StatChanged, CurrentValue - Rolled);
+			Character->ApplyFlatStatModifier(Attr.ModifiedAttribute, -Rolled);
+			//debug comment out later
+			UE_LOG(LogTemp, Log, TEXT("Removing %.2f from %s"), Rolled, *Attr.ModifiedAttribute.GetName());
 		}
 
 		AppliedItemStats.Remove(Item);
@@ -418,28 +405,6 @@ void UEquipmentManager::ResetAllEquipmentBonuses(APHBaseCharacter* Character)
 	}
 
 	AppliedItemStats.Empty();
-}
-
-
-
-FName UEquipmentManager::FindSlotName(const EEquipmentSlot Slot)
-{
-	static const TMap<EEquipmentSlot, FName> SlotMapping = {
-		{EEquipmentSlot::ES_None, "None"},
-		{EEquipmentSlot::ES_Head, "HeadSocket"},
-		{EEquipmentSlot::ES_Gloves, "GlovesSocket"},
-		{EEquipmentSlot::ES_Neck, "NeckSocket"},
-		{EEquipmentSlot::ES_Chestplate, "ChestSocket"},
-		{EEquipmentSlot::ES_Legs, "LegsSocket"},
-		{EEquipmentSlot::ES_Boots, "BootsSocket"},
-		{EEquipmentSlot::ES_MainHand, "MainHandSocket"},
-		{EEquipmentSlot::ES_OffHand, "OffHandSocket"},
-		{EEquipmentSlot::ES_Ring, "RingSocket"},
-		{EEquipmentSlot::ES_Flask, "FlaskSocket"},
-		{EEquipmentSlot::ES_Belt, "BeltSocket"}
-	};
-
-	return SlotMapping.Contains(Slot) ? SlotMapping[Slot] : "None";
 }
 
 

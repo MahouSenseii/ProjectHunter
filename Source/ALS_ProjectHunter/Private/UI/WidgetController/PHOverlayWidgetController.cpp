@@ -36,7 +36,8 @@ void UPHOverlayWidgetController::BindCallbacksToDependencies()
 {
 	Super::BindCallbacksToDependencies();
 	APHPlayerState* PHPlayerState = CastChecked<APHPlayerState>(PlayerState);
-	PHPlayerState->OnXPChangedDelegate.AddUObject(this, &UPHOverlayWidgetController::OnXPChange);
+	PHPlayerState->OnXPChangedDelegate.AddDynamic(this, &UPHOverlayWidgetController::OnXPChange);
+
 	
 	
 	const UPHAttributeSet* PHAttributeSet = CastChecked<UPHAttributeSet>(AttributeSet);
@@ -127,7 +128,7 @@ void UPHOverlayWidgetController::BindCallbacksToDependencies()
 }
 
 
-void UPHOverlayWidgetController::OnXPChange(int32 NewXP) const
+void UPHOverlayWidgetController::OnXPChange(int32 NewXP)
 {
 	const APHPlayerState* PHPlayerState = CastChecked<APHPlayerState>(PlayerState);
 	const ULevelUpInfo* LevelUpInfo = PHPlayerState->LevelUpInfo;

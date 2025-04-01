@@ -100,6 +100,7 @@ void UInteractionManager::AddInteraction(UInteractableManager* Interactable)
 		CurrentInteractable = Interactable;
 		OnNewInteractableAssigned.Broadcast(Interactable);
 	}
+	
 }
 
 
@@ -198,7 +199,7 @@ void UInteractionManager::RemoveInteractionFromCurrent(UInteractableManager* Int
 	CurrentInteractable = nullptr;
 
 	// Perform any cleanup or state reset required when an interaction ends.
-	
+	OnRemoveCurrentInteractable.Broadcast(Interactable);
 }
 
 

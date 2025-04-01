@@ -112,6 +112,15 @@ public:
 
 	static int32 CalculateStackedItemValue(const FItemInformation& ItemData);
 	static int32 CalculateValue(const FItemInformation& ItemData);
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	bool ExecuteItemTrade(const TArray<UBaseItem*>& Items, UInventoryManager* Seller, UInventoryManager* Buyer, const TArray<int32>& OptionalTargetTileIndices, FString& OutMessage);
+
+	bool CanBuyerAffordItems(const TArray<UBaseItem*>& Items, UInventoryManager* Seller, int32& OutTotalCost, FString& OutMessage) const;
+	bool FindPlacementIndices(const TArray<UBaseItem*>& Items, UInventoryManager* Buyer, const TArray<int32>& OptionalTargetTileIndices, TArray<int32>& OutValidIndices, FString& OutMessage) const;
+	void FinalizeTrade(const TArray<UBaseItem*>& Items, UInventoryManager* Seller, UInventoryManager* Buyer, const TArray<int32>& ValidIndices, int32 TotalCost);
+
+	
+	void RebuildTopLeftMap();
 
 protected:
 	virtual void BeginPlay() override;
@@ -145,7 +154,7 @@ public:
 	int32 Colums = 14;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
-	float TileSize = 20.0f;
+	float TileSize = 15.0f;
 
 	UPROPERTY(BlueprintReadWrite, Category = "Checker")
 	bool Generated = false;
@@ -177,6 +186,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	APHBaseCharacter* OwnerCharacter;
 
+
 private:
 	/* ============================= */
 	/* ===       Private Vars  ==== */
@@ -184,5 +194,8 @@ private:
 	UPROPERTY()
 	int32 Gems = 1000;
 
+	UPROPERTY(Transient)
+	TMap<FTile, UBaseItem*> TopLeftItemMap;
+	
 	FString InventoryID = "";
 };

@@ -8,7 +8,7 @@
 #include "CombatFunctionLibrary.generated.h"
 
 /**
- * 
+ * Converts different types of combat damage results into human-readable text for UI or logging purposes.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UCombatFunctionLibrary : public UBlueprintFunctionLibrary

@@ -89,6 +89,7 @@ void APHPlayerController::RemoveInteractionFromObject_Implementation(UInteractab
 		ServerRemoveInteractionFromObject(Interactable);
 		ClientRemoveInteractionFromObject(Interactable);
 	}
+	
 }
 
 void APHPlayerController::ServerRemoveInteractionFromObject_Implementation(UInteractableManager* Interactable)

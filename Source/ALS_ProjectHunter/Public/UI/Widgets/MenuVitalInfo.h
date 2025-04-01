@@ -19,18 +19,14 @@ class ALS_PROJECTHUNTER_API UMenuVitalInfo : public UPHUserWidget
 
 
 public:
-	UPROPERTY(EditAnywhere, meta = (BindWidget), Category = "VitalInfo" )
+	
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, meta = (BindWidget), Category = "VitalInfo" )
 	UImage* VitalImage;
 
-	UPROPERTY(EditAnywhere, meta = (BindWidget), Category = "VitalInfo" )
-	UProgressBar* VitalProgressBar;
 
-	UPROPERTY(EditAnywhere, meta = (BindWidget), Category = "VitalInfo" )
+
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, meta = (BindWidget), Category = "VitalInfo" )
 	UTextBlock* VitalType;
+	
 
-	UPROPERTY(EditAnywhere, meta = (BindWidget), Category = "VitalInfo" )
-	UTextBlock* VitalMin;
-
-	UPROPERTY(EditAnywhere, meta = (BindWidget), Category = "VitalInfo" )
-	UTextBlock* VitalMax;
 };

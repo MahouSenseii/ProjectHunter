@@ -25,47 +25,9 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-	UFUNCTION()
-	static FDamageByType GetAllDamageByType(const APHBaseCharacter* Attacker, const UEquippableItem* Weapon);
-
-	UFUNCTION()
-	static float CalculateBaseDamage(const APHBaseCharacter* Attacker, const EAttackType AttackType);
-
-	UFUNCTION()
-	static float CalculateDamageAfterDefenses(float RawDamage, const APHBaseCharacter* Defender, EDamageTypes DamageType);
-
-	UFUNCTION()
-	static bool RollForCriticalHit(const APHBaseCharacter* Attacker, const EAttackType AttackType);
-
-	UFUNCTION()
-	static float GetCriticalMultiplier(const APHBaseCharacter* Attacker,  const EAttackType AttackType);
-
-
-	UFUNCTION(BlueprintCallable, Category = "Combat")
-	static FCombatHitResult CalculateFinalDamage(
-		const APHBaseCharacter* Attacker,
-		const APHBaseCharacter* Defender,
-		const UEquippableItem* Weapon,
-		EAttackType AttackType,
-		EDamageTypes PrimaryDamageType
-	);
-
-
-	static FDamageHitResultByType CalculateAllFinalDamageByType(
-	const APHBaseCharacter* Attacker,
-	const APHBaseCharacter* Defender,
-	const FDamageByType& RawDamage,
-	const EAttackType AttackType);
-
 
 	UFUNCTION()
 	static bool RollForStatusEffect(const APHBaseCharacter* Attacker, EDamageTypes DamageType);
-
-	static FDamageByType GetAllDamageByType(const APHBaseCharacter* Attacker, const UEquippableItem* Weapon, bool bIsSpell);
-
-	UFUNCTION()
-	static FDefenseStats GetAllDefenses(const APHBaseCharacter* Defender);
-
 
 	/* ============================= */
 	/* === Poise & Stagger System === */

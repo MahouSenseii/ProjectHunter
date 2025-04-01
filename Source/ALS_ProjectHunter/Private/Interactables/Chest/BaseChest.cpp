@@ -12,30 +12,30 @@
 ABaseChest::ABaseChest()
 {
 	// Override parent logic to ensure SkeletalMesh is used instead of StaticMesh
-	StaticMesh = nullptr;
-	
-
-	// Load and assign skeletal mesh asset
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Game/Loot_Anim_Set/Props/TreasureChest/TreasureChest_SkelMesh.TreasureChest_SkelMesh"));
-	if (MeshAsset.Succeeded())
+	if (StaticMesh)
 	{
-		SkeletalMeshAsset = MeshAsset.Object;
-		if (SkeletalMesh)
-		{
-			SkeletalMesh->SetSkeletalMesh(SkeletalMeshAsset);
-		}
+		StaticMesh->DestroyComponent();
+		StaticMesh = nullptr;
 	}
-
+	
 	// Setup ItemSpawnBox if not already created
 	ItemSpawnBox = CreateDefaultSubobject<UBoxComponent>(TEXT("ItemSpawnBox"));
 	ItemSpawnBox->SetupAttachment(RootComponent);
-	const FVector Location(0.0f, -305.0f, 60.0f);
+	const FVector Location(0.0f, -105.0f, 60.0f);
 	const FRotator Rotation(0.0f, 0.0f, 0.0f);
 	const FVector Scale(3.0f, 2.0f, 0.5f);
-	ItemSpawnBox->SetRelativeTransform(FTransform(Rotation, Location, Scale));
+	SkeletalMesh->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
 
+	ItemSpawnBox->SetRelativeTransform(FTransform(Rotation, Location, Scale));
 	// Create Loot Manager
 	SpawnableLootManager = CreateDefaultSubobject<USpawnableLootManager>(TEXT("LootManager"));
+	
+}
+
+void ABaseChest::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+	
 }
 
 
@@ -45,7 +45,6 @@ void ABaseChest::BeginPlay()
 	Super::BeginPlay();
 
 	SpawnableLootManager->SetSpawnBox(ItemSpawnBox);
-
 }
 
 void ABaseChest::BPIClientEndInteraction_Implementation(AActor* Interactor)
@@ -63,7 +62,8 @@ void ABaseChest::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)
 	{
 		CurrentInteractor = Interactor;
 		SetOwner(Interactor);
-		GetAnimation(AnimToPlay);
+		UE_LOG(LogTemp, Warning, TEXT("AnimToPlay is: %s"), *GetNameSafe(AnimToPlay));
+		GetAnimationToPlay(AnimToPlay);
 		if (SpawnableLootManager->SpawnableItems)
 		{
 
@@ -80,7 +80,7 @@ void ABaseChest::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)
 	}
 }
 
-void ABaseChest::GetAnimation(UAnimationAsset* NewAnimToPlay) const
+void ABaseChest::GetAnimationToPlay(UAnimationAsset* NewAnimToPlay) const
 {
 	if (SkeletalMesh && NewAnimToPlay)
 	{

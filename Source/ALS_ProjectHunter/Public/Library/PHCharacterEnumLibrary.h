@@ -21,3 +21,14 @@ enum class EAttackType : uint8
 	AT_Ranged     UMETA(DisplayName = "Ranged"),
 	AT_Spell      UMETA(DisplayName = "Spell")
 };
+
+
+UENUM(BlueprintType)
+enum class EVitalType: uint8
+{
+	VT_None       UMETA(DisplayName = "None"),
+	VT_Health      UMETA(DisplayName = "Health"),
+	VT_Stamina     UMETA(DisplayName = "Stamina"),
+	VT_Mana    UMETA(DisplayName = "Mana"),
+	VT_XP    UMETA(DisplayName = "XP")
+};

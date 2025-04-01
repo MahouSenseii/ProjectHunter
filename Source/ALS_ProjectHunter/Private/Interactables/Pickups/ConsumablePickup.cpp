@@ -15,13 +15,12 @@ void AConsumablePickup::BeginPlay()
 }
 
 bool AConsumablePickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo,
-	FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData,
-	FConsumableItemData ConsumableItemData) const
+	FEquippableItemData EquippableItemData,	FConsumableItemData ConsumableItemData) const
 {
 	Super::InteractionHandle(Actor, WasHeld);
 
 	FItemInformation  PassedItemInformation = ItemInfo;
 	FConsumableItemData PassedConsumableItemData = ConsumableData;
 
-	return Super::HandleInteraction(Actor, WasHeld,  PassedItemInformation, FEquippableItemData(), FWeaponItemData(),  PassedConsumableItemData);
+	return Super::HandleInteraction(Actor, WasHeld,  PassedItemInformation, FEquippableItemData(), PassedConsumableItemData);
 }

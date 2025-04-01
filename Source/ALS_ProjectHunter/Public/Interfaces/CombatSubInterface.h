@@ -24,4 +24,6 @@ class ALS_PROJECTHUNTER_API ICombatSubInterface
 public:
 
 	virtual int32 GetPlayerLevel();
+	virtual int32 GetCurrentXP();
+	virtual int32 GetXPFNeededForNextLevel();
 };

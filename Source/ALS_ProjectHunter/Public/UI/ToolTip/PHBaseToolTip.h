@@ -24,61 +24,28 @@ public:
 
 	virtual void NativeConstruct() override;
 
+	UPROPERTY()
+	FItemInformation ItemInfo;
+
+	UPROPERTY()
+	FEquippableItemData ItemData;
+	
 	UFUNCTION(BlueprintCallable) virtual void InitializeToolTip();
-	UFUNCTION(BlueprintGetter, BlueprintCallable) UBaseItem* GetItemObject() const { return  ItemObj; }
 	UFUNCTION(BlueprintCallable) static FString GetRarityText(const EItemRarity Rarity);
 	UFUNCTION(BlueprintCallable) virtual void ChangeColorByRarity();
-	UFUNCTION() FLinearColor GetColorBaseOnRarity() const;
-	UFUNCTION(BlueprintSetter, BlueprintCallable) void SetItemObj(UBaseItem* Item) { ItemObj = Item;}
+	UFUNCTION() FLinearColor GetColorBaseOnRarity();
+	UFUNCTION(BlueprintSetter, BlueprintCallable) virtual void SetItemInfo(const FItemInformation& Item);
 
 
 	
 protected:
 
-	UPROPERTY(EditAnywhere) TObjectPtr<UBaseItem> ItemObj;
 	UPROPERTY(EditAnywhere) EItemRarity ItemGrade;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UImage* ToolTipBackgroundImage;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UImage* ItemImage;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* ItemName;
+	UPROPERTY() UMaterialInstanceDynamic* ToolTipBGMaterial;
 	
-	// Str Requirements
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UHorizontalBox* StrBox;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* StrText;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* StrValue;
-	
-	// Level Requirements
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UHorizontalBox* LvlBox;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* LvlText;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* LvlValue;
-	
-	// Int Requirements
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UHorizontalBox* IntBox;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock*IntText;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* IntValue;
-	
-	// Int Requirements
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UHorizontalBox* DexBox;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* DexText;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* DexValue;
-
-	// End Requirements
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UHorizontalBox* EndBox;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* EndText;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* EndValue;
-	
-	// Aff Requirements
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UHorizontalBox* AffBox;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* AffText;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* AffValue;
-	
-	// Luck Requirements
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UHorizontalBox* LuckBox;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* LuckText;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock* LuckValue;
-	
-	//  Cov Requirements
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UHorizontalBox* CovBox;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock*  CovText;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget)) UTextBlock*  CovValue;
-
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Color")
+	TMap<EItemRarity, FLinearColor> RarityColors;
 };

@@ -30,6 +30,8 @@ UInteractableManager::UInteractableManager()
 	{
 		UE_LOG(LogTemp, Error, TEXT("Failed to find widget class at the specified path."));
 	}
+
+	ResetInteractable();
 }
 
 
@@ -49,9 +51,24 @@ void UInteractableManager::BeginPlay()
 			Owner->Tags.AddUnique(DestroyableTag);
 		}
 	}
+
+	if (InteractionWidget)
+	{
+		InteractionWidget->SetWidget(nullptr); // clear editor-copied widget
+	}
+
+	InteractionWidgetRef = nullptr; // clear any stale reference
+
+	ResetInteractable();
 }
 
-
+void UInteractableManager::ResetInteractable()
+{
+	IsInteractable = true;
+	AlreadyInteracted = false;
+	InteractableValue = FMath::RandRange(0, InteractableLimitValue);
+	MashingProgress = 0.0f;
+}
 
 void UInteractableManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -124,6 +141,19 @@ void UInteractableManager::SetWidgetLocalOwner(APlayerController* OwnerPlayerCon
 	if (!OwnerPlayerController || !OwnerPlayerController->IsLocalPlayerController())
 	{
 		return;
+	}
+	
+	if (InteractionWidgetRef)
+	{
+		InteractionWidgetRef->RemoveFromParent();
+		InteractionWidgetRef = nullptr;
+	}
+
+
+	// Remove the previous widget if it exists
+	if (InteractionWidget && InteractionWidget->GetWidget())
+	{
+		InteractionWidget->SetWidget(nullptr);
 	}
 
 	InteractionWidgetRef = CreateWidget<UInteractableWidget>(OwnerPlayerController, WidgetClass);

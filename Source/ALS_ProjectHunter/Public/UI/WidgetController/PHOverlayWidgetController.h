@@ -23,8 +23,8 @@ public:
 	virtual void BindCallbacksToDependencies() override;
 
 protected:
-	
-	void OnXPChange(int32 NewXP) const;
+	UFUNCTION()
+	void OnXPChange(int32 NewXP);
 
 	
 

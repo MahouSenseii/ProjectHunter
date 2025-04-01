@@ -19,56 +19,81 @@ void USpawnableLootManager::BeginPlay()
 
 int32 USpawnableLootManager::GenerateDropAmount(UPHAttributeSet* AttributeSet)
 {
-	if (!AttributeSet) return MinMaxLootAmount.X; // Return minimum if no attribute set
+	const float PlayerLuck = AttributeSet ? AttributeSet->GetLuck() : 0.0f;
 
-	// 75% chance to return minimum drop amount
-	if (UKismetMathLibrary::RandomFloat() < MinThreshold) 
-	{
-		return MinMaxLootAmount.X;
-	}
+	// Normalize Luck against configurable MaxPlayerLuck
+	const float LuckRatio = FMath::Clamp(PlayerLuck / MaxPlayerLuck, 0.0f, 1.0f);
+	const float LuckFactor = LuckRatio / (LuckRatio + LuckSoftCapConstant);
 
-	// Generate a quadratic random value
+	// Quadratic randomness
 	const float RandomFloat = UKismetMathLibrary::RandomFloat();
 	const float SquaredRandom = RandomFloat * RandomFloat;
 
-	// Calculate luck factor (normalized to [0,1])
-	const float PlayerLuck = AttributeSet->GetLuck();
-	const float LuckFactor = FMath::Clamp(PlayerLuck / 9999.0f, 0.0f, 1.0f);
-
-	// Adjust randomness based on LuckFactor
+	// Tilt the randomness slightly based on Luck
 	const float AdjustedRandom = FMath::Lerp(SquaredRandom, RandomFloat, LuckFactor);
 
-	// Scale random value within min-max range
-	const int32 Range = MinMaxLootAmount.Y - MinMaxLootAmount.X;
-	const int32 ScaledValue = FMath::TruncToInt(AdjustedRandom * Range);
+	const int32 Min = FMath::TruncToInt(MinMaxLootAmount.X);
+	const int32 Max = FMath::TruncToInt(MinMaxLootAmount.Y);
+	const int32 Range = Max - Min;
 
-	// Apply final LuckFactor bonus
-	int32 LootAmountRoll = ScaledValue + MinMaxLootAmount.X;
-	LootAmountRoll += FMath::CeilToInt(LootAmountRoll * LuckFactor);
+	const int32 ScaledValue = FMath::TruncToInt(AdjustedRandom * Range);
+	const int32 LootAmountRoll = Min + ScaledValue;
+
+	UE_LOG(LogTemp, Log, TEXT("Luck=%f | Ratio=%.3f | Factor=%.3f | Roll=%.2f | Loot=%d"),
+		PlayerLuck, LuckRatio, LuckFactor, AdjustedRandom, LootAmountRoll);
 
 	return LootAmountRoll;
 }
 
+
+
+
 FTransform USpawnableLootManager::GetSpawnLocation() const
 {
-	if (!SpawnBox) 
+	if (!SpawnBox || !GetWorld()) 
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SpawnBox is null, using default transform"));
+		UE_LOG(LogTemp, Warning, TEXT("SpawnBox is null or World is not available, using default transform"));
 		return FTransform();
 	}
 
-	// Get SpawnBox extent and generate a random position inside
 	const FVector BoxExtent = SpawnBox->GetScaledBoxExtent();
-	const FVector RandomVector = FVector(
+	const FVector BaseLocation = SpawnBox->GetComponentLocation();
+
+	// Random XY position in box
+	const FVector RandomXY = FVector(
 		FMath::RandRange(-BoxExtent.X, BoxExtent.X),
 		FMath::RandRange(-BoxExtent.Y, BoxExtent.Y),
-		30.0f // Adjust for ground-level spawn
+		0.0f
 	);
+	const FVector SpawnPointXY = BaseLocation + RandomXY;
 
-	// Get Base Location
-	const FVector BaseLocation = SpawnBox->GetComponentLocation();
-	return FTransform(BaseLocation + RandomVector);
+	// Line trace settings
+	const FVector TraceStart = SpawnPointXY + FVector(0, 0, 500);   // Start above the point
+	const FVector TraceEnd = SpawnPointXY - FVector(0, 0, 1000);   // Trace downward
+
+	FHitResult Hit;
+	FCollisionQueryParams TraceParams;
+	TraceParams.bTraceComplex = true;
+	TraceParams.AddIgnoredActor(GetOwner());
+
+	if (GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, TraceParams))
+	{
+		// Debug visuals
+		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Green, false, 2.0f, 0, 1.0f);
+		DrawDebugPoint(GetWorld(), Hit.ImpactPoint, 10.0f, FColor::Red, false, 2.0f);
+
+		// Use ground hit with optional offset
+		FVector HitLocation = Hit.ImpactPoint + FVector(0, 0, GroundOffsetZ);
+		return FTransform(HitLocation);
+	}
+	
+		// Fallback: just drop to approximate floor height
+		FVector DefaultSpawn = SpawnPointXY + FVector(0, 0, 30.0f);
+		UE_LOG(LogTemp, Warning, TEXT("No ground hit. Using fallback spawn height."));
+		return FTransform(DefaultSpawn);
+	
 }
+
 
 void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* DataTable, const FTransform SpawnTransform)
 {
@@ -78,10 +103,18 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
 		return;
 	}
 
+	// Safe row lookup
 	const FItemInformation* ItemInfo = DataTable->FindRow<FItemInformation>(ItemName, TEXT("LookupItemInfo"));
 	if (!ItemInfo) 
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Item %s not found in DataTable"), *ItemName.ToString());
+		return;
+	}
+
+	// Check if world is valid before spawning
+	if (!GetWorld()) 
+	{
+		UE_LOG(LogTemp, Warning, TEXT("World is null, cannot spawn item %s"), *ItemName.ToString());
 		return;
 	}
 
@@ -101,6 +134,7 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
 		return;
 	}
 
+
 	// Assign properties
 	SpawnedItem->ItemInfo = *ItemInfo;
 	SpawnedItem->SetNewMesh(ItemInfo->StaticMesh);
@@ -115,29 +149,31 @@ void USpawnableLootManager::GetSpawnItem(UPHAttributeSet* AttributeSet)
 		return;
 	}
 
-	// Compute total drop rating
+	if (bLooted)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Loot has already been claimed. Skipping spawn."));
+		return;
+	}
+
+	// total drop rating
 	int32 TotalDropRating = 0;
 	for (const auto& Row : SpawnableItems->GetRowMap())
 	{
-		const FDropTable* ItemInfo = reinterpret_cast<FDropTable*>(Row.Value);
-		if (ItemInfo)
+		if (const FDropTable* ItemInfo = SpawnableItems->FindRow<FDropTable>(Row.Key, TEXT("SpawnRatingCalc")))
 		{
 			TotalDropRating += ItemInfo->DropRating;
 		}
 	}
 
-	// Determine number of items to spawn
 	const int32 NumberOfItemsToSpawn = GenerateDropAmount(AttributeSet);
 	for (int32 i = 0; i < NumberOfItemsToSpawn; ++i)
 	{
-		// Randomize item selection
-		int32 RandomScore = FMath::RandRange(0, TotalDropRating);
+		int32 RandomScore = FMath::RandRange(1, TotalDropRating);
 		FName SelectedItemName;
 
-		// Find the item corresponding to the random score
 		for (const auto& Row : SpawnableItems->GetRowMap())
 		{
-			if (const FDropTable* ItemInfo = reinterpret_cast<FDropTable*>(Row.Value))
+			if (const FDropTable* ItemInfo = SpawnableItems->FindRow<FDropTable>(Row.Key, TEXT("ItemRoll")))
 			{
 				RandomScore -= ItemInfo->DropRating;
 				if (RandomScore <= 0)
@@ -148,15 +184,15 @@ void USpawnableLootManager::GetSpawnItem(UPHAttributeSet* AttributeSet)
 			}
 		}
 
-		// Spawn the selected item
-		if (!SelectedItemName.IsNone())
-		{
-			const FTransform SpawnTransform = GetSpawnLocation();
-			SpawnItemByName(SelectedItemName, MasterDropList, SpawnTransform);
-		}
-		else
+		if (SelectedItemName.IsNone())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("No item selected to spawn."));
+			continue;
 		}
+
+		const FTransform SpawnTransform = GetSpawnLocation();
+		SpawnItemByName(SelectedItemName, MasterDropList, SpawnTransform);
 	}
+
+	bLooted = true;
 }

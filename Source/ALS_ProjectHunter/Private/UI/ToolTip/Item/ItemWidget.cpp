@@ -7,7 +7,6 @@
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Materials/MaterialInstance.h"
-#include "..\..\..\Public\UI\ToolTip\EquippableToolTip.h"
 
 
 void UItemWidget::NativeConstruct()
@@ -42,10 +41,10 @@ void UItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPoint
     if (UDragWidget* DragOp = NewObject<UDragWidget>())
     {
         DragOp->Payload = ItemObject;
-        this->SetRenderScale(FVector2D(0.4f, 0.4f));
+       // this->SetRenderScale(FVector2D(0.5f, 0.5f));
         DragOp->DefaultDragVisual = this;
         DragOp->Pivot = EDragPivot::MouseDown;
-        DragOp->Offset = FVector2D(-0.25, -0.25);
+       //  DragOp->Offset = FVector2D(-0.25, -0.25);
         OutOperation = DragOp;
         UE_LOG(LogTemp, Log, TEXT("Drag operation created."));
         

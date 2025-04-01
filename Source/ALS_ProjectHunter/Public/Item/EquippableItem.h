@@ -11,7 +11,7 @@ class APHBaseCharacter;
 /**
  * 
  */
-UCLASS()
+UCLASS(BlueprintType)
 class ALS_PROJECTHUNTER_API UEquippableItem : public UBaseItem
 {
 	GENERATED_BODY()
@@ -31,16 +31,26 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Base")
 	void SetEquippableData(FEquippableItemData Data) { EquippableData = Data; }
-	
-	UFUNCTION(Blueprintable)
-	void SetWeaponData(const FWeaponItemData& NewWeaponItemData){ WeaponItemData = NewWeaponItemData;}
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	FItemStatRequirement GetStatRequirements() const;
-
-	UFUNCTION(Blueprintable)
-	FWeaponItemData GetWeaponData() const { return WeaponItemData;}
 	
+
+	UFUNCTION(BlueprintCallable, Category = "Modifiers")
+	void RerollAllMods();
+	
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	TArray<FPHAttributeData> GetItemStats() const;
+	const FPHItemStats& GetFullItemStats() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	TArray<FPHAttributeData> GetItemStatsByTag(FGameplayTag Tag) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	TArray<FPHAttributeData> GetItemStatsByAffixType(EPrefixSuffix Type) const;
+
+
 protected:
 	UPROPERTY(EditAnywhere, Category = "ItemInfo")
 	FEquippableItemData EquippableData;
@@ -48,11 +58,5 @@ protected:
 	// Set in BP will be all stats that the item can generate
 	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")
 	UDataTable* StatsDataTable;
-
-	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")
-	FPHItemStats ItemStats;
-
 	
-	UPROPERTY(EditAnywhere, Category = "ItemInfo")
-	FWeaponItemData WeaponItemData;
 };

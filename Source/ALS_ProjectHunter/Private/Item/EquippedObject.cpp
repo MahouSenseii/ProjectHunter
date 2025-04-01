@@ -34,7 +34,7 @@ AEquippedObject::AEquippedObject()
 		StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 
-	if(!ItemStats.bHasGenerated)
+	if(!ItemStats.bAffixesGenerated)
 	{
 		ItemStats = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
 		ItemInfo = UPHItemFunctionLibrary::GenerateItemName(ItemStats,ItemInfo);

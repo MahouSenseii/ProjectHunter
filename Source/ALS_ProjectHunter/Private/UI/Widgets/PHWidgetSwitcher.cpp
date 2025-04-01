@@ -288,7 +288,7 @@ void UPHWidgetSwitcher::ClickButton(const EWidgets WidgetType) const
         if (Item.Widget == WidgetType)
         {
             Button = Item.MenuButton;
-            if(const APHPlayerController* PC = Cast<APHPlayerController>(OwnerCharacter->GetAlsController()))
+            if(const APHPlayerController* PC = Cast<APHPlayerController>(Cast<APHPlayerController>(OwnerCharacter->GetController())))
             {
                 PC->GetWidgetManager()->Execute_SwitchWidgetTo(OwnerCharacter,
                     WidgetType,Button->WidgetSwitcher, nullptr);

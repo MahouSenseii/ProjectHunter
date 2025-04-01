@@ -7,6 +7,8 @@
 #include "Item/ConsumableItem.h"
 #include "AbilitySystemComponent.h"
 #include "PHGameplayTags.h"
+#include "Interactables/Pickups/WeaponPickup.h"
+#include "Item/EquippedObject.h"
 #include "Item/WeaponItem.h"
 
 bool UPHItemFunctionLibrary::AreItemSlotsEqual(FItemInformation FirstItem, FItemInformation SecondItem)
@@ -23,45 +25,60 @@ bool UPHItemFunctionLibrary::AreItemSlotsEqual(FItemInformation FirstItem, FItem
 }
 
 
-UBaseItem* UPHItemFunctionLibrary::GetItemInformation(FItemInformation ItemInfo, FEquippableItemData EquippableItemData,
-                                                      FWeaponItemData WeaponItemData, FConsumableItemData ConsumableItemData)
+UBaseItem* UPHItemFunctionLibrary::GetItemInformation(
+	FItemInformation ItemInfo,
+	FEquippableItemData EquippableItemData,
+	FConsumableItemData ConsumableItemData)
 {
-    switch (ItemInfo.EquipmentSlot)
-    {
-    case EEquipmentSlot::ES_Belt:
-    case EEquipmentSlot::ES_Boots:
-    case EEquipmentSlot::ES_Chestplate:
-    case EEquipmentSlot::ES_Head:
-    case EEquipmentSlot::ES_Neck:
-    case EEquipmentSlot::ES_Legs:
-    case EEquipmentSlot::ES_Cloak:
-    case EEquipmentSlot::ES_Gloves:
-    case EEquipmentSlot::ES_Ring:
-        return CreateEquippableItem(ItemInfo, EquippableItemData);
+	switch (ItemInfo.EquipmentSlot)
+	{
+	case EEquipmentSlot::ES_Belt:
+	case EEquipmentSlot::ES_Boots:
+	case EEquipmentSlot::ES_Chestplate:
+	case EEquipmentSlot::ES_Head:
+	case EEquipmentSlot::ES_Neck:
+	case EEquipmentSlot::ES_Legs:
+	case EEquipmentSlot::ES_Cloak:
+	case EEquipmentSlot::ES_Gloves:
+	case EEquipmentSlot::ES_Ring:
+	case EEquipmentSlot::ES_MainHand:
+	case EEquipmentSlot::ES_OffHand:
+		return CreateEquippableItem(ItemInfo, EquippableItemData);
 
-    case EEquipmentSlot::ES_Flask:
-        return CreateConsumableItem(ItemInfo, ConsumableItemData);
+	case EEquipmentSlot::ES_Flask:
+		return CreateConsumableItem(ItemInfo, ConsumableItemData);
 
-    case EEquipmentSlot::ES_MainHand:
-    case EEquipmentSlot::ES_OffHand:
-        return CreateWeaponItem(ItemInfo, EquippableItemData, WeaponItemData);
-
-    case EEquipmentSlot::ES_None:
-    default:
-        UE_LOG(LogTemp, Warning, TEXT("Unknown Equipment Slot: %d"), static_cast<int32>(ItemInfo.EquipmentSlot));
-        return nullptr;
-    }
+	case EEquipmentSlot::ES_None:
+	default:
+		UE_LOG(LogTemp, Warning, TEXT("Unknown or None Equipment Slot: %d"), static_cast<int32>(ItemInfo.EquipmentSlot));
+		return nullptr;
+	}
 }
 
-UEquippableItem* UPHItemFunctionLibrary::CreateEquippableItem(const FItemInformation& ItemInfo, const FEquippableItemData& EquippableItemData)
-{
-    UEquippableItem* NewEquipItem = NewObject<UEquippableItem>();
-    NewEquipItem->SetItemInfo(ItemInfo);
-    NewEquipItem->SetEquippableData(EquippableItemData);
-    NewEquipItem->GetEquippableData().ArmorAttributes = EquippableItemData.ArmorAttributes;
 
-    return NewEquipItem;
+UEquippableItem* UPHItemFunctionLibrary::CreateEquippableItem(
+	const FItemInformation& ItemInfo,
+	const FEquippableItemData& EquippableItemData)
+{
+	if (!EquippableItemData.EquipClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EquipClass is not set on EquippableItemData!"));
+		return nullptr;
+	}
+
+	UEquippableItem* NewEquipItem = NewObject<UEquippableItem>(GetTransientPackage(), EquippableItemData.EquipClass);
+	if (!NewEquipItem)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to create UEquippableItem object."));
+		return nullptr;
+	}
+
+	NewEquipItem->SetItemInfo(ItemInfo);
+	NewEquipItem->SetEquippableData(EquippableItemData);
+
+	return NewEquipItem;
 }
+
 
 UConsumableItem* UPHItemFunctionLibrary::CreateConsumableItem(const FItemInformation& ItemInfo, const FConsumableItemData ConsumableItemData)
 {
@@ -69,15 +86,6 @@ UConsumableItem* UPHItemFunctionLibrary::CreateConsumableItem(const FItemInforma
     NewConsumableItem->SetItemInfo(ItemInfo);
     NewConsumableItem->SetConsumableData(ConsumableItemData);
     return NewConsumableItem;
-}
-
-UWeaponItem* UPHItemFunctionLibrary::CreateWeaponItem( const FItemInformation& ItemInfo, const FEquippableItemData& EquippableItemData, const FWeaponItemData& WeaponItemData)
-{
-    UWeaponItem* NewWeaponItem = NewObject<UWeaponItem>();
-    NewWeaponItem->SetItemInfo(ItemInfo);
-    NewWeaponItem->SetEquippableData(EquippableItemData);
-    NewWeaponItem->SetWeaponData(WeaponItemData);
-    return NewWeaponItem;
 }
 
 TMap<FString, int> UPHItemFunctionLibrary::CalculateTotalDamage(const int MinDamage, const int MaxDamage, const APHBaseCharacter* Actor)
@@ -148,48 +156,111 @@ TMap<FString, int> UPHItemFunctionLibrary::CalculateTotalDamage(const int MinDam
 
 FText UPHItemFunctionLibrary::FormatAttributeText(const FPHAttributeData& AttributeData)
 {
-    // If the stat is not identified, return masked text
-    if (!AttributeData.bIsIdentified)
-    {
-        return FText::FromString(TEXT("??????"));
-    }
+	if (!AttributeData.bIsIdentified)
+	{
+		return FText::FromString(TEXT("??????"));
+	}
 
-    // Roll a value within the given range
-    const float RolledValue1 = FMath::RandRange(AttributeData.MinStatChanged, AttributeData.MaxStatChanged);
+	const FText StatName = FText::FromName(AttributeData.AttributeName); // Swap to DisplayName if you add that
 
-    // Handle different display formats
-    switch (AttributeData.DisplayFormat)
-    {
-        case EAttributeDisplayFormat::Additive:
-            return FText::Format(FText::FromString(TEXT("+{0} TO {1}")),
-                                 FText::AsNumber(FMath::RoundToInt(RolledValue1)),
-                                 FText::FromName(AttributeData.AttributeName));
+	const int32 Rolled = FMath::RoundToInt(AttributeData.RolledStatValue);
+	const int32 Min = FMath::RoundToInt(AttributeData.MinStatChanged);
+	const int32 Max = FMath::RoundToInt(AttributeData.MaxStatChanged);
 
-        case EAttributeDisplayFormat::Percent:
-            return FText::Format(FText::FromString(TEXT("+{0}% TO {1}")),
-                                 FText::AsNumber(FMath::RoundToInt(RolledValue1)),
-                                 FText::FromName(AttributeData.AttributeName));
+	switch (AttributeData.DisplayFormat)
+	{
+	case EAttributeDisplayFormat::Additive:
+		return FText::Format(
+			FText::FromString(TEXT("+{0} {1}")),
+			FText::AsNumber(Rolled),
+			StatName
+		);
 
-        case EAttributeDisplayFormat::MinMax:
-            if (AttributeData.bIsRange)
-            {
-                const float RolledValue2 = FMath::RandRange(AttributeData.MinStatChanged, AttributeData.MaxStatChanged);
-                return FText::Format(FText::FromString(TEXT("ADD {0} TO {1} {2}")),
-                                     FText::AsNumber(FMath::RoundToInt(RolledValue1)),
-                                     FText::AsNumber(FMath::RoundToInt(RolledValue2)),
-                                     FText::FromName(AttributeData.AttributeName));
-            }
-            else
-            {
-                return FText::Format(FText::FromString(TEXT("+{0} {1}")),
-                                     FText::AsNumber(FMath::RoundToInt(RolledValue1)),
-                                     FText::FromName(AttributeData.AttributeName));
-            }
-            
-        default:
-            return FText::FromString(TEXT("INVALID ATTRIBUTE FORMAT"));
-    }
+	case EAttributeDisplayFormat::FlatNegative:
+		return FText::Format(
+			FText::FromString(TEXT("-{0} {1}")),
+			FText::AsNumber(Rolled),
+			StatName
+		);
+
+	case EAttributeDisplayFormat::Percent:
+		return FText::Format(
+			FText::FromString(TEXT("+{0}% {1}")),
+			FText::AsNumber(Rolled),
+			StatName
+		);
+
+	case EAttributeDisplayFormat::MinMax:
+		if (AttributeData.bDisplayAsRange)
+		{
+			return FText::Format(
+				FText::FromString(TEXT("Adds {0}–{1} {2}")),
+				FText::AsNumber(Min),
+				FText::AsNumber(Max),
+				StatName
+			);
+		}
+		else
+		{
+			return FText::Format(
+				FText::FromString(TEXT("+{0} {1}")),
+				FText::AsNumber(Rolled),
+				StatName
+			);
+		}
+
+	case EAttributeDisplayFormat::Increase:
+		return FText::Format(
+			FText::FromString(TEXT("{0}% increased {1}")),
+			FText::AsNumber(Rolled),
+			StatName
+		);
+
+	case EAttributeDisplayFormat::More:
+		return FText::Format(
+			FText::FromString(TEXT("{0}% more {1}")),
+			FText::AsNumber(Rolled),
+			StatName
+		);
+
+	case EAttributeDisplayFormat::Less:
+		return FText::Format(
+			FText::FromString(TEXT("{0}% less {1}")),
+			FText::AsNumber(Rolled),
+			StatName
+		);
+
+	case EAttributeDisplayFormat::Chance:
+		return FText::Format(
+			FText::FromString(TEXT("{0}% chance to {1}")),
+			FText::AsNumber(Rolled),
+			StatName
+		);
+
+	case EAttributeDisplayFormat::Duration:
+		return FText::Format(
+			FText::FromString(TEXT("{0}s duration to {1}")),
+			FText::AsNumber(AttributeData.RolledStatValue), // Duration may be fractional
+			StatName
+		);
+
+	case EAttributeDisplayFormat::Cooldown:
+		return FText::Format(
+			FText::FromString(TEXT("{0}s cooldown on {1}")),
+			FText::AsNumber(AttributeData.RolledStatValue), // Same here
+			StatName
+		);
+
+	case EAttributeDisplayFormat::CustomText:
+		// Optional: implement a custom text override on your struct like AttributeData.CustomDisplayFormatText
+		return FText::FromString(TEXT("Custom Attribute Format"));
+
+	default:
+		return FText::FromString(TEXT("Invalid Attribute Format"));
+	}
 }
+
+
 
 
 void UPHItemFunctionLibrary::IdentifyStat(float ChanceToIdentify, FPHItemStats& StatsToCheck)
@@ -197,7 +268,7 @@ void UPHItemFunctionLibrary::IdentifyStat(float ChanceToIdentify, FPHItemStats& 
     TArray<FPHAttributeData*> AllStats;
 
     // Gather all un-identified stats into a list
-    for (FPHAttributeData& Stat : StatsToCheck.PrefixStats)
+    for (FPHAttributeData& Stat : StatsToCheck.Prefixes)
     {
         if (!Stat.bIsIdentified)
         {
@@ -205,7 +276,7 @@ void UPHItemFunctionLibrary::IdentifyStat(float ChanceToIdentify, FPHItemStats& 
         }
     }
 
-    for (FPHAttributeData& Stat : StatsToCheck.SuffixStats)
+    for (FPHAttributeData& Stat : StatsToCheck.Suffixes)
     {
         if (!Stat.bIsIdentified)
         {
@@ -240,6 +311,13 @@ FPHItemStats UPHItemFunctionLibrary::GenerateStats(const UDataTable* StatsThatCa
 {
     FPHItemStats GeneratedStats;
 
+	const int32 MaxPrefixes = 3;
+	const int32 MaxSuffixes = 3;
+
+	int32 PrefixCount = 0;
+	int32 SuffixCount = 0;
+	
+
     if (!StatsThatCanBeGenerated)
     {
         
@@ -264,15 +342,23 @@ FPHItemStats UPHItemFunctionLibrary::GenerateStats(const UDataTable* StatsThatCa
         // Retrieve the stat data from the table
         if (const FPHAttributeData* StatData = StatsThatCanBeGenerated->FindRow<FPHAttributeData>(SelectedRow, TEXT("Generating Stats")))
         {
+        	if (PrefixCount >= MaxPrefixes && SuffixCount >= MaxSuffixes)
+        	{
+        		break;
+        	}
+        	
             // Assign stat based on its PrefixSuffix type
-            if (StatData->PrefixSuffix == EPrefixSuffix::Prefix)
-            {
-                GeneratedStats.PrefixStats.Add(*StatData);
-            }
-            else if (StatData->PrefixSuffix == EPrefixSuffix::Suffix)
-            {
-                GeneratedStats.SuffixStats.Add(*StatData);
-            }
+        	if (StatData->PrefixSuffix == EPrefixSuffix::Prefix && PrefixCount < MaxPrefixes)
+        	{
+        		GeneratedStats.Prefixes.Add(*StatData);
+        		PrefixCount++;
+        	}
+        	else if (StatData->PrefixSuffix == EPrefixSuffix::Suffix && SuffixCount < MaxSuffixes)
+        	{
+        		GeneratedStats.Suffixes.Add(*StatData);
+        		SuffixCount++;
+        	}
+
         }
 
         // Reduce chance for the next stat
@@ -280,14 +366,30 @@ FPHItemStats UPHItemFunctionLibrary::GenerateStats(const UDataTable* StatsThatCa
 
         // Remove used row to prevent duplicate stats
         RowNames.RemoveAt(RandomIndex);
-        GeneratedStats.bHasGenerated = true;
+        GeneratedStats.bAffixesGenerated = true;
     }
     return GeneratedStats;
 }
 
 int32 UPHItemFunctionLibrary::GetRankPointsValue(ERankPoints Rank)
 {
-    return static_cast<int32>(Rank) * 5;
+	switch (Rank)
+	{
+	case ERankPoints::RP_Neg30: return -30;
+	case ERankPoints::RP_Neg25: return -25;
+	case ERankPoints::RP_Neg20: return -20;
+	case ERankPoints::RP_Neg15: return -15;
+	case ERankPoints::RP_Neg10: return -10;
+	case ERankPoints::RP_Neg5:  return -5;
+	case ERankPoints::RP_0:     return 0;
+	case ERankPoints::RP_5:     return 5;
+	case ERankPoints::RP_10:    return 10;
+	case ERankPoints::RP_15:    return 15;
+	case ERankPoints::RP_20:    return 20;
+	case ERankPoints::RP_25:    return 25;
+	case ERankPoints::RP_30:    return 30;
+	default:                       return 0;
+	}
 }
 
 EItemRarity UPHItemFunctionLibrary::DetermineWeaponRank(const int32 BaseRankPoints, const FPHItemStats& Stats)
@@ -295,67 +397,221 @@ EItemRarity UPHItemFunctionLibrary::DetermineWeaponRank(const int32 BaseRankPoin
     int32 TotalRankPoints = BaseRankPoints; // Start with base weapon points
 
     // Sum up RankPoints from all prefixes and suffixes
-    for (const FPHAttributeData& Prefix : Stats.PrefixStats)
+    for (const FPHAttributeData& Prefix : Stats.Prefixes)
     {
         TotalRankPoints += GetRankPointsValue(Prefix.RankPoints);
     }
-    for (const FPHAttributeData& Suffix : Stats.SuffixStats)
+    for (const FPHAttributeData& Suffix : Stats.Suffixes)
     {
         TotalRankPoints += GetRankPointsValue(Suffix.RankPoints);
     }
 
     // Determine rank based on adjusted thresholds
+	if (TotalRankPoints >= 55) return EItemRarity::IR_GradeD;
+	if (TotalRankPoints >= 95) return EItemRarity::IR_GradeC;
+	if (TotalRankPoints >= 135) return EItemRarity::IR_GradeB;
+	if (TotalRankPoints >= 175) return EItemRarity::IR_GradeA;
     if (TotalRankPoints >= 205) return EItemRarity::IR_GradeS;
-    if (TotalRankPoints >= 175) return EItemRarity::IR_GradeA;
-    if (TotalRankPoints >= 135) return EItemRarity::IR_GradeB;
-    if (TotalRankPoints >= 95) return EItemRarity::IR_GradeC;
-    if (TotalRankPoints >= 55) return EItemRarity::IR_GradeD;
+
+
 
     return EItemRarity::IR_GradeF; // Default to F if below 55 points
 }
 
 FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& ItemStats, FItemInformation& ItemInfo)
 {
-    // Initialize highest ranked prefix and suffix
-    const FPHAttributeData* HighestPrefix = nullptr;
-    const FPHAttributeData* HighestSuffix = nullptr;
+	const FText UnknownAffixText = NSLOCTEXT("Item", "UnidentifiedAffix", "???");
 
-    // Find the highest ranking prefix
-    for (const FPHAttributeData& Prefix : ItemStats.PrefixStats)
-    {
-        if (!HighestPrefix || Prefix.RankPoints > HighestPrefix->RankPoints)
-        {
-            HighestPrefix = &Prefix;
-        }
-    }
+	const FPHAttributeData* HighestPrefix = nullptr;
+	const FPHAttributeData* HighestSuffix = nullptr;
 
-    // Find the highest ranking suffix
-    for (const FPHAttributeData& Suffix : ItemStats.SuffixStats)
-    {
-        if (!HighestSuffix || Suffix.RankPoints > HighestSuffix->RankPoints)
-        {
-            HighestSuffix = &Suffix;
-        }
-    }
+	for (const FPHAttributeData& Prefix : ItemStats.Prefixes)
+	{
+		if (!HighestPrefix || Prefix.RankPoints > HighestPrefix->RankPoints)
+		{
+			HighestPrefix = &Prefix;
+		}
+	}
 
-    // Ensure we have valid names
-    const FText PrefixName = (HighestPrefix) ? FText::FromName(HighestPrefix->AttributeName) : FText::FromString(TEXT(""));
-    const FText SuffixName = (HighestSuffix) ? FText::FromName(HighestSuffix->AttributeName) : FText::FromString(TEXT(""));
+	for (const FPHAttributeData& Suffix : ItemStats.Suffixes)
+	{
+		if (!HighestSuffix || Suffix.RankPoints > HighestSuffix->RankPoints)
+		{
+			HighestSuffix = &Suffix;
+		}
+	}
 
-    // Convert enums to readable text
-    const FText RarityName = UEnum::GetDisplayValueAsText(ItemInfo.ItemRarity);
-    const FText ItemTypeName = UEnum::GetDisplayValueAsText(ItemInfo.ItemType);
+	const FText PrefixName = (HighestPrefix)
+		? (HighestPrefix->bIsIdentified
+			? FText::FromName(HighestPrefix->AttributeName)
+			: UnknownAffixText)
+		: FText::GetEmpty();
 
-    // Construct the full item name
-    const FText ItemName = FText::Format(FText::FromString(TEXT("{0} {1} {2} {3}")),
-                                         RarityName, PrefixName, ItemTypeName, SuffixName);
+	const FText SuffixName = (HighestSuffix)
+		? (HighestSuffix->bIsIdentified
+			? FText::FromName(HighestSuffix->AttributeName)
+			: UnknownAffixText)
+		: FText::GetEmpty();
+	
+	const FText ItemSubTypeName = UEnum::GetDisplayValueAsText(ItemInfo.ItemSubType);
 
-    // Assign the generated name to the item
-    ItemInfo.ItemName = ItemName;
+	// 🔥 Build final name 
+	FString FullName;
 
-    return ItemInfo;
+	if (!PrefixName.IsEmpty())
+	{
+		FullName += PrefixName.ToString() + TEXT(" ");
+	}
+
+	FullName += ItemSubTypeName.ToString();
+
+	if (!SuffixName.IsEmpty())
+	{
+		FullName += TEXT(" of ") + SuffixName.ToString();
+	}
+
+	ItemInfo.ItemName = FText::FromString(FullName);
+	return ItemInfo;
 }
 
 
 
 
+
+void UPHItemFunctionLibrary::RerollModifiers(
+	UEquippableItem* Item,
+	const UDataTable* ModPool,
+	bool bRerollPrefixes,
+	bool bRerollSuffixes,
+	const TArray<FGuid>& LockedModifiers
+)
+{
+	if (!Item || !ModPool) return;
+
+	FEquippableItemData EquipData = Item->GetEquippableData();
+	FPHItemStats& Affixes = EquipData.Affixes;
+
+	if (bRerollPrefixes)
+	{
+		TArray<FPHAttributeData> NewPrefixes;
+
+		for (const FPHAttributeData& Mod : Affixes.Prefixes)
+		{
+			if (LockedModifiers.Contains(Mod.ModifierUID))
+			{
+				NewPrefixes.Add(Mod); // Preserve locked mod
+			}
+			else
+			{
+				NewPrefixes.Add(RollSingleMod(ModPool, true));
+			}
+		}
+
+		Affixes.Prefixes = NewPrefixes;
+	}
+
+	if (bRerollSuffixes)
+	{
+		TArray<FPHAttributeData> NewSuffixes;
+
+		for (const FPHAttributeData& Mod : Affixes.Suffixes)
+		{
+			if (LockedModifiers.Contains(Mod.ModifierUID))
+			{
+				NewSuffixes.Add(Mod); // Preserve locked mod
+			}
+			else
+			{
+				NewSuffixes.Add(RollSingleMod(ModPool, false));
+			}
+		}
+
+		Affixes.Suffixes = NewSuffixes;
+	}
+
+	// Push updated data back into the item
+	Item->SetEquippableData(EquipData);
+}
+
+
+
+
+FPHAttributeData UPHItemFunctionLibrary::RollSingleMod(const UDataTable* ModPool, bool bIsPrefix)
+{
+    TArray<FPHAttributeData*> AllRows;
+    ModPool->GetAllRows<FPHAttributeData>(TEXT("ModRoll"), AllRows);
+
+    // Filter valid prefix/suffix mods
+    TArray<FPHAttributeData*> ValidRows;
+    for (FPHAttributeData* Row : AllRows)
+    {
+        if ((bIsPrefix && Row->PrefixSuffix == EPrefixSuffix::Prefix) ||
+            (!bIsPrefix && Row->PrefixSuffix == EPrefixSuffix::Suffix))
+        {
+            ValidRows.Add(Row);
+        }
+    }
+
+    if (ValidRows.Num() == 0) return FPHAttributeData();
+
+    // Pick one randomly
+    const int32 RollIndex = FMath::RandRange(0, ValidRows.Num() - 1);
+    FPHAttributeData RolledMod = *ValidRows[RollIndex];
+
+    // Generate runtime UID
+    RolledMod.ModifierUID = FGuid::NewGuid();
+
+    // Roll value (optional: float or int)
+    const float RolledValue = RolledMod.bRollsAsInteger
+                                  ? static_cast<float>(FMath::RandRange(static_cast<int32>(RolledMod.MinStatChanged), static_cast<int32>(RolledMod.MaxStatChanged)))
+                                  : FMath::FRandRange(RolledMod.MinStatChanged, RolledMod.MaxStatChanged);
+
+    RolledMod.MinStatChanged = RolledValue;
+    RolledMod.MaxStatChanged = RolledValue;
+
+    return RolledMod;
+}
+
+FName UPHItemFunctionLibrary::GetSocketNameForSlot(EEquipmentSlot Slot)
+{
+	static const TMap<EEquipmentSlot, FName> SlotToSocketMap = {
+		{EEquipmentSlot::ES_Head, "HeadSocket"},
+		{EEquipmentSlot::ES_Gloves, "GlovesSocket"},
+		{EEquipmentSlot::ES_Neck, "NeckSocket"},
+		{EEquipmentSlot::ES_Chestplate, "ChestSocket"},
+		{EEquipmentSlot::ES_Legs, "LegsSocket"},
+		{EEquipmentSlot::ES_Boots, "BootsSocket"},
+		{EEquipmentSlot::ES_MainHand, "MainHandSocket"},
+		{EEquipmentSlot::ES_OffHand, "OffHandSocket"},
+		{EEquipmentSlot::ES_Ring, "RingSocket"},
+		{EEquipmentSlot::ES_Flask, "FlaskSocket"},
+		{EEquipmentSlot::ES_Belt, "BeltSocket"},
+		{EEquipmentSlot::ES_None, "None"}
+	};
+
+	const FName* FoundSocket = SlotToSocketMap.Find(Slot);
+	return FoundSocket ? *FoundSocket : FName("None");
+}
+
+float UPHItemFunctionLibrary::GetStatValueByAttribute(const FEquippableItemData& Data, const FGameplayAttribute& Attribute)
+{
+	float Total = 0.f;
+
+	auto Accumulate = [&](const TArray<FPHAttributeData>& Stats)
+	{
+		for (const auto& Stat : Stats)
+		{
+			if (Stat.ModifiedAttribute == Attribute)
+			{
+				Total += Stat.RolledStatValue;
+			}
+		}
+	};
+
+	Accumulate(Data.Affixes.Prefixes);
+	Accumulate(Data.Affixes.Suffixes);
+	Accumulate(Data.Affixes.Implicits);
+	Accumulate(Data.Affixes.Crafted);
+
+	return Total;
+}

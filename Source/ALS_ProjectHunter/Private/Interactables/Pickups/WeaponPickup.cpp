@@ -4,14 +4,13 @@
 #include "Interactables/Pickups/WeaponPickup.h"
 
 bool AWeaponPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation  PassedItemInfo,
-	FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData,
+	FEquippableItemData EquippableItemData,
 	FConsumableItemData ConsumableItemData) const
 {
 	Super::InteractionHandle(Actor, WasHeld);
 
-	FItemInformation  PassedItemInformation = ItemInfo;
+	const FItemInformation  PassedItemInformation = ItemInfo;
 	FEquippableItemData  PassedEquippableItemData = EquipmentData; // Assuming you have relevant equippable data
-	FWeaponItemData  PassedWeaponItemData = WeaponData;
 
-	return AItemPickup::HandleInteraction(Actor, WasHeld,  PassedItemInformation,  PassedEquippableItemData,  PassedWeaponItemData, FConsumableItemData());
+	return AItemPickup::HandleInteraction(Actor, WasHeld,  PassedItemInformation,  PassedEquippableItemData, FConsumableItemData());
 }

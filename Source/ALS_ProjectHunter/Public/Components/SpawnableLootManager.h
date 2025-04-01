@@ -29,7 +29,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Loot|Drop System")
 	int32 GenerateDropAmount(UPHAttributeSet* AttributeSet);
 	
-
 	/** Gets a random spawn location within the designated spawn box */
 	UFUNCTION(BlueprintCallable, Category = "Loot|Drop System")
 	FTransform GetSpawnLocation() const;
@@ -41,6 +40,9 @@ public:
 	/** Assigns a new SpawnBox for determining item drop locations */
 	UFUNCTION(BlueprintCallable, Category = "Loot|Drop System")
 	void SetSpawnBox(UBoxComponent* InBox) { SpawnBox = InBox; }
+
+	UFUNCTION(BlueprintCallable, Category = "Loot|Control")
+	void ResetLootStatus() { bLooted = false; }
 
 	/** Spawns an item by its name from the given DataTable */
 	UFUNCTION(BlueprintCallable, Category = "Loot|Drop System")
@@ -54,6 +56,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot|Drop Settings")
 	FVector2D MinMaxLootAmount;
 
+	/** Minimum threshold probability for rolling the lowest amount of loot */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot|Drop Settings")
+	float MinThreshold = 0.75f;
+
 	/** Data table defining all potential spawnable items */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot|Drop Tables")
 	UDataTable* SpawnableItems;
@@ -62,12 +68,22 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot|Drop Tables")
 	UDataTable* MasterDropList;
 
-	/** Minimum threshold probability for rolling the lowest amount of loot */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Loot|Drop Settings")
-	float MinThreshold = 0.75f;
+	/** Optional height offset above the ground hit location when spawning items */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot|Drop Settings")
+	float GroundOffsetZ = 10.0f;
+
+	/** Controls the diminishing returns curve for Luck. Higher = slower progression. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot|Luck")
+	float LuckSoftCapConstant = 100.0f;
+
+	/** Expected max Luck a player can achieve (used for scaling) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot|Luck")
+	float MaxPlayerLuck = 100.0f;
+
 
 private:
 	/** The class of pickup item to spawn */
+	UPROPERTY(EditAnywhere, Category = "Loot|Internal")
 	TSubclassOf<AItemPickup> PickUpClass;
 
 	/** The designated spawn area for item drops */
@@ -75,6 +91,6 @@ private:
 	UBoxComponent* SpawnBox = nullptr;
 
 	/** Tracks whether loot has already been claimed */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, Category = "Loot|Internal", meta = (AllowPrivateAccess = "true"))
 	bool bLooted = false;
 };

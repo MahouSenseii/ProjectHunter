@@ -27,6 +27,28 @@ AItemPickup::AItemPickup()
 	StaticMesh->SetStaticMesh(ItemInfo.StaticMesh);
 }
 
+UBaseItem* AItemPickup::CreateItemObject(UObject* Outer)
+{
+	if (!Outer)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CreateItemObject: Outer is null"));
+		return nullptr;
+	}
+
+	// Create the item using the correct outer (usually the Tooltip Widget or Owning Actor)
+	UEquippableItem* Item = NewObject<UEquippableItem>(Outer);
+	if (!Item)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CreateItemObject: Failed to create UEquippableItem"));
+		return nullptr;
+	}
+
+	// Initialize it using the pickup's ItemInfo
+	//Item->Initialize(ItemInfo);
+
+	return Item;
+}
+
 void AItemPickup::BeginPlay()
 {
 	Super::BeginPlay();
@@ -47,9 +69,8 @@ void AItemPickup::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld
 {
 	FItemInformation PassedItemInfo;
 	FEquippableItemData EquippableItemData;
-	FWeaponItemData WeaponItemData;
 	FConsumableItemData ConsumableItemData;
-	HandleInteraction(Interactor, WasHeld, PassedItemInfo,EquippableItemData, WeaponItemData,ConsumableItemData);
+	HandleInteraction(Interactor, WasHeld, PassedItemInfo,EquippableItemData, ConsumableItemData);
 }
 
 UBaseItem* AItemPickup::GenerateItem() const
@@ -67,7 +88,7 @@ UBaseItem* AItemPickup::GenerateItem() const
 	return nullptr;
 }
 
-bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo, FEquippableItemData EquippableItemData, FWeaponItemData WeaponItemData, FConsumableItemData ConsumableItemData) const
+bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo, FEquippableItemData EquippableItemData, FConsumableItemData ConsumableItemData) const
 {
 	if (!IsValid(Actor))
 	{
@@ -84,7 +105,7 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformatio
 	}
 
 	// Get the item information
-	UBaseItem* ReturnItem = UPHItemFunctionLibrary::GetItemInformation( PassedItemInfo, EquippableItemData, WeaponItemData, ConsumableItemData);
+	UBaseItem* ReturnItem = UPHItemFunctionLibrary::GetItemInformation( PassedItemInfo, EquippableItemData, ConsumableItemData);
 	if (!ReturnItem)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Failed to create item from ItemInfo."));

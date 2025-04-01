@@ -25,14 +25,18 @@ class ALS_PROJECTHUNTER_API UPHItemFunctionLibrary : public UBlueprintFunctionLi
 
 public:
 
+
+
+	
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	static bool AreItemSlotsEqual(FItemInformation FirstItem, FItemInformation SecondItem);
 	static UBaseItem* GetItemInformation(FItemInformation ItemInfo, FEquippableItemData EquippableItemData,
-	                              FWeaponItemData WeaponItemData, FConsumableItemData ConsumableItemData);
-	static UEquippableItem* CreateEquippableItem(const FItemInformation& ItemInfo, const FEquippableItemData& EquippableItemData);
+	                              FConsumableItemData ConsumableItemData);
+
+	static UEquippableItem* CreateEquippableItem(const FItemInformation& ItemInfo,
+		const FEquippableItemData& EquippableItemData);
+
 	static UConsumableItem* CreateConsumableItem(const FItemInformation& ItemInfo, FConsumableItemData ConsumableItemData);
-	static UWeaponItem* CreateWeaponItem(const FItemInformation& ItemInfo, const FEquippableItemData& EquippableItemData,
-	                              const FWeaponItemData& WeaponItemData);
 
 	UFUNCTION(BlueprintCallable, Category = "Damage Calculation")
 	static TMap<FString, int> CalculateTotalDamage(int MinDamage, int MaxDamage, const APHBaseCharacter* Actor);
@@ -45,6 +49,14 @@ public:
 	static int32 GetRankPointsValue(ERankPoints Rank);
 	static EItemRarity DetermineWeaponRank(int32 BaseRankPoints, const FPHItemStats& Stats);
 	static FItemInformation GenerateItemName(const FPHItemStats& ItemStats, FItemInformation& ItemInfo);
-	
+	static void RerollModifiers(UEquippableItem* Item, const UDataTable* ModPool, bool bRerollPrefixes, bool bRerollSuffixes,
+	                            const TArray<FGuid>& LockedModifiers);
+	static FPHAttributeData RollSingleMod(const UDataTable* ModPool, bool bIsPrefix);
 
+
+	UFUNCTION()
+	float GetStatValueByAttribute(const FEquippableItemData& Data, const FGameplayAttribute& Attribute);
+
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	static FName GetSocketNameForSlot(EEquipmentSlot Slot);
 };

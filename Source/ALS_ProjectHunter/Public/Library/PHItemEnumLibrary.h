@@ -220,14 +220,13 @@ enum class EDamageTypes : uint8
 {
 	DT_None         UMETA(DisplayName = "None"),
 
-	DT_Earth        UMETA(DisplayName = "Earth"),
 	DT_Fire         UMETA(DisplayName = "Fire"),
 	DT_Ice          UMETA(DisplayName = "Ice"),
 	DT_Light        UMETA(DisplayName = "Light"),
 	DT_Lightning    UMETA(DisplayName = "Lightning"),
 	DT_Physical     UMETA(DisplayName = "Physical"),
 	DT_Corruption   UMETA(DisplayName = "Corruption"),
-	DT_Wind         UMETA(DisplayName = "Wind")
+
 };
 
 
@@ -235,27 +234,53 @@ UENUM(BlueprintType)
 enum class EAttributeDisplayFormat : uint8
 {
 	//add more as needed 
-	Additive          UMETA(DisplayName = "+{0} TO ATTRIBUTE"),        // "+10 TO STRENGTH"
-	Percent          UMETA(DisplayName = "+{0}% TO ATTRIBUTE"),       // "+20% TO FIRE RESISTANCE"
-	MinMax          UMETA(DisplayName = "ADD {0} TO {1} DAMAGE"),     // "ADD 5 TO 10 FIRE DAMAGE"
+	Additive UMETA(DisplayName = "+{0} TO ATTRIBUTE"),        // "+10 TO STRENGTH"
+	FlatNegative UMETA(DisplayName = "-{0} {1}"),			 //"-10% Movement Speed"	
+	Percent UMETA(DisplayName = "+{0}% TO ATTRIBUTE"),       // "+20% TO FIRE RESISTANCE"
+	MinMax UMETA(DisplayName = "ADD {0} TO {1} DAMAGE"),     // "ADD 5 TO 10 FIRE DAMAGE"
+	Increase UMETA(DisplayName = "{0}% increased {1}"),		//" 30% increased Attack Speed "
+	More UMETA(DisplayName = "{0}% more {1}"),				//"40% more Projectile Damage"
+	Less UMETA(DisplayName = "{0}% less {1}"),				//"25% less Area of Effect"
+	Chance UMETA(DisplayName = "{0}% chance to {1}"),		//"15% chance to Gain Frenzy Charge on Crit"
+	Duration UMETA(DisplayName = "{0}s duration to {1}"),	// "5s duration to Freeze"
+	Cooldown UMETA(DisplayName = "{0}s cooldown on {1}"),	//"1.5s cooldown on Lightning Warp"
+	CustomText UMETA(DisplayName = "Custom Format"),		//Custom no examples 
 };
 
 UENUM(BlueprintType)
 enum class EPrefixSuffix
 {
-	Prefix        UMETA(DisplayName = "Preffix"),
-	Suffix        UMETA(DisplayName = "Suffix"), 
+	Prefix,
+	Suffix,
+	Implicit,
+	Enchant,
+	Corrupted 
 };
 
 UENUM(BlueprintType)
 enum class ERankPoints : uint8
 {
-	RP_5  UMETA(DisplayName = "5"),
-	RP_10 UMETA(DisplayName = "10"),
-	RP_15 UMETA(DisplayName = "15"),
-	RP_20 UMETA(DisplayName = "20"),
-	RP_25 UMETA(DisplayName = "25"),
-	RP_30 UMETA(DisplayName = "30")
+	RP_Neg30	UMETA(DisplayName = "-30"),
+	RP_Neg25	UMETA(DisplayName = "-25"),
+	RP_Neg20	UMETA(DisplayName = "-20"),
+	RP_Neg15	UMETA(DisplayName = "-15"),
+	RP_Neg10	UMETA(DisplayName = "-10"),
+	RP_Neg5		UMETA(DisplayName = "-5"),
+	RP_0		UMETA(DisplayName = "0"),
+	RP_5		UMETA(DisplayName = "5"),
+	RP_10		UMETA(DisplayName = "10"),
+	RP_15		UMETA(DisplayName = "15"),
+	RP_20		UMETA(DisplayName = "20"),
+	RP_25		UMETA(DisplayName = "25"),
+	RP_30		UMETA(DisplayName = "30")
 };
 
 
+UENUM(BlueprintType)
+enum class EAffixOrigin : uint8
+{
+	Generated,
+	Crafted,
+	Implicit,
+	Corrupted,
+};

@@ -9,6 +9,7 @@
 #include "Components/EquipmentManager.h"
 #include "Interfaces/CombatSubInterface.h"
 #include "PaperSpriteComponent.h"
+#include "Player/PHPlayerController.h"
 #include "UI/ToolTip/EquippableToolTip.h"
 #include "PHBaseCharacter.generated.h"
 
@@ -56,6 +57,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Character")
 	virtual int32 GetPlayerLevel() override;
 
+	UFUNCTION(BlueprintCallable, Category = "Character")
+	virtual  int32 GetCurrentXP() override;
+
+	UFUNCTION(BlueprintCallable, Category = "Character")
+	virtual  int32 GetXPFNeededForNextLevel() override;
+
 	/** Tooltip UI */
 	UFUNCTION()
 	void OpenToolTip(UInteractableManager* InteractableManager);
@@ -91,6 +98,18 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual bool CanSprint() const override;
 
+	/** Equipment Handles */
+
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	float GetStatBase(const FGameplayAttribute& Attr) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	void ApplyFlatStatModifier(const FGameplayAttribute& Attr, float InValue) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	void RemoveFlatStatModifier(const FGameplayAttribute& Attribute, float Delta);
+
+
 protected:
 	/** Begin Play */
 	virtual void BeginPlay() override;
@@ -119,6 +138,12 @@ protected:
 	UFUNCTION()
 	void OnRep_PoiseDamage();
 
+	
+protected:
+	
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Controller")
+	APHPlayerController* CurrentController;
+	
 private:
 	/** Gameplay Ability System */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GAS", meta = (AllowPrivateAccess = "true"))

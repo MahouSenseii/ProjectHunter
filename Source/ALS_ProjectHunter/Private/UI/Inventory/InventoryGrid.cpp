@@ -77,21 +77,29 @@ void UInventoryGrid::DrawGridLines(const FPaintGeometry& PaintGeometry, FSlateWi
 
 void UInventoryGrid::DrawDragDropBox(FPaintContext Context, const FPaintGeometry& PaintGeometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
 {
+	// Use const-safe payload retrieval
 	UBaseItem* Payload = const_cast<UInventoryGrid*>(this)->GetPayload(UWidgetBlueprintLibrary::GetDragDroppingContent());
 	if (!Payload) return;
 
-	const bool bIsRoom = IsRoomAvailableforPayload(Payload);
-	const FLinearColor Color = bIsRoom ? FLinearColor(0.0f, 1.0f, 0.0f, 0.25f) : FLinearColor(1.0f, 0.0f, 0.0f, 0.25f);
+	// Choose color based on whether the item can be placed
+	const bool bIsRoomAvailable = IsRoomAvailableforPayload(Payload);
+	const FLinearColor BoxColor = bIsRoomAvailable
+		? FLinearColor(0.0f, 1.0f, 0.0f, 0.35f)   // Green translucent
+		: FLinearColor(1.0f, 0.0f, 0.0f, 0.35f);  // Red translucent
 
-	const FVector2D Position(DraggedItemTopLeft.X * TileSize, DraggedItemTopLeft.Y * TileSize);
-	const FVector2D Size(Payload->GetDimensions().X * TileSize, Payload->GetDimensions().Y * TileSize);
+	// Calculate draw position and size using the payload's dimensions
+	const FVector2D Position = FVector2D(DraggedItemTopLeft) * TileSize;
+	const FVector2D Size = FVector2D(Payload->GetDimensions()) * TileSize;
+
+	// Validate the brush before drawing
 	if (!Brush || !Brush->Brush.GetResourceObject())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("DrawDragDropBox: No valid brush set!"));
+		UE_LOG(LogTemp, Warning, TEXT("DrawDragDropBox: Invalid or missing brush!"));
 		return;
 	}
 
-	UWidgetBlueprintLibrary::DrawBox(Context, Position, Size, Brush, Color);
+	// Draw the box using UWidgetBlueprintLibrary
+	UWidgetBlueprintLibrary::DrawBox(Context, Position, Size, Brush, BoxColor);
 }
 
 

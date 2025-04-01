@@ -220,6 +220,8 @@ public:
 	static  TMap<FString, FGameplayAttribute> FlatDamageToAttributesMap;
 	static TMap<FString, FGameplayAttribute> PercentDamageToAttributesMap;
 	static TMap<FString, FGameplayAttribute> AllAttributesMap;
+	TArray<FGameplayAttribute> GetAttributesByTagPrefix(const FString& Prefix);
+
 
 private:
 	/** Singleton instance */

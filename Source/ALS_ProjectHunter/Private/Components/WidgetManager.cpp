@@ -34,8 +34,11 @@ void UWidgetManager::WidgetCheck(APHBaseCharacter* Owner)
 		UE_LOG(LogTemp, Log, TEXT("WidgetCheck: Found active widget %d"), static_cast<int32>(Execute_GetActiveWidget(this)));
 		Execute_CloseActiveWidget(this);
 	}
-
-	Execute_SwitchWidgetTo(this, EWidgets::AW_Equipment, EWidgetsSwitcher::WS_MainTab, nullptr);
+	else
+	{
+		Execute_SwitchWidgetTo(this, EWidgets::AW_Equipment, EWidgetsSwitcher::WS_MainTab, nullptr);
+	}
+	
 }
 
 

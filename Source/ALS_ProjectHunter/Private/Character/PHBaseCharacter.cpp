@@ -52,13 +52,12 @@ void APHBaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	InitAbilityActorInfo();
-
+	
+	CurrentController = Cast<APHPlayerController>(NewController);
+	if (CurrentController)
 	{
-		if (const APHPlayerController* CurrentController = Cast<APHPlayerController>(NewController))
-		{
-			CurrentController->InteractionManager->OnNewInteractableAssigned.AddDynamic(this, &APHBaseCharacter::OpenToolTip);
-			CurrentController->InteractionManager->OnRemoveCurrentInteractable.AddDynamic(this, &APHBaseCharacter::CloseToolTip);
-		}
+		CurrentController->InteractionManager->OnRemoveCurrentInteractable.AddDynamic(this, &APHBaseCharacter::CloseToolTip);
+		CurrentController->InteractionManager->OnNewInteractableAssigned.AddDynamic(this, &APHBaseCharacter::OpenToolTip);
 	}
 }
 
@@ -99,6 +98,53 @@ bool APHBaseCharacter::CanSprint() const
 		return false;
 	}
 	return bReturnValue;
+}
+
+/* =========================== */
+/* === Equipment Handles   === */
+/* =========================== */
+
+float APHBaseCharacter::GetStatBase(const FGameplayAttribute& Attr) const
+{
+	if (!Attr.IsValid()) return 0.0f;
+
+	if (const UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+	{
+		return ASC->GetNumericAttribute(Attr);
+	}
+
+	return 0.0f;
+}
+
+void APHBaseCharacter::ApplyFlatStatModifier( const FGameplayAttribute& Attr, const float InValue) const
+{
+	if (!Attr.IsValid()) return;
+
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+	{
+		const float CurrentValue = ASC->GetNumericAttribute(Attr);
+		const float NewValue = CurrentValue + InValue;
+
+		
+		// May add later if needed if going - causes issues or to clamp max  
+		// const float ClampedValue = FMath::Clamp(NewValue, 0.f, MaxAllowed);
+
+		ASC->SetNumericAttributeBase(Attr, NewValue);
+	}
+}
+
+void APHBaseCharacter::RemoveFlatStatModifier(const FGameplayAttribute& Attribute, float Delta)
+{
+	if (!Attribute.IsValid()) return;
+
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+	{
+		const float CurrentValue = ASC->GetNumericAttribute(Attribute);
+		const float NewValue = CurrentValue - Delta;
+
+		// Optional clamp to prevent negatives if needed
+		ASC->SetNumericAttributeBase(Attribute, NewValue);
+	}
 }
 
 /* =========================== */
@@ -286,31 +332,73 @@ int32 APHBaseCharacter::GetPlayerLevel()
 	return Level;
 }
 
+int32 APHBaseCharacter::GetCurrentXP()
+{
+		const APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
+		check(LocalPlayerState)
+		return  LocalPlayerState->GetXP();
+}
+
+int32 APHBaseCharacter::GetXPFNeededForNextLevel()
+{
+	const APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
+	check(LocalPlayerState)
+	return  LocalPlayerState->GetXPForNextLevel();
+}
+
 void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 {
 	if (!InteractableManager) return;
+
 	AItemPickup* PickupItem = Cast<AItemPickup>(InteractableManager->GetOwner());
 	if (!PickupItem) return;
 
-	UBaseItem* ItemObject = NewObject<UBaseItem>(this);
+	if (CurrentToolTip)
+	{
+		CurrentToolTip->RemoveFromParent();
+		CurrentToolTip = nullptr;
+	}
+
+	// Use the Tooltip Widget as the Outer to keep the item alive
+	UUserWidget* ToolTipWidget = nullptr;
+
+	if (Cast<AEquipmentPickup>(PickupItem) && EquippableToolTipClass)
+	{
+		ToolTipWidget = CreateWidget<UEquippableToolTip>(GetWorld(), EquippableToolTipClass);
+		
+	}
+	else if (Cast<AConsumablePickup>(PickupItem) && ConsumableToolTipClass)
+	{
+		ToolTipWidget = CreateWidget<UConsumableToolTip>(GetWorld(), ConsumableToolTipClass);
+	}
+
+	if (!ToolTipWidget) return;
+
+	// Create the item instance using the widget as the Outer to avoid GC issues
+	UBaseItem* ItemObject = PickupItem->CreateItemObject(ToolTipWidget);
 	if (!ItemObject) return;
 
 	ItemObject->SetItemInfo(PickupItem->ItemInfo);
 	ItemObject->SetRotated(PickupItem->ItemInfo.Rotated);
 
-	if (Cast<AEquipmentPickup>(PickupItem) && EquippableToolTipClass)
+	// Cast and assign
+	if (UPHBaseToolTip* ToolTip = Cast<UPHBaseToolTip>(ToolTipWidget))
 	{
-		CurrentToolTip = CreateWidget<UEquippableToolTip>(GetWorld(), EquippableToolTipClass);
-	}
-	else if (Cast<AConsumablePickup>(PickupItem) && ConsumableToolTipClass)
-	{
-		CurrentToolTip = CreateWidget<UConsumableToolTip>(GetWorld(), ConsumableToolTipClass);
-	}
+		if(UEquippableToolTip* EquipToolTip = Cast<UEquippableToolTip>(ToolTip))
+		{
+			EquipToolTip->SetItemInfo(ItemObject->GetItemInfo());
+			EquipToolTip->ItemData = Cast<AEquipmentPickup>(PickupItem)->EquipmentData;
+			EquipToolTip->OwnerCharacter = this;
+			EquipToolTip->AddToViewport();
+			CurrentToolTip = EquipToolTip;
+		}
+		else
+		{
+			ToolTip->SetItemInfo(ItemObject->GetItemInfo());
+			ToolTip->AddToViewport();
+			CurrentToolTip = ToolTip;
+		}
 
-	if (CurrentToolTip)
-	{
-		CurrentToolTip->SetItemObj(ItemObject);
-		CurrentToolTip->AddToViewport();
 	}
 }
 
