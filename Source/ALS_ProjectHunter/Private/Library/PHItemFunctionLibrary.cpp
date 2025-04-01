@@ -66,7 +66,7 @@ UEquippableItem* UPHItemFunctionLibrary::CreateEquippableItem(
 		return nullptr;
 	}
 
-	UEquippableItem* NewEquipItem = NewObject<UEquippableItem>(GetTransientPackage(), EquippableItemData.EquipClass);
+	UEquippableItem* NewEquipItem = NewObject<UEquippableItem>();
 	if (!NewEquipItem)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Failed to create UEquippableItem object."));
