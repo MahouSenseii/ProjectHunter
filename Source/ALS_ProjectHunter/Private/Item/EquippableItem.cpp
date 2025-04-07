@@ -15,10 +15,10 @@ void UEquippableItem::Initialize(FItemInformation& ItemInfo)
 {
 	Super::Initialize(ItemInfo);
 
-	if (!EquippableData.Affixes.bAffixesGenerated)
+	if (!ItemInfo.ItemData.Affixes.bAffixesGenerated)
 	{
-		EquippableData.Affixes = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
-		ItemInfo = UPHItemFunctionLibrary::GenerateItemName(EquippableData.Affixes, ItemInfo);
+		ItemInfos.ItemData.Affixes = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
+		ItemInfos = UPHItemFunctionLibrary::GenerateItemName(ItemInfo.ItemData.Affixes, ItemInfo);
 	}
 }
 
@@ -30,36 +30,36 @@ bool UEquippableItem::CanEquipItem(const APHBaseCharacter* Character) const
     if (!AttributeSet) return false;
 
     // Check if the player's stats meet the item's requirements
-    if (AttributeSet->GetStrength() < EquippableData.StatRequirements.RequiredStrength) return false;
-    if (AttributeSet->GetIntelligence() < EquippableData.StatRequirements.RequiredIntelligence) return false;
-    if (AttributeSet->GetDexterity() < EquippableData.StatRequirements.RequiredDexterity) return false;
-    if (AttributeSet->GetEndurance() < EquippableData.StatRequirements.RequiredEndurance) return false;
-    if (AttributeSet->GetAffliction() < EquippableData.StatRequirements.RequiredAffliction) return false;
-    if (AttributeSet->GetLuck() < EquippableData.StatRequirements.RequiredLuck) return false;
-    if (AttributeSet->GetCovenant() < EquippableData.StatRequirements.RequiredCovenant) return false;
+    if (AttributeSet->GetStrength() < ItemInfos.ItemData.StatRequirements.RequiredStrength) return false;
+    if (AttributeSet->GetIntelligence() < ItemInfos.ItemData.StatRequirements.RequiredIntelligence) return false;
+    if (AttributeSet->GetDexterity() < ItemInfos.ItemData.StatRequirements.RequiredDexterity) return false;
+    if (AttributeSet->GetEndurance() < ItemInfos.ItemData.StatRequirements.RequiredEndurance) return false;
+    if (AttributeSet->GetAffliction() < ItemInfos.ItemData.StatRequirements.RequiredAffliction) return false;
+    if (AttributeSet->GetLuck() < ItemInfos.ItemData.StatRequirements.RequiredLuck) return false;
+    if (AttributeSet->GetCovenant() < ItemInfos.ItemData.StatRequirements.RequiredCovenant) return false;
 
     return true;
 }
 
 FItemStatRequirement UEquippableItem::GetStatRequirements() const
 {
-	return EquippableData.StatRequirements;
+	return ItemInfos.ItemData.StatRequirements;
 }
 
 void UEquippableItem::RerollAllMods()
 {
 	UPHItemFunctionLibrary::RerollModifiers(this, StatsDataTable, true, true, {});
-	UPHItemFunctionLibrary::GenerateItemName(EquippableData.Affixes, GetItemInfo()); // Rebuild name from new affixes
+	UPHItemFunctionLibrary::GenerateItemName(ItemInfos.ItemData.Affixes, GetItemInfo()); // Rebuild name from new affixes
 }
 
 TArray<FPHAttributeData> UEquippableItem::GetItemStats() const
 {
-	return EquippableData.Affixes.GetAllStats();
+	return ItemInfos.ItemData.Affixes.GetAllStats();
 }
 
 const FPHItemStats& UEquippableItem::GetFullItemStats() const
 {
-	return EquippableData.Affixes;
+	return ItemInfos.ItemData.Affixes;
 }
 
 

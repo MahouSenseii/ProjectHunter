@@ -40,6 +40,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
@@ -198,7 +199,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	int32 MashingAmount = 10;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Class") 
+	UPROPERTY() 
 	TSubclassOf<UInteractableWidget> WidgetClass;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere) 

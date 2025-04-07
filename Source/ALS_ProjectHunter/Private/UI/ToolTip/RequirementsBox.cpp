@@ -2,7 +2,6 @@
 
 
 #include "UI/ToolTip/RequirementsBox.h"
-
 #include "AbilitySystem/PHAttributeSet.h"
 #include "Character/PHBaseCharacter.h"
 
@@ -35,11 +34,7 @@ void URequirementsBox::SetItemRequirements(const FEquippableItemData& PassedItem
 
 			Box->SetVisibility(ESlateVisibility::Visible);
 
-			const FText DisplayText = FText::Format(
-				FText::FromString(TEXT("{0} / {1}")),
-				FText::AsNumber(FMath::RoundToInt(CurrentValue)),
-				FText::AsNumber(FMath::RoundToInt(RequiredValue))
-			);
+			const FText DisplayText = FText::AsNumber(FMath::RoundToInt(RequiredValue));
 
 			TextBlock->SetText(DisplayText);
 			TextBlock->SetColorAndOpacity(
@@ -68,5 +63,6 @@ void URequirementsBox::SetItemRequirements(const FEquippableItemData& PassedItem
 		this->RemoveFromParent();
 	}
 }
+
 
 

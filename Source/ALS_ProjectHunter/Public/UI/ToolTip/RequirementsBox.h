@@ -7,13 +7,14 @@
 #include "Components/ScaleBox.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
-#include "Components/VerticalBox.h"
 #include "Library/PHItemStructLibrary.h"
 #include "UI/Widgets/PHUserWidget.h"
 #include "RequirementsBox.generated.h"
 
 /**
- * 
+ * @class URequirementsBox
+ * @brief Represents a widget that displays the requirements of an equippable item.
+ * @inherit UPHUserWidget
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API URequirementsBox : public UPHUserWidget

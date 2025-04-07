@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "MinMaxBox.h"
 #include "RequirementsBox.h"
+#include "Components/VerticalBox.h"
 #include "Library/PHItemStructLibrary.h"
 #include "UI/Widgets/PHUserWidget.h"
 #include "EquippableStatsBox.generated.h"

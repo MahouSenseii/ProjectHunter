@@ -26,7 +26,8 @@ class ALS_PROJECTHUNTER_API UEquipmentManager : public UActorComponent
 public:	
 	/** Constructor */
 	UEquipmentManager();
-
+	virtual void BeginDestroy() override;
+	
 	/* ============================= */
 	/* === Equipment Slot Checking === */
 	/* ============================= */

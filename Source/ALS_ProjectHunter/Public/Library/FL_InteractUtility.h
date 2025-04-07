@@ -103,7 +103,7 @@ public:
 
 	
 	UFUNCTION(BlueprintCallable, Category = "Checker")
-	static bool AreRequirementsMet(const UBaseItem* InItem, AActor* OwnerPlayer);
+	static bool AreRequirementsMet( UBaseItem* InItem, AActor* OwnerPlayer);
 
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	static bool CheckBasedOnCompare(EItemRequiredStatsCategory RequiredStats, float RequiredValue, AActor* OwnerPlayer);

@@ -24,7 +24,10 @@ UInteractableManager::UInteractableManager()
 
 	if (WidgetFinder.Succeeded())
 	{
-		WidgetClass = WidgetFinder.Class;
+		if (WidgetFinder.Class)
+		{
+			WidgetClass = WidgetFinder.Class;
+		}
 	}
 	else
 	{
@@ -42,7 +45,11 @@ void UInteractableManager::BeginPlay()
 	Super::BeginPlay();
 	SetIsReplicated(true);
 	Initialize();
-
+	if (InteractionWidget)
+	{
+		InteractionWidgetRef = nullptr; // clear any stale reference
+	}
+	
 	if (AActor* Owner = GetOwner())
 	{
 		Owner->Tags.AddUnique(InteractableTag);

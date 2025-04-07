@@ -4,18 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "Library/PHItemEnumLibrary.h"
-#include "Components/TextBlock.h"
-#include "Components/HorizontalBox.h"
-#include "Components/Image.h"
 #include "Components/SizeBox.h"
-#include "Item/EquippableItem.h"
 #include "UI/ToolTip/PHBaseToolTip.h"
 #include "UI/ToolTip/EquippableStatsBox.h"
 #include "EquippableToolTip.generated.h"
 
 class UBaseItem;
 /**
- * 
+ *  Struct that holds information for checking and displaying a specific stat.
  */
 
 USTRUCT(BlueprintType)

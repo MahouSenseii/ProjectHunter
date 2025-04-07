@@ -29,6 +29,7 @@ class ALS_PROJECTHUNTER_API UItemWidget : public UPHUserWidget
 	GENERATED_BODY()
 
 public:
+	
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnRemoved OnRemoved;
 
@@ -58,13 +59,6 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FVector2D Size;
-	
-	/*UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	TObjectPtr<UToolTip> ItemToolTip;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	TSubclassOf<UToolTip> ToolTipClass;*/
-
 
 	UPROPERTY()
 	UMaterialInstanceDynamic* CachedDynamicMaterial = nullptr;

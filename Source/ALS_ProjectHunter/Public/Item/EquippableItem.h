@@ -26,12 +26,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool CanEquipItem(const APHBaseCharacter* Character) const;
 
-	UFUNCTION(BlueprintCallable, Category = "Base")
-	FEquippableItemData GetEquippableData() const { return EquippableData;}
-
-	UFUNCTION(BlueprintCallable, Category = "Base")
-	void SetEquippableData(FEquippableItemData Data) { EquippableData = Data; }
-
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	FItemStatRequirement GetStatRequirements() const;
 	
@@ -52,8 +46,6 @@ public:
 
 
 protected:
-	UPROPERTY(EditAnywhere, Category = "ItemInfo")
-	FEquippableItemData EquippableData;
 
 	// Set in BP will be all stats that the item can generate
 	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")

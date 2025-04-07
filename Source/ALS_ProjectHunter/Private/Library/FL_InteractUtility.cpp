@@ -173,7 +173,7 @@ UTexture2D* UFL_InteractUtility::GetKeyboardIcon(const EKeyboardIcon Input)
 	}
 }
 
-bool UFL_InteractUtility::AreRequirementsMet(const UBaseItem* InItem, AActor* OwnerPlayer)
+bool UFL_InteractUtility::AreRequirementsMet(UBaseItem* InItem, AActor* OwnerPlayer)
 {
 	if (!InItem) // Check if the Item pointer is valid
 	{
@@ -181,7 +181,7 @@ bool UFL_InteractUtility::AreRequirementsMet(const UBaseItem* InItem, AActor* Ow
 	}
 
 	// Loop through each weapon requirement
-	for (const UWeaponItem* AsWeaponItem = Cast<UWeaponItem>(InItem); const auto& Elem : AsWeaponItem->GetEquippableData().RequirementStats)
+	for (const auto& Elem : InItem->GetItemInfo().ItemData.RequirementStats)
 	{
 		const EItemRequiredStatsCategory RequirementCategory = Elem.Key;
 

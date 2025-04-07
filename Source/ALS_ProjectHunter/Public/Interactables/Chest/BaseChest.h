@@ -9,7 +9,8 @@
 class USpawnableLootManager;
 class UBoxComponent;
 /**
- * 
+ * ABaseChest class is responsible for representing a chest in the game.
+ * It inherits from ABaseInteractable class and provides implementations for chest-specific functionality.
  */
 
 UCLASS()
