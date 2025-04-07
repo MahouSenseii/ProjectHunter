@@ -9,7 +9,7 @@ void UConsumableItem::Initialize(FItemInformation& ItemInfo)
 {
 	Super::Initialize(ItemInfo);
 	// Initialize the consumable data from the item info
-	ConsumableData.GameplayEffectClass = ItemInfo.GameplayEffectClass;
+	ConsumableData.GameplayEffectClass = ItemInfo.ItemInfo.GameplayEffectClass;
 
 	// Default quantity is 1 unless set otherwise
 	ConsumableData.Quantity = 1;

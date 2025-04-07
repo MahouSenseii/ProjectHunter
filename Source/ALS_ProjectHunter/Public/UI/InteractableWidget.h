@@ -25,6 +25,7 @@ class ALS_PROJECTHUNTER_API UInteractableWidget : public UUserWidget
 public:
 
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 	UFUNCTION() void  BindEventDispatchers();
 	UFUNCTION() void UnbindEventDispatchers();
 	virtual bool Initialize() override;

@@ -33,7 +33,7 @@ void UItemSot::NativeConstruct()
 	}
 	if(EquipmentSlot!= EEquipmentSlot::ES_None)
 	{
-		SlotData.EquipmentSlot = EquipmentSlot;
+		SlotData.ItemInfo.EquipmentSlot = EquipmentSlot;
 	}
 	else
 	{
@@ -75,7 +75,7 @@ bool UItemSot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& I
 
         // Rotate the item for placement
 		FItemInformation TempItemInformation = CastedItem->GetItemInfo();
-    	TempItemInformation.Rotated = true;
+    	TempItemInformation.ItemInfo.Rotated = true;
     	CastedItem->SetItemInfo(TempItemInformation);
     	if(ItemWidgetClass)
     	{
@@ -167,6 +167,7 @@ void UItemSot::Refresh()
 
 void UItemSot::CreateChildContent()
 {
+	check(ItemWidgetClass);
 	if (UBaseItem** pRetrievedItem = Equipment->EquipmentData.Find(EquipmentSlot))
 	{
 		if (*pRetrievedItem)

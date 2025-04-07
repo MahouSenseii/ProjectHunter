@@ -30,13 +30,11 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	static bool AreItemSlotsEqual(FItemInformation FirstItem, FItemInformation SecondItem);
-	static UBaseItem* GetItemInformation(FItemInformation ItemInfo, FEquippableItemData EquippableItemData,
-	                              FConsumableItemData ConsumableItemData);
+	static UBaseItem* GetItemInformation(FItemInformation ItemInfo, FConsumableItemData ConsumableItemData);
 
-	static UEquippableItem* CreateEquippableItem(const FItemInformation& ItemInfo,
-		const FEquippableItemData& EquippableItemData);
+	static UEquippableItem* CreateEquippableItem(const FItemInformation& ItemInfo);
 
-	static UConsumableItem* CreateConsumableItem(const FItemInformation& ItemInfo, FConsumableItemData ConsumableItemData);
+	static UConsumableItem* CreateConsumableItem(const FItemInformation& ItemInfo);
 
 	UFUNCTION(BlueprintCallable, Category = "Damage Calculation")
 	static TMap<FString, int> CalculateTotalDamage(int MinDamage, int MaxDamage, const APHBaseCharacter* Actor);
@@ -55,7 +53,7 @@ public:
 
 
 	UFUNCTION()
-	float GetStatValueByAttribute(const FEquippableItemData& Data, const FGameplayAttribute& Attribute);
+	static float GetStatValueByAttribute(const FEquippableItemData& Data, const FGameplayAttribute& Attribute);
 
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	static FName GetSocketNameForSlot(EEquipmentSlot Slot);

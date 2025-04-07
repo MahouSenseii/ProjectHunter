@@ -2,19 +2,11 @@
 
 
 #include "UI/ToolTip/EquippableToolTip.h"
-#include "Item/BaseItem.h"
-#include "Item/WeaponItem.h"
 #include "Library/PHItemFunctionLibrary.h"
 
 void UEquippableToolTip::NativeConstruct()
-{
-	{
-		StatsBox->SetEquippableItem(ItemData);
-	}
-	
+{	
 	InitializeToolTip();
-
-	
 }
 
 void UEquippableToolTip::InitializeToolTip()
@@ -24,8 +16,9 @@ void UEquippableToolTip::InitializeToolTip()
 	StatsBox->CreateMinMaxBoxByDamageTypes();
 	StatsBox->SetMinMaxForOtherStats();
 	StatsBox->CreateResistanceBoxes();
-	StatsBox->GetRequirementsBox()->SetItemRequirements(ItemData, OwnerCharacter);
+	StatsBox->GetRequirementsBox()->SetItemRequirements(ItemInfo.ItemData, OwnerCharacter);
 	CreateAffixBox();
+	LoreText->SetText(ItemInfo.ItemInfo.ItemDescription);
 }
 
 void UEquippableToolTip::SetItemInfo(const FItemInformation& Item)
@@ -34,7 +27,7 @@ void UEquippableToolTip::SetItemInfo(const FItemInformation& Item)
 
 	if (StatsBox)
 	{
-			StatsBox->SetEquippableItem(ItemData);
+			StatsBox->SetEquippableItem(ItemInfo.ItemData);
 	}
 }
 
@@ -44,7 +37,7 @@ void UEquippableToolTip::CreateAffixBox()
 
 	AffixBoxContainer->ClearChildren();
 
-	const FPHItemStats& Affixes = ItemData.Affixes;
+	const FPHItemStats& Affixes = ItemInfo.ItemData.Affixes;
 
 	// Helper to create a text block for each attribute
 	auto AddAffixList = [this](const TArray<FPHAttributeData>& AffixList)

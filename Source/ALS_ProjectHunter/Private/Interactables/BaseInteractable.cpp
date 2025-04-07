@@ -33,6 +33,17 @@ ABaseInteractable::ABaseInteractable()
 	SetupOverlapEvents();
 }
 
+void ABaseInteractable::Destroyed()
+{
+	Super::Destroyed();
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(TimerHandle_DelayedStart);
+	}
+	
+	DestroyAllCreatedComponents();
+}
+
 void ABaseInteractable::InitializeComponent()
 {
 	// Base component setup
@@ -227,7 +238,7 @@ UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHi
 void ABaseInteractable::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	ValidateComponents();
+	//ValidateComponents();
 	if(!InteractableManager->IsInteractable) { return;}
 	// Attempt to cast the OtherActor to your player character class.
 	if(const APHBaseCharacter* CastCharacter = Cast<APHBaseCharacter>(OtherActor))

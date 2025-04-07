@@ -28,7 +28,7 @@ AEquippedObject::AEquippedObject()
 	DamageSpline->SetupAttachment(DefaultScene);
 
 	// Set properties for the StaticMesh
-	StaticMesh->SetStaticMesh(ItemInfo.StaticMesh);
+	StaticMesh->SetStaticMesh(ItemInfo.ItemInfo.StaticMesh);
 	if (StaticMesh)
 	{
 		StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -43,13 +43,32 @@ AEquippedObject::AEquippedObject()
 
 }
 
+void AEquippedObject::Destroyed()
+{
+	// Clean up components
+	if (StaticMesh)
+	{
+		StaticMesh->DestroyComponent();
+	}
+	if (SkeletalMesh)
+	{
+		SkeletalMesh->DestroyComponent();
+	}
+	if (DamageSpline)
+	{
+		DamageSpline->DestroyComponent();
+	}
+	
+	Super::Destroyed();
+}
+
 void AEquippedObject::SetItemInfo(FItemInformation Info)
 {
 	ItemInfo = Info;
 }
 
 void AEquippedObject::SetItemInfoRotated(bool inBool)
-{ ItemInfo.Rotated = inBool; }
+{ ItemInfo.ItemInfo.Rotated = inBool; }
 
 // Called when the game starts or when spawned
 void AEquippedObject::BeginPlay()

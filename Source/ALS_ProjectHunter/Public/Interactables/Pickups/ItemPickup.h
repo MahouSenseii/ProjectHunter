@@ -11,7 +11,8 @@
 
 class URotatingMovementComponent;
 /**
- * 
+ * AItemPickup is a class representing an item that can be picked up by characters in the game.
+ * It inherits from ABaseInteractable and provides functionalities for handling interactions with characters.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API AItemPickup : public ABaseInteractable
@@ -50,7 +51,7 @@ public:
 	virtual UBaseItem* GenerateItem() const;
 
 	virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo,
-	FEquippableItemData EquippableItemData, FConsumableItemData ConsumableItemData) const;
+		FConsumableItemData ConsumableItemData) const;
 
 	UFUNCTION(BlueprintCallable)
 	virtual void HandleHeldInteraction(APHBaseCharacter* Character) const;

@@ -41,7 +41,6 @@ void UItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPoint
     if (UDragWidget* DragOp = NewObject<UDragWidget>())
     {
         DragOp->Payload = ItemObject;
-       // this->SetRenderScale(FVector2D(0.5f, 0.5f));
         DragOp->DefaultDragVisual = this;
         DragOp->Pivot = EDragPivot::MouseDown;
        //  DragOp->Offset = FVector2D(-0.25, -0.25);
@@ -164,11 +163,11 @@ void UItemWidget::Refresh()
     UMaterialInstance* MaterialInstance;
     if (ItemObject->IsRotated())
     {
-        MaterialInstance = ItemObject->GetItemInfo().ItemImageRotated;
+        MaterialInstance = ItemObject->GetItemInfo().ItemInfo.ItemImageRotated;
     }
     else
     {
-        MaterialInstance = ItemObject->GetItemInfo().ItemImage;
+        MaterialInstance = ItemObject->GetItemInfo().ItemInfo.ItemImage;
     }
 
     if (MaterialInstance)

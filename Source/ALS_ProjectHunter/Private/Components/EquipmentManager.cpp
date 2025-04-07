@@ -11,6 +11,28 @@
 
 UEquipmentManager::UEquipmentManager() { }
 
+void UEquipmentManager::BeginDestroy()
+{
+	// Clear all equipment data
+	EquipmentData.Empty();
+    
+	// Destroy all equipped objects
+	for (const auto& Pair : EquipmentItem)
+	{
+		if (IsValid(Pair.Value))
+		{
+			Pair.Value->Destroy();
+		}
+	}
+	EquipmentItem.Empty();
+    
+	// Clear any applied effects
+	AppliedPassiveEffects.Empty();
+	AppliedItemStats.Empty();
+	
+	Super::BeginDestroy();
+}
+
 void UEquipmentManager::BeginPlay()
 {
 	Super::BeginPlay();
@@ -32,7 +54,7 @@ bool UEquipmentManager::CheckSlot(UBaseItem* Item)
 	UEquippableItem* EquippableItem = Cast<UEquippableItem>(Item);
 	if (!EquippableItem) return false;
 
-	EEquipmentSlot Slot = EquippableItem->GetEquippableData().EquipSlot;
+	const EEquipmentSlot Slot = EquippableItem->GetItemInfo().ItemData.EquipSlot;
 	return EquipmentData.Contains(Slot);
 }
 
@@ -68,7 +90,7 @@ bool UEquipmentManager::IsItemEquippable(UBaseItem* Item)
 		EItemType::IT_Armor, EItemType::IT_Weapon, EItemType::IT_Shield
 	};
 
-	return EquippableTypes.Contains(Item->GetItemInfo().ItemType);
+	return EquippableTypes.Contains(Item->GetItemInfo().ItemInfo.ItemType);
 }
 
 /* ============================= */
@@ -82,7 +104,7 @@ bool UEquipmentManager::AddItemInSlotToInventory(UBaseItem* Item)
 	UEquippableItem* EquippableItem = Cast<UEquippableItem>(Item);
 	if (!EquippableItem) return false;
 
-	const EEquipmentSlot Slot = EquippableItem->GetEquippableData().EquipSlot;
+	const EEquipmentSlot Slot = EquippableItem->GetItemInfo().ItemData.EquipSlot;
 	if (UBaseItem** RetrievedItem = EquipmentData.Find(Slot))
 	{
 		return GetInventoryManager()->TryToAddItemToInventory(*RetrievedItem, true);
@@ -135,10 +157,10 @@ void UEquipmentManager::HandleHasMesh(UBaseItem* Item, EEquipmentSlot Slot)
 	}
 
 	// Attach the new item
-	if (const UEquippableItem* EquipItem = Cast<UEquippableItem>(Item))
+	if (Item)
 	{
 		Item->SetRotated(false);
-		AttachItem(EquipItem->GetEquippableData().EquipClass, Item, Slot);
+		AttachItem(Item->GetItemInfo().ItemData.EquipClass, Item, Slot);
 	}
 	else
 	{
@@ -241,7 +263,7 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 		}
 
 		// Set the mesh and validate it
-		if (UStaticMesh* Mesh = Item->GetItemInfo().StaticMesh)
+		if (UStaticMesh* Mesh = Item->GetItemInfo().ItemInfo.StaticMesh)
 		{
 			SpawnedActor->SetMesh(Mesh);
 		}
@@ -305,7 +327,7 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
 	if (!ASC) return;
 
 	// === Apply Attribute Bonuses from FPHItemStats ===
-	const FPHItemStats& ItemStats = Item->GetEquippableData().Affixes;
+	const FPHItemStats& ItemStats = Item->GetItemInfo().ItemData.Affixes;
 	const TArray<FPHAttributeData>& Stats = ItemStats.GetAllStats();
 
 	FAppliedStats AppliedStats;
@@ -328,7 +350,7 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
 	}
 
 	// === Apply Passive Effects ===
-	const TArray<FItemPassiveEffectInfo>& Passives = Item->GetEquippableData().PassiveEffects;
+	const TArray<FItemPassiveEffectInfo>& Passives = Item->GetItemInfo().ItemData.PassiveEffects;
 	FPassiveEffectHandleList PassiveHandles;
 
 	for (const FItemPassiveEffectInfo& Passive : Passives)
@@ -423,7 +445,7 @@ bool UEquipmentManager::DropItem(UBaseItem* Item)
 	}
 
 	// Ensure the pickup class exists
-	const TSubclassOf<AItemPickup> Class = Item->GetItemInfo().PickupClass;
+	const TSubclassOf<AItemPickup> Class = Item->GetItemInfo().ItemInfo.PickupClass;
 	if (!Class)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("DropItem failed: Pickup class is null"));
@@ -444,8 +466,8 @@ bool UEquipmentManager::DropItem(UBaseItem* Item)
 
 	// Set properties of the dropped item
 	DroppedItem->ItemInfo = Item->GetItemInfo();
-	DroppedItem->SetNewMesh(Item->GetItemInfo().StaticMesh);
-	DroppedItem->SetSkeletalMesh(Item->GetItemInfo().SkeletalMesh);
+	DroppedItem->SetNewMesh(Item->GetItemInfo().ItemInfo.StaticMesh);
+	DroppedItem->SetSkeletalMesh(Item->GetItemInfo().ItemInfo.SkeletalMesh);
 
 	return true;
 }

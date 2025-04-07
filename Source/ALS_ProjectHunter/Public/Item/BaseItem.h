@@ -28,14 +28,14 @@ public:
 	
 	/** Check if the item is rotated */
 	UFUNCTION(BlueprintCallable)
-	bool IsRotated() const { return ItemInfos.Rotated; }
+	bool IsRotated() const { return ItemInfos.ItemInfo.Rotated; }
 	
 	/** Toggles the rotation state of the item */
 	UFUNCTION(BlueprintCallable)
-	void Rotate() { ItemInfos.Rotated = !ItemInfos.Rotated; }
+	void Rotate() { ItemInfos.ItemInfo.Rotated = !ItemInfos.ItemInfo.Rotated; }
 
 	UFUNCTION(BlueprintCallable)
-	void SetRotated(bool inBool) { ItemInfos.Rotated =  inBool ;}
+	void SetRotated(bool inBool) { ItemInfos.ItemInfo.Rotated =  inBool ;}
 
 	
 	/** Returns the icon of the item, considering rotation */
@@ -52,8 +52,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Setter")
 	void SetItemInfo(const FItemInformation NewItemInfo) { ItemInfos = NewItemInfo; }
+
+	UFUNCTION(BlueprintCallable, Category = "Setter")
+	void SetEquipmentData(const FEquippableItemData InData) { ItemInfos.ItemData = InData;}
 	
-private:
+protected:
 	
 	/** Information related to the item */
 	UPROPERTY()

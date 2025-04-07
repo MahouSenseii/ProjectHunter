@@ -349,7 +349,8 @@ int32 APHBaseCharacter::GetXPFNeededForNextLevel()
 void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 {
 	if (!InteractableManager) return;
-
+	check(EquippableToolTipClass);
+	
 	AItemPickup* PickupItem = Cast<AItemPickup>(InteractableManager->GetOwner());
 	if (!PickupItem) return;
 
@@ -379,7 +380,7 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 	if (!ItemObject) return;
 
 	ItemObject->SetItemInfo(PickupItem->ItemInfo);
-	ItemObject->SetRotated(PickupItem->ItemInfo.Rotated);
+	ItemObject->SetRotated(PickupItem->ItemInfo.ItemInfo.Rotated);
 
 	// Cast and assign
 	if (UPHBaseToolTip* ToolTip = Cast<UPHBaseToolTip>(ToolTipWidget))
@@ -387,7 +388,6 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 		if(UEquippableToolTip* EquipToolTip = Cast<UEquippableToolTip>(ToolTip))
 		{
 			EquipToolTip->SetItemInfo(ItemObject->GetItemInfo());
-			EquipToolTip->ItemData = Cast<AEquipmentPickup>(PickupItem)->EquipmentData;
 			EquipToolTip->OwnerCharacter = this;
 			EquipToolTip->AddToViewport();
 			CurrentToolTip = EquipToolTip;

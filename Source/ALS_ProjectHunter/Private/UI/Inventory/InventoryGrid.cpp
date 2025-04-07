@@ -151,7 +151,7 @@ bool UInventoryGrid::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 	const FTile InTile{ DraggedItemTopLeft.X, DraggedItemTopLeft.Y };
 	const int32 Index = OwnerInventory->TileToIndex(InTile);
 
-	if (Payload->GetItemInfo().OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID())
+	if (Payload->GetItemInfo().ItemInfo.OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID())
 	{
 		HandleOwnedItemDrop(Payload, Index);
 	}
@@ -416,7 +416,7 @@ void UInventoryGrid::AddItemToGrid(UBaseItem* Item, const FTile TopLeftTile)
 	}
 	
 	FItemInformation TempItemInfo = Item->GetItemInfo();
-	TempItemInfo.LastSavedSlot  = ECurrentItemSlot::CIS_Inventory;
+	TempItemInfo.ItemInfo.LastSavedSlot  = ECurrentItemSlot::CIS_Inventory;
 	Item->SetItemInfo(TempItemInfo);
 	APlayerController* Owner = GetOwningPlayer();
 	if (!Owner)
@@ -516,7 +516,7 @@ void UInventoryGrid::BuySellLogic(UBaseItem* Item, bool& WasAdded)
 	 const FTile SetTiles = { DraggedItemTopLeft.X, DraggedItemTopLeft.Y };
 
     // If the item already belongs to the owner, just reposition it without buying or selling.
-    if (Item->GetItemInfo().OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID())
+    if (Item->GetItemInfo().ItemInfo.OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID())
     {
         if (OwnerInventory->IsRoomAvailable(Item, OwnerInventory->TileToIndex(SetTiles)))
         {
@@ -541,7 +541,7 @@ void UInventoryGrid::BuySellLogic(UBaseItem* Item, bool& WasAdded)
     // Determine the buyer and seller based on the current item owner.
 
 	 // Determine the seller and buyer explicitly
-    UInventoryManager* Seller = Item->GetItemInfo().OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->
+    UInventoryManager* Seller = Item->GetItemInfo().ItemInfo.OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->
                                                                                GetID()
 	                                ? OwnerInventory
 	                                : OtherInventory;
@@ -623,7 +623,7 @@ UInventoryManager* UInventoryGrid::FindOwners(UBaseItem* Item, UInventoryManager
 
 	// If the Item's OwnerID matches the character ID of the owner of OwnerInventory,
 	// this inventory is the owner of the item.
-	if (Item->GetItemInfo().OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID())
+	if (Item->GetItemInfo().ItemInfo.OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID())
 	{
 		// The item belongs to the OwnerInventory.
 		// Set 'Other' to represent the non-owner inventory in this scenario.

@@ -13,8 +13,8 @@
 
 bool UPHItemFunctionLibrary::AreItemSlotsEqual(FItemInformation FirstItem, FItemInformation SecondItem)
 {
-	if((FirstItem.EquipmentSlot == SecondItem.EquipmentSlot)|| (FirstItem.EquipmentSlot == EEquipmentSlot::ES_MainHand && SecondItem.EquipmentSlot == EEquipmentSlot::ES_OffHand)
-		|| (SecondItem.EquipmentSlot == EEquipmentSlot::ES_MainHand && FirstItem.EquipmentSlot == EEquipmentSlot::ES_OffHand))
+	if((FirstItem.ItemInfo.EquipmentSlot == SecondItem.ItemInfo.EquipmentSlot)|| (FirstItem.ItemInfo.EquipmentSlot == EEquipmentSlot::ES_MainHand && SecondItem.ItemInfo.EquipmentSlot == EEquipmentSlot::ES_OffHand)
+		|| (SecondItem.ItemInfo.EquipmentSlot == EEquipmentSlot::ES_MainHand && FirstItem.ItemInfo.EquipmentSlot == EEquipmentSlot::ES_OffHand))
 	{
 
 		return  true;
@@ -25,12 +25,9 @@ bool UPHItemFunctionLibrary::AreItemSlotsEqual(FItemInformation FirstItem, FItem
 }
 
 
-UBaseItem* UPHItemFunctionLibrary::GetItemInformation(
-	FItemInformation ItemInfo,
-	FEquippableItemData EquippableItemData,
-	FConsumableItemData ConsumableItemData)
+UBaseItem* UPHItemFunctionLibrary::GetItemInformation(FItemInformation ItemInfo,FConsumableItemData ConsumableItemData)
 {
-	switch (ItemInfo.EquipmentSlot)
+	switch (ItemInfo.ItemInfo.EquipmentSlot)
 	{
 	case EEquipmentSlot::ES_Belt:
 	case EEquipmentSlot::ES_Boots:
@@ -43,24 +40,22 @@ UBaseItem* UPHItemFunctionLibrary::GetItemInformation(
 	case EEquipmentSlot::ES_Ring:
 	case EEquipmentSlot::ES_MainHand:
 	case EEquipmentSlot::ES_OffHand:
-		return CreateEquippableItem(ItemInfo, EquippableItemData);
+		return CreateEquippableItem(ItemInfo);
 
 	case EEquipmentSlot::ES_Flask:
-		return CreateConsumableItem(ItemInfo, ConsumableItemData);
+		return CreateConsumableItem(ItemInfo);
 
 	case EEquipmentSlot::ES_None:
 	default:
-		UE_LOG(LogTemp, Warning, TEXT("Unknown or None Equipment Slot: %d"), static_cast<int32>(ItemInfo.EquipmentSlot));
+		UE_LOG(LogTemp, Warning, TEXT("Unknown or None Equipment Slot: %d"), static_cast<int32>(ItemInfo.ItemInfo.EquipmentSlot));
 		return nullptr;
 	}
 }
 
 
-UEquippableItem* UPHItemFunctionLibrary::CreateEquippableItem(
-	const FItemInformation& ItemInfo,
-	const FEquippableItemData& EquippableItemData)
+UEquippableItem* UPHItemFunctionLibrary::CreateEquippableItem(const FItemInformation& ItemInfo)
 {
-	if (!EquippableItemData.EquipClass)
+	if (!ItemInfo.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("EquipClass is not set on EquippableItemData!"));
 		return nullptr;
@@ -72,19 +67,16 @@ UEquippableItem* UPHItemFunctionLibrary::CreateEquippableItem(
 		UE_LOG(LogTemp, Error, TEXT("Failed to create UEquippableItem object."));
 		return nullptr;
 	}
-
+	NewEquipItem->AddToRoot(); // Prevent garbage collection
 	NewEquipItem->SetItemInfo(ItemInfo);
-	NewEquipItem->SetEquippableData(EquippableItemData);
-
 	return NewEquipItem;
 }
 
 
-UConsumableItem* UPHItemFunctionLibrary::CreateConsumableItem(const FItemInformation& ItemInfo, const FConsumableItemData ConsumableItemData)
+UConsumableItem* UPHItemFunctionLibrary::CreateConsumableItem(const FItemInformation& ItemInfo)
 {
     UConsumableItem* NewConsumableItem = NewObject<UConsumableItem>();
     NewConsumableItem->SetItemInfo(ItemInfo);
-    NewConsumableItem->SetConsumableData(ConsumableItemData);
     return NewConsumableItem;
 }
 
@@ -453,7 +445,7 @@ FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& It
 			: UnknownAffixText)
 		: FText::GetEmpty();
 	
-	const FText ItemSubTypeName = UEnum::GetDisplayValueAsText(ItemInfo.ItemSubType);
+	const FText ItemSubTypeName = UEnum::GetDisplayValueAsText(ItemInfo.ItemInfo.ItemSubType);
 
 	// 🔥 Build final name 
 	FString FullName;
@@ -467,10 +459,10 @@ FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& It
 
 	if (!SuffixName.IsEmpty())
 	{
-		FullName += TEXT(" of ") + SuffixName.ToString();
+		FullName += TEXT(" of The ") + SuffixName.ToString();
 	}
 
-	ItemInfo.ItemName = FText::FromString(FullName);
+	ItemInfo.ItemInfo.ItemName = FText::FromString(FullName);
 	return ItemInfo;
 }
 
@@ -488,7 +480,7 @@ void UPHItemFunctionLibrary::RerollModifiers(
 {
 	if (!Item || !ModPool) return;
 
-	FEquippableItemData EquipData = Item->GetEquippableData();
+	FEquippableItemData EquipData = Item->GetItemInfo().ItemData;
 	FPHItemStats& Affixes = EquipData.Affixes;
 
 	if (bRerollPrefixes)
@@ -530,7 +522,7 @@ void UPHItemFunctionLibrary::RerollModifiers(
 	}
 
 	// Push updated data back into the item
-	Item->SetEquippableData(EquipData);
+	Item->SetEquipmentData(EquipData);
 }
 
 

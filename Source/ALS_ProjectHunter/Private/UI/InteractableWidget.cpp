@@ -35,6 +35,37 @@ void UInteractableWidget::NativeConstruct()
 	Img_Key->SetBrush(GetInteractionIcon());
 }
 
+void UInteractableWidget::NativeDestruct()
+{
+	UnbindEventDispatchers();
+
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	}
+    
+	// Clean up utility instance
+	if (MyUtilityInstance)
+	{
+		MyUtilityInstance->ConditionalBeginDestroy();
+		MyUtilityInstance = nullptr;
+	}
+    
+	// Clean up dynamic materials
+	if (DynamicSquareMaterial)
+	{
+		DynamicSquareMaterial->ConditionalBeginDestroy();
+		DynamicSquareMaterial = nullptr;
+	}
+	if (DynamicCircularMaterial)
+	{
+		DynamicCircularMaterial->ConditionalBeginDestroy();
+		DynamicCircularMaterial = nullptr;
+	}
+    
+	Super::NativeDestruct();
+}
+
 void UInteractableWidget::BindEventDispatchers()
 {
 	if (InteractableManager) // Check if InteractableManager is valid

@@ -13,9 +13,9 @@
 /* ============================= */
 class AItemPickup;
 class AEquippableItem;
+class AEquippedObject;
 class APickup;
 class AConsumablePickup;
-class AEquippedObject;
 class AWeaponPickup;
 
 /* ============================= */
@@ -179,46 +179,67 @@ struct FPHAttributeData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName AttributeName;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EPrefixSuffix PrefixSuffix;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGameplayAttribute ModifiedAttribute;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FGameplayTag> AffectedTags;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MinStatChanged;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MaxStatChanged;
+	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Transient)
 	float RolledStatValue = 0.0f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float PercentBonus = 0.0f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bDisplayAsRange;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsIdentified;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EAttributeDisplayFormat DisplayFormat;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ERankPoints RankPoints;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EAffixOrigin AffixOrigin;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 AffixTier = 1;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bAffectsBaseWeaponStatsDirectly = false;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName ModifierID;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 MaxStacks = 1;
+	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	int32 StackCount = 1;
+	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	FGuid ModifierUID;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Weight = 1.0f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bShowInTooltip = true;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bRollsAsInteger = false;
 };
@@ -230,12 +251,16 @@ struct FPHItemStats // Affixes
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	bool bAffixesGenerated = false;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	TArray<FPHAttributeData> Prefixes;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	TArray<FPHAttributeData> Suffixes;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	TArray<FPHAttributeData> Implicits;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	TArray<FPHAttributeData> Crafted;
 
@@ -304,6 +329,17 @@ struct FEquippableItemData
     FEquippableItemData()
         : EquipSlot(EEquipmentSlot::ES_None)
 	{}
+
+	FORCEINLINE bool IsValid() const
+    {
+    	const bool bHasValidAffixes = Affixes.bAffixesGenerated;
+    	const bool bHasPassiveEffects = !PassiveEffects.IsEmpty();
+    	const bool bHasWeaponType = WeaponHandle != EWeaponHandle::WH_None;
+
+    	return  bHasValidAffixes || bHasPassiveEffects || bHasWeaponType;
+    }
+
+
 };
 
 USTRUCT(BlueprintType)
@@ -330,32 +366,43 @@ struct FDefenseStats
 
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float ArmorFlat = 0.0f;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float FireResistanceFlat = 0.0f;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float IceResistanceFlat = 0.0f;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float LightningResistanceFlat = 0.0f;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float LightResistanceFlat = 0.0f;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float CorruptionResistanceFlat = 0.0f;
 
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float ArmorPercent = 0.0f;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float FireResistancePercent = 0.0f;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float IceResistancePercent = 0.0f;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float LightningResistancePercent = 0.0f;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float LightResistancePercent = 0.0f;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float CorruptionResistancePercent = 0.0f;
 
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float GlobalDefenses = 0.0f;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Defense")
 	float BlockStrength = 0.0f;
 
@@ -363,7 +410,7 @@ struct FDefenseStats
 };
 
 USTRUCT(BlueprintType)
-struct FItemInformation : public FTableRowBase
+struct FItemBase: public FTableRowBase
 {
 	GENERATED_BODY()
 
@@ -445,7 +492,7 @@ struct FItemInformation : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bHasNameBeenGenerated;
 
-	FItemInformation()
+	FItemBase()
 		: BaseGradeValue(0), StaticMesh(nullptr), SkeletalMesh(nullptr), OwnerID(""),
 		  ItemTag(""), ItemImage(nullptr), ItemImageRotated(nullptr), ItemType(EItemType::IT_None),
 		  ItemSubType(EItemSubType::IST_None),
@@ -455,6 +502,12 @@ struct FItemInformation : public FTableRowBase
 		  Transform(), GameplayEffectClass(nullptr), bHasNameBeenGenerated(false)
 	{
 	}
+
+	FORCEINLINE bool IsValid() const
+	{
+		return !ItemName.IsEmpty() && ItemType != EItemType::IT_None && StaticMesh != nullptr;
+	}
+
 };
 
 
@@ -505,4 +558,23 @@ struct FPassiveEffectHandleList
 
 	UPROPERTY()
 	TArray<FActiveGameplayEffectHandle> Handles;
+};
+
+USTRUCT(BlueprintType)
+struct FItemInformation: public FTableRowBase
+{
+	GENERATED_BODY()
+
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
+	FItemBase ItemInfo;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
+	FEquippableItemData ItemData;
+
+	FORCEINLINE bool IsValid() const
+	{
+		return ItemInfo.IsValid() || ItemData.IsValid();
+	}
+
 };

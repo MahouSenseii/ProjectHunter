@@ -12,6 +12,10 @@ class APHBaseCharacter;
 class UInteractableManager;
 class UWidgetComponent;
 
+/**
+ * ABaseInteractable is a blueprintable Actor class that implements the IInteractableObjectInterface.
+ * It serves as a base class for interactable objects in the game.
+ */
 
 UCLASS(Blueprintable)
 class ALS_PROJECTHUNTER_API ABaseInteractable : public AActor, public IInteractableObjectInterface
@@ -21,6 +25,7 @@ class ALS_PROJECTHUNTER_API ABaseInteractable : public AActor, public IInteracta
 public:	
 	// Sets default values for this actor's properties
 	ABaseInteractable();
+	virtual void Destroyed() override;
 	void InitializeComponent();
 	void DestroyAllCreatedComponents();
 	virtual void OnConstruction(const FTransform& Transform) override;

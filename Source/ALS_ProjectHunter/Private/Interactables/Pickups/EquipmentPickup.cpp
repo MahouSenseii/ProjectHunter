@@ -24,23 +24,20 @@ void AEquipmentPickup::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if(!EquipmentData.Affixes.bAffixesGenerated)
+	if(!ItemInfo.ItemData.Affixes.bAffixesGenerated)
 	{
-		EquipmentData.Affixes = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
-		ItemInfo =  UPHItemFunctionLibrary::GenerateItemName(EquipmentData.Affixes ,ItemInfo);
+		ItemInfo.ItemData.Affixes = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
+		ItemInfo =  UPHItemFunctionLibrary::GenerateItemName(ItemInfo.ItemData.Affixes ,ItemInfo);
 	}
 }
 
 
-bool AEquipmentPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo,
-                                         FEquippableItemData EquippableItemData, FConsumableItemData ConsumableItemData) const
+bool AEquipmentPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo,FConsumableItemData ConsumableItemData) const
 {
 	Super::InteractionHandle(Actor, WasHeld);
 
-	FItemInformation  PassedItemInformation = ItemInfo;
-	FEquippableItemData  PassedEquippableItemData = EquipmentData; // Assuming you have relevant equippable data
-	
-	return Super::HandleInteraction(Actor, WasHeld,   PassedItemInformation,  PassedEquippableItemData, FConsumableItemData());
+	const FItemInformation  PassedItemInformation = ItemInfo;
+	return Super::HandleInteraction(Actor, WasHeld,   PassedItemInformation, FConsumableItemData());
 }
 
 void AEquipmentPickup::HandleHeldInteraction(APHBaseCharacter* Character) const
@@ -49,7 +46,7 @@ void AEquipmentPickup::HandleHeldInteraction(APHBaseCharacter* Character) const
 
 if (Character->GetEquipmentManager()->IsItemEquippable(ObjItem) && (UFL_InteractUtility::AreRequirementsMet(ObjItem, Character)))
 	{
-		Character->GetEquipmentManager()->TryToEquip(ObjItem, true, ObjItem->GetItemInfo().EquipmentSlot);
+		Character->GetEquipmentManager()->TryToEquip(ObjItem, true, ObjItem->GetItemInfo().ItemInfo.EquipmentSlot);
 	}
 	else
 	{

@@ -7,7 +7,9 @@
 #include "ConsumablePickup.generated.h"
 
 /**
- * 
+ 
+ @class AConsumablePickup
+ @brief A class representing a consumable item pickup that can be interacted with
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API AConsumablePickup : public AItemPickup
@@ -19,7 +21,7 @@ public:
 	virtual void BeginPlay() override;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "ItemInfomation")
 	FConsumableItemData ConsumableData;
-virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo, FEquippableItemData EquippableItemData, FConsumableItemData ConsumableItemData) const override;
+virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo,FConsumableItemData ConsumableItemData) const override;
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void OnUse();
 

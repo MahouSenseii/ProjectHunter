@@ -3,9 +3,9 @@
 
 #include "UI/ToolTip/EquippableStatsBox.h"
 
+#include "Components/HorizontalBoxSlot.h"
+#include "Components/VerticalBoxSlot.h"
 #include "Interactables/Pickups/WeaponPickup.h"
-#include "Item/EquippableItem.h"
-#include "Library/WidgetFunctionLibrary.h"
 #include "UI/ToolTip/MinMaxBox.h"
 
 void UEquippableStatsBox::NativeConstruct()
@@ -16,14 +16,16 @@ void UEquippableStatsBox::NativeConstruct()
 	{
 		RequirementsBox->ItemData = EquippableItemData;
 	}
+
+	MinMaxBoxClass = UMinMaxBox::StaticClass();
 }
 
 void UEquippableStatsBox::CreateMinMaxBoxByDamageTypes()
 {
-	if (!EquippableItemData.PickupClass) return;
+	if (!EquippableItemData.IsValid()) return;
+	check(MinMaxBoxClass);
 
 	const TMap<EDamageTypes, FDamageRange>& DamageMap = EquippableItemData.WeaponBaseStats.BaseDamage;
-
 	bool bHasElementalDamage = false;
 
 	// Handle Physical Damage
@@ -44,12 +46,8 @@ void UEquippableStatsBox::CreateMinMaxBoxByDamageTypes()
 		PhysicalDamageBox->RemoveFromParent(); // Not present at all
 	}
 
-	// Handle Elemental Damage
-	if (EDBox)
-	{
-		EDBox->ClearChildren();
-	}
 
+	// Handle Elemental Damage
 	for (const TPair<EDamageTypes, FDamageRange>& Pair : DamageMap)
 	{
 		const EDamageTypes DamageType = Pair.Key;
@@ -62,19 +60,41 @@ void UEquippableStatsBox::CreateMinMaxBoxByDamageTypes()
 
 		bHasElementalDamage = true;
 
+		// Create MinMaxBox
 		UMinMaxBox* MinMaxBox = CreateWidget<UMinMaxBox>(this, MinMaxBoxClass);
-		if (!MinMaxBox) continue;
+		
+		if (!MinMaxBox)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to create MinMaxBox for damage type %d"), static_cast<int32>(DamageType));
+			continue;
+		}
 
-		MinMaxBox->SetMinMaxText(DamageValues.Max, DamageValues.Min);
+		MinMaxBox->Init();
+		MinMaxBox->SetMinMaxText(DamageValues.Min, DamageValues.Max); // Assuming this is (Min, Max)
 		MinMaxBox->SetColorBaseOnType(DamageType);
+		MinMaxBox->SetFontSize(10.0f);
 
 		if (EDBox)
 		{
-			EDBox->AddChild(MinMaxBox);
+			// Add with alignment
+			if (UHorizontalBox* VBox = Cast<UHorizontalBox>(EDBox))
+			{
+				if (UHorizontalBoxSlot* HBSlot = VBox->AddChildToHorizontalBox(MinMaxBox))
+				{
+					HBSlot->SetHorizontalAlignment(HAlign_Right);  // Align to the right
+					HBSlot->SetVerticalAlignment(VAlign_Fill);
+				}
+			}
+			else
+			{
+				// fallback for non-vertical box type
+				EDBox->AddChild(MinMaxBox);
+				
+			}
 		}
 	}
 
-	// Remove EDBox if no elemental damage
+	// Remove EDBox if no elemental damage was found
 	if (!bHasElementalDamage && EDBox)
 	{
 		EDBox->RemoveFromParent();
@@ -87,8 +107,8 @@ void UEquippableStatsBox::SetMinMaxForOtherStats() const
 {
 	if (!EquippableItemData.PickupClass) return;
 
-	// Helper: Show/hide box based on value
-	auto SetStatRow = [](UHorizontalBox* Box, UTextBlock* TextBlock, float Value)
+	// Helper: Show/hide box based on value, with optional percent display
+	auto SetStatRow = [](UHorizontalBox* Box, UTextBlock* TextBlock, float Value, bool bAsPercent = false)
 	{
 		if (!Box || !TextBlock) return;
 
@@ -99,7 +119,17 @@ void UEquippableStatsBox::SetMinMaxForOtherStats() const
 		else
 		{
 			Box->SetVisibility(ESlateVisibility::Visible);
-			TextBlock->SetText(FText::AsNumber(FMath::RoundToInt(Value)));
+			if (bAsPercent)
+			{
+				// Show as percentage (rounded)
+				const int32 RoundedPercent = FMath::RoundToInt(Value * 100.f);
+				TextBlock->SetText(FText::FromString(FString::Printf(TEXT("%d%%"), RoundedPercent)));
+			}
+			else
+			{
+				// Show as rounded whole number
+				TextBlock->SetText(FText::AsNumber(FMath::RoundToInt(Value)));
+			}
 		}
 	};
 
@@ -139,15 +169,16 @@ void UEquippableStatsBox::SetMinMaxForOtherStats() const
 	const float FinalWeaponRange  = EquippableItemData.WeaponBaseStats.WeaponRange + GetStatModifierFromAffixes(UPHAttributeSet::GetAttackRangeAttribute());
 
 	// Apply to UI
-	SetStatRow(ArmourBox,      ArmourValue,      FinalArmor);
-	SetStatRow(PoiseBox,       PoiseValue,       FinalPoise);
-	SetStatRow(CritChanceBox,  CritChanceValue,  FinalCritChance);
-	SetStatRow(AtkSpeedBox,    AtkSpeedValue,    FinalAttackSpeed);
-	SetStatRow(CastTimeBox,    CastTimeValue,    FinalCastTime);
-	SetStatRow(ManaCostBox,    ManaCostValue,    FinalManaCost);
-	SetStatRow(StaminaCostBox, StaminaCostValue, FinalStaminaCost);
-	SetStatRow(WeaponRangeBox, WeaponRangeValue, FinalWeaponRange);
+	SetStatRow(ArmourBox,      ArmourValue,      FinalArmor,false);
+	SetStatRow(PoiseBox,       PoiseValue,       FinalPoise, false);
+	SetStatRow(CritChanceBox,  CritChanceValue,  FinalCritChance, true);
+	SetStatRow(AtkSpeedBox,    AtkSpeedValue,    FinalAttackSpeed, false);
+	SetStatRow(CastTimeBox,    CastTimeValue,    FinalCastTime , false);
+	SetStatRow(ManaCostBox,    ManaCostValue,    FinalManaCost, false);
+	SetStatRow(StaminaCostBox, StaminaCostValue, FinalStaminaCost, false);
+	SetStatRow(WeaponRangeBox, WeaponRangeValue, FinalWeaponRange, false);
 }
+
 
 
 

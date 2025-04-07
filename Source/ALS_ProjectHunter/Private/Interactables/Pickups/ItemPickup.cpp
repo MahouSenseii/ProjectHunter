@@ -24,7 +24,7 @@ AItemPickup::AItemPickup()
 	// Set rotation rate (can also be changed later during gameplay)
 	RotatingMovementComponent->RotationRate = FRotator(0.f, 180.f, 0.f); // Rotate 180 degrees per second around the yaw axis.
 
-	StaticMesh->SetStaticMesh(ItemInfo.StaticMesh);
+	StaticMesh->SetStaticMesh(ItemInfo.ItemInfo.StaticMesh);
 }
 
 UBaseItem* AItemPickup::CreateItemObject(UObject* Outer)
@@ -43,9 +43,6 @@ UBaseItem* AItemPickup::CreateItemObject(UObject* Outer)
 		return nullptr;
 	}
 
-	// Initialize it using the pickup's ItemInfo
-	//Item->Initialize(ItemInfo);
-
 	return Item;
 }
 
@@ -53,7 +50,7 @@ void AItemPickup::BeginPlay()
 {
 	Super::BeginPlay();
 
-	StaticMesh->SetStaticMesh(ItemInfo.StaticMesh);
+	StaticMesh->SetStaticMesh(ItemInfo.ItemInfo.StaticMesh);
 	StaticMesh->CanCharacterStepUpOn = ECB_No;
 	StaticMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
 	if(InteractableManager)
@@ -67,10 +64,10 @@ void AItemPickup::BeginPlay()
 
 void AItemPickup::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)
 {
-	FItemInformation PassedItemInfo;
+	FItemInformation PassedItemInfo ;
 	FEquippableItemData EquippableItemData;
 	FConsumableItemData ConsumableItemData;
-	HandleInteraction(Interactor, WasHeld, PassedItemInfo,EquippableItemData, ConsumableItemData);
+	HandleInteraction(Interactor, WasHeld, PassedItemInfo, ConsumableItemData);
 }
 
 UBaseItem* AItemPickup::GenerateItem() const
@@ -88,7 +85,7 @@ UBaseItem* AItemPickup::GenerateItem() const
 	return nullptr;
 }
 
-bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo, FEquippableItemData EquippableItemData, FConsumableItemData ConsumableItemData) const
+bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo, FConsumableItemData ConsumableItemData) const
 {
 	if (!IsValid(Actor))
 	{
@@ -105,7 +102,7 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformatio
 	}
 
 	// Get the item information
-	UBaseItem* ReturnItem = UPHItemFunctionLibrary::GetItemInformation( PassedItemInfo, EquippableItemData, ConsumableItemData);
+	UBaseItem* ReturnItem = UPHItemFunctionLibrary::GetItemInformation( PassedItemInfo, ConsumableItemData);
 	if (!ReturnItem)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Failed to create item from ItemInfo."));
@@ -114,7 +111,7 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformatio
 
 	// Set the Owner ID for the item
 	FItemInformation ReturnItemInfo = ReturnItem->GetItemInfo();
-	ReturnItemInfo.OwnerID = OwnerCharacter->GetInventoryManager()->GetID();
+	ReturnItemInfo.ItemInfo.OwnerID = OwnerCharacter->GetInventoryManager()->GetID();
 	ReturnItem->SetItemInfo(ReturnItemInfo);
 
 	// If the interaction was held, try to equip the item
@@ -122,11 +119,11 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformatio
 	{
 		if (OwnerCharacter->GetEquipmentManager()->IsItemEquippable(ReturnItem))
 		{
-			OwnerCharacter->GetEquipmentManager()->TryToEquip(ReturnItem, true, ReturnItemInfo.EquipmentSlot);
+			OwnerCharacter->GetEquipmentManager()->TryToEquip(ReturnItem, true, ReturnItemInfo.ItemInfo.EquipmentSlot);
 		}
 		else
 		{
-			OwnerCharacter->GetEquipmentManager()->TryToEquip(ReturnItem, false, ReturnItemInfo.EquipmentSlot);
+			OwnerCharacter->GetEquipmentManager()->TryToEquip(ReturnItem, false, ReturnItemInfo.ItemInfo.EquipmentSlot);
 		}
 
 		if (InteractableManager)

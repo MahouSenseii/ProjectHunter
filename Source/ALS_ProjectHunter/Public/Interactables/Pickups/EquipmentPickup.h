@@ -19,11 +19,8 @@ public:
 	AEquipmentPickup();
 
 	virtual void BeginPlay() override;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "ItemInfomation" )
-	FEquippableItemData EquipmentData;
 	
-	virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo, FEquippableItemData EquippableItemData, FConsumableItemData ConsumableItemData) const override;
+	virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo, FConsumableItemData ConsumableItemData) const override;
 	virtual void HandleHeldInteraction(APHBaseCharacter* Character) const override;
 	virtual void HandleSimpleInteraction(APHBaseCharacter* Character) const override;
 	virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;

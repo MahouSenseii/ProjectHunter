@@ -119,7 +119,7 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
 	}
 
 	// Set the Pickup class
-	PickUpClass = ItemInfo->PickupClass;
+	PickUpClass = ItemInfo->ItemInfo.PickupClass;
 	if (!PickUpClass) 
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Pickup class is null for item: %s"), *ItemName.ToString());
@@ -137,7 +137,7 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
 
 	// Assign properties
 	SpawnedItem->ItemInfo = *ItemInfo;
-	SpawnedItem->SetNewMesh(ItemInfo->StaticMesh);
+	SpawnedItem->SetNewMesh(ItemInfo->ItemInfo.StaticMesh);
 	SpawnedItem->OnConstruction(SpawnTransform);
 }
 

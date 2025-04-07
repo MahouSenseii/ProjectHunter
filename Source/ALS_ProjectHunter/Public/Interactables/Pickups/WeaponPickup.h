@@ -7,7 +7,9 @@
 #include "WeaponPickup.generated.h"
 
 /**
- * 
+ * @class AWeaponPickup
+ *
+ * A class representing a weapon pickup in the game.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API AWeaponPickup : public AEquipmentPickup
@@ -16,5 +18,5 @@ class ALS_PROJECTHUNTER_API AWeaponPickup : public AEquipmentPickup
 
 public:
 	bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo,
-	                       FEquippableItemData EquippableItemData, FConsumableItemData ConsumableItemData) const;
+		FConsumableItemData ConsumableItemData) const;
 };

@@ -8,25 +8,25 @@
 
 FIntPoint UBaseItem::GetDimensions()
 {
-	if (ItemInfos.Rotated)
+	if (ItemInfos.ItemInfo.Rotated)
 	{
 		// Return reversed dimensions if Rotated is true
-		return FIntPoint(ItemInfos.Dimensions.Y, ItemInfos.Dimensions.X);
+		return FIntPoint(ItemInfos.ItemInfo.Dimensions.Y, ItemInfos.ItemInfo.Dimensions.X);
 	}
 
 	// Return original dimensions if Rotated is false
-	return ItemInfos.Dimensions;
+	return ItemInfos.ItemInfo.Dimensions;
 }
 
 
 UMaterialInstance* UBaseItem::GetIcon() const
 {
-	if (ItemInfos.Rotated)
+	if (ItemInfos.ItemInfo.Rotated)
 	{
 		// Return rotated image if available; otherwise, return original image
-		return ItemInfos.ItemImageRotated ? ItemInfos.ItemImageRotated : ItemInfos.ItemImage;
+		return ItemInfos.ItemInfo.ItemImageRotated ? ItemInfos.ItemInfo.ItemImageRotated : ItemInfos.ItemInfo.ItemImage;
 	}
-	return ItemInfos.ItemImage ? ItemInfos.ItemImage : nullptr; // Return original image if available, or null if not
+	return ItemInfos.ItemInfo.ItemImage ? ItemInfos.ItemInfo.ItemImage : nullptr; // Return original image if available, or null if not
 }
 
 

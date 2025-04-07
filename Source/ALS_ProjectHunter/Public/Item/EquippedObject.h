@@ -8,7 +8,6 @@
 #include "EquippedObject.generated.h"
 
 class AALSBaseCharacter;
-struct FItemInformation;
 class USceneComponent;
 class USplineComponent;
 class UTimelineComponent;
@@ -21,10 +20,10 @@ class ALS_PROJECTHUNTER_API AEquippedObject : public AActor
 public:	
 	// Sets default values for this actor's properties
 	AEquippedObject();
+	virtual void Destroyed() override;
 
 	UFUNCTION(BlueprintCallable, BlueprintSetter)
 	void SetItemInfo(FItemInformation Info);
-		
 	void SetOwningCharacter(AALSBaseCharacter* InOwner) { OwningCharacter = InOwner; }
 
 	UFUNCTION(BlueprintCallable)

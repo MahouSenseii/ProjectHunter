@@ -10,7 +10,6 @@
 #include "Interactables/Pickups/WeaponPickup.h"
 #include "Item/ConsumableItem.h"
 #include "Item/EquippableItem.h"
-#include "Item/WeaponItem.h"
 #include "Kismet/KismetMathLibrary.h"
 
 // Sets default values for this component's properties
@@ -224,7 +223,7 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
     // Helper lambda to handle mesh setup and common properties
     auto SetupPickup = [&](AItemPickup* Pickup) {
         Pickup->ItemInfo = Item->GetItemInfo();
-        Pickup->SetNewMesh(Item->GetItemInfo().StaticMesh);
+        Pickup->SetNewMesh(Item->GetItemInfo().ItemInfo.StaticMesh);
         Pickup->SetupMesh();
     };
 
@@ -233,32 +232,32 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
 
 
 	
-    switch (Item->GetItemInfo().ItemType)
+    switch (Item->GetItemInfo().ItemInfo.ItemType)
     {
     case EItemType::IT_Weapon:
-        CreatedPickup = World->SpawnActor<AWeaponPickup>(Item->GetItemInfo().PickupClass, DropLocation, DropRotation, SpawnParams);
+        CreatedPickup = World->SpawnActor<AWeaponPickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
         if (const auto WeaponPickup = Cast<AWeaponPickup>(CreatedPickup))
         {
-            WeaponPickup->EquipmentData = Cast<UWeaponItem>(Item)->GetEquippableData();
+            WeaponPickup->ItemInfo.ItemData = Item->GetItemInfo().ItemData;
         }
         break;
     case EItemType::IT_Armor:
     case EItemType::IT_Shield:
-        CreatedPickup = World->SpawnActor<AEquipmentPickup>(Item->GetItemInfo().PickupClass, DropLocation, DropRotation, SpawnParams);
+        CreatedPickup = World->SpawnActor<AEquipmentPickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
         if (const auto EquipPickup = Cast<AEquipmentPickup>(CreatedPickup))
         {
-            EquipPickup->EquipmentData = Cast<UEquippableItem>(Item)->GetEquippableData();
+            EquipPickup->ItemInfo.ItemData =Item->GetItemInfo().ItemData;
         }
         break;
     case EItemType::IT_Consumable:
-        CreatedPickup = World->SpawnActor<AConsumablePickup>(Item->GetItemInfo().PickupClass, DropLocation, DropRotation, SpawnParams);
+        CreatedPickup = World->SpawnActor<AConsumablePickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
         if (const auto ConsumablePickup = Cast<AConsumablePickup>(CreatedPickup))
         {
             ConsumablePickup->ConsumableData = Cast<UConsumableItem>(Item)->GetConsumableData();
         }
         break;
     default:
-        CreatedPickup = World->SpawnActor<AItemPickup>(Item->GetItemInfo().PickupClass, DropLocation, DropRotation, SpawnParams);
+        CreatedPickup = World->SpawnActor<AItemPickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
 
         break;
     }
@@ -269,7 +268,7 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
         return true;
     }
 
-    UE_LOG(LogTemp, Error, TEXT("Failed to spawn pickup for item %s"), *Item->GetItemInfo().ItemName.ToString());
+    UE_LOG(LogTemp, Error, TEXT("Failed to spawn pickup for item %s"), *Item->GetItemInfo().ItemInfo.ItemName.ToString());
     return false;
 }
 
@@ -396,7 +395,7 @@ bool UInventoryManager::TryToAddItemToInventory(UBaseItem* Item, const bool Chec
 // The AddItemAt function
 void UInventoryManager::AddItemAt(UBaseItem* Item, int32 TopLeftIndex)
 {
-	Item->GetItemInfo().OwnerID = InventoryID;
+	Item->GetItemInfo().ItemInfo.OwnerID = InventoryID;
 
 	FTile TopLeftTile;
 	IndexToTile(TopLeftIndex, TopLeftTile);
@@ -421,7 +420,7 @@ bool UInventoryManager::TryToAddItemToInventoryRotated(UBaseItem* Item)
 	if (IsValid(Item))
 	{
 		FItemInformation TempItemInfo = Item->GetItemInfo();
-		TempItemInfo.Rotated = true;
+		TempItemInfo.ItemInfo.Rotated = true;
 		Item->SetItemInfo(TempItemInfo);
 		for(int32 x = 0; x < InventoryList.Num(); x++)
 		{
@@ -526,9 +525,9 @@ bool UInventoryManager::SpawnItemByName(const FName ItemName, const UDataTable* 
 	const FItemInformation* ItemInfo = DataTable->FindRow<FItemInformation>(ItemName, TEXT("SpawnItem"));
 	if (!ItemInfo) return false;
 
-	UBaseItem* Item = nullptr;
+	UBaseItem* Item;
 
-	switch (ItemInfo->ItemType)
+	switch (ItemInfo->ItemInfo.ItemType)
 	{
 	case EItemType::IT_Weapon:
 	case EItemType::IT_Armor:
@@ -540,7 +539,7 @@ bool UInventoryManager::SpawnItemByName(const FName ItemName, const UDataTable* 
 
 		EquipItem->SetItemInfo(*ItemInfo);
 
-		if (const FEquippableItemData* EquipData = DataTable->FindRow<FEquippableItemData>(ItemName, TEXT("LookupEquipData"))) EquipItem->SetEquippableData(*EquipData);
+		if (DataTable->FindRow<FItemInformation>(ItemName, TEXT("LookupEquipData"))) EquipItem->GetItemInfo();
 
 		Item = EquipItem;
 		break;
@@ -578,7 +577,7 @@ bool UInventoryManager::SpawnItemByName(const FName ItemName, const UDataTable* 
 	if (!Item) return false;
 
 	FItemInformation UpdatedInfo = Item->GetItemInfo();
-	UpdatedInfo.OwnerID = InventoryID;
+	UpdatedInfo.ItemInfo.OwnerID = InventoryID;
 	Item->SetItemInfo(UpdatedInfo);
 
 	if (!TryToAddItemToInventory(Item, true))
@@ -594,7 +593,7 @@ bool UInventoryManager::SpawnItemByName(const FName ItemName, const UDataTable* 
 
 bool UInventoryManager::HasEnoughGems(UBaseItem* Item) const
 {
-	if(Item->GetItemInfo().Stackable && IsValid(Item))
+	if(Item->GetItemInfo().ItemInfo.Stackable && IsValid(Item))
 	{
 		return  (CalculateStackedItemValue(Item->GetItemInfo()) <= Gems);
 	}
@@ -603,12 +602,12 @@ bool UInventoryManager::HasEnoughGems(UBaseItem* Item) const
 
 int32 UInventoryManager::CalculateStackedItemValue(const FItemInformation& ItemData)
 {
-	return 	UKismetMathLibrary::Round((ItemData.Value* ItemData.ValueModifier) * ItemData.Quantity);
+	return 	UKismetMathLibrary::Round((ItemData.ItemInfo.Value* ItemData.ItemInfo.ValueModifier) * ItemData.ItemInfo.Quantity);
 }
 
 int32 UInventoryManager::CalculateValue(const FItemInformation& ItemData)
 {
-	return UKismetMathLibrary::Round(ItemData.Value * ItemData.ValueModifier);
+	return UKismetMathLibrary::Round(ItemData.ItemInfo.Value * ItemData.ItemInfo.ValueModifier);
 }
 
 bool UInventoryManager::ExecuteItemTrade(const TArray<UBaseItem*>& Items, UInventoryManager* Seller,
@@ -691,7 +690,7 @@ bool UInventoryManager::FindPlacementIndices(const TArray<UBaseItem*>& Items, UI
 
 		if (TargetIndex == INDEX_NONE)
 		{
-			OutMessage = FString::Printf(TEXT("Trade failed: No space for item %s."), *Item->GetItemInfo().ItemName.ToString());
+			OutMessage = FString::Printf(TEXT("Trade failed: No space for item %s."), *Item->GetItemInfo().ItemInfo.ItemName.ToString());
 			return false;
 		}
 
