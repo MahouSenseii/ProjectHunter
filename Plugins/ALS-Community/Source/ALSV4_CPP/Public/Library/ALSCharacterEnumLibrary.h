@@ -27,6 +27,7 @@ static FORCEINLINE FString GetEnumerationToString(const Enumeration InValue)
 UENUM(BlueprintType, meta = (ScriptName = "ALS_Gait"))
 enum class EALSGait : uint8
 {
+	Idle,
 	Walking,
 	Running,
 	Sprinting
@@ -55,7 +56,9 @@ enum class EALSMovementState : uint8
 	Grounded,
 	InAir,
 	Mantling,
-	Ragdoll
+	Ragdoll,
+	WallClimbing,
+	WallRunning
 };
 
 /**
@@ -76,7 +79,8 @@ enum class EALSOverlayState : uint8
 	Torch,
 	Binoculars,
 	Box,
-	Barrel
+	Barrel,
+	Katana,
 };
 
 /**

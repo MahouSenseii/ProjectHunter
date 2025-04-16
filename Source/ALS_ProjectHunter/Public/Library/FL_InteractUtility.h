@@ -108,6 +108,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	static bool CheckBasedOnCompare(EItemRequiredStatsCategory RequiredStats, float RequiredValue, AActor* OwnerPlayer);
 
+
+	/** Finds the best interactable based on forward angle and distance */
+	UFUNCTION(BlueprintCallable, Category = "Interaction")
+	static void GetInteractableScores(
+		const TArray<UInteractableManager*>& Interactables,const FVector& PlayerLocation,const FVector& PlayerForward,
+		float MaxDistance,float MinDot,TArray<float>& OutScores,
+		TArray<UInteractableManager*>& OutValidElements,bool bDrawDebug = false
+);
 	
 	UFUNCTION(BlueprintGetter)
 	static UInteractableManager* GetCurrentInteractableObject(const APHBaseCharacter* OwningPlayer);

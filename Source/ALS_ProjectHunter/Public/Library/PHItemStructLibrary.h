@@ -310,10 +310,6 @@ struct FEquippableItemData
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affixes")
     FPHItemStats Affixes;
 
-    // --- Weapon-Specific Fields (only used if this item is a weapon) --- //
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
-    TSubclassOf<AWeaponPickup> PickupClass;
-
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
     EWeaponHandle WeaponHandle = EWeaponHandle::WH_None;
 
@@ -428,6 +424,9 @@ struct FItemBase: public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString OwnerID;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName ItemID;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText ItemName;
@@ -475,7 +474,10 @@ struct FItemBase: public FTableRowBase
 	bool Stackable;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int Quantity;
+	int32 Quantity;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 MaxStackSize;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool Rotated;
@@ -498,7 +500,7 @@ struct FItemBase: public FTableRowBase
 		  ItemSubType(EItemSubType::IST_None),
 		  ItemRarity(EItemRarity::IR_None), Value(0), ValueModifier(0.0f), IsTradeable(false),
 		  Dimensions(FIntPoint::ZeroValue), EquipmentSlot(EEquipmentSlot::ES_None),
-		  Stackable(false), Quantity(0), Rotated(false), LastSavedSlot(ECurrentItemSlot::CIS_None),
+		  Stackable(false), Quantity(0), MaxStackSize(0), Rotated(false), LastSavedSlot(ECurrentItemSlot::CIS_None),
 		  Transform(), GameplayEffectClass(nullptr), bHasNameBeenGenerated(false)
 	{
 	}

@@ -27,9 +27,21 @@ public:
 	UInteractionManager();
 
 	// The threshold for interaction
-	UPROPERTY()
-	float InteractThreshold = 0.0f;
+	UPROPERTY(EditAnywhere)
+	float InteractThreshold = 0.25f;
 
+
+	UPROPERTY(EditAnywhere)
+	float InteractMaxDistance = 400.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Scoring")
+	float DotWeight = 0.9f;
+
+	UPROPERTY(EditAnywhere, Category = "Scoring")
+	float DistanceWeight = 0.1f;
+
+	UPROPERTY(EditAnywhere, Category = "Debug")
+	bool bDebugMode = false;
 	
 	UPROPERTY()
 	TObjectPtr<APHPlayerController> OwnerController;
@@ -77,9 +89,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "InteractionControl")
 	void ToggleHighlight(bool bShouldHighlight) const;
-
-	/*UFUNCTION(BlueprintCallable,  Category = "InteractionControl")
-	void HandleObjectInteractionEnd();*/
 
 	// Check if the interaction should be updated
 	UFUNCTION(BlueprintCallable, Category = "InteractionControl") bool ShouldUpdateInteraction();

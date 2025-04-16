@@ -8,11 +8,11 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Library/PHCharacterEnumLibrary.h"
 #include "PHGameplayTags.h"
+#include "..\..\Public\Library\PHTagUtilityLibrary.h"
 #include "Net/UnrealNetwork.h"
 
 UPHAttributeSet::UPHAttributeSet()
 {
-	const FPHGameplayTags& GameplayTags = FPHGameplayTags::Get();
 	
 }
 
@@ -293,6 +293,10 @@ void UPHAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 		SetReservedStamina(GetReservedStamina());
 	}
 
+	if (Props.TargetASC)
+	{
+		UPHTagUtilityLibrary::UpdateAttributeThresholdTags(Props.TargetASC, this);
+	}
 }
 
 

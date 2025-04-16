@@ -21,15 +21,7 @@ public:
 	/** Use the consumable item, applying its effect */
 	UFUNCTION(BlueprintCallable, Category = "Consumable")
 	void UseItem(AActor* Target);
-
-	/** Sets the quantity of the consumable item */
-	UFUNCTION(BlueprintCallable, Category = "Consumable")
-	void SetQuantity(int NewQuantity);
-
-	/** Gets the current quantity of the consumable item */
-	UFUNCTION(BlueprintCallable, Category = "Consumable")
-	int GetQuantity() const;
-
+	
 	UFUNCTION(BlueprintCallable, Category = "Consumable")
 	FConsumableItemData GetConsumableData() const { return ConsumableData;}
 

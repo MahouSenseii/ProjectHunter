@@ -131,6 +131,9 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float InLevel) const;
 
+	UFUNCTION(BlueprintCallable)
+	FActiveGameplayEffectHandle ApplyEffectToSelfWithReturn(TSubclassOf<UGameplayEffect> InEffect, float InLevel);
+
 	/** Default Attribute Initialization */
 	void InitializeDefaultAttributes() const;
 

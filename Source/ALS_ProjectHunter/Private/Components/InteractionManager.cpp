@@ -10,6 +10,7 @@
 #include "Character/Player/PHPlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Item/EquippableItem.h"
+#include "Library/FL_InteractUtility.h"
 
 // Sets default values for this component's properties
 UInteractionManager::UInteractionManager()
@@ -144,41 +145,41 @@ void UInteractionManager::MaxOfFloatArray(const TArray<float>& FloatArray, float
 
 void UInteractionManager::AssignCurrentInteraction()
 {
-	if (IsValid(OwnerController) && IsValid(OwnerController->PossessedCharacter))
+	if (!IsValid(OwnerController) || !IsValid(OwnerController->PossessedCharacter)) return;
+
+	const APHBaseCharacter* OwnerPawn = Cast<APHBaseCharacter>(OwnerController->PossessedCharacter);
+	const FVector OwnerLocation = OwnerPawn->GetActorLocation();
+	const FVector OwnerForward = OwnerPawn->GetCamera()->GetActorForwardVector();
+
+	TArray<float> Scores;
+	TArray<UInteractableManager*> ValidElements;
+
+	UFL_InteractUtility::GetInteractableScores(
+		InteractableList,
+		OwnerLocation,
+		OwnerForward,
+		InteractMaxDistance > 0.f ? InteractMaxDistance : 800.f,
+		InteractThreshold,
+		Scores,
+		ValidElements,
+		bDebugMode
+	);
+
+	float MaxScore;
+	int32 MaxIndex;
+	MaxOfFloatArray(Scores, MaxScore, MaxIndex);
+
+	if (MaxIndex != INDEX_NONE)
 	{
-		TArray<float> DotProducts;
-		const APHBaseCharacter* OwnerPawn = Cast<APHBaseCharacter>(OwnerController->PossessedCharacter);
-		const FVector OwnerLocation = OwnerPawn ? OwnerPawn->GetRootComponent()->GetComponentLocation() : FVector::ZeroVector;
-	
-		// Calculate Dot Products for interactable objects only
-		for (const UInteractableManager* Element : InteractableList)
-		{
-			constexpr float Tolerance = 0.0001f;
-			if (!Element || !Element->IsInteractable ) continue;  // Skip non-interactable or null element
-			
-				FVector InteractableLocation = Element->InteractableArea->GetComponentLocation();
-				FVector ForwardVector = OwnerPawn->GetCamera()->GetActorForwardVector();
-				FVector DirectionVector = (InteractableLocation - OwnerLocation).GetSafeNormal(Tolerance);
-				float DotProductResult = FVector::DotProduct(DirectionVector, ForwardVector);
-				DotProducts.Add(DotProductResult);
-		}
+		SetCurrentInteraction(ValidElements[MaxIndex]);
 
-		// Find the maximum DotProduct and its index
-		float MaxValue = FLT_MIN;
-		int MaxIndex = INDEX_NONE;
-		MaxOfFloatArray(DotProducts, MaxValue, MaxIndex);
-
-		// Check if a suitable interactable has been found
-		if (MaxValue >= InteractThreshold)
-		{
-			SetCurrentInteraction(InteractableList[MaxIndex]);
-			UE_LOG(LogTemp, Warning, TEXT("Set a new interaction based on dot product."));
-		}
-		else
-		{
-			SetCurrentInteraction(nullptr);
-			UE_LOG(LogTemp, Warning, TEXT("No suitable interaction found based on dot product."));
-		}
+		UE_LOG(LogTemp, Warning, TEXT("Selected: %s with Score %.3f"),
+			*ValidElements[MaxIndex]->GetOwner()->GetName(), MaxScore);
+	}
+	else
+	{
+		SetCurrentInteraction(nullptr);
+		UE_LOG(LogTemp, Warning, TEXT("No valid interactable found"));
 	}
 }
 

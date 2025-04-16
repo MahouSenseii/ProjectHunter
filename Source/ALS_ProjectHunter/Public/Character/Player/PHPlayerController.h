@@ -12,8 +12,17 @@
 class UWidgetManager;
 class APHBaseCharacter;
 class UPHInputConfig;
+
+
+struct FDoOnceState
+{
+	bool bHasBeenInitialized = false;
+	bool bIsClosed = false;
+};
+
 /**
- * 
+ * @class APHPlayerController
+ * PHPlayerController provides functionality for handling player interactions and inputs within the game.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API APHPlayerController : public AALSPlayerController, public IInteractionProcessInterface
@@ -55,6 +64,23 @@ protected:
 	// Inputs 
 	UFUNCTION() void Menu(const FInputActionValue& Value) const;
 	
+	UFUNCTION()
+	void Interact(const FInputActionValue& Value);
+
+	//helper
+	void RunInteractionCheck();
+
+
+	UFUNCTION(BlueprintCallable)
+	EInteractType CheckInputType(float Elapsed, float InRequiredHeldTime, bool bReset = false);
+
+
+	UFUNCTION(BlueprintCallable)
+	float GetElapsedSeconds(const UInputAction* Action) const;
+
+	UFUNCTION(BlueprintCallable)
+	const UInputAction* GetInputActionByName(const FString& InString) const;
+	
 private:
 
 public:
@@ -65,8 +91,21 @@ protected:
 	
 	UPROPERTY(BlueprintReadOnly) TObjectPtr<UInteractableManager> CurrentInteractable;
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager") TObjectPtr<UWidgetManager> WidgetManager;
+	UPROPERTY(BlueprintReadOnly) float RequiredHeldTime = 0.25f;
+	UPROPERTY(BlueprintReadOnly) float CachedHoldTime = 0.0f;
+
+	static bool DoOnce(FDoOnceState& State, bool bReset, bool bStartClosed);
+	// Timer handle for delay
+	FTimerHandle InteractionDelayHandle;
+	bool bHasCheckedInputType = false;
 private:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UPHInputConfig> InputConfig;
+	FDoOnceState MyDoOnce;
+
+	UPROPERTY()
+	UInteractableManager* SavedInteractable = nullptr;
+	static bool bHasRun;
+
 };

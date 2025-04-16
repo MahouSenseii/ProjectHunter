@@ -29,6 +29,26 @@ UMaterialInstance* UBaseItem::GetIcon() const
 	return ItemInfos.ItemInfo.ItemImage ? ItemInfos.ItemInfo.ItemImage : nullptr; // Return original image if available, or null if not
 }
 
+int32 UBaseItem::GetQuantity() const
+{
+	return ItemInfos.ItemInfo.Quantity;
+}
+
+void UBaseItem::AddQuantity(const int32 InQty)
+{
+	if (InQty <= 0) return;
+
+	const int32 MaxStack = ItemInfos.ItemInfo.MaxStackSize;
+	if (MaxStack > 0)
+	{
+		ItemInfos.ItemInfo.Quantity = FMath::Clamp(GetQuantity() + InQty, 0, MaxStack);
+	}
+	else
+	{
+		ItemInfos.ItemInfo.Quantity += InQty;
+	}
+}
+
 
 void UBaseItem::ApplyEffectToTarget(AActor* Target, TSubclassOf<UGameplayEffect> GameplayEffectClass)
 {

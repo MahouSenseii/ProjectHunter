@@ -109,6 +109,95 @@ FVector UInventoryManager::GetSpawnLocation() const
 	}
 }
 
+void UInventoryManager::SetItemInTiles(UBaseItem* Item, const FTile& TopLeft)
+{
+	if (!IsValid(Item)) return;
+
+	const FVector2D Dimensions = Item->GetItemInfo().ItemInfo.Dimensions;
+
+	for (int32 X = 0; X < Dimensions.X; ++X)
+	{
+		for (int32 Y = 0; Y < Dimensions.Y; ++Y)
+		{
+			const FTile Tile(TopLeft.X + X, TopLeft.Y + Y);
+
+			if (const int32 Index = TileToIndex(Tile); InventoryList.IsValidIndex(Index))
+			{
+				InventoryList[Index] = Item;
+			}
+		}
+	}
+}
+
+
+void UInventoryManager::ClearItemFromTiles(UBaseItem* Item, const FTile& TopLeft)
+{
+	if (!IsValid(Item)) return;
+
+	const FVector2D Dimensions = Item->GetItemInfo().ItemInfo.Dimensions;
+
+	for (int32 X = 0; X < Dimensions.X; ++X)
+	{
+		for (int32 Y = 0; Y < Dimensions.Y; ++Y)
+		{
+			const FTile Tile(TopLeft.X + X, TopLeft.Y + Y);
+			const int32 Index = TileToIndex(Tile);
+
+			// Clear only if this tile still points to this item
+			if (InventoryList.IsValidIndex(Index) && InventoryList[Index] == Item)
+			{
+				InventoryList[Index] = nullptr;
+			}
+		}
+	}
+}
+
+bool UInventoryManager::AreItemsStackable(UBaseItem* A, UBaseItem* B)
+{
+		if (!A || !B) return false;
+    
+    	return A->IsStackable() &&
+    	       B->IsStackable() &&
+    	       	A->GetItemInfo().ItemInfo.ItemID == B->GetItemInfo().ItemInfo.ItemID;
+
+}
+
+bool UInventoryManager::CanAcceptItemAt(UBaseItem* NewItem, const int32 Index)
+{
+	if (!IsValid(NewItem) || !InventoryList.IsValidIndex(Index))
+	{
+		return false;
+	}
+
+	UBaseItem* ExistingItem = InventoryList[Index];
+
+	// Case 1: Same stackable item = can stack
+	if (AreItemsStackable(ExistingItem, NewItem))
+	{
+		// Optional: Check for max stack limit
+		const int32 MaxStack = ExistingItem->GetItemInfo().ItemInfo.MaxStackSize;
+		if (MaxStack <= 0) return true;
+
+		const int32 ExistingQty = ExistingItem->GetItemInfo().ItemInfo.Quantity;
+		const int32 NewQty = NewItem->GetItemInfo().ItemInfo.Quantity;
+
+		return (ExistingQty + NewQty) <= MaxStack;
+	}
+
+	// Case 2: Empty or room available at that spot
+	if (ExistingItem == nullptr)
+	{
+		return IsRoomAvailable(NewItem, Index);
+	}
+
+	// Case 3: Not same item, and tile is already taken
+	return false;
+}
+
+UBaseItem* UInventoryManager::GetItemAt(int32 Index) const
+{
+	return InventoryList.IsValidIndex(Index) ? InventoryList[Index] : nullptr;
+}
 
 void UInventoryManager::ResizeInventory()
 {
@@ -174,30 +263,33 @@ void UInventoryManager::RemoveItemInInventory(UBaseItem* Item)
 {
 	if (!IsValid(Item)) return;
 
-	for (int32 i = 0; i < InventoryList.Num(); ++i)
-	{
-		if (InventoryList[i] == Item)
-		{
-			InventoryList[i] = nullptr;
-		}
-	}
+	const FTile* TopLeftPtr = TopLeftItemMap.FindKey(Item);
+	if (!TopLeftPtr) return;
 
-	// Clean from TopLeftItemMap
-	TArray<FTile> KeysToRemove;
-	for (const auto& Elem : TopLeftItemMap)
-	{
-		if (Elem.Value == Item)
-		{
-			KeysToRemove.Add(Elem.Key);
-		}
-	}
-	for (const FTile& Tile : KeysToRemove)
-	{
-		TopLeftItemMap.Remove(Tile);
-	}
+	const FTile TopLeft = *TopLeftPtr;
 
+	// Step 1: Clear the tiles
+	ClearItemFromTiles(Item, TopLeft);
+
+	// Step 2: Remove top-left reference
+	TopLeftItemMap.Remove(TopLeft);
+
+	// Step 3: Broadcast change
 	OnInventoryChanged.Broadcast();
 }
+
+
+void UInventoryManager::ForEachOccupiedTile(const FTile& TopLeft, const FVector2D& Dimensions, const TFunctionRef<void(const FTile&)>& Func)
+{
+	for (int32 X = 0; X < Dimensions.X; ++X)
+	{
+		for (int32 Y = 0; Y < Dimensions.Y; ++Y)
+		{
+			Func(FTile(TopLeft.X + X, TopLeft.Y + Y));
+		}
+	}
+}
+
 
 bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
 {
@@ -216,7 +308,7 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
 
     // Determine spawn location and parameters
     const FVector DropLocation = GetSpawnLocation();
-    const FRotator DropRotation = FRotator::ZeroRotator; // Assuming no specific rotation is needed.
+    const FRotator DropRotation = FRotator::ZeroRotator;
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
@@ -374,6 +466,22 @@ bool UInventoryManager::ContainsItem(const UBaseItem* Item) const
 
 bool UInventoryManager::TryToAddItemToInventory(UBaseItem* Item, const bool CheckRotated)
 {
+
+
+	if (Item->IsStackable())
+	{
+		for (UBaseItem* ExistingItem : InventoryList)
+		{
+			if (AreItemsStackable(ExistingItem, Item))
+			{
+				ExistingItem->AddQuantity(Item->GetQuantity());
+				Item->ConditionalBeginDestroy(); // Or safely discard
+				OnInventoryChanged.Broadcast();
+				return true;
+			}
+		}
+	}
+	
 	if (IsValid(Item))
 	{
 		for (int32 x = 0; x < InventoryList.Num(); x++)
@@ -395,22 +503,11 @@ bool UInventoryManager::TryToAddItemToInventory(UBaseItem* Item, const bool Chec
 // The AddItemAt function
 void UInventoryManager::AddItemAt(UBaseItem* Item, int32 TopLeftIndex)
 {
-	Item->GetItemInfo().ItemInfo.OwnerID = InventoryID;
-
 	FTile TopLeftTile;
 	IndexToTile(TopLeftIndex, TopLeftTile);
 
-	// Save top-left for fast lookup
 	TopLeftItemMap.Add(TopLeftTile, Item);
-
-	// Fill the tile slots
-	ForEachTile(Item, TopLeftIndex, [this, Item](FTile Tile)
-	{
-		if (const int32 Index = TileToIndex(Tile); InventoryList.IsValidIndex(Index))
-		{
-			InventoryList[Index] = Item;
-		}
-	});
+	SetItemInTiles(Item, TopLeftTile);
 
 	OnInventoryChanged.Broadcast();
 }
@@ -639,7 +736,7 @@ bool UInventoryManager::ExecuteItemTrade(const TArray<UBaseItem*>& Items, UInven
 }
 
 bool UInventoryManager::CanBuyerAffordItems(const TArray<UBaseItem*>& Items, UInventoryManager* Seller,
-	int32& OutTotalCost, FString& OutMessage) const
+	int32& OutTotalCost, FString& OutMessage)
 {
 	OutTotalCost = 0;
 
@@ -663,7 +760,7 @@ bool UInventoryManager::CanBuyerAffordItems(const TArray<UBaseItem*>& Items, UIn
 }
 
 bool UInventoryManager::FindPlacementIndices(const TArray<UBaseItem*>& Items, UInventoryManager* Buyer,
-	const TArray<int32>& OptionalTargetTileIndices, TArray<int32>& OutValidIndices, FString& OutMessage) const
+	const TArray<int32>& OptionalTargetTileIndices, TArray<int32>& OutValidIndices, FString& OutMessage)
 {
 	OutValidIndices.Empty();
 

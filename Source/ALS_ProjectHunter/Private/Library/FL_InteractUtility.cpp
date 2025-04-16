@@ -209,6 +209,43 @@ bool UFL_InteractUtility::CheckBasedOnCompare(EItemRequiredStatsCategory Require
 	return false;
 }
 
+void UFL_InteractUtility::GetInteractableScores(const TArray<UInteractableManager*>& Interactables,
+	const FVector& PlayerLocation,const FVector& PlayerForward, const float MaxDistance, const float MinDot,
+	TArray<float>& OutScores,TArray<UInteractableManager*>& OutValidElements, const bool bDrawDebug)
+{
+	OutScores.Empty();
+	OutValidElements.Empty();
+
+	for (UInteractableManager* Element : Interactables)
+	{
+		if (!Element || !Element->IsInteractable || !Element->InteractableArea) continue;
+
+		const FVector InteractableLocation = Element->InteractableArea->GetComponentLocation();
+		const FVector Direction = (InteractableLocation - PlayerLocation).GetSafeNormal();
+		const float Distance = FVector::Dist(PlayerLocation, InteractableLocation);
+		const float Dot = FVector::DotProduct(Direction, PlayerForward);
+
+		if (Distance > MaxDistance || Dot < MinDot) continue;
+
+		const float DotWeight = 0.9f;
+		const float DistanceWeight = 0.1f;
+
+		float DistanceNormalized = 1.0f - FMath::Clamp(Distance / MaxDistance, 0.f, 1.f);
+		float Score = Dot * DotWeight + DistanceNormalized * DistanceWeight;
+
+		OutScores.Add(Score);
+		OutValidElements.Add(Element);
+
+		if (bDrawDebug)
+		{
+			FColor LineColor = FColor::Blue;
+			DrawDebugLine(Element->GetWorld(), PlayerLocation, InteractableLocation, LineColor, false, 2.0f, 0, 2.f);
+			DrawDebugString(Element->GetWorld(), InteractableLocation + FVector(0,0,50),
+				FString::Printf(TEXT("Score: %.2f"), Score), nullptr, FColor::White, 2.0f);
+		}
+	}
+}
+
 
 UInteractableManager* UFL_InteractUtility::GetCurrentInteractableObject(const APHBaseCharacter* OwningPlayer)
 {

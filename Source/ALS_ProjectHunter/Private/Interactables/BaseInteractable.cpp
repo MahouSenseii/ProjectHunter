@@ -31,6 +31,8 @@ ABaseInteractable::ABaseInteractable()
 	SetupUI();
 	SetupTrigger();
 	SetupOverlapEvents();
+
+	
 }
 
 void ABaseInteractable::Destroyed()
@@ -40,8 +42,6 @@ void ABaseInteractable::Destroyed()
 	{
 		GetWorld()->GetTimerManager().ClearTimer(TimerHandle_DelayedStart);
 	}
-	
-	DestroyAllCreatedComponents();
 }
 
 void ABaseInteractable::InitializeComponent()
@@ -70,44 +70,7 @@ void ABaseInteractable::InitializeComponent()
 	InteractionWidget->SetDrawSize(FVector2D(125.0f,125.0f));
 }
 
-void ABaseInteractable::DestroyAllCreatedComponents()
-{
-	if (InteractionWidget)
-	{
-		InteractionWidget->DestroyComponent();
-		InteractionWidget = nullptr;
-	}
 
-	if (InteractableArea)
-	{
-		InteractableArea->DestroyComponent();
-		InteractableArea = nullptr;
-	}
-
-	if (SkeletalMesh)
-	{
-		SkeletalMesh->DestroyComponent();
-		SkeletalMesh = nullptr;
-	}
-
-	if (StaticMesh)
-	{
-		StaticMesh->DestroyComponent();
-		StaticMesh = nullptr;
-	}
-
-	if (InteractableManager)
-	{
-		InteractableManager->DestroyComponent();
-		InteractableManager = nullptr;
-	}
-
-	if (Scene)
-	{
-		Scene->DestroyComponent();
-		Scene = nullptr;
-	}
-}
 
 
 void ABaseInteractable::OnConstruction(const FTransform& Transform)

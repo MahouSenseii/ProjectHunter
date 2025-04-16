@@ -1168,6 +1168,13 @@ EALSGait AALSBaseCharacter::GetActualGait(EALSGait AllowedGait) const
 		return EALSGait::Running;
 	}
 
+	const float SpeedSquared = GetCharacterMovement()->Velocity.SizeSquared();
+    	
+    if( SpeedSquared <= KINDA_SMALL_NUMBER)
+    {
+    	return EALSGait::Idle;
+    }
+
 	return EALSGait::Walking;
 }
 
@@ -1381,7 +1388,7 @@ void AALSBaseCharacter::StanceAction_Implementation()
 
 void AALSBaseCharacter::WalkAction_Implementation()
 {
-	if (DesiredGait == EALSGait::Walking)
+	 if (DesiredGait == EALSGait::Walking)
 	{
 		SetDesiredGait(EALSGait::Running);
 	}

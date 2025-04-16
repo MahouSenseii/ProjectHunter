@@ -151,36 +151,54 @@ bool UInventoryGrid::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 	const FTile InTile{ DraggedItemTopLeft.X, DraggedItemTopLeft.Y };
 	const int32 Index = OwnerInventory->TileToIndex(InTile);
 
-	if (Payload->GetItemInfo().ItemInfo.OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID())
-	{
-		HandleOwnedItemDrop(Payload, Index);
-	}
-	else
-	{
-		HandleUnownedItemDrop(Payload, Index);
-	}
+	const bool bHandled = Payload->GetItemInfo().ItemInfo.OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID()
+		? HandleOwnedItemDrop(Payload, Index)
+		: HandleUnownedItemDrop(Payload, Index);
 
-	return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
+	return bHandled;
 }
 
 
 
 bool UInventoryGrid::HandleOwnedItemDrop(UBaseItem* Payload, const int32 Index) const
 {
-	if (OwnerInventory->IsRoomAvailable(Payload, Index))
+	if (!Payload || !OwnerInventory) return false;
+
+	UBaseItem* ExistingItem = OwnerInventory->GetItemAt(Index);
+
+	// Step 1: Explicit merge if dropped on matching stackable
+	if (Payload->IsStackable() && OwnerInventory->AreItemsStackable(ExistingItem, Payload))
 	{
-        OwnerInventory->AddItemAt(Payload, Index);
-        return true;
-    }
-    else if (OwnerInventory->TryToAddItemToInventory(Payload, true))
-    {
-        return true;
-    }
-    else
-    {
-        return OwnerInventory->DropItemInInventory(Payload);
-    }
+		const int32 MaxStack = ExistingItem->GetItemInfo().ItemInfo.MaxStackSize;
+		const int32 CurrentQty = ExistingItem->GetItemInfo().ItemInfo.Quantity;
+		const int32 NewQty = Payload->GetItemInfo().ItemInfo.Quantity;
+
+		if (MaxStack == 0 || (CurrentQty + NewQty) <= MaxStack)
+		{
+			ExistingItem->AddQuantity(NewQty);
+			Payload->ConditionalBeginDestroy(); // Clean up merged item
+			OwnerInventory->OnInventoryChanged.Broadcast();
+			return true;
+		}
+	}
+
+	// Step 2: Try to place item directly at specified location
+	if (OwnerInventory->CanAcceptItemAt(Payload, Index))
+	{
+		OwnerInventory->AddItemAt(Payload, Index);
+		return true;
+	}
+
+	// Step 3: Try to auto-place somewhere else in inventory
+	if (OwnerInventory->TryToAddItemToInventory(Payload, true))
+	{
+		return true;
+	}
+
+	// Step 4: No valid space — drop to world
+	return OwnerInventory->DropItemInInventory(Payload);
 }
+
 
 bool UInventoryGrid::HandleUnownedItemDrop(UBaseItem* Payload, int32 Index)
 {
@@ -270,8 +288,10 @@ void UInventoryGrid::GridInitialize(UInventoryManager* PlayerInventory, float In
 		if (OwnerInventory->OnInventoryChanged.IsBound())
 		{
 			OwnerInventory->OnInventoryChanged.RemoveDynamic(this, &UInventoryGrid::Refresh);
+			OwnerCharacter->GetEquipmentManager()->OnEquipmentChanged.RemoveDynamic(this, &UInventoryGrid::Refresh);
 		}
 		OwnerInventory->OnInventoryChanged.AddDynamic(this, &UInventoryGrid::Refresh);
+		OwnerCharacter->GetEquipmentManager()->OnEquipmentChanged.AddDynamic(this, &UInventoryGrid::Refresh);
 	}
 	else
 	{

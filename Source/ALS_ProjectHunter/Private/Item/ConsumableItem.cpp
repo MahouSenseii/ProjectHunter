@@ -41,15 +41,4 @@ void UConsumableItem::UseItem(AActor* Target)
 		}
 	}
 }
-void UConsumableItem::SetQuantity(int NewQuantity)
-{
-	if (NewQuantity >= 0)
-	{
-		ConsumableData.Quantity = NewQuantity;
-	}
-}
 
-int UConsumableItem::GetQuantity() const
-{
-	return ConsumableData.Quantity;
-}

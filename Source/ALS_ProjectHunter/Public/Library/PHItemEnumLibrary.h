@@ -248,7 +248,7 @@ enum class EAttributeDisplayFormat : uint8
 };
 
 UENUM(BlueprintType)
-enum class EPrefixSuffix
+enum class EPrefixSuffix : uint8
 {
 	Prefix,
 	Suffix,

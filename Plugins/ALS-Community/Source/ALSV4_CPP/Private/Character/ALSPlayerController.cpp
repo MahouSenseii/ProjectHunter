@@ -260,22 +260,6 @@ void AALSPlayerController::LookingDirectionAction(const FInputActionValue& Value
 	}
 }
 
-void AALSPlayerController::Interact_Implementation(const FInputActionValue& Value)
-{
-}
-
-
-void AALSPlayerController::Interact_Completed_Implementation(const FInputActionValue& Value)
-{
-}
-
-void AALSPlayerController::Interact_Started_Implementation(const FInputActionValue& Value)
-{
-}
-
-void AALSPlayerController::Interact_Ongoing_Implementation(const FInputActionValue& Value)
-{
-}
 
 void AALSPlayerController::DebugToggleHudAction(const FInputActionValue& Value)
 {
@@ -409,45 +393,4 @@ void AALSPlayerController::DebugOverlayMenuCycleAction(const FInputActionValue& 
 	}
 }
 
-float AALSPlayerController::GetElapsedSeconds(const UInputAction* Action) const
-{
-	// Attempt to retrieve the Enhanced Input subsystem associated with the local player.
-	// This subsystem manages input actions and mappings for the player.
-	if (const auto EnhancedInput = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(this->GetLocalPlayer()))
-	{
-		// Get the underlying PlayerInput object which holds information about current input states.
-		if (const auto LocalPlayerInput = EnhancedInput->GetPlayerInput())
-		{
-			// Attempt to find the action instance data for the specified action.
-			// This data contains details about the action's current state, including how long it has been active.
-			if (const auto ActionData = LocalPlayerInput->FindActionInstanceData(Action))
-			{
-				// If the action instance data is found, return the elapsed time since the action was activated.
-				return ActionData->GetElapsedTime();
-			}
-		}
-	}
-	// If any step fails (e.g., the action is not found), return 0 to indicate no elapsed time.
-	return 0;
-}
 
-const UInputAction* AALSPlayerController::GetInputActionByName(const FString& InString) const
-{
-	const UInputMappingContext* Context = DefaultInputMappingContext;
-	TObjectPtr<const UInputAction> FoundAction  = nullptr;
-
-	if (Context)
-	{
-		const TArray<FEnhancedActionKeyMapping>& Mappings = Context->GetMappings();
-		for (const FEnhancedActionKeyMapping& Keymapping : Mappings)
-		{
-			if (Keymapping.Action && Keymapping.Action->GetFName() == InString)
-			{
-				FoundAction = Keymapping.Action;
-				break; // Found the Interact action, no need to search further.
-			}
-		}
-		return FoundAction;
-	}
-	return nullptr;
-}

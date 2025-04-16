@@ -30,11 +30,11 @@ public:
 
 	/** Sets the item this widget should display stats for */
 	UFUNCTION(BlueprintCallable)
-	void SetEquippableItem(const FEquippableItemData Item) { EquippableItemData = Item; }
+	void SetEquippableItem(const FEquippableItemData Item) { ItemData.ItemData = Item; }
 
 	
 	UFUNCTION(BlueprintCallable)
-	FEquippableItemData GetEquippableItem() { return  EquippableItemData;}
+	FEquippableItemData GetEquippableItem() { return  ItemData.ItemData;}
 
 	/** Generates elemental damage min-max boxes */
 	UFUNCTION(BlueprintCallable)
@@ -51,7 +51,7 @@ protected:
 
 	/** The equippable item to display */
 	UPROPERTY(EditAnywhere, Category = "Item")
-	FEquippableItemData EquippableItemData;
+	FItemInformation ItemData;
 
 	/** Widget class used for each elemental MinMaxBox */
 	UPROPERTY(EditAnywhere, Category = "Class")

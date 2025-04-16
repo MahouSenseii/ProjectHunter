@@ -92,7 +92,7 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformatio
 		return false;
 	}
 
-	APHPlayerController* PlayerController = Cast<APHPlayerController>(Actor);
+	const APHPlayerController* PlayerController = Cast<APHPlayerController>(Actor);
 	
 	APHBaseCharacter* OwnerCharacter = Cast<APHBaseCharacter>(PlayerController->AcknowledgedPawn);
 	if (!OwnerCharacter)

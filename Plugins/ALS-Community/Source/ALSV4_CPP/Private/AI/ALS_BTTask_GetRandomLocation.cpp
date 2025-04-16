@@ -5,6 +5,7 @@
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
+#include "NavFilters/NavigationQueryFilter.h"
 
 UALS_BTTask_GetRandomLocation::UALS_BTTask_GetRandomLocation()
 {

@@ -42,7 +42,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	UMaterialInstance* GetIcon() const;
 
-	
+	UFUNCTION(BlueprintCallable)
+	virtual int32 GetQuantity() const;
+
+	UFUNCTION(BlueprintCallable)
+	void AddQuantity(const int32 InQty);
+
+	UFUNCTION(BlueprintCallable)
+	bool IsStackable() const { return ItemInfos.ItemInfo.Stackable; }
 
 	UFUNCTION()
 	static void ApplyEffectToTarget(AActor* Target, TSubclassOf<UGameplayEffect> GameplayEffectClass);

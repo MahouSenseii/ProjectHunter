@@ -29,6 +29,7 @@ void UItemSot::NativeConstruct()
 		// added equipment manager
 		Equipment = Owner->GetEquipmentManager();
 		Inventory = Owner->GetInventoryManager();
+		Equipment->OnEquipmentChanged.AddDynamic(this, &ThisClass::Refresh);
 		Refresh();
 	}
 	if(EquipmentSlot!= EEquipmentSlot::ES_None)
@@ -75,7 +76,7 @@ bool UItemSot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& I
 
         // Rotate the item for placement
 		FItemInformation TempItemInformation = CastedItem->GetItemInfo();
-    	TempItemInformation.ItemInfo.Rotated = true;
+    	TempItemInformation.ItemInfo.Rotated = false;
     	CastedItem->SetItemInfo(TempItemInformation);
     	if(ItemWidgetClass)
     	{
@@ -132,7 +133,7 @@ bool UItemSot::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEven
 	else
 	{
 		// Set color to red-ish with slight transparency to indicate item cannot be placed
-		FLinearColor(1.0f, 0.0f, 0.0f, 0.60f);
+		Color = FLinearColor(1.0f, 0.0f, 0.0f, 0.60f);
 
 	}
 

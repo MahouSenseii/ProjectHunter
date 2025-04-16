@@ -142,9 +142,8 @@ void UEquipmentManager::HandleHasMesh(UBaseItem* Item, EEquipmentSlot Slot)
 
 	// Retrieve the currently equipped item in the slot
 	UBaseItem** EquippedItemPtr = EquipmentData.Find(Slot);
-	UBaseItem* EquippedItem = (EquippedItemPtr) ? *EquippedItemPtr : nullptr;
 
-	if (IsValid(EquippedItem))
+	if (UBaseItem* EquippedItem = (EquippedItemPtr) ? *EquippedItemPtr : nullptr; IsValid(EquippedItem))
 	{
 		// Try adding old equipment back to inventory; if it fails, drop it
 		if (!GetInventoryManager()->TryToAddItemToInventory(EquippedItem, true))

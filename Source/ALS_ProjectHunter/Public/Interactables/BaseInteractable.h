@@ -25,9 +25,9 @@ class ALS_PROJECTHUNTER_API ABaseInteractable : public AActor, public IInteracta
 public:	
 	// Sets default values for this actor's properties
 	ABaseInteractable();
+	
 	virtual void Destroyed() override;
 	void InitializeComponent();
-	void DestroyAllCreatedComponents();
 	virtual void OnConstruction(const FTransform& Transform) override;
 	
 	void CheckForActors();

@@ -58,6 +58,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Remove")
 	void RemoveItemInInventory(UBaseItem* Item);
+	
+	static void ForEachOccupiedTile(const FTile& TopLeft, const FVector2D& Dimensions, const TFunctionRef<void(const FTile&)>& Func);
 
 	UFUNCTION(BlueprintCallable, Category = "Remove")
 	bool DropItemInInventory(UBaseItem* Item);
@@ -85,6 +87,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Add")
 	bool TryToAddItemToInventoryRotated(UBaseItem* Item);
 
+	
 	/* ============================= */
 	/* ===        Shop           === */
 	/* ============================= */
@@ -115,9 +118,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Shop")
 	bool ExecuteItemTrade(const TArray<UBaseItem*>& Items, UInventoryManager* Seller, UInventoryManager* Buyer, const TArray<int32>& OptionalTargetTileIndices, FString& OutMessage);
 
-	bool CanBuyerAffordItems(const TArray<UBaseItem*>& Items, UInventoryManager* Seller, int32& OutTotalCost, FString& OutMessage) const;
-	bool FindPlacementIndices(const TArray<UBaseItem*>& Items, UInventoryManager* Buyer, const TArray<int32>& OptionalTargetTileIndices, TArray<int32>& OutValidIndices, FString& OutMessage) const;
-	void FinalizeTrade(const TArray<UBaseItem*>& Items, UInventoryManager* Seller, UInventoryManager* Buyer, const TArray<int32>& ValidIndices, int32 TotalCost);
+	static bool CanBuyerAffordItems(const TArray<UBaseItem*>& Items, UInventoryManager* Seller, int32& OutTotalCost, FString& OutMessage);
+	static bool FindPlacementIndices(const TArray<UBaseItem*>& Items, UInventoryManager* Buyer, const TArray<int32>& OptionalTargetTileIndices, TArray<int32>& OutValidIndices, FString& OutMessage);
+	static void FinalizeTrade(const TArray<UBaseItem*>& Items, UInventoryManager* Seller, UInventoryManager* Buyer, const TArray<int32>& ValidIndices, int32 TotalCost);
 
 	
 	void RebuildTopLeftMap();
@@ -128,6 +131,26 @@ protected:
 
 	UFUNCTION()
 	FVector GetSpawnLocation() const;
+
+
+public:
+
+	
+	/* ============================= */
+	/* ===       Helpers         === */
+	/* ============================= */
+
+	static bool AreItemsStackable(UBaseItem* A, UBaseItem* B);
+	bool CanAcceptItemAt(UBaseItem* NewItem, int32 Index);
+	UBaseItem* GetItemAt(int32 Index) const;
+
+private:
+	
+	void SetItemInTiles(UBaseItem* Item, const FTile& TopLeft);
+	void ClearItemFromTiles(UBaseItem* Item, const FTile& TopLeft);
+
+	
+
 
 public:
 	/* ============================= */

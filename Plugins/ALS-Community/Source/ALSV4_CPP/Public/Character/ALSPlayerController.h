@@ -91,19 +91,6 @@ protected:
 	UFUNCTION()
 	void LookingDirectionAction(const FInputActionValue& Value);
 
-	UFUNCTION(BlueprintNativeEvent)
-	void Interact(const FInputActionValue& Value);
-
-	UFUNCTION(BlueprintNativeEvent)
-	void Interact_Completed(const FInputActionValue& Value);
-
-
-	UFUNCTION(BlueprintNativeEvent)
-	void Interact_Started(const FInputActionValue& Value);
-
-
-	UFUNCTION(BlueprintNativeEvent)
-	void Interact_Ongoing(const FInputActionValue& Value);
 	
 	// Debug actions
 	UFUNCTION()
@@ -138,12 +125,8 @@ protected:
 
 	UFUNCTION()
 	void DebugOverlayMenuCycleAction(const FInputActionValue& Value);
-	
-	UFUNCTION(BlueprintCallable)
-	float GetElapsedSeconds(const UInputAction* Action) const;
 
-	UFUNCTION(BlueprintCallable)
-	const UInputAction* GetInputActionByName(const FString& InString) const;
+
 
 public:
 	/** Main character reference */
@@ -157,6 +140,9 @@ public:
 	TObjectPtr<UInputMappingContext> DebugInputMappingContext = nullptr;
 
 protected:
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Interact")
+	bool bHasInteractBeenReleased = true;
 	
 	bool bIsUsingGamepad;
 };

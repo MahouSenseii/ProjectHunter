@@ -16,7 +16,7 @@ APHPlayerState::APHPlayerState()
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	AttributeSet = CreateDefaultSubobject<UPHAttributeSet>("Attribute Set");
-	NetUpdateFrequency = 100.0f;
+	SetNetUpdateFrequency(100.0f);
 	LevelUpInfo = CreateDefaultSubobject<ULevelUpInfo>("Level up");
 }
 

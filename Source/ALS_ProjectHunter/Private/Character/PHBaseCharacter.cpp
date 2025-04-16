@@ -1,6 +1,8 @@
 // Copyright@2024 Quentin Davis 
 
 #include "Character/PHBaseCharacter.h"
+
+#include "PHGameplayTags.h"
 #include "AbilitySystem/PHAbilitySystemComponent.h"
 #include "AbilitySystem/PHAttributeSet.h"
 #include "Character/ALSPlayerController.h"
@@ -86,6 +88,26 @@ void APHBaseCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	StaminaDegen(DeltaSeconds);
+
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+	{
+		const bool bHasMovingTag = ASC->HasMatchingGameplayTag(FPHGameplayTags::Get().Condition_WhileMoving);
+
+		if (bIsMoving && !bHasMovingTag)
+			ASC->AddLooseGameplayTag(FPHGameplayTags::Get().Condition_WhileMoving);
+		else if (!bIsMoving && bHasMovingTag)
+			ASC->RemoveLooseGameplayTag(FPHGameplayTags::Get().Condition_WhileMoving);
+
+		const bool bHasStationaryTag = ASC->HasMatchingGameplayTag(FPHGameplayTags::Get().Condition_WhileStationary);
+
+		if (!bIsMoving && !bHasStationaryTag)
+			ASC->AddLooseGameplayTag(FPHGameplayTags::Get().Condition_WhileStationary);
+		else if (bIsMoving && bHasStationaryTag)
+			ASC->RemoveLooseGameplayTag(FPHGameplayTags::Get().Condition_WhileStationary);
+	}
+
+	
+	
 }
 
 bool APHBaseCharacter::CanSprint() const
@@ -240,22 +262,55 @@ void APHBaseCharacter::StaminaRegeneration() const
 void APHBaseCharacter::StaminaDegen(const float DeltaTime)
 {
 	check(StaminaDegenEffect);
-	if(const UPHAttributeSet* PhAttributeSet = Cast<UPHAttributeSet>(AttributeSet); !bIsInRecovery && PhAttributeSet->GetStamina() <= 0)
+	FActiveGameplayEffectHandle StaminaEffectHandle;
+
+	const UPHAttributeSet* PhAttributeSet = Cast<UPHAttributeSet>(AttributeSet);
+	if (!PhAttributeSet) return;
+
+	// Enter recovery mode if stamina is depleted
+	if (!bIsInRecovery && PhAttributeSet->GetStamina() <= 0)
 	{
 		bIsInRecovery = true;
 	}
 
-	
-	if(GetGait() == EALSGait::Sprinting)
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
 	{
-		ApplyEffectToSelf(StaminaDegenEffect, 1);
+		// Sprint tag logic
+		const bool bIsSprinting = CanSprint(); // Or replace with ALS-specific check
+		const bool bHasSprintTag = ASC->HasMatchingGameplayTag(FPHGameplayTags::Get().Condition_Sprinting);
+
+		if (bIsSprinting && !bHasSprintTag)
+		{
+			ASC->AddLooseGameplayTag(FPHGameplayTags::Get().Condition_Sprinting);
+		}
+		else if (!bIsSprinting && bHasSprintTag)
+		{
+			ASC->RemoveLooseGameplayTag(FPHGameplayTags::Get().Condition_Sprinting);
+		}
+
+		// Apply or clear stamina degen effect
+		if (GetGait() == EALSGait::Sprinting)
+		{
+			if (!StaminaEffectHandle.IsValid() || !ASC->GetActiveGameplayEffect(StaminaEffectHandle))
+			{
+				StaminaEffectHandle = ApplyEffectToSelfWithReturn(StaminaDegenEffect, 1.0f);
+			}
+		}
+		else
+		{
+			if (StaminaEffectHandle.IsValid())
+			{
+				ASC->RemoveActiveGameplayEffect(StaminaEffectHandle);
+				StaminaEffectHandle.Invalidate();
+			}
+		}
 	}
 
-	
-	if(bIsInRecovery)
+	// Handle stamina recovery timing
+	if (bIsInRecovery)
 	{
 		TimeSinceLastRecovery += DeltaTime;
-		if(TimeSinceLastRecovery >= 3.0f)
+		if (TimeSinceLastRecovery >= 3.0f)
 		{
 			bIsInRecovery = false;
 			TimeSinceLastRecovery = 0.0f;
@@ -272,6 +327,21 @@ void APHBaseCharacter::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEf
 	ContextHandle.AddSourceObject(this);
 	const FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(GameplayEffectClass, InLevel, ContextHandle);
 	GetAbilitySystemComponent()->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), GetAbilitySystemComponent());
+}
+
+FActiveGameplayEffectHandle APHBaseCharacter::ApplyEffectToSelfWithReturn(TSubclassOf<UGameplayEffect> InEffect, float InLevel)
+{
+	if (!InEffect || !AbilitySystemComponent) return FActiveGameplayEffectHandle();
+
+	const FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+	const FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(InEffect, Level, Context);
+
+	if (SpecHandle.IsValid())
+	{
+		return AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	}
+
+	return FActiveGameplayEffectHandle();
 }
 
 void APHBaseCharacter::InitializeDefaultAttributes() const

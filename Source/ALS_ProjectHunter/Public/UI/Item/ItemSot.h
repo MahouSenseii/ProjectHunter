@@ -13,7 +13,9 @@
 
 class UItemWidget;
 /**
- * 
+ * Class representing an item slot within a user interface.
+ *
+ * This class extends UPHUserWidget and provides functionality for managing an item slot including the display elements and interaction logic.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UItemSot : public UPHUserWidget
