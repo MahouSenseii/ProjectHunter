@@ -6,8 +6,13 @@
 #include "UI/DragDrop/DragWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
+#include "Interactables/Pickups/ConsumablePickup.h"
+#include "Item/EquippableItem.h"
 #include "Materials/MaterialInstance.h"
 
+
+class UConsumableToolTip;
+class UEquippableToolTip;
 
 void UItemWidget::NativeConstruct()
 {
@@ -27,35 +32,39 @@ void UItemWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void UItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent,
-                                       UDragDropOperation*& OutOperation)
+void UItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)
 {
     Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
 
-    if (!ItemObject)
+    // 1. Validate item data
+    if (!IsValid(ItemObject))
     {
-        UE_LOG(LogTemp, Warning, TEXT("ItemObject is null."));
+        UE_LOG(LogTemp, Warning, TEXT("NativeOnDragDetected: ItemObject is null."));
         return;
     }
 
-    if (UDragWidget* DragOp = NewObject<UDragWidget>())
+    // 2. Create drag operation
+    if (UDragWidget* DragOp = NewObject<UDragWidget>(this))
     {
         DragOp->Payload = ItemObject;
         DragOp->DefaultDragVisual = this;
-        DragOp->Pivot = EDragPivot::MouseDown;
-       //  DragOp->Offset = FVector2D(-0.25, -0.25);
-        OutOperation = DragOp;
-        UE_LOG(LogTemp, Log, TEXT("Drag operation created."));
-        
+        DragOp->Pivot = EDragPivot::CenterCenter;
+        check(DragOp->DefaultDragVisual != nullptr);
 
-        OnRemoved.Broadcast(ItemObject);
-        RemoveFromParent();
+        OutOperation = DragOp;
+
+        // 3. Notify grid and detach visual
+        OnRemoved.Broadcast(ItemObject);     // Let grid know it's being moved
+        RemoveFromParent();                  // Remove from canvas
+
+        UE_LOG(LogTemp, Log, TEXT("NativeOnDragDetected: Drag operation started for %s"), *ItemObject->GetItemInfo().ItemInfo.ItemName.ToString());
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("Failed to create a new DragOp."));
+        UE_LOG(LogTemp, Error, TEXT("NativeOnDragDetected: Failed to create drag operation."));
     }
 }
+
 
 
 
@@ -210,34 +219,57 @@ void UItemWidget::Refresh()
 void UItemWidget::EventHovered()
 {
     // Check if the tooltip is not already created to prevent memory leaks and redundant creation.
-   /* if (!ItemToolTip && ToolTipClass)
+    if (!CurrentToolTip && EquippableToolTipClass)
     {
         CreateToolTip();
-    }*/
+    }
 }
 
 void UItemWidget::CreateToolTip()
+{
+    check(EquippableToolTipClass);
+
+    if (CurrentToolTip)
     {
-     /*   if (!ItemToolTip && ToolTipClass)
-        {
-            if (UUserWidget* CreatedWidget = CreateWidget<UUserWidget>(GetOwningPlayer(), ToolTipClass))
-            {
-                if (UToolTip* CreatedToolTip = Cast<UToolTip>(CreatedWidget))
-                {
-                    CreatedToolTip->SetItemObj(ItemObject);
-                    ItemToolTip = CreatedToolTip;
-                }
-
-                FVector2D DesiredPosition = CalculateTooltipPosition();
-                const float Width = GetTooltipWidth();
-                const float Height = GetTooltipHeight();
-
-                CreatedWidget->SetDesiredSizeInViewport(FVector2D(Width, Height));
-                CreatedWidget->SetPositionInViewport(DesiredPosition);
-                CreatedWidget->AddToViewport(1);
-            }
-        }*/
+        CurrentToolTip->RemoveFromParent();
+        CurrentToolTip = nullptr;
     }
+
+    // Use the Tooltip Widget as the Outer to keep the item alive
+    UUserWidget* PHToolTipWidget = nullptr;
+    
+    if ( ItemObject->GetItemInfo().ItemInfo.ItemType == EItemType::IT_Armor || ItemObject->GetItemInfo().ItemInfo.ItemType == EItemType::IT_Weapon
+        ||ItemObject->GetItemInfo().ItemInfo.ItemType == EItemType::IT_Shield
+        && EquippableToolTipClass)
+    {
+        PHToolTipWidget = CreateWidget<UEquippableToolTip>(GetWorld(), EquippableToolTipClass);
+		
+    }
+    else if (ItemObject->GetItemInfo().ItemInfo.ItemType == EItemType::IT_Consumable && ConsumableToolTipClass)
+    {
+        PHToolTipWidget = CreateWidget<UConsumableToolTip>(GetWorld(), ConsumableToolTipClass);
+    }
+    if (!CurrentToolTip && EquippableToolTipClass)
+    {
+        if (UUserWidget* CreatedWidget = CreateWidget<UUserWidget>(GetOwningPlayer(), CurrentToolTip))
+        {
+            if (UToolTip* CreatedToolTip = Cast<UToolTip>(CreatedWidget))
+            {
+                CreatedToolTip->SetItemObj(ItemObject);
+                CurrentToolTip = CreatedToolTip;
+            }
+
+            const FVector2D DesiredPosition = CalculateTooltipPosition();
+            const float Width = GetTooltipWidth();
+            const float Height = GetTooltipHeight();
+
+            CreatedWidget->SetDesiredSizeInViewport(FVector2D(Width, Height));
+            CreatedWidget->SetPositionInViewport(DesiredPosition);
+            CreatedWidget->AddToViewport(1);
+        }
+    }
+}
+
 
 void UItemWidget::EventMouseUnHovered()
 {

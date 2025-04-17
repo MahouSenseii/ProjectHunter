@@ -43,16 +43,23 @@ int32 UInventoryGrid::NativePaint(const FPaintArgs& Args, const FGeometry& Allot
 	const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements,
 	int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
+	// 1. Always call Super and get the next available layer
 	const int32 NewLayer = Super::NativePaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle, bParentEnabled);
+
+	// 2. Build drawing context
 	const FPaintContext Context(AllottedGeometry, MyCullingRect, OutDrawElements, NewLayer, InWidgetStyle, bParentEnabled);
+
+	// 3. Draw grid lines
 	DrawGridLines(AllottedGeometry.ToPaintGeometry(), OutDrawElements, NewLayer);
 
+	// 4. Optionally draw drop highlight box
 	if (DrawDropLocation && UWidgetBlueprintLibrary::IsDragDropping())
 	{
 		DrawDragDropBox(Context, AllottedGeometry.ToPaintGeometry(), OutDrawElements, NewLayer);
 	}
 
-	return NewLayer;
+	// 5. Return layer to continue stacking above this widget
+	return NewLayer + 1;
 }
 
 void UInventoryGrid::DrawGridLines(const FPaintGeometry& PaintGeometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
@@ -77,30 +84,48 @@ void UInventoryGrid::DrawGridLines(const FPaintGeometry& PaintGeometry, FSlateWi
 
 void UInventoryGrid::DrawDragDropBox(FPaintContext Context, const FPaintGeometry& PaintGeometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
 {
-	// Use const-safe payload retrieval
+	// 1. Get the dragged item payload
 	UBaseItem* Payload = const_cast<UInventoryGrid*>(this)->GetPayload(UWidgetBlueprintLibrary::GetDragDroppingContent());
-	if (!Payload) return;
-
-	// Choose color based on whether the item can be placed
-	const bool bIsRoomAvailable = IsRoomAvailableforPayload(Payload);
-	const FLinearColor BoxColor = bIsRoomAvailable
-		? FLinearColor(0.0f, 1.0f, 0.0f, 0.35f)   // Green translucent
-		: FLinearColor(1.0f, 0.0f, 0.0f, 0.35f);  // Red translucent
-
-	// Calculate draw position and size using the payload's dimensions
-	const FVector2D Position = FVector2D(DraggedItemTopLeft) * TileSize;
-	const FVector2D Size = FVector2D(Payload->GetDimensions()) * TileSize;
-
-	// Validate the brush before drawing
-	if (!Brush || !Brush->Brush.GetResourceObject())
+	if (!Payload)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("DrawDragDropBox: Invalid or missing brush!"));
+		UE_LOG(LogTemp, Warning, TEXT("DrawDragDropBox: Payload is null."));
 		return;
 	}
 
-	// Draw the box using UWidgetBlueprintLibrary
+	// 2. Validate TileSize
+	if (TileSize <= 0.0f)
+	{
+		UE_LOG(LogTemp, Error, TEXT("DrawDragDropBox: TileSize is 0 or invalid!"));
+		return;
+	}
+
+	// 3. Determine if room is available
+	const bool bIsRoomAvailable = IsRoomAvailableforPayload(Payload);
+	const FLinearColor BoxColor = bIsRoomAvailable
+		? FLinearColor(0.0f, 1.0f, 0.0f, 0.35f)   // Green
+		: FLinearColor(1.0f, 0.0f, 0.0f, 0.35f);  // Red
+
+	// 4. Get position and size
+	const FVector2D Position = FVector2D(DraggedItemTopLeft) * TileSize;
+	const FVector2D Size = FVector2D(Payload->GetDimensions()) * TileSize;
+
+	UE_LOG(LogTemp, Log, TEXT("DrawDragDropBox: TopLeft=(%d,%d) | Pos=(%.1f,%.1f) | Size=(%.1f,%.1f) | Available=%s"),
+		DraggedItemTopLeft.X, DraggedItemTopLeft.Y,
+		Position.X, Position.Y,
+		Size.X, Size.Y,
+		bIsRoomAvailable ? TEXT("Yes") : TEXT("No"));
+
+	// 5. Check if brush is valid
+	if (!Brush || !Brush->Brush.GetResourceObject())
+	{
+		UE_LOG(LogTemp, Error, TEXT("DrawDragDropBox: Brush or its resource is missing!"));
+		return;
+	}
+
+	// 6. Draw the translucent drop area box
 	UWidgetBlueprintLibrary::DrawBox(Context, Position, Size, Brush, BoxColor);
 }
+
 
 
 

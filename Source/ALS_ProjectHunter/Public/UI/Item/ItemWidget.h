@@ -62,6 +62,16 @@ public:
 
 	UPROPERTY()
 	UMaterialInstanceDynamic* CachedDynamicMaterial = nullptr;
+
+	/** UI - ToolTips */
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "ToolTip", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UPHBaseToolTip> CurrentToolTip;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ToolTip", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UEquippableToolTip> EquippableToolTipClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ToolTip", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UConsumableToolTip> ConsumableToolTipClass;
 	
 public:
 

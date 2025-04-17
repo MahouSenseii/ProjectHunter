@@ -113,17 +113,25 @@ void UInventoryManager::SetItemInTiles(UBaseItem* Item, const FTile& TopLeft)
 {
 	if (!IsValid(Item)) return;
 
-	const FVector2D Dimensions = Item->GetItemInfo().ItemInfo.Dimensions;
+	// Save to TopLeft map (in case it wasn't already)
+	TopLeftItemMap.FindOrAdd(TopLeft) = Item;
+
+	const FIntPoint Dimensions = Item->GetDimensions();  // Use rotated-aware getter
 
 	for (int32 X = 0; X < Dimensions.X; ++X)
 	{
 		for (int32 Y = 0; Y < Dimensions.Y; ++Y)
 		{
 			const FTile Tile(TopLeft.X + X, TopLeft.Y + Y);
+			const int32 Index = TileToIndex(Tile);
 
-			if (const int32 Index = TileToIndex(Tile); InventoryList.IsValidIndex(Index))
+			if (InventoryList.IsValidIndex(Index))
 			{
 				InventoryList[Index] = Item;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("SetItemInTiles: Invalid index for Tile (%d, %d)"), Tile.X, Tile.Y);
 			}
 		}
 	}
@@ -134,7 +142,14 @@ void UInventoryManager::ClearItemFromTiles(UBaseItem* Item, const FTile& TopLeft
 {
 	if (!IsValid(Item)) return;
 
-	const FVector2D Dimensions = Item->GetItemInfo().ItemInfo.Dimensions;
+	// Double-check TopLeftItemMap consistency (optional warning)
+	if (!TopLeftItemMap.Contains(TopLeft) || TopLeftItemMap[TopLeft] != Item)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ClearItemFromTiles: TopLeft map mismatch for item %s at tile (%d, %d)"),
+			*Item->GetItemInfo().ItemInfo.ItemName.ToString(), TopLeft.X, TopLeft.Y);
+	}
+
+	const FIntPoint Dimensions = Item->GetDimensions();
 
 	for (int32 X = 0; X < Dimensions.X; ++X)
 	{
@@ -143,14 +158,17 @@ void UInventoryManager::ClearItemFromTiles(UBaseItem* Item, const FTile& TopLeft
 			const FTile Tile(TopLeft.X + X, TopLeft.Y + Y);
 			const int32 Index = TileToIndex(Tile);
 
-			// Clear only if this tile still points to this item
 			if (InventoryList.IsValidIndex(Index) && InventoryList[Index] == Item)
 			{
 				InventoryList[Index] = nullptr;
 			}
 		}
 	}
+
+	// Remove from TopLeft map
+	TopLeftItemMap.Remove(TopLeft);
 }
+
 
 bool UInventoryManager::AreItemsStackable(UBaseItem* A, UBaseItem* B)
 {
@@ -166,37 +184,103 @@ bool UInventoryManager::CanAcceptItemAt(UBaseItem* NewItem, const int32 Index)
 {
 	if (!IsValid(NewItem) || !InventoryList.IsValidIndex(Index))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("CanAcceptItemAt: Invalid item or index %d"), Index);
 		return false;
 	}
 
 	UBaseItem* ExistingItem = InventoryList[Index];
 
-	// Case 1: Same stackable item = can stack
+	// 🟢 Case 1: Stacking into an existing stackable item
 	if (AreItemsStackable(ExistingItem, NewItem))
 	{
-		// Optional: Check for max stack limit
 		const int32 MaxStack = ExistingItem->GetItemInfo().ItemInfo.MaxStackSize;
-		if (MaxStack <= 0) return true;
+		const int32 ExistingQty = ExistingItem->GetQuantity();
+		const int32 NewQty = NewItem->GetQuantity();
 
-		const int32 ExistingQty = ExistingItem->GetItemInfo().ItemInfo.Quantity;
-		const int32 NewQty = NewItem->GetItemInfo().ItemInfo.Quantity;
-
-		return (ExistingQty + NewQty) <= MaxStack;
+		if (MaxStack == 0 || (ExistingQty + NewQty) <= MaxStack)
+		{
+			return true;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("CanAcceptItemAt: Stack size would exceed max (%d + %d > %d)"), ExistingQty, NewQty, MaxStack);
+			return false;
+		}
 	}
 
-	// Case 2: Empty or room available at that spot
-	if (ExistingItem == nullptr)
+	// 🟡 Case 2: Empty slot — check if the entire item can fit starting from Index
+	if (!ExistingItem)
 	{
 		return IsRoomAvailable(NewItem, Index);
 	}
 
-	// Case 3: Not same item, and tile is already taken
+	// 🔴 Case 3: Slot is occupied with a different item — reject
 	return false;
 }
+
 
 UBaseItem* UInventoryManager::GetItemAt(int32 Index) const
 {
 	return InventoryList.IsValidIndex(Index) ? InventoryList[Index] : nullptr;
+}
+
+TArray<FTile> UInventoryManager::GetOccupiedTilesForItem(UBaseItem* Item) const
+{
+	if (!IsValid(Item)) return {};
+
+	const FTile* TopLeftPtr = TopLeftItemMap.FindKey(Item);
+	if (!TopLeftPtr) return {};
+
+	const FTile TopLeft = *TopLeftPtr;
+	const FIntPoint Dimensions = Item->GetDimensions();
+
+	TArray<FTile> OccupiedTiles;
+	OccupiedTiles.Reserve(Dimensions.X * Dimensions.Y);
+
+	for (int32 x = 0; x < Dimensions.X; ++x)
+	{
+		for (int32 y = 0; y < Dimensions.Y; ++y)
+		{
+			OccupiedTiles.Add(FTile(TopLeft.X + x, TopLeft.Y + y));
+		}
+	}
+
+	return OccupiedTiles;
+}
+
+void UInventoryManager::ValidateTileMap()
+{
+	for (const auto& Pair : TopLeftItemMap)
+	{
+		UBaseItem* Item = Pair.Value;
+		if (!IsValid(Item)) continue;
+
+		const FTile TopLeft = Pair.Key;
+		const FIntPoint Dimensions = Item->GetDimensions();
+
+		for (int32 x = 0; x < Dimensions.X; ++x)
+		{
+			for (int32 y = 0; y < Dimensions.Y; ++y)
+			{
+				const FTile Tile(TopLeft.X + x, TopLeft.Y + y);
+				const int32 Index = TileToIndex(Tile);
+
+				if (!InventoryList.IsValidIndex(Index))
+				{
+					UE_LOG(LogTemp, Error, TEXT("[ValidateTileMap] Invalid index for tile (%d, %d)"), Tile.X, Tile.Y);
+					continue;
+				}
+
+				if (InventoryList[Index] != Item)
+				{
+					UE_LOG(LogTemp, Error, TEXT("[ValidateTileMap] Tile (%d, %d) does not reference item %s (Expected: %s)"),
+						Tile.X, Tile.Y,
+						*GetNameSafe(InventoryList[Index]),
+						*Item->GetItemInfo().ItemInfo.ItemName.ToString());
+				}
+			}
+		}
+	}
 }
 
 void UInventoryManager::ResizeInventory()
@@ -207,16 +291,22 @@ void UInventoryManager::ResizeInventory()
 
 void UInventoryManager::ClearAllSlots()
 {
-	// Set each slot in the InventoryList array to nullptr.
+	// 1. Clear tile occupation
 	for (auto& Item : InventoryList)
 	{
 		Item = nullptr;
 	}
 
-	// Logging for debugging purposes
-	UE_LOG(LogTemp, Warning, TEXT("All slots in InventoryList have been set to nullptr."));
+	// 2. Clear top-left tracking
+	TopLeftItemMap.Empty();
 
+	// 3. Optional: broadcast inventory change
+	OnInventoryChanged.Broadcast();
+
+	// 4. Debug log
+	UE_LOG(LogTemp, Warning, TEXT("InventoryList and TopLeftItemMap have been cleared."));
 }
+
 
 int32 UInventoryManager::TileToIndex(FTile Tile)
 {
@@ -234,30 +324,22 @@ void UInventoryManager::IndexToTile(int32 Index, FTile& Tile)
 TMap<UBaseItem*, FTile> UInventoryManager::GetAllItems()
 {
 	TMap<UBaseItem*, FTile> AllItemsLocal;
-	FTile Tile;
 
-	for (int32 ArrayIndex = 0; ArrayIndex < InventoryList.Num(); ArrayIndex++)
+	for (const auto& Pair : TopLeftItemMap)
 	{
-		// Skip null or already processed items
-		
-		if (!IsValid(InventoryList[ArrayIndex]))
+		if (IsValid(Pair.Value))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Invalid item at index %d"), ArrayIndex);
-			continue;
+			AllItemsLocal.Add(Pair.Value, Pair.Key);
 		}
-		if (AllItemsLocal.Contains(InventoryList[ArrayIndex]))
+		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Duplicate item at index %d"), ArrayIndex);
-			continue;
+			UE_LOG(LogTemp, Warning, TEXT("GetAllItems: Found null item at tile (%d, %d)"), Pair.Key.X, Pair.Key.Y);
 		}
-
-		// Calculate tile and add the item to the map
-		IndexToTile(ArrayIndex, Tile);
-		AllItemsLocal.Add(InventoryList[ArrayIndex], Tile);
 	}
 
 	return AllItemsLocal;
 }
+
 
 void UInventoryManager::RemoveItemInInventory(UBaseItem* Item)
 {
@@ -278,14 +360,20 @@ void UInventoryManager::RemoveItemInInventory(UBaseItem* Item)
 	OnInventoryChanged.Broadcast();
 }
 
-
-void UInventoryManager::ForEachOccupiedTile(const FTile& TopLeft, const FVector2D& Dimensions, const TFunctionRef<void(const FTile&)>& Func)
+void UInventoryManager::ForEachOccupiedTile(UBaseItem* Item, const TFunctionRef<void(const FTile&)>& Func) const
 {
+	if (!IsValid(Item)) return;
+
+	const FTile* TopLeftPtr = TopLeftItemMap.FindKey(Item);
+	if (!TopLeftPtr) return;
+
+	const FIntPoint Dimensions = Item->GetDimensions();
+
 	for (int32 X = 0; X < Dimensions.X; ++X)
 	{
 		for (int32 Y = 0; Y < Dimensions.Y; ++Y)
 		{
-			Func(FTile(TopLeft.X + X, TopLeft.Y + Y));
+			Func(FTile(TopLeftPtr->X + X, TopLeftPtr->Y + Y));
 		}
 	}
 }
@@ -293,76 +381,80 @@ void UInventoryManager::ForEachOccupiedTile(const FTile& TopLeft, const FVector2
 
 bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
 {
-    if (!IsValid(Item))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("DropItemInInventory: Item is invalid."));
-        return false;
-    }
+	if (!IsValid(Item))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DropItemInInventory: Item is invalid."));
+		return false;
+	}
 
-    UWorld* World = GetWorld();
-    if (!World)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("DropItemInInventory: Invalid world context."));
-        return false;
-    }
+	// Remove from inventory before dropping
+	RemoveItemInInventory(Item);
 
-    // Determine spawn location and parameters
-    const FVector DropLocation = GetSpawnLocation();
-    const FRotator DropRotation = FRotator::ZeroRotator;
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DropItemInInventory: Invalid world context."));
+		return false;
+	}
 
-    // Helper lambda to handle mesh setup and common properties
-    auto SetupPickup = [&](AItemPickup* Pickup) {
-        Pickup->ItemInfo = Item->GetItemInfo();
-        Pickup->SetNewMesh(Item->GetItemInfo().ItemInfo.StaticMesh);
-        Pickup->SetupMesh();
-    };
+	// Determine spawn location and parameters
+	const FVector DropLocation = GetSpawnLocation();
+	const FRotator DropRotation = FRotator::ZeroRotator;
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-    // Spawn the pickup actor based on the item type
-    AItemPickup* CreatedPickup;
+	// Spawn the pickup actor based on the item type
+	AItemPickup* CreatedPickup = nullptr;
 
+	auto SetupPickup = [&](AItemPickup* Pickup)
+	{
+		Pickup->ItemInfo = Item->GetItemInfo();
+		Pickup->SetNewMesh(Item->GetItemInfo().ItemInfo.StaticMesh);
+		Pickup->SetupMesh();
+	};
 
-	
-    switch (Item->GetItemInfo().ItemInfo.ItemType)
-    {
-    case EItemType::IT_Weapon:
-        CreatedPickup = World->SpawnActor<AWeaponPickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
-        if (const auto WeaponPickup = Cast<AWeaponPickup>(CreatedPickup))
-        {
-            WeaponPickup->ItemInfo.ItemData = Item->GetItemInfo().ItemData;
-        }
-        break;
-    case EItemType::IT_Armor:
-    case EItemType::IT_Shield:
-        CreatedPickup = World->SpawnActor<AEquipmentPickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
-        if (const auto EquipPickup = Cast<AEquipmentPickup>(CreatedPickup))
-        {
-            EquipPickup->ItemInfo.ItemData =Item->GetItemInfo().ItemData;
-        }
-        break;
-    case EItemType::IT_Consumable:
-        CreatedPickup = World->SpawnActor<AConsumablePickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
-        if (const auto ConsumablePickup = Cast<AConsumablePickup>(CreatedPickup))
-        {
-            ConsumablePickup->ConsumableData = Cast<UConsumableItem>(Item)->GetConsumableData();
-        }
-        break;
-    default:
-        CreatedPickup = World->SpawnActor<AItemPickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+	switch (Item->GetItemInfo().ItemInfo.ItemType)
+	{
+	case EItemType::IT_Weapon:
+		CreatedPickup = World->SpawnActor<AWeaponPickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+		if (const auto WeaponPickup = Cast<AWeaponPickup>(CreatedPickup))
+		{
+			WeaponPickup->ItemInfo.ItemData = Item->GetItemInfo().ItemData;
+		}
+		break;
 
-        break;
-    }
+	case EItemType::IT_Armor:
+	case EItemType::IT_Shield:
+		CreatedPickup = World->SpawnActor<AEquipmentPickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+		if (const auto EquipPickup = Cast<AEquipmentPickup>(CreatedPickup))
+		{
+			EquipPickup->ItemInfo.ItemData = Item->GetItemInfo().ItemData;
+		}
+		break;
 
-    if (CreatedPickup)
-    {
-        SetupPickup(CreatedPickup);
-        return true;
-    }
+	case EItemType::IT_Consumable:
+		CreatedPickup = World->SpawnActor<AConsumablePickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+		if (const auto ConsumablePickup = Cast<AConsumablePickup>(CreatedPickup))
+		{
+			ConsumablePickup->ConsumableData = Cast<UConsumableItem>(Item)->GetConsumableData();
+		}
+		break;
 
-    UE_LOG(LogTemp, Error, TEXT("Failed to spawn pickup for item %s"), *Item->GetItemInfo().ItemInfo.ItemName.ToString());
-    return false;
+	default:
+		CreatedPickup = World->SpawnActor<AItemPickup>(Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+		break;
+	}
+
+	if (CreatedPickup)
+	{
+		SetupPickup(CreatedPickup);
+		return true;
+	}
+
+	UE_LOG(LogTemp, Error, TEXT("Failed to spawn pickup for item %s"), *Item->GetItemInfo().ItemInfo.ItemName.ToString());
+	return false;
 }
+
 
 
 bool UInventoryManager::GetItemAtTile(int32 Index, UBaseItem*& RetrievedItem)
@@ -392,15 +484,14 @@ bool UInventoryManager::IsRoomAvailable(UBaseItem* Item, int32 TopLeftIndex)
 	ForEachTile(Item, TopLeftIndex, [&](FTile Tile)
 		{
 			const int32 Index = TileToIndex(Tile);
-			UBaseItem* RetrievedItem;
-
-			if (!IsTileValid(Tile) || !GetItemAtTile(Index, RetrievedItem))
+			
+			if (!IsTileValid(Tile))
 			{
 				bIsRoomAvailable = false;
 				return;
 			}
 
-			if (IsValid(RetrievedItem))
+			if (InventoryList.IsValidIndex(Index) && IsValid(InventoryList[Index]))
 			{
 				bIsRoomAvailable = false;
 				return;
@@ -516,9 +607,9 @@ bool UInventoryManager::TryToAddItemToInventoryRotated(UBaseItem* Item)
 {
 	if (IsValid(Item))
 	{
-		FItemInformation TempItemInfo = Item->GetItemInfo();
-		TempItemInfo.ItemInfo.Rotated = true;
-		Item->SetItemInfo(TempItemInfo);
+		
+		Item->SetRotated(true);
+		
 		for(int32 x = 0; x < InventoryList.Num(); x++)
 		{
 			if(IsRoomAvailable(Item, x))
@@ -528,6 +619,8 @@ bool UInventoryManager::TryToAddItemToInventoryRotated(UBaseItem* Item)
 			}
 		}
 	}
+	
+	Item->SetRotated(false);
 	return false;
 }
 

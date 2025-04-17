@@ -59,7 +59,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Remove")
 	void RemoveItemInInventory(UBaseItem* Item);
 	
-	static void ForEachOccupiedTile(const FTile& TopLeft, const FVector2D& Dimensions, const TFunctionRef<void(const FTile&)>& Func);
+	void ForEachOccupiedTile(UBaseItem* Item, const TFunctionRef<void(const FTile&)>& Func) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Remove")
 	bool DropItemInInventory(UBaseItem* Item);
@@ -143,6 +143,9 @@ public:
 	static bool AreItemsStackable(UBaseItem* A, UBaseItem* B);
 	bool CanAcceptItemAt(UBaseItem* NewItem, int32 Index);
 	UBaseItem* GetItemAt(int32 Index) const;
+
+	TArray<FTile> GetOccupiedTilesForItem(UBaseItem* Item) const;
+	void ValidateTileMap();
 
 private:
 	
