@@ -8,6 +8,7 @@
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Character/Player/PHPlayerCharacter.h"
 #include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Components/InventoryManager.h"
 #include "Item/EquippedObject.h"
 #include "Library/PHItemFunctionLibrary.h"

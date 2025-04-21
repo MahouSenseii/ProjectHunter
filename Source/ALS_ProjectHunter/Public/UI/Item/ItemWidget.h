@@ -9,19 +9,21 @@
 #include "Components/SizeBox.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
-#include "Components/CanvasPanelSlot.h"
+
 #include "ItemWidget.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRemoved, UBaseItem*, RemovedItem);
 
 /**
- * 
+ * UToolTip class represents a tooltip in the user interface.
  */
 
 class UToolTip;
 class UInventoryManager;
 class UBaseItem;
 class UCanvasPanel;
+class UEquippableToolTip;
+class UConsumableToolTip;
 
 UCLASS()
 class ALS_PROJECTHUNTER_API UItemWidget : public UPHUserWidget
@@ -65,7 +67,7 @@ public:
 
 	/** UI - ToolTips */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "ToolTip", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UPHBaseToolTip> CurrentToolTip;
+	UUserWidget* CurrentToolTip;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ToolTip", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UEquippableToolTip> EquippableToolTipClass;

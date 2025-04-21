@@ -12,7 +12,7 @@ void UEquippableStatsBox::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if(ItemData.ItemInfo.PickupClass)
+	if(ItemData.ItemInfo.IsValid())
 	{
 		RequirementsBox->ItemData = ItemData.ItemData;
 	}
@@ -112,7 +112,7 @@ void UEquippableStatsBox::SetMinMaxForOtherStats() const
 	{
 		if (!Box || !TextBlock) return;
 
-		if (FMath::IsNearlyZero(Value))
+		if (FMath::Abs(Value) < 0.01f)
 		{
 			Box->SetVisibility(ESlateVisibility::Collapsed);
 		}

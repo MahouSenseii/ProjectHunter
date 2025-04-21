@@ -47,6 +47,9 @@ public:
 
 	URequirementsBox* GetRequirementsBox() const { return RequirementsBox;}
 
+	UFUNCTION(BlueprintCallable)
+	void SetItemData(const FItemInformation InData) { ItemData = InData;}
+
 protected:
 
 	/** The equippable item to display */

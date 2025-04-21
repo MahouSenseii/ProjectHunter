@@ -6,9 +6,10 @@
 #include "UI/DragDrop/DragWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Interactables/Pickups/ConsumablePickup.h"
-#include "Item/EquippableItem.h"
 #include "Materials/MaterialInstance.h"
+#include "UI/ToolTip/ConsumableToolTip.h"
 
 
 class UConsumableToolTip;
@@ -21,6 +22,7 @@ void UItemWidget::NativeConstruct()
     Refresh();
 
     InitializeComponents(); // Initialize button events,
+    
 }
 
 void UItemWidget::NativeDestruct()
@@ -225,51 +227,61 @@ void UItemWidget::EventHovered()
     }
 }
 
+
 void UItemWidget::CreateToolTip()
 {
+    check(ItemObject); 
     check(EquippableToolTipClass);
 
-    if (CurrentToolTip)
+
+    TSubclassOf<UUserWidget> TooltipClassToUse = nullptr;
+
+    const auto& ItemInfo = ItemObject->GetItemInfo().ItemInfo;
+    switch (ItemInfo.ItemType)
     {
-        CurrentToolTip->RemoveFromParent();
-        CurrentToolTip = nullptr;
+        case EItemType::IT_Armor:
+        case EItemType::IT_Weapon:
+        case EItemType::IT_Shield:
+            TooltipClassToUse = EquippableToolTipClass;
+            break;
+
+        case EItemType::IT_Consumable:
+            TooltipClassToUse = ConsumableToolTipClass;
+            break;
+
+        default:
+            break;
     }
 
-    // Use the Tooltip Widget as the Outer to keep the item alive
-    UUserWidget* PHToolTipWidget = nullptr;
-    
-    if ( ItemObject->GetItemInfo().ItemInfo.ItemType == EItemType::IT_Armor || ItemObject->GetItemInfo().ItemInfo.ItemType == EItemType::IT_Weapon
-        ||ItemObject->GetItemInfo().ItemInfo.ItemType == EItemType::IT_Shield
-        && EquippableToolTipClass)
+    if (TooltipClassToUse)
     {
-        PHToolTipWidget = CreateWidget<UEquippableToolTip>(GetWorld(), EquippableToolTipClass);
-		
-    }
-    else if (ItemObject->GetItemInfo().ItemInfo.ItemType == EItemType::IT_Consumable && ConsumableToolTipClass)
-    {
-        PHToolTipWidget = CreateWidget<UConsumableToolTip>(GetWorld(), ConsumableToolTipClass);
-    }
-    if (!CurrentToolTip && EquippableToolTipClass)
-    {
-        if (UUserWidget* CreatedWidget = CreateWidget<UUserWidget>(GetOwningPlayer(), CurrentToolTip))
+        UUserWidget* NewToolTip = CreateWidget<UUserWidget>(GetWorld(), TooltipClassToUse);
+        if (!NewToolTip) return;
+
+
+        if (UEquippableToolTip* AsEquippable = Cast<UEquippableToolTip>(NewToolTip))
         {
-            if (UToolTip* CreatedToolTip = Cast<UToolTip>(CreatedWidget))
-            {
-                CreatedToolTip->SetItemObj(ItemObject);
-                CurrentToolTip = CreatedToolTip;
-            }
-
-            const FVector2D DesiredPosition = CalculateTooltipPosition();
-            const float Width = GetTooltipWidth();
-            const float Height = GetTooltipHeight();
-
-            CreatedWidget->SetDesiredSizeInViewport(FVector2D(Width, Height));
-            CreatedWidget->SetPositionInViewport(DesiredPosition);
-            CreatedWidget->AddToViewport(1);
+            AsEquippable->SetItemInfo(ItemObject->GetItemInfo());
+            CurrentToolTip = AsEquippable;
         }
+        else if (UConsumableToolTip* AsConsumable = Cast<UConsumableToolTip>(NewToolTip))
+        {
+            AsConsumable->SetItemInfo(ItemObject->GetItemInfo());
+        }
+
+        // Positioning
+        const FVector2D DesiredPosition = CalculateTooltipPosition();
+        const float Width = GetTooltipWidth();
+        const float Height = GetTooltipHeight();
+        Cast<UEquippableToolTip>(CurrentToolTip)->StatsBox->GetRequirementsBox()->SetItemRequirements(
+            ItemObject->GetItemInfo().ItemData,OwnerCharacter);
+        SetToolTip(NewToolTip);
+        NewToolTip->SetDesiredSizeInViewport(FVector2D(Width, Height));
+        NewToolTip->SetPositionInViewport(DesiredPosition);
+        NewToolTip->AddToViewport(100);
+       
     }
 }
-
 
 void UItemWidget::EventMouseUnHovered()
 {
@@ -278,11 +290,11 @@ void UItemWidget::EventMouseUnHovered()
 
 void UItemWidget::RemoveToolTip()
 {
-   /* if (IsValid(ItemToolTip))
+   if (IsValid(CurrentToolTip))
     {
-        ItemToolTip->RemoveFromParent();
-        ItemToolTip = nullptr;
-    }*/
+        CurrentToolTip->RemoveFromParent();
+        CurrentToolTip = nullptr;
+    }
 }
 
 FVector2D UItemWidget::CalculateTooltipPosition() const

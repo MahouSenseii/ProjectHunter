@@ -13,6 +13,10 @@ void UEquippableToolTip::InitializeToolTip()
 {
 	Super::InitializeToolTip();
 
+	if(ItemInfo.IsValid())
+	{
+		StatsBox->SetItemData(ItemInfo);
+	}
 	StatsBox->CreateMinMaxBoxByDamageTypes();
 	StatsBox->SetMinMaxForOtherStats();
 	StatsBox->CreateResistanceBoxes();
