@@ -33,9 +33,13 @@ void UEquippableStatsBox::CreateMinMaxBoxByDamageTypes()
 	{
 		if (!FMath::IsNearlyZero(PhysicalDamage->Min) || !FMath::IsNearlyZero(PhysicalDamage->Max))
 		{
-			if (PhysicalDamageValueMin) PhysicalDamageValueMin->SetText(FText::AsNumber(PhysicalDamage->Min));
-			if (PhysicalDamageValueMax) PhysicalDamageValueMax->SetText(FText::AsNumber(PhysicalDamage->Max));
+			const FString FormattedMin = FString::Printf(TEXT("(%d/"), FMath::RoundToInt(PhysicalDamage->Min));
+			const FString FormattedMax = FString::Printf(TEXT("%d)"), FMath::RoundToInt(PhysicalDamage->Max));
+
+			if (PhysicalDamageValueMin) PhysicalDamageValueMin->SetText(FText::FromString(FormattedMin));
+			if (PhysicalDamageValueMax) PhysicalDamageValueMax->SetText(FText::FromString(FormattedMax));
 		}
+
 		else if (PhysicalDamageBox)
 		{
 			PhysicalDamageBox->RemoveFromParent();
@@ -70,7 +74,7 @@ void UEquippableStatsBox::CreateMinMaxBoxByDamageTypes()
 		}
 
 		MinMaxBox->Init();
-		MinMaxBox->SetMinMaxText(DamageValues.Min, DamageValues.Max); // Assuming this is (Min, Max)
+		MinMaxBox->SetMinMaxText(DamageValues.Min, DamageValues.Max);
 		MinMaxBox->SetColorBaseOnType(DamageType);
 		MinMaxBox->SetFontSize(10.0f);
 

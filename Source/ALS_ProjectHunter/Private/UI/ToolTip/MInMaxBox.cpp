@@ -57,9 +57,13 @@ void UMinMaxBox::SetColorBaseOnType(const EDamageTypes Type) const
 
 void UMinMaxBox::SetMinMaxText(const float MaxValue, const float MinValue) const
 {
-	if (MinText) MinText->SetText(FText::AsNumber(MinValue));
-	if (MaxText) MaxText->SetText(FText::AsNumber(MaxValue));
+	const FString MinFormatted = FString::Printf(TEXT("( %d /"), FMath::RoundToInt(MinValue));
+	const FString MaxFormatted = FString::Printf(TEXT(" %d )"), FMath::RoundToInt(MaxValue));
+
+	if (MinText) MinText->SetText(FText::FromString(MinFormatted));
+	if (MaxText) MaxText->SetText(FText::FromString(MaxFormatted));
 }
+
 
 void UMinMaxBox::SetFontSize(float InValue) const
 {
