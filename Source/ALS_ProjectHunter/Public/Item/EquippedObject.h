@@ -64,7 +64,7 @@ public:
 	
 protected:
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Stats")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Stats")
 	FItemInformation ItemInfo;
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
