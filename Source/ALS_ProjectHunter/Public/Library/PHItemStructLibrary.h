@@ -269,6 +269,7 @@ struct FPHItemStats // Affixes
 		TArray<FPHAttributeData> Out;
 		Out.Append(Prefixes);
 		Out.Append(Suffixes);
+		Out.Append(Implicits);
 		return Out;
 	}
 };
@@ -452,13 +453,13 @@ struct FItemBase: public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EItemRarity ItemRarity;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category = " Trade")
 	int Value;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = " Trade")	
 	float ValueModifier;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = " Trade")
 	bool IsTradeable;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

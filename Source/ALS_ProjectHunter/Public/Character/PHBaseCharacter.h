@@ -13,6 +13,7 @@
 #include "UI/ToolTip/EquippableToolTip.h"
 #include "PHBaseCharacter.generated.h"
 
+struct FInitialGameplayEffectInfo;
 class UInteractableManager;
 class UCombatManager;
 class USpringArmComponent;
@@ -35,6 +36,9 @@ public:
 	APHBaseCharacter(const FObjectInitializer& ObjectInitializer);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION(BlueprintCallable, Category="GAS|Vital")
+	void ApplyPeriodicEffectToSelf(FInitialGameplayEffectInfo EffectInfo) const;
 	
 	/** Called when possessed by a new controller */
 	virtual void PossessedBy(AController* NewController) override;
@@ -98,6 +102,8 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual bool CanSprint() const override;
 
+	//Changed Handle
+	virtual void OnGaitChanged(EALSGait PreviousGait) override;
 	/** Equipment Handles */
 
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
@@ -116,17 +122,7 @@ protected:
 
 	/** Ability System Initialization */
 	virtual void InitAbilityActorInfo();
-
-	/** Regeneration */
-	void SetRegenerationTimer(FTimerHandle& TimerHandle, void (APHBaseCharacter::*RegenFunction)() const, float RegenRate);
-	void HealthRegenRateChange();
-	void ManaRegenRateChange();
-	void StaminaRegenRateChange();
-	void HealthRegeneration() const;
-	void ManaRegeneration() const;
-	void StaminaRegeneration() const;
-	void StaminaDegen(float DeltaTime);
-
+	
 	/** Effect Application */
 	UFUNCTION(BlueprintCallable)
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float InLevel) const;
@@ -146,6 +142,10 @@ protected:
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Controller")
 	APHPlayerController* CurrentController;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GAS")
+	TArray<FInitialGameplayEffectInfo> StartupEffects;
+	
 	
 private:
 	/** Gameplay Ability System */
@@ -166,19 +166,7 @@ private:
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "GAS|Attributes", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UGameplayEffect> DefaultVitalAttributes;
-
-	/** Regeneration Effects */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Vital", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UGameplayEffect> HealthRegenEffect;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Vital", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UGameplayEffect> ManaRegenEffect;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Vital", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UGameplayEffect> StaminaRegenEffect;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Vital", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UGameplayEffect> StaminaDegenEffect;
+	
 
 	/** Managers */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager", meta = (AllowPrivateAccess = "true"))
@@ -230,9 +218,5 @@ private:
 
 	bool bIsInRecovery = false;
 	float TimeSinceLastRecovery = 0.0;
-
-	/** Timers */
-	FTimerHandle HealthRegenTimer;
-	FTimerHandle ManaRegenTimer;
-	FTimerHandle StaminaRegenTimer;
+	
 };

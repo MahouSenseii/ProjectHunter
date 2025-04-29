@@ -101,7 +101,6 @@ void UInteractableManager::SetupInteractableReferences(USphereComponent* InInter
 		UE_LOG(LogTemp, Error, TEXT("One or more input parameters are null or empty."));
 		return;
 	}
-
 	InteractableArea = InInteractableArea;
 	InteractionWidget = InInteractionWidget;
 	SetupHighlightableObjects(InHighlightableObject);

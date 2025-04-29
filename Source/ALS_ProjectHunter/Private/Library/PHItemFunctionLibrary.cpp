@@ -585,6 +585,11 @@ FName UPHItemFunctionLibrary::GetSocketNameForSlot(EEquipmentSlot Slot)
 	return FoundSocket ? *FoundSocket : FName("None");
 }
 
+bool UPHItemFunctionLibrary::IsItemInformationValid(const FItemInformation& ItemInformation)
+{
+	return ItemInformation.IsValid();
+}
+
 float UPHItemFunctionLibrary::GetStatValueByAttribute(const FEquippableItemData& Data, const FGameplayAttribute& Attribute)
 {
 	float Total = 0.f;

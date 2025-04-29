@@ -69,6 +69,7 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaPercentageReserved)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxStaminaRegenAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaReservedAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxStaminaReservedAmount)
+DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaDegen)
 
 // === Secondary Attributes: Arcane Shield
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ArcaneShield)
@@ -468,6 +469,10 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 	Attributes_Secondary_Vital_MaxStaminaReservedAmount = TagsManager.AddNativeGameplayTag(
 		FName("Attribute.Secondary.Vital.MaxStaminaReservedAmount"),
 		TEXT("Maximum stamina that can be reserved."));
+
+	Attributes_Secondary_Vital_StaminaDegen = TagsManager.AddNativeGameplayTag(
+	FName("Attribute.Secondary.Vital.StaminaDegen"),
+	TEXT("Stamina Degen."));
 
 	/* === Arcane Shield === */
 	Attributes_Secondary_Vital_ArcaneShield = TagsManager.AddNativeGameplayTag(

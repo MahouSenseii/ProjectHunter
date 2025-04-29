@@ -7,8 +7,7 @@
 #include "GameFramework/Character.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Library/PHCharacterEnumLibrary.h"
-#include "PHGameplayTags.h"
-#include "..\..\Public\Library\PHTagUtilityLibrary.h"
+#include "Library/PHTagUtilityLibrary.h"
 #include "Net/UnrealNetwork.h"
 
 UPHAttributeSet::UPHAttributeSet()
@@ -199,7 +198,6 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Gems, COND_None, REPNOTIFY_Always);
-	
 }
 
 float UPHAttributeSet::GetAttributeValue(const FGameplayAttribute& Attribute) const 

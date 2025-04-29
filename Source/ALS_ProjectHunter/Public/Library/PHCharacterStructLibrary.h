@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "AttributeSet.h"
 #include "GameplayTagContainer.h"
 #include "PHCharacterStructLibrary.generated.h"
 
@@ -111,3 +112,29 @@ struct FLevelUpResult
 	int32 AttributePointsAwarded = 0;
 };
 
+USTRUCT(BlueprintType)
+struct FInitialGameplayEffectInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<UGameplayEffect> EffectClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DefaultRate = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FGameplayAttribute RateAttribute;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DefaultAmount = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FGameplayAttribute AmountAttribute;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Categories = "Attributes.Secondary.Vital"))
+	FGameplayTag SetByCallerTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Level = 1.0f;
+};

@@ -51,10 +51,15 @@ public:
 	                            const TArray<FGuid>& LockedModifiers);
 	static FPHAttributeData RollSingleMod(const UDataTable* ModPool, bool bIsPrefix);
 
+	
 
 	UFUNCTION()
 	static float GetStatValueByAttribute(const FEquippableItemData& Data, const FGameplayAttribute& Attribute);
 
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	static FName GetSocketNameForSlot(EEquipmentSlot Slot);
+
+
+	UFUNCTION(BlueprintPure, Category = "Item Information")
+	static bool IsItemInformationValid(const FItemInformation& ItemInformation);
 };

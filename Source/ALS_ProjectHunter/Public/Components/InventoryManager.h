@@ -180,7 +180,7 @@ public:
 	int32 Colums = 14;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
-	float TileSize = 15.0f;
+	float TileSize = 20.0f;
 
 	UPROPERTY(BlueprintReadWrite, Category = "Checker")
 	bool Generated = false;

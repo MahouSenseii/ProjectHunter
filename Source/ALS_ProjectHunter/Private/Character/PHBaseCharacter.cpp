@@ -15,6 +15,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Interactables/Pickups/ConsumablePickup.h"
 #include "Interactables/Pickups/EquipmentPickup.h"
+#include "Library/PHCharacterStructLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "UI/ToolTip/ConsumableToolTip.h"
 #include "UI/HUD/PHHUD.h"
@@ -40,6 +41,7 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 		AttributeSet = CreateDefaultSubobject<UPHAttributeSet>("Attribute Set");
 	}
 
+	
 	// Mini-map
 	MiniMapIndicator = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Mini-Map Indicator"));
 }
@@ -49,7 +51,45 @@ void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(APHBaseCharacter, CurrentPoiseDamage);
 }
-	
+
+void APHBaseCharacter::ApplyPeriodicEffectToSelf(FInitialGameplayEffectInfo EffectInfo) const
+{
+	if (!EffectInfo.EffectClass || !IsValid(AbilitySystemComponent))
+		return;
+
+	// 1) Build context + spec
+	FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(
+		EffectInfo.EffectClass, EffectInfo.Level, Context);
+
+	if (!SpecHandle.IsValid())
+		return;
+
+	// 2) Pull dynamic OR fallback values
+	const float Period = EffectInfo.RateAttribute.IsValid()
+		? AbilitySystemComponent->GetNumericAttribute(EffectInfo.RateAttribute)
+		: EffectInfo.DefaultRate;
+
+	const float Amount = EffectInfo.AmountAttribute.IsValid()
+		? AbilitySystemComponent->GetNumericAttribute(EffectInfo.AmountAttribute)
+		: EffectInfo.DefaultAmount;
+
+	// 3) Override tick period if effect is periodic
+	SpecHandle.Data->Period = Period;
+
+	// 4) Feed the per-tick amount via SetByCaller
+	if (EffectInfo.SetByCallerTag.IsValid())
+	{
+		SpecHandle.Data->SetSetByCallerMagnitude(EffectInfo.SetByCallerTag, Amount);
+	}
+
+	// 5) Apply it to self (ASC is both instigator and target)
+	AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), AbilitySystemComponent);
+}
+
+
 void APHBaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
@@ -72,22 +112,15 @@ void APHBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (AbilitySystemComponent)
+	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
 	{
-		if (const UPHAttributeSet* AttributeSetPtr = AbilitySystemComponent->GetSet<UPHAttributeSet>())
-		{
-			// Setup regeneration timers
-			SetRegenerationTimer(HealthRegenTimer, &APHBaseCharacter::HealthRegeneration, AttributeSetPtr->GetHealthRegenRate());
-			SetRegenerationTimer(ManaRegenTimer, &APHBaseCharacter::ManaRegeneration, AttributeSetPtr->GetManaRegenRate());
-			SetRegenerationTimer(StaminaRegenTimer, &APHBaseCharacter::StaminaRegeneration, AttributeSetPtr->GetStaminaRegenRate());
-		}
+		ApplyPeriodicEffectToSelf(EffectInfo);
 	}
 }
 
 void APHBaseCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	StaminaDegen(DeltaSeconds);
 
 	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
 	{
@@ -104,10 +137,7 @@ void APHBaseCharacter::Tick(float DeltaSeconds)
 			ASC->AddLooseGameplayTag(FPHGameplayTags::Get().Condition_WhileStationary);
 		else if (bIsMoving && bHasStationaryTag)
 			ASC->RemoveLooseGameplayTag(FPHGameplayTags::Get().Condition_WhileStationary);
-	}
-
-	
-	
+	}	
 }
 
 bool APHBaseCharacter::CanSprint() const
@@ -120,6 +150,24 @@ bool APHBaseCharacter::CanSprint() const
 		return false;
 	}
 	return bReturnValue;
+}
+
+void APHBaseCharacter::OnGaitChanged(EALSGait PreviousGait)
+{
+	Super::OnGaitChanged(PreviousGait);
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC) return;
+
+	const FGameplayTag& StaminaDegenTag = FPHGameplayTags::Get().Attributes_Secondary_Vital_StaminaDegen;
+
+	if (Gait == EALSGait::Sprinting)
+	{
+		ASC->AddLooseGameplayTag(StaminaDegenTag);
+	}
+	else
+	{
+		ASC->RemoveLooseGameplayTag(StaminaDegenTag);
+	}
 }
 
 /* =========================== */
@@ -200,123 +248,9 @@ void APHBaseCharacter::InitAbilityActorInfo()
 			}
 		}
 	}
-}
-
-void APHBaseCharacter::SetRegenerationTimer(FTimerHandle& TimerHandle, void(APHBaseCharacter::* RegenFunction)() const, float RegenRate)
-{
-	auto& TimerManager = GetWorldTimerManager();
-
-	// Check and clear the timer if it's already set.
-	if (TimerManager.IsTimerActive(TimerHandle))
-	{
-		TimerManager.ClearTimer(TimerHandle);
-	}
-
-	// Set the new timer with the provided regeneration rate and function.
-	TimerManager.SetTimer(TimerHandle, this, RegenFunction, RegenRate, true);
-}
-
-void APHBaseCharacter::HealthRegenRateChange()
-{
-	if (const UPHAttributeSet* AttributeSetPtr = AbilitySystemComponent->GetSet<UPHAttributeSet>())
-	{
-		SetRegenerationTimer(HealthRegenTimer, &APHBaseCharacter::HealthRegeneration, AttributeSetPtr->GetHealthRegenRate());
-	}
-}
-
-void APHBaseCharacter::ManaRegenRateChange()
-{
-	if (const UPHAttributeSet* AttributeSetPtr = AbilitySystemComponent->GetSet<UPHAttributeSet>())
-	{
-		SetRegenerationTimer(ManaRegenTimer, &APHBaseCharacter::ManaRegeneration, AttributeSetPtr->GetManaRegenRate());
-	}
-}
-
-void APHBaseCharacter::StaminaRegenRateChange()
-{
-	if (const UPHAttributeSet* AttributeSetPtr = AbilitySystemComponent->GetSet<UPHAttributeSet>())
-	{
-		SetRegenerationTimer(StaminaRegenTimer, &APHBaseCharacter::StaminaRegeneration, AttributeSetPtr->GetStaminaRegenRate());
-	}
-}
-
-void APHBaseCharacter::HealthRegeneration() const
-{
-	check(HealthRegenEffect)
-	ApplyEffectToSelf(HealthRegenEffect,1);
-}
-
-void APHBaseCharacter::ManaRegeneration() const
-{
-	check(ManaRegenEffect)
-	ApplyEffectToSelf(ManaRegenEffect,1);
-}
-
-void APHBaseCharacter::StaminaRegeneration() const
-{
-	check(StaminaRegenEffect)
-	ApplyEffectToSelf(StaminaRegenEffect,1);
 	
 }
 
-void APHBaseCharacter::StaminaDegen(const float DeltaTime)
-{
-	check(StaminaDegenEffect);
-	FActiveGameplayEffectHandle StaminaEffectHandle;
-
-	const UPHAttributeSet* PhAttributeSet = Cast<UPHAttributeSet>(AttributeSet);
-	if (!PhAttributeSet) return;
-
-	// Enter recovery mode if stamina is depleted
-	if (!bIsInRecovery && PhAttributeSet->GetStamina() <= 0)
-	{
-		bIsInRecovery = true;
-	}
-
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
-	{
-		// Sprint tag logic
-		const bool bIsSprinting = CanSprint(); // Or replace with ALS-specific check
-		const bool bHasSprintTag = ASC->HasMatchingGameplayTag(FPHGameplayTags::Get().Condition_Sprinting);
-
-		if (bIsSprinting && !bHasSprintTag)
-		{
-			ASC->AddLooseGameplayTag(FPHGameplayTags::Get().Condition_Sprinting);
-		}
-		else if (!bIsSprinting && bHasSprintTag)
-		{
-			ASC->RemoveLooseGameplayTag(FPHGameplayTags::Get().Condition_Sprinting);
-		}
-
-		// Apply or clear stamina degen effect
-		if (GetGait() == EALSGait::Sprinting)
-		{
-			if (!StaminaEffectHandle.IsValid() || !ASC->GetActiveGameplayEffect(StaminaEffectHandle))
-			{
-				StaminaEffectHandle = ApplyEffectToSelfWithReturn(StaminaDegenEffect, 1.0f);
-			}
-		}
-		else
-		{
-			if (StaminaEffectHandle.IsValid())
-			{
-				ASC->RemoveActiveGameplayEffect(StaminaEffectHandle);
-				StaminaEffectHandle.Invalidate();
-			}
-		}
-	}
-
-	// Handle stamina recovery timing
-	if (bIsInRecovery)
-	{
-		TimeSinceLastRecovery += DeltaTime;
-		if (TimeSinceLastRecovery >= 3.0f)
-		{
-			bIsInRecovery = false;
-			TimeSinceLastRecovery = 0.0f;
-		}
-	}
-}
 
 void APHBaseCharacter::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float InLevel) const
 {
@@ -334,7 +268,7 @@ FActiveGameplayEffectHandle APHBaseCharacter::ApplyEffectToSelfWithReturn(TSubcl
 	if (!InEffect || !AbilitySystemComponent) return FActiveGameplayEffectHandle();
 
 	const FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
-	const FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(InEffect, Level, Context);
+	const FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(InEffect, InLevel, Context);
 
 	if (SpecHandle.IsValid())
 	{
@@ -343,6 +277,7 @@ FActiveGameplayEffectHandle APHBaseCharacter::ApplyEffectToSelfWithReturn(TSubcl
 
 	return FActiveGameplayEffectHandle();
 }
+
 
 void APHBaseCharacter::InitializeDefaultAttributes() const
 {

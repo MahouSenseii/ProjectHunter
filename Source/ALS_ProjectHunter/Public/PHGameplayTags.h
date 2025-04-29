@@ -95,6 +95,7 @@ public:
 	static FGameplayTag Attributes_Secondary_Vital_MaxStaminaRegenAmount;
 	static FGameplayTag Attributes_Secondary_Vital_StaminaReservedAmount;
 	static FGameplayTag Attributes_Secondary_Vital_MaxStaminaReservedAmount;
+	static FGameplayTag Attributes_Secondary_Vital_StaminaDegen;
 
 	/** Arcane Shield */
 	static FGameplayTag Attributes_Secondary_Vital_ArcaneShield;
