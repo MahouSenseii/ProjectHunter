@@ -10,6 +10,7 @@
 #include "Library/InteractionEnumLibrary.h"
 #include "Library/PHItemFunctionLibrary.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "UI/InteractableWidget.h"
 
 
 AItemPickup::AItemPickup()
@@ -159,10 +160,19 @@ void AItemPickup::HandleSimpleInteraction(APHBaseCharacter* Character) const
 
 void AItemPickup::SetWidgetRarity()
 {
-	
-	if (InteractionWidget->IsWidgetVisible())
-	{
-		SetWidgetRarity();
-	}
+
+        if (!InteractableManager)
+        {
+                return;
+        }
+
+        // Ensure the widget has been created and is visible before setting the rarity
+        if (InteractionWidget && InteractionWidget->GetWidget() && InteractionWidget->IsWidgetVisible())
+        {
+                if (UInteractableWidget* InteractableWidget = InteractableManager->InteractionWidgetRef)
+                {
+                        InteractableWidget->SetGrade(ItemInfo.ItemInfo.ItemRarity);
+                }
+        }
 }
 
