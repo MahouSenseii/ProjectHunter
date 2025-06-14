@@ -72,9 +72,9 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	TMap<FString, FGameplayAttribute> AllAttributesMap;
 
-	/*
-	 *Combat Indecatorss 
-	 */
+        /*
+         *Combat Indicators
+         */
 
 	UPROPERTY(BlueprintReadOnly, Category = "Combat Alignment", ReplicatedUsing = OnRep_CombatAlignment)
 	FGameplayAttributeData CombatAlignment;
