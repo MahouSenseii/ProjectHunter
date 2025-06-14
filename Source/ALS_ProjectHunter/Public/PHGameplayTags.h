@@ -78,7 +78,7 @@ public:
 	static FGameplayTag Attributes_Secondary_Vital_MaxManaRegenRate;
 	static FGameplayTag Attributes_Secondary_Vital_MaxManaRegenAmount;
 	static FGameplayTag Attributes_Secondary_Vital_ManaReservedAmount;
-	static FGameplayTag Attributes_Secondary_Vital_MaxManaRRegenAmount;
+	static FGameplayTag Attributes_Secondary_Vital_MaxManaRegenAmount;
 	static FGameplayTag Attributes_Secondary_Vital_MaxManaReservedAmount;
 	static FGameplayTag Attributes_Secondary_Vital_ManaFlatReservedAmount;
 	static FGameplayTag Attributes_Secondary_Vital_ManaPercentageReserved;
