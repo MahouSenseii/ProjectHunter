@@ -44,7 +44,6 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	// Regeneration 
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, HealthRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, HealthRegenAmount, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, HealthRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedHealth, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedHealth, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedHealth, COND_None, REPNOTIFY_Always);
@@ -52,7 +51,6 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaRegenAmount, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedMana, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedMana, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedMana, COND_None, REPNOTIFY_Always);
@@ -60,7 +58,6 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaRegenAmount, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedStamina, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedStamina, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedStamina, COND_None, REPNOTIFY_Always);
@@ -68,7 +65,6 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArcaneShieldRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,ArcaneShieldRegenAmount, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArcaneShieldRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedArcaneShield, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedArcaneShield, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedArcaneShield, COND_None, REPNOTIFY_Always);
@@ -160,7 +156,6 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	//Piercing
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourPiercing, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FirePiercing, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPiercing, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPiercing, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionPiercing, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  IcePiercing, COND_None, REPNOTIFY_Always);
