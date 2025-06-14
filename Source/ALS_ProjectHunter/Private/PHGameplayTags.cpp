@@ -52,7 +52,7 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ManaRegenAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxManaRegenRate)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxManaRegenAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ManaReservedAmount)
-DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxManaRRegenAmount)
+DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxManaRegenAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxManaReservedAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ManaFlatReservedAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ManaPercentageReserved)
@@ -409,8 +409,8 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 		FName("Attribute.Secondary.Vital.ManaReservedAmount"),
 		TEXT("Total mana reserved (not usable)."));
 
-	Attributes_Secondary_Vital_MaxManaRRegenAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxManaRRegenAmount"),
+	Attributes_Secondary_Vital_MaxManaRegenAmount = TagsManager.AddNativeGameplayTag(
+		FName("Attribute.Secondary.Vital.MaxManaRegenAmount"),
 		TEXT("Maximum mana regen per tick (typo or extra?)."));
 
 	Attributes_Secondary_Vital_MaxManaReservedAmount = TagsManager.AddNativeGameplayTag(
