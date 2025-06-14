@@ -261,17 +261,20 @@ struct FPHItemStats // Affixes
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	TArray<FPHAttributeData> Implicits;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	TArray<FPHAttributeData> Crafted;
+        UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+        TArray<FPHAttributeData> Crafted;
 
-	TArray<FPHAttributeData> GetAllStats() const
-	{
-		TArray<FPHAttributeData> Out;
-		Out.Append(Prefixes);
-		Out.Append(Suffixes);
-		Out.Append(Implicits);
-		return Out;
-	}
+        TArray<FPHAttributeData> GetAllStats() const
+        {
+                TArray<FPHAttributeData> Out;
+                Out.Append(Prefixes);
+                Out.Append(Suffixes);
+                Out.Append(Implicits);
+                // Crafted affixes were previously omitted; include them so the
+                // caller receives a complete list of generated stats.
+                Out.Append(Crafted);
+                return Out;
+        }
 };
 
 /* ============================= */
