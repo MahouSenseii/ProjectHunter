@@ -40,8 +40,7 @@ public:
 	/* === Attribute Utility Functions === */
 	/* ============================= */
 
-	float GetAttributeValue(const FGameplayAttribute& Attribute) const;
-	float GetAttributeValue(FGameplayAttribute& Attribute) const;
+        float GetAttributeValue(const FGameplayAttribute& Attribute) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Combat Alignment")
 	ECombatAlignment GetCombatAlignmentBP() const;
