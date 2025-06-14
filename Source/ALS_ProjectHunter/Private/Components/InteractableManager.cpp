@@ -20,7 +20,7 @@ UInteractableManager::UInteractableManager()
 	SetIsReplicatedByDefault(true);
 
 	// Attempt to load the default widget class from assets
-	static ConstructorHelpers::FClassFinder<UInteractableWidget> WidgetFinder(TEXT("/Game/PeojectHunter/UI/PopUps/WBP_InteractableWidget"));
+       static ConstructorHelpers::FClassFinder<UInteractableWidget> WidgetFinder(TEXT("/Game/ProjectHunter/UI/PopUps/WBP_InteractableWidget"));
 
 	if (WidgetFinder.Succeeded())
 	{
