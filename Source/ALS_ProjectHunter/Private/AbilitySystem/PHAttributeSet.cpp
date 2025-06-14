@@ -204,16 +204,6 @@ float UPHAttributeSet::GetAttributeValue(const FGameplayAttribute& Attribute) co
 	return 0.0f;
 }
 
-float UPHAttributeSet::GetAttributeValue(FGameplayAttribute& Attribute) const
-{
-	// Get the Ability System Component that owns this Attribute Set
-	if (const UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent())
-	{
-		return ASC->GetNumericAttribute(Attribute);
-	}
-    
-	return 0.0f; // Default return value
-}
 
 // for use in BP will show enum not float values 
 ECombatAlignment UPHAttributeSet::GetCombatAlignmentBP() const
