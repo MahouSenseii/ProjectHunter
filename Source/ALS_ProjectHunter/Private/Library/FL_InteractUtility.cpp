@@ -196,17 +196,39 @@ bool UFL_InteractUtility::AreRequirementsMet(UBaseItem* InItem, AActor* OwnerPla
 }
 
 bool UFL_InteractUtility::CheckBasedOnCompare(EItemRequiredStatsCategory RequiredStats, float RequiredValue,
-	AActor* OwnerPlayer)
+        AActor* OwnerPlayer)
 {
-	if (const APHBaseCharacter* Owner = Cast<APHBaseCharacter>(OwnerPlayer))
-	{
-		// Map the item's stat requirement to the character's stat identity
-		
-		// Compare the character's stat value against the item's required value
-		return false;
-	}
+        if (const APHBaseCharacter* Owner = Cast<APHBaseCharacter>(OwnerPlayer))
+        {
+                // Attempt to access the attribute set on the owner
+                const UPHAttributeSet* AttributeSet = Cast<UPHAttributeSet>(Owner->GetAttributeSet());
 
-	return false;
+                switch (RequiredStats)
+                {
+                case EItemRequiredStatsCategory::ISC_None:
+                        return true;
+                case EItemRequiredStatsCategory::ISC_RequiredLevel:
+                        return Owner->GetPlayerLevel() >= RequiredValue;
+                case EItemRequiredStatsCategory::ISC_RequiredStrength:
+                        return AttributeSet && AttributeSet->GetStrength() >= RequiredValue;
+                case EItemRequiredStatsCategory::ISC_RequiredDexterity:
+                        return AttributeSet && AttributeSet->GetDexterity() >= RequiredValue;
+                case EItemRequiredStatsCategory::ISC_RequiredIntelligence:
+                        return AttributeSet && AttributeSet->GetIntelligence() >= RequiredValue;
+                case EItemRequiredStatsCategory::ISC_RequiredEndurance:
+                        return AttributeSet && AttributeSet->GetEndurance() >= RequiredValue;
+                case EItemRequiredStatsCategory::ISC_RequiredAffliction:
+                        return AttributeSet && AttributeSet->GetAffliction() >= RequiredValue;
+                case EItemRequiredStatsCategory::ISC_RequiredLuck:
+                        return AttributeSet && AttributeSet->GetLuck() >= RequiredValue;
+                case EItemRequiredStatsCategory::ISC_RequiredCovenant:
+                        return AttributeSet && AttributeSet->GetCovenant() >= RequiredValue;
+                default:
+                        return false;
+                }
+        }
+
+        return false;
 }
 
 void UFL_InteractUtility::GetInteractableScores(const TArray<UInteractableManager*>& Interactables,
