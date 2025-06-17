@@ -46,3 +46,159 @@ struct FPHAttributeInfo
 	float AttributeValue = 0.0f;
 };
 
+USTRUCT(BlueprintType)
+struct FInitialPrimaryAttributes
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Strength = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Intelligence = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Dexterity = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Endurance = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Affliction = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Luck = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Covenant = 0.f;
+};
+
+USTRUCT(BlueprintType)
+struct FInitialSecondaryAttributes
+{
+	GENERATED_BODY()
+
+	// === Regen ===
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
+	float HealthRegenRate = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
+	float ManaRegenRate = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
+	float StaminaRegenRate = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
+	float ArcaneShieldRegenRate = 1.f;
+
+	// === Regen Amounts ===
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
+	float HealthRegenAmount = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
+	float ManaRegenAmount = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
+	float StaminaRegenAmount = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
+	float ArcaneShieldRegenAmount = 0.f;
+
+	// === Reserved (Flat) ===
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
+	float FlatReservedHealth = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
+	float FlatReservedMana = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
+	float FlatReservedStamina = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
+	float FlatReservedArcaneShield = 0.f;
+
+	// === Reserved (Percentage) ===
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
+	float PercentageReservedHealth = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
+	float PercentageReservedMana = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
+	float PercentageReservedStamina = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
+	float PercentageReservedArcaneShield = 0.f;
+
+	// === Resistances (Flat) ===
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
+	float FireResistanceFlat = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
+	float IceResistanceFlat = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
+	float LightningResistanceFlat = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
+	float LightResistanceFlat = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
+	float CorruptionResistanceFlat = 0.f;
+
+	// === Resistances (Percent) ===
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
+	float FireResistancePercent = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
+	float IceResistancePercent = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
+	float LightningResistancePercent = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
+	float LightResistancePercent = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
+	float CorruptionResistancePercent = 0.f;
+
+	// === Utility ===
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Utility")
+	float Gems = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Utility")
+	float LifeLeech = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Utility")
+	float ManaLeech = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Utility")
+	float MovementSpeed = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Utility")
+	float CritChance = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Utility")
+	float CritMultiplier = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Utility")
+	float Poise = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Utility")
+	float StunRecovery = 0.f;
+};
+
+USTRUCT(BlueprintType)
+struct FInitialVitalAttributes
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vital")
+	float Health = 100.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vital")
+	float Stamina = 100.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vital")
+	float Mana = 100.f;
+};

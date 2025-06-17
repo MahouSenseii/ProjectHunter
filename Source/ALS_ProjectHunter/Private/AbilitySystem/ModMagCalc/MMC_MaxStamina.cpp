@@ -5,7 +5,7 @@
 
 #include "AbilitySystem/PHAttributeSet.h"
 #include "Interfaces/CombatSubInterface.h"
-
+//check
 class ICombatSubInterface;
 
 UMMC_MaxStamina::UMMC_MaxStamina()
@@ -46,6 +46,6 @@ float UMMC_MaxStamina::CalculateBaseMagnitude_Implementation(const FGameplayEffe
 
 	// Base hp 100 +( 5 * Endurance) + ( 6 * PlayerLevel )
 	//PrimaryAttributes start at 0 so players will always start with 100 Stamina
-	return (100.0f + ( 5.f *   Endurance) + (6.f *  ( 1- PlayerLevel)) - Reserved);
+	return (100.0f + ( 5.f *   Endurance) + (6.f *  (  PlayerLevel - 1)) - Reserved);
 	
 }

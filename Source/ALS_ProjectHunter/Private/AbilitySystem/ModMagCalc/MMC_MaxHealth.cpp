@@ -35,5 +35,5 @@ float UMMC_MaxHealth::CalculateBaseMagnitude_Implementation(const FGameplayEffec
 	// Base hp 100 +( 5 * Strength) + ( 6 * ( 1 - PlayerLevel) )
 	//PrimaryAttributes start at 0 so players will always start with 100 Health
 	
-	return (100.0f + (5.f *   Strength) + (12.f *  ( 1 - PlayerLevel)));
+	return (100.0f + (5.f *   Strength) + (12.f *  ( PlayerLevel - 1)));
 }

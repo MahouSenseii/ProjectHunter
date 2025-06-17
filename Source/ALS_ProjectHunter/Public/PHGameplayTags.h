@@ -78,7 +78,6 @@ public:
 	static FGameplayTag Attributes_Secondary_Vital_MaxManaRegenRate;
 	static FGameplayTag Attributes_Secondary_Vital_MaxManaRegenAmount;
 	static FGameplayTag Attributes_Secondary_Vital_ManaReservedAmount;
-	static FGameplayTag Attributes_Secondary_Vital_MaxManaRegenAmount;
 	static FGameplayTag Attributes_Secondary_Vital_MaxManaReservedAmount;
 	static FGameplayTag Attributes_Secondary_Vital_ManaFlatReservedAmount;
 	static FGameplayTag Attributes_Secondary_Vital_ManaPercentageReserved;
@@ -185,6 +184,8 @@ public:
 	static FGameplayTag Attributes_Secondary_Misc_ManaOnHit;
 	static FGameplayTag Attributes_Secondary_Misc_StaminaOnHit;
 	static FGameplayTag Attributes_Secondary_Misc_StaminaCostChanges;
+	static FGameplayTag Attributes_Secondary_Misc_CritChance;
+	static FGameplayTag Attributes_Secondary_Misc_CritMultiplier;
 	static FGameplayTag Attributes_Secondary_Money_Gems;
 	static FGameplayTag Attributes_Secondary_Misc_CombatAlignment;
 

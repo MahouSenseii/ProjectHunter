@@ -93,6 +93,7 @@ void APHBaseCharacter::ApplyPeriodicEffectToSelf(FInitialGameplayEffectInfo Effe
 void APHBaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
+	
 	InitAbilityActorInfo();
 	
 	CurrentController = Cast<APHPlayerController>(NewController);
@@ -237,7 +238,9 @@ void APHBaseCharacter::InitAbilityActorInfo()
 		AbilitySystemComponent = LocalPlayerState->GetAbilitySystemComponent();
 		AbilitySystemComponent->InitAbilityActorInfo(LocalPlayerState, this);
 		Cast<UPHAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
+
 		InitializeDefaultAttributes();
+		
 		AttributeSet = LocalPlayerState->GetAttributeSet();
 
 		if (AALSPlayerController* PHPlayerController = Cast<AALSPlayerController>(GetController()))
@@ -281,10 +284,90 @@ FActiveGameplayEffectHandle APHBaseCharacter::ApplyEffectToSelfWithReturn(TSubcl
 
 void APHBaseCharacter::InitializeDefaultAttributes() const
 {
-	ApplyEffectToSelf(DefaultPrimaryAttributes, 1.f);
-	ApplyEffectToSelf(DefaultSecondaryMaxAttributes,1.f);
-	ApplyEffectToSelf(DefaultSecondaryCurrentAttributes,1.f);
-	ApplyEffectToSelf(DefaultVitalAttributes, 1.f);
+	if (!IsValid(AbilitySystemComponent)) return;
+
+	FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	// === PRIMARY ATTRIBUTES ===
+	FGameplayEffectSpecHandle PrimarySpec = AbilitySystemComponent->MakeOutgoingSpec(DefaultPrimaryAttributes, 1.0f, Context);
+	if (PrimarySpec.IsValid())
+	{
+		const auto& PHTags = FPHGameplayTags::Get();
+
+		PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Strength, PrimaryInitAttributes.Strength);
+		PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Intelligence, PrimaryInitAttributes.Intelligence);
+		PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Dexterity, PrimaryInitAttributes.Dexterity);
+		PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Endurance, PrimaryInitAttributes.Endurance);
+		PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Affliction, PrimaryInitAttributes.Affliction);
+		PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Luck, PrimaryInitAttributes.Luck);
+		PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Covenant, PrimaryInitAttributes.Covenant);
+
+		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*PrimarySpec.Data);
+	}
+
+	// === SECONDARY ATTRIBUTES ===
+	FGameplayEffectSpecHandle SecondarySpec = AbilitySystemComponent->MakeOutgoingSpec(DefaultSecondaryCurrentAttributes, 1.0f, Context);
+	if ( SecondarySpec.IsValid())
+	{
+		const auto& PhTags = FPHGameplayTags::Get();
+
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_HealthRegenRate, SecondaryInitAttributes.HealthRegenRate);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ManaRegenRate, SecondaryInitAttributes.ManaRegenRate);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_StaminaRegenRate, SecondaryInitAttributes.StaminaRegenRate);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ArcaneShieldRegenRate, SecondaryInitAttributes.ArcaneShieldRegenRate);
+
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_HealthRegenAmount, SecondaryInitAttributes.HealthRegenAmount);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ManaRegenAmount, SecondaryInitAttributes.ManaRegenAmount);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_StaminaRegenAmount, SecondaryInitAttributes.StaminaRegenAmount);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ArcaneShieldRegenAmount, SecondaryInitAttributes.ArcaneShieldRegenAmount);
+
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_HealthFlatReservedAmount, SecondaryInitAttributes.FlatReservedHealth);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ManaFlatReservedAmount, SecondaryInitAttributes.FlatReservedMana);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_StaminaFlatReservedAmount, SecondaryInitAttributes.FlatReservedStamina);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ArcaneShieldFlatReservedAmount, SecondaryInitAttributes.FlatReservedArcaneShield);
+
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_HealthPercentageReserved, SecondaryInitAttributes.PercentageReservedHealth);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ManaPercentageReserved, SecondaryInitAttributes.PercentageReservedMana);\
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_StaminaPercentageReserved, SecondaryInitAttributes.PercentageReservedStamina);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ArcaneShieldPercentageReserved, SecondaryInitAttributes.PercentageReservedArcaneShield);
+
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Resistances_FireResistanceFlat, SecondaryInitAttributes.FireResistanceFlat);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Resistances_IceResistanceFlat, SecondaryInitAttributes.IceResistanceFlat);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Resistances_LightningResistanceFlat, SecondaryInitAttributes.LightningResistanceFlat);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Resistances_LightResistanceFlat, SecondaryInitAttributes.LightResistanceFlat);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Resistances_CorruptionResistanceFlat, SecondaryInitAttributes.CorruptionResistanceFlat);
+
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Resistances_FireResistancePercentage, SecondaryInitAttributes.FireResistancePercent);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Resistances_IceResistancePercentage, SecondaryInitAttributes.IceResistancePercent);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Resistances_LightningResistancePercentage, SecondaryInitAttributes.LightningResistancePercent);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Resistances_LightResistancePercentage, SecondaryInitAttributes.LightResistancePercent);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Resistances_CorruptionResistancePercentage, SecondaryInitAttributes.CorruptionResistancePercent);
+
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Money_Gems, SecondaryInitAttributes.Gems);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Misc_LifeLeech, SecondaryInitAttributes.LifeLeech);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Misc_ManaLeech, SecondaryInitAttributes.ManaLeech);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Misc_MovementSpeed, SecondaryInitAttributes.MovementSpeed);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Misc_CritChance, SecondaryInitAttributes.CritChance);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Misc_CritMultiplier, SecondaryInitAttributes.CritMultiplier);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Misc_Poise, SecondaryInitAttributes.Poise);
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Misc_StunRecovery, SecondaryInitAttributes.StunRecovery);
+
+		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SecondarySpec.Data);
+	}
+
+	FGameplayEffectSpecHandle VitalSpec = AbilitySystemComponent->MakeOutgoingSpec(DefaultVitalAttributes, 1.0f, Context);
+	if ( VitalSpec.IsValid())
+	{
+		const auto& PhTags = FPHGameplayTags::Get();
+
+		VitalSpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Vital_Health, VitalInitAttributes.Health);
+		VitalSpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Vital_Mana, VitalInitAttributes.Mana);
+		VitalSpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Vital_Stamina, VitalInitAttributes.Stamina);
+		
+		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*VitalSpec.Data);
+	}
+		
 }
 
 void APHBaseCharacter::OnRep_PoiseDamage()

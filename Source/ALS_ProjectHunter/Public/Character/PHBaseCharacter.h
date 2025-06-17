@@ -115,6 +115,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
 	void RemoveFlatStatModifier(const FGameplayAttribute& Attribute, float Delta);
 
+	
+	/** Primary attributes set at character spawn */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes|Init")
+	FInitialPrimaryAttributes PrimaryInitAttributes;
+
+	/** Secondary attributes */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes|Init")
+	FInitialSecondaryAttributes SecondaryInitAttributes;
+
+	/** Vital attributes */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes|Init")
+	FInitialVitalAttributes VitalInitAttributes;
+
 
 protected:
 	/** Begin Play */

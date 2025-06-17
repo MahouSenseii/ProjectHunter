@@ -198,7 +198,7 @@ bool UFL_InteractUtility::AreRequirementsMet(UBaseItem* InItem, AActor* OwnerPla
 bool UFL_InteractUtility::CheckBasedOnCompare(EItemRequiredStatsCategory RequiredStats, float RequiredValue,
         AActor* OwnerPlayer)
 {
-        if (const APHBaseCharacter* Owner = Cast<APHBaseCharacter>(OwnerPlayer))
+        if (APHBaseCharacter* Owner = Cast<APHBaseCharacter>(OwnerPlayer))
         {
                 // Attempt to access the attribute set on the owner
                 const UPHAttributeSet* AttributeSet = Cast<UPHAttributeSet>(Owner->GetAttributeSet());
