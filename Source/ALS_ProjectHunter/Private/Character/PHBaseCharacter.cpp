@@ -289,6 +289,7 @@ void APHBaseCharacter::InitializeDefaultAttributes() const
 	FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
 	Context.AddSourceObject(this);
 
+	ApplyEffectToSelf(DefaultPrimaryAttributes,1.0);
 	// === PRIMARY ATTRIBUTES ===
 	FGameplayEffectSpecHandle PrimarySpec = AbilitySystemComponent->MakeOutgoingSpec(DefaultPrimaryAttributes, 1.0f, Context);
 	if (PrimarySpec.IsValid())
@@ -306,6 +307,21 @@ void APHBaseCharacter::InitializeDefaultAttributes() const
 		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*PrimarySpec.Data);
 	}
 
+	ApplyEffectToSelf(DefaultVitalAttributes,1.0);
+	FGameplayEffectSpecHandle VitalSpec = AbilitySystemComponent->MakeOutgoingSpec(DefaultVitalAttributes, 1.0f, Context);
+	if ( VitalSpec.IsValid())
+	{
+		const auto& PhTags = FPHGameplayTags::Get();
+
+		VitalSpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Vital_Health, VitalInitAttributes.Health);
+		VitalSpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Vital_Mana, VitalInitAttributes.Mana);
+		VitalSpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Vital_Stamina, VitalInitAttributes.Stamina);
+		
+		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*VitalSpec.Data);
+		
+	}
+	ApplyEffectToSelf(DefaultSecondaryCurrentAttributes,1.0);
+	ApplyEffectToSelf(DefaultSecondaryMaxAttributes,1.0);
 	// === SECONDARY ATTRIBUTES ===
 	FGameplayEffectSpecHandle SecondarySpec = AbilitySystemComponent->MakeOutgoingSpec(DefaultSecondaryCurrentAttributes, 1.0f, Context);
 	if ( SecondarySpec.IsValid())
@@ -354,18 +370,6 @@ void APHBaseCharacter::InitializeDefaultAttributes() const
 		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Misc_StunRecovery, SecondaryInitAttributes.StunRecovery);
 
 		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SecondarySpec.Data);
-	}
-
-	FGameplayEffectSpecHandle VitalSpec = AbilitySystemComponent->MakeOutgoingSpec(DefaultVitalAttributes, 1.0f, Context);
-	if ( VitalSpec.IsValid())
-	{
-		const auto& PhTags = FPHGameplayTags::Get();
-
-		VitalSpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Vital_Health, VitalInitAttributes.Health);
-		VitalSpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Vital_Mana, VitalInitAttributes.Mana);
-		VitalSpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Vital_Stamina, VitalInitAttributes.Stamina);
-		
-		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*VitalSpec.Data);
 	}
 		
 }
