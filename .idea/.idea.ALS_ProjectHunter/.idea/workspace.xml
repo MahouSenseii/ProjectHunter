@@ -14,14 +14,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/PeojectHunter/GAS/GameplayEffects/DefaultAttribute/GE_SecondaryCurrentAttribute.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/PeojectHunter/GAS/GameplayEffects/DefaultAttribute/GE_SecondaryCurrentAttribute.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/PeojectHunter/GAS/GameplayEffects/DefaultAttribute/GE_SecondaryMaxAttribute.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/PeojectHunter/GAS/GameplayEffects/DefaultAttribute/GE_SecondaryMaxAttribute.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/PeojectHunter/GAS/GameplayEffects/DefaultAttribute/GE_VitalAttributes.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/PeojectHunter/GAS/GameplayEffects/DefaultAttribute/GE_VitalAttributes.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" afterDir="false" />
-    </list>
+    <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -921,7 +914,7 @@
       <workItem from="1745943461649" duration="6946000" />
       <workItem from="1749915902637" duration="4477000" />
       <workItem from="1750078249665" duration="19406000" />
-      <workItem from="1750253543472" duration="7895000" />
+      <workItem from="1750253543472" duration="9694000" />
     </task>
     <servers />
   </component>
