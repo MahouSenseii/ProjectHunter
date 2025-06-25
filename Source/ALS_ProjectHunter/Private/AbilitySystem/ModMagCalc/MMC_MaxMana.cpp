@@ -43,5 +43,5 @@ float UMMC_MaxMana::CalculateBaseMagnitude_Implementation(const FGameplayEffectS
 
 	// Base hp 100 +( 5 * Intelligence) + ( 6 * PlayerLevel )
 	//PrimaryAttributes start at 0 so players will always start with 100 Mana
-	return (100.0f + ( 5.f *   Intelligence) + ((6.f * (  PlayerLevel - 1l)) - Reserved));
+	return (100.0f + ( 5.f *   Intelligence) + ((6.f * (  PlayerLevel - 1)) - Reserved));
 }

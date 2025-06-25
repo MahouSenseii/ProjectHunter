@@ -132,9 +132,13 @@ struct FInitialGameplayEffectInfo
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGameplayAttribute AmountAttribute;
 
+	// Tag passed to the MMC using SetByCaller
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Categories = "Attributes.Secondary.Vital"))
 	FGameplayTag SetByCallerTag;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Level = 1.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Categories = "Attributes.Secondary.Vital"))
+	FGameplayTag TriggerTag;
 };

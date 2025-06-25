@@ -26,6 +26,12 @@ class APHPlayerState;
 /* === Constructor & Setup === */
 /* =========================== */
 
+
+namespace
+{
+	constexpr float MinAllowedEffectPeriod = 0.1f;
+}
+
 APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	EquipmentManager = CreateDefaultSubobject<UEquipmentManager>(TEXT("EquipmentManager"));
@@ -52,12 +58,27 @@ void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	DOREPLIFETIME(APHBaseCharacter, CurrentPoiseDamage);
 }
 
-void APHBaseCharacter::ApplyPeriodicEffectToSelf(FInitialGameplayEffectInfo EffectInfo) const
-{
-	if (!EffectInfo.EffectClass || !IsValid(AbilitySystemComponent))
-		return;
 
-	// 1) Build context + spec
+void APHBaseCharacter::ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& EffectInfo)
+{
+	if (!IsValid(AbilitySystemComponent) || !EffectInfo.EffectClass)
+	{
+		return;
+	}
+
+	// 1. Clear any existing effect for this SetByCallerTag
+	if (EffectInfo.SetByCallerTag.IsValid())
+	{
+		if (const FActiveGameplayEffectHandle* FoundHandle = ActivePeriodicEffects.Find(EffectInfo.SetByCallerTag))
+		{
+			if (FoundHandle->IsValid())
+			{
+				AbilitySystemComponent->RemoveActiveGameplayEffect(*FoundHandle);
+			}
+		}
+	}
+
+	// 2. Build context and spec
 	FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
 	Context.AddSourceObject(this);
 
@@ -65,29 +86,42 @@ void APHBaseCharacter::ApplyPeriodicEffectToSelf(FInitialGameplayEffectInfo Effe
 		EffectInfo.EffectClass, EffectInfo.Level, Context);
 
 	if (!SpecHandle.IsValid())
+	{
 		return;
+	}
 
-	// 2) Pull dynamic OR fallback values
-	const float Period = EffectInfo.RateAttribute.IsValid()
+	// 3. Pull current values from attributes or fallback to defaults
+	const float RawRate = EffectInfo.RateAttribute.IsValid()
 		? AbilitySystemComponent->GetNumericAttribute(EffectInfo.RateAttribute)
 		: EffectInfo.DefaultRate;
 
-	const float Amount = EffectInfo.AmountAttribute.IsValid()
+	const float ClampedRate = FMath::Max(RawRate, MinAllowedEffectPeriod);
+
+	const float RawAmount = EffectInfo.AmountAttribute.IsValid()
 		? AbilitySystemComponent->GetNumericAttribute(EffectInfo.AmountAttribute)
 		: EffectInfo.DefaultAmount;
 
-	// 3) Override tick period if effect is periodic
-	SpecHandle.Data->Period = Period;
+	// 4. Set SetByCallerMagnitude (used in MMC) and Period (for ticking)
+	SpecHandle.Data->SetSetByCallerMagnitude(EffectInfo.SetByCallerTag, RawAmount);
+	SpecHandle.Data->Period = ClampedRate;
 
-	// 4) Feed the per-tick amount via SetByCaller
-	if (EffectInfo.SetByCallerTag.IsValid())
+	// 5. Apply the effect to self and track the handle
+	FActiveGameplayEffectHandle Handle = AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(
+		*SpecHandle.Data.Get(), AbilitySystemComponent);
+
+	if (EffectInfo.SetByCallerTag.IsValid() && Handle.IsValid())
 	{
-		SpecHandle.Data->SetSetByCallerMagnitude(EffectInfo.SetByCallerTag, Amount);
+		ActivePeriodicEffects.Add(EffectInfo.SetByCallerTag, Handle);
 	}
 
-	// 5) Apply it to self (ASC is both instigator and target)
-	AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), AbilitySystemComponent);
+	// 6. Optional: debug log
+#if WITH_EDITOR
+	UE_LOG(LogTemp, Log, TEXT("[GAS] Applied %s with Amount %.2f, Period %.2f"),
+		*EffectInfo.EffectClass->GetName(), RawAmount, ClampedRate);
+#endif
 }
+
+
 
 
 void APHBaseCharacter::PossessedBy(AController* NewController)
@@ -115,10 +149,142 @@ void APHBaseCharacter::BeginPlay()
 
 	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
 	{
+		// Bind rate/amount change listeners
+		if (EffectInfo.RateAttribute.IsValid())
+		{
+			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(EffectInfo.RateAttribute)
+				.AddUObject(this, &APHBaseCharacter::OnAnyVitalPeriodicStatChanged);
+		}
+
+		if (EffectInfo.AmountAttribute.IsValid())
+		{
+			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(EffectInfo.AmountAttribute)
+				.AddUObject(this, &APHBaseCharacter::OnAnyVitalPeriodicStatChanged);
+		}
+
+		// Bind trigger tag change listener (if any)
+		if (EffectInfo.TriggerTag.IsValid())
+		{
+			AbilitySystemComponent->RegisterGameplayTagEvent(EffectInfo.TriggerTag, EGameplayTagEventType::NewOrRemoved)
+				.AddUObject(this, &APHBaseCharacter::OnRegenTagChanged);
+		}
+
+		// Apply the effect initially
 		ApplyPeriodicEffectToSelf(EffectInfo);
 	}
 }
 
+void APHBaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	ClearAllPeriodicEffects();
+}
+
+
+void APHBaseCharacter::ClearAllPeriodicEffects()
+{
+	
+	TArray<FActiveGameplayEffectHandle> Handles;
+	ActivePeriodicEffects.GenerateValueArray(Handles);
+
+	for (const FActiveGameplayEffectHandle& Handle : Handles)
+	{
+		if (Handle.IsValid())
+		{
+			AbilitySystemComponent->RemoveActiveGameplayEffect(Handle);
+		}
+	}
+
+	ActivePeriodicEffects.Empty();
+}
+
+bool APHBaseCharacter::HasValidPeriodicEffect(FGameplayTag EffectTag) const
+{
+	TArray<FActiveGameplayEffectHandle> Handles;
+	ActivePeriodicEffects.MultiFind(EffectTag, Handles);
+
+	for (const FActiveGameplayEffectHandle& Handle : Handles)
+	{
+		if (Handle.IsValid() && AbilitySystemComponent->GetActiveGameplayEffect(Handle))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void APHBaseCharacter::PurgeInvalidPeriodicHandles()
+{
+	TArray<FGameplayTag> PHTags;
+	ActivePeriodicEffects.GetKeys( PHTags);
+
+	for (const FGameplayTag& Tag :  PHTags)
+	{
+		TArray<FActiveGameplayEffectHandle> Handles;
+		ActivePeriodicEffects.MultiFind(Tag, Handles);
+
+		for (int32 i = Handles.Num() - 1; i >= 0; --i)
+		{
+			if (!Handles[i].IsValid())
+			{
+				ActivePeriodicEffects.RemoveSingle(Tag, Handles[i]);
+			}
+		}
+	}
+}
+
+
+void APHBaseCharacter::RemoveAllPeriodicEffectsByTag(const FGameplayTag EffectTag)
+{
+	TArray<FActiveGameplayEffectHandle> Handles;
+	ActivePeriodicEffects.MultiFind(EffectTag, Handles);
+
+	// Filter and remove invalid handles first
+	for (int32 i = Handles.Num() - 1; i >= 0; --i)
+	{
+		if (!Handles[i].IsValid())
+		{
+			Handles.RemoveAt(i);
+		}
+	}
+
+	// Remove valid handles from ASC
+	for (const FActiveGameplayEffectHandle& Handle : Handles)
+	{
+		if (Handle.IsValid())
+		{
+			AbilitySystemComponent->RemoveActiveGameplayEffect(Handle);
+		}
+	}
+
+	// Remove entries from the TMultiMap
+	ActivePeriodicEffects.Remove(EffectTag);
+}
+
+
+void APHBaseCharacter::OnRegenTagChanged(FGameplayTag ChangedTag, int32 NewCount)
+{
+	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
+	{
+		if (EffectInfo.TriggerTag == ChangedTag)
+		{
+			ApplyPeriodicEffectToSelf(EffectInfo);
+		}
+	}
+}
+
+void APHBaseCharacter::OnAnyVitalPeriodicStatChanged(const FOnAttributeChangeData& Data)
+{
+	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
+	{
+		if (EffectInfo.RateAttribute == Data.Attribute || EffectInfo.AmountAttribute == Data.Attribute)
+		{
+			ApplyPeriodicEffectToSelf(EffectInfo);
+		}
+	}
+}
 void APHBaseCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -344,7 +510,7 @@ void APHBaseCharacter::InitializeDefaultAttributes() const
 		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ArcaneShieldFlatReservedAmount, SecondaryInitAttributes.FlatReservedArcaneShield);
 
 		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_HealthPercentageReserved, SecondaryInitAttributes.PercentageReservedHealth);
-		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ManaPercentageReserved, SecondaryInitAttributes.PercentageReservedMana);\
+		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ManaPercentageReserved, SecondaryInitAttributes.PercentageReservedMana);
 		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_StaminaPercentageReserved, SecondaryInitAttributes.PercentageReservedStamina);
 		SecondarySpec.Data->SetSetByCallerMagnitude(PhTags.Attributes_Secondary_Vital_ArcaneShieldPercentageReserved, SecondaryInitAttributes.PercentageReservedArcaneShield);
 
@@ -371,8 +537,11 @@ void APHBaseCharacter::InitializeDefaultAttributes() const
 
 		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SecondarySpec.Data);
 	}
-		
+
+
+	
 }
+
 
 void APHBaseCharacter::OnRep_PoiseDamage()
 {

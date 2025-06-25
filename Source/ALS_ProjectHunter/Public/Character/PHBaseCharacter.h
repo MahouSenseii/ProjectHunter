@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "Character/ALSCharacter.h"
 #include "Components/EquipmentManager.h"
@@ -11,7 +10,12 @@
 #include "PaperSpriteComponent.h"
 #include "Player/PHPlayerController.h"
 #include "UI/ToolTip/EquippableToolTip.h"
+#include "AbilitySystemComponent.h"
+#include "Containers/Map.h"
+#include "GameplayTagContainer.h" 
+#include "GameplayEffectTypes.h" 
 #include "PHBaseCharacter.generated.h"
+
 
 struct FInitialGameplayEffectInfo;
 class UInteractableManager;
@@ -38,7 +42,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, Category="GAS|Vital")
-	void ApplyPeriodicEffectToSelf(FInitialGameplayEffectInfo EffectInfo) const;
+	void ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& EffectInfo);
 	
 	/** Called when possessed by a new controller */
 	virtual void PossessedBy(AController* NewController) override;
@@ -128,10 +132,41 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes|Init")
 	FInitialVitalAttributes VitalInitAttributes;
 
+	// Store active periodic effects by SetByCaller ta
+	TMultiMap<FGameplayTag, FActiveGameplayEffectHandle> ActivePeriodicEffects;
+
+
 
 protected:
 	/** Begin Play */
 	virtual void BeginPlay() override;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	
+	// Clears all periodic effects currently applied to the character
+	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
+	void ClearAllPeriodicEffects();
+
+	// Checks if any valid periodic effect exists for the given tag
+	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
+	bool HasValidPeriodicEffect(FGameplayTag EffectTag) const;
+
+	// Removes all invalid handles from the periodic effect map
+	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
+	void PurgeInvalidPeriodicHandles();
+
+	// Removes all active periodic effects matching the given tag
+	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
+	void RemoveAllPeriodicEffectsByTag(FGameplayTag EffectTag);
+
+	// Triggered when a regen/degen tag changes (can force reapplication)
+	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
+	void OnRegenTagChanged(FGameplayTag ChangedTag, int32 NewCount);
+
+	// Triggered when any rate/amount attribute changes
+	void OnAnyVitalPeriodicStatChanged(const FOnAttributeChangeData& Data);
+
 
 	/** Ability System Initialization */
 	virtual void InitAbilityActorInfo();
@@ -145,7 +180,7 @@ protected:
 
 	/** Default Attribute Initialization */
 	void InitializeDefaultAttributes() const;
-
+	
 	/** Callback for Poise Replication */
 	UFUNCTION()
 	void OnRep_PoiseDamage();
@@ -223,12 +258,12 @@ private:
 	float TimeSinceLastPoiseHit = 0.0f;
 
 	/** Internal State */
+	/** If true, this character is controlled by a real player and expects ASC/Attributes from the PlayerState */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Defaults", meta = (AllowPrivateAccess = "true"))
 	bool bIsPlayer = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Defaults", meta = (AllowPrivateAccess = "true"))
 	int32 Level = 1;
-
 	bool bIsInRecovery = false;
 	float TimeSinceLastRecovery = 0.0;
 	
