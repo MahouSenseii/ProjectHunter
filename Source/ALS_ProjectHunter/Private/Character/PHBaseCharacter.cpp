@@ -10,12 +10,9 @@
 #include "Character/Player/State/PHPlayerState.h"
 #include "Components/EquipmentManager.h"
 #include "Components/InventoryManager.h"
-#include "Components/SceneCaptureComponent2D.h"
 #include "Components/CombatManager.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "Interactables/Pickups/ConsumablePickup.h"
 #include "Interactables/Pickups/EquipmentPickup.h"
-#include "Library/PHCharacterStructLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "UI/ToolTip/ConsumableToolTip.h"
 #include "UI/HUD/PHHUD.h"
@@ -25,12 +22,6 @@ class APHPlayerState;
 /* =========================== */
 /* === Constructor & Setup === */
 /* =========================== */
-
-
-namespace
-{
-	constexpr float MinAllowedEffectPeriod = 0.1f;
-}
 
 APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -59,71 +50,6 @@ void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 }
 
 
-void APHBaseCharacter::ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& EffectInfo)
-{
-	if (!IsValid(AbilitySystemComponent) || !EffectInfo.EffectClass)
-	{
-		return;
-	}
-
-	// 1. Clear any existing effect for this SetByCallerTag
-	if (EffectInfo.SetByCallerTag.IsValid())
-	{
-		if (const FActiveGameplayEffectHandle* FoundHandle = ActivePeriodicEffects.Find(EffectInfo.SetByCallerTag))
-		{
-			if (FoundHandle->IsValid())
-			{
-				AbilitySystemComponent->RemoveActiveGameplayEffect(*FoundHandle);
-			}
-		}
-	}
-
-	// 2. Build context and spec
-	FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
-	Context.AddSourceObject(this);
-
-	FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(
-		EffectInfo.EffectClass, EffectInfo.Level, Context);
-
-	if (!SpecHandle.IsValid())
-	{
-		return;
-	}
-
-	// 3. Pull current values from attributes or fallback to defaults
-	const float RawRate = EffectInfo.RateAttribute.IsValid()
-		? AbilitySystemComponent->GetNumericAttribute(EffectInfo.RateAttribute)
-		: EffectInfo.DefaultRate;
-
-	const float ClampedRate = FMath::Max(RawRate, MinAllowedEffectPeriod);
-
-	const float RawAmount = EffectInfo.AmountAttribute.IsValid()
-		? AbilitySystemComponent->GetNumericAttribute(EffectInfo.AmountAttribute)
-		: EffectInfo.DefaultAmount;
-
-	// 4. Set SetByCallerMagnitude (used in MMC) and Period (for ticking)
-	SpecHandle.Data->SetSetByCallerMagnitude(EffectInfo.SetByCallerTag, RawAmount);
-	SpecHandle.Data->Period = ClampedRate;
-
-	// 5. Apply the effect to self and track the handle
-	FActiveGameplayEffectHandle Handle = AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(
-		*SpecHandle.Data.Get(), AbilitySystemComponent);
-
-	if (EffectInfo.SetByCallerTag.IsValid() && Handle.IsValid())
-	{
-		ActivePeriodicEffects.Add(EffectInfo.SetByCallerTag, Handle);
-	}
-
-	// 6. Optional: debug log
-#if WITH_EDITOR
-	UE_LOG(LogTemp, Log, TEXT("[GAS] Applied %s with Amount %.2f, Period %.2f"),
-		*EffectInfo.EffectClass->GetName(), RawAmount, ClampedRate);
-#endif
-}
-
-
-
-
 void APHBaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
@@ -146,145 +72,9 @@ UAbilitySystemComponent* APHBaseCharacter::GetAbilitySystemComponent() const
 void APHBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
-	{
-		// Bind rate/amount change listeners
-		if (EffectInfo.RateAttribute.IsValid())
-		{
-			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(EffectInfo.RateAttribute)
-				.AddUObject(this, &APHBaseCharacter::OnAnyVitalPeriodicStatChanged);
-		}
-
-		if (EffectInfo.AmountAttribute.IsValid())
-		{
-			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(EffectInfo.AmountAttribute)
-				.AddUObject(this, &APHBaseCharacter::OnAnyVitalPeriodicStatChanged);
-		}
-
-		// Bind trigger tag change listener (if any)
-		if (EffectInfo.TriggerTag.IsValid())
-		{
-			AbilitySystemComponent->RegisterGameplayTagEvent(EffectInfo.TriggerTag, EGameplayTagEventType::NewOrRemoved)
-				.AddUObject(this, &APHBaseCharacter::OnRegenTagChanged);
-		}
-
-		// Apply the effect initially
-		ApplyPeriodicEffectToSelf(EffectInfo);
-	}
-}
-
-void APHBaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-
-	ClearAllPeriodicEffects();
 }
 
 
-void APHBaseCharacter::ClearAllPeriodicEffects()
-{
-	
-	TArray<FActiveGameplayEffectHandle> Handles;
-	ActivePeriodicEffects.GenerateValueArray(Handles);
-
-	for (const FActiveGameplayEffectHandle& Handle : Handles)
-	{
-		if (Handle.IsValid())
-		{
-			AbilitySystemComponent->RemoveActiveGameplayEffect(Handle);
-		}
-	}
-
-	ActivePeriodicEffects.Empty();
-}
-
-bool APHBaseCharacter::HasValidPeriodicEffect(FGameplayTag EffectTag) const
-{
-	TArray<FActiveGameplayEffectHandle> Handles;
-	ActivePeriodicEffects.MultiFind(EffectTag, Handles);
-
-	for (const FActiveGameplayEffectHandle& Handle : Handles)
-	{
-		if (Handle.IsValid() && AbilitySystemComponent->GetActiveGameplayEffect(Handle))
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void APHBaseCharacter::PurgeInvalidPeriodicHandles()
-{
-	TArray<FGameplayTag> PHTags;
-	ActivePeriodicEffects.GetKeys( PHTags);
-
-	for (const FGameplayTag& Tag :  PHTags)
-	{
-		TArray<FActiveGameplayEffectHandle> Handles;
-		ActivePeriodicEffects.MultiFind(Tag, Handles);
-
-		for (int32 i = Handles.Num() - 1; i >= 0; --i)
-		{
-			if (!Handles[i].IsValid())
-			{
-				ActivePeriodicEffects.RemoveSingle(Tag, Handles[i]);
-			}
-		}
-	}
-}
-
-
-void APHBaseCharacter::RemoveAllPeriodicEffectsByTag(const FGameplayTag EffectTag)
-{
-	TArray<FActiveGameplayEffectHandle> Handles;
-	ActivePeriodicEffects.MultiFind(EffectTag, Handles);
-
-	// Filter and remove invalid handles first
-	for (int32 i = Handles.Num() - 1; i >= 0; --i)
-	{
-		if (!Handles[i].IsValid())
-		{
-			Handles.RemoveAt(i);
-		}
-	}
-
-	// Remove valid handles from ASC
-	for (const FActiveGameplayEffectHandle& Handle : Handles)
-	{
-		if (Handle.IsValid())
-		{
-			AbilitySystemComponent->RemoveActiveGameplayEffect(Handle);
-		}
-	}
-
-	// Remove entries from the TMultiMap
-	ActivePeriodicEffects.Remove(EffectTag);
-}
-
-
-void APHBaseCharacter::OnRegenTagChanged(FGameplayTag ChangedTag, int32 NewCount)
-{
-	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
-	{
-		if (EffectInfo.TriggerTag == ChangedTag)
-		{
-			ApplyPeriodicEffectToSelf(EffectInfo);
-		}
-	}
-}
-
-void APHBaseCharacter::OnAnyVitalPeriodicStatChanged(const FOnAttributeChangeData& Data)
-{
-	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
-	{
-		if (EffectInfo.RateAttribute == Data.Attribute || EffectInfo.AmountAttribute == Data.Attribute)
-		{
-			ApplyPeriodicEffectToSelf(EffectInfo);
-		}
-	}
-}
 void APHBaseCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -340,49 +130,6 @@ void APHBaseCharacter::OnGaitChanged(EALSGait PreviousGait)
 /* =========================== */
 /* === Equipment Handles   === */
 /* =========================== */
-
-float APHBaseCharacter::GetStatBase(const FGameplayAttribute& Attr) const
-{
-	if (!Attr.IsValid()) return 0.0f;
-
-	if (const UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
-	{
-		return ASC->GetNumericAttribute(Attr);
-	}
-
-	return 0.0f;
-}
-
-void APHBaseCharacter::ApplyFlatStatModifier( const FGameplayAttribute& Attr, const float InValue) const
-{
-	if (!Attr.IsValid()) return;
-
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
-	{
-		const float CurrentValue = ASC->GetNumericAttribute(Attr);
-		const float NewValue = CurrentValue + InValue;
-
-		
-		// May add later if needed if going - causes issues or to clamp max  
-		// const float ClampedValue = FMath::Clamp(NewValue, 0.f, MaxAllowed);
-
-		ASC->SetNumericAttributeBase(Attr, NewValue);
-	}
-}
-
-void APHBaseCharacter::RemoveFlatStatModifier(const FGameplayAttribute& Attribute, float Delta)
-{
-	if (!Attribute.IsValid()) return;
-
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
-	{
-		const float CurrentValue = ASC->GetNumericAttribute(Attribute);
-		const float NewValue = CurrentValue - Delta;
-
-		// Optional clamp to prevent negatives if needed
-		ASC->SetNumericAttributeBase(Attribute, NewValue);
-	}
-}
 
 /* =========================== */
 /* === Ability System (GAS) === */
@@ -542,40 +289,9 @@ void APHBaseCharacter::InitializeDefaultAttributes() const
 	
 }
 
-
-void APHBaseCharacter::OnRep_PoiseDamage()
-{
-}
-
 /* =========================== */
 /* === Poise System === */
 /* =========================== */
-
-float APHBaseCharacter::GetPoisePercentage() const
-{
-	const UPHAttributeSet* Attributes = Cast<UPHAttributeSet>(GetAttributeSet());
-	if (!Attributes) return 100.0f; // Assume full poise if attributes not found
-
-	const float PoiseThreshold = Attributes->GetPoise();
-	const float CurrentPoise = GetCurrentPoiseDamage();
-
-	return (PoiseThreshold > 0.0f) ? FMath::Clamp((1.0f - (CurrentPoise / PoiseThreshold)) * 100.0f, 0.0f, 100.0f) : 0.0f;
-}
-
-UAnimMontage* APHBaseCharacter::GetStaggerAnimation()
-{
-	return  StaggerMontage;
-}
-
-void APHBaseCharacter::ApplyPoiseDamage(float PoiseDamage)
-{
-	if (!HasAuthority()) return; // Server-side only
-
-	CurrentPoiseDamage = FMath::Max(0.0f, CurrentPoiseDamage + PoiseDamage);
-	TimeSinceLastPoiseHit = 0.0f; // Reset timer
-
-	ForceNetUpdate(); // Ensure replication
-}
 
 /* =========================== */
 /* === UI & MiniMap === */
@@ -607,7 +323,7 @@ int32 APHBaseCharacter::GetXPFNeededForNextLevel()
 	return  LocalPlayerState->GetXPForNextLevel();
 }
 
-void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
+void APHBaseCharacter::OpenToolTip(const UInteractableManager* InteractableManager)
 {
 	if (!InteractableManager) return;
 	check(EquippableToolTipClass);
@@ -671,19 +387,6 @@ void APHBaseCharacter::CloseToolTip(UInteractableManager* InteractableManager)
 	}
 }
 
-void APHBaseCharacter::SetupMiniMapCamera()
-{
-	MiniMapSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("MiniMapSpringArm"));
-	MiniMapSpringArm->SetupAttachment(RootComponent);
-	MiniMapCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("MiniMapCapture"));
-	MiniMapCapture->SetupAttachment(MiniMapSpringArm);
-
-	MiniMapSpringArm->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
-	MiniMapSpringArm->TargetArmLength = 600.f;
-	MiniMapSpringArm->bDoCollisionTest = false;
-	MiniMapCapture->ProjectionType = ECameraProjectionMode::Orthographic;
-	MiniMapCapture->OrthoWidth = 1500.f;
-}
 
 float APHBaseCharacter::GetCurrentPoiseDamage() const
 {
