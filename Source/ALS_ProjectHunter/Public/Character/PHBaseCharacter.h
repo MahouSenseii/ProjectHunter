@@ -14,10 +14,10 @@
 #include "Containers/Map.h"
 #include "GameplayTagContainer.h" 
 #include "GameplayEffectTypes.h" 
-#include "Library/PHCharacterStructLibrary.h"
 #include "PHBaseCharacter.generated.h"
 
 
+struct FInitialGameplayEffectInfo;
 class UInteractableManager;
 class UCombatManager;
 class USpringArmComponent;
@@ -40,6 +40,9 @@ public:
 	APHBaseCharacter(const FObjectInitializer& ObjectInitializer);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION(BlueprintCallable, Category="GAS|Vital")
+	void ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& EffectInfo);
 	
 	/** Called when possessed by a new controller */
 	virtual void PossessedBy(AController* NewController) override;
@@ -70,11 +73,15 @@ public:
 
 	/** Tooltip UI */
 	UFUNCTION()
-	void OpenToolTip(const UInteractableManager* InteractableManager);
+	void OpenToolTip(UInteractableManager* InteractableManager);
 
 	UFUNCTION()
 	void CloseToolTip(UInteractableManager* InteractableManager);
-	
+
+	/** MiniMap Setup */
+	UFUNCTION()
+	void SetupMiniMapCamera();
+
 	/** Poise Functions */
 	UFUNCTION(BlueprintCallable, Category = "Poise")
 	float GetCurrentPoiseDamage() const;
@@ -84,7 +91,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Poise")
 	void SetTimeSinceLastPoiseHit(float NewTime);
-	
+
+	UFUNCTION(BlueprintCallable, Category = "Poise")
+	void ApplyPoiseDamage(float PoiseDamage);
+
+	UFUNCTION(BlueprintCallable, Category = "Poise")
+	float GetPoisePercentage() const;
+
+	/** Stagger */
+	UFUNCTION(BlueprintCallable, Category = "Poise")
+	UAnimMontage* GetStaggerAnimation();
 
 	/** Regeneration & Tick */
 	virtual void Tick(float DeltaSeconds) override;
@@ -92,7 +108,18 @@ public:
 
 	//Changed Handle
 	virtual void OnGaitChanged(EALSGait PreviousGait) override;
+	/** Equipment Handles */
 
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	float GetStatBase(const FGameplayAttribute& Attr) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	void ApplyFlatStatModifier(const FGameplayAttribute& Attr, float InValue) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	void RemoveFlatStatModifier(const FGameplayAttribute& Attribute, float Delta);
+
+	
 	/** Primary attributes set at character spawn */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes|Init")
 	FInitialPrimaryAttributes PrimaryInitAttributes;
@@ -113,6 +140,33 @@ public:
 protected:
 	/** Begin Play */
 	virtual void BeginPlay() override;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	
+	// Clears all periodic effects currently applied to the character
+	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
+	void ClearAllPeriodicEffects();
+
+	// Checks if any valid periodic effect exists for the given tag
+	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
+	bool HasValidPeriodicEffect(FGameplayTag EffectTag) const;
+
+	// Removes all invalid handles from the periodic effect map
+	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
+	void PurgeInvalidPeriodicHandles();
+
+	// Removes all active periodic effects matching the given tag
+	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
+	void RemoveAllPeriodicEffectsByTag(FGameplayTag EffectTag);
+
+	// Triggered when a regen/degen tag changes (can force reapplication)
+	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
+	void OnRegenTagChanged(FGameplayTag ChangedTag, int32 NewCount);
+
+	// Triggered when any rate/amount attribute changes
+	void OnAnyVitalPeriodicStatChanged(const FOnAttributeChangeData& Data);
+
 
 	/** Ability System Initialization */
 	virtual void InitAbilityActorInfo();

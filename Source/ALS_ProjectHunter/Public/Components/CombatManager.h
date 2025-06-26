@@ -33,7 +33,12 @@ protected:
 	/* === Poise & Stagger System === */
 	/* ============================= */
 
-	
+	UFUNCTION(BlueprintCallable, Category = "Combat|Stagger")
+	void ApplyPoiseDamage(APHBaseCharacter* Defender, float DamageTaken);
+	void RegeneratePoise(float DeltaTime) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Stagger")
+	static void StaggerCharacter(APHBaseCharacter* Defender);
 
 public:	
 	
