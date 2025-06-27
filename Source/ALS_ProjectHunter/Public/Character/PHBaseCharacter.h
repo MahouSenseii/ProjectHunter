@@ -82,26 +82,6 @@ public:
 	UFUNCTION()
 	void SetupMiniMapCamera();
 
-	/** Poise Functions */
-	UFUNCTION(BlueprintCallable, Category = "Poise")
-	float GetCurrentPoiseDamage() const;
-
-	UFUNCTION(BlueprintCallable, Category = "Poise")
-	float GetTimeSinceLastPoiseHit() const;
-
-	UFUNCTION(BlueprintCallable, Category = "Poise")
-	void SetTimeSinceLastPoiseHit(float NewTime);
-
-	UFUNCTION(BlueprintCallable, Category = "Poise")
-	void ApplyPoiseDamage(float PoiseDamage);
-
-	UFUNCTION(BlueprintCallable, Category = "Poise")
-	float GetPoisePercentage() const;
-
-	/** Stagger */
-	UFUNCTION(BlueprintCallable, Category = "Poise")
-	UAnimMontage* GetStaggerAnimation();
-
 	/** Regeneration & Tick */
 	virtual void Tick(float DeltaSeconds) override;
 	virtual bool CanSprint() const override;
@@ -179,13 +159,9 @@ protected:
 	FActiveGameplayEffectHandle ApplyEffectToSelfWithReturn(TSubclassOf<UGameplayEffect> InEffect, float InLevel);
 
 	/** Default Attribute Initialization */
-	void InitializeDefaultAttributes() const;
-	
-	/** Callback for Poise Replication */
-	UFUNCTION()
-	void OnRep_PoiseDamage();
+	void InitializeDefaultAttributes();
+	void ReapplyAllStartupRegenEffects();
 
-	
 protected:
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Controller")
@@ -249,10 +225,7 @@ private:
 	/** Animation */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim", meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* StaggerMontage;
-
-	/** Poise System */
-	UPROPERTY(ReplicatedUsing = OnRep_PoiseDamage, meta = (AllowPrivateAccess = "true"))
-	float CurrentPoiseDamage = 0.0f;
+	
 
 	UPROPERTY(meta = (AllowPrivateAccess = "true"))
 	float TimeSinceLastPoiseHit = 0.0f;

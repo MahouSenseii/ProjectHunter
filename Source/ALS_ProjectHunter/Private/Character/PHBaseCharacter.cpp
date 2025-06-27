@@ -55,7 +55,6 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(APHBaseCharacter, CurrentPoiseDamage);
 }
 
 
@@ -114,7 +113,6 @@ void APHBaseCharacter::ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInf
 		ActivePeriodicEffects.Add(EffectInfo.SetByCallerTag, Handle);
 	}
 
-	// 6. Optional: debug log
 #if WITH_EDITOR
 	UE_LOG(LogTemp, Log, TEXT("[GAS] Applied %s with Amount %.2f, Period %.2f"),
 		*EffectInfo.EffectClass->GetName(), RawAmount, ClampedRate);
@@ -448,7 +446,7 @@ FActiveGameplayEffectHandle APHBaseCharacter::ApplyEffectToSelfWithReturn(TSubcl
 }
 
 
-void APHBaseCharacter::InitializeDefaultAttributes() const
+void APHBaseCharacter::InitializeDefaultAttributes()
 {
 	if (!IsValid(AbilitySystemComponent)) return;
 
@@ -486,8 +484,14 @@ void APHBaseCharacter::InitializeDefaultAttributes() const
 		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*VitalSpec.Data);
 		
 	}
-	ApplyEffectToSelf(DefaultSecondaryCurrentAttributes,1.0);
-	ApplyEffectToSelf(DefaultSecondaryMaxAttributes,1.0);
+	
+	FGameplayEffectSpecHandle SecondaryVitalSpec = AbilitySystemComponent->MakeOutgoingSpec(DefaultSecondaryMaxAttributes, 1.0f, Context);
+	if ( SecondaryVitalSpec.IsValid())
+	{
+		
+		ApplyEffectToSelf(DefaultSecondaryMaxAttributes,1.0);
+	}
+	
 	// === SECONDARY ATTRIBUTES ===
 	FGameplayEffectSpecHandle SecondarySpec = AbilitySystemComponent->MakeOutgoingSpec(DefaultSecondaryCurrentAttributes, 1.0f, Context);
 	if ( SecondarySpec.IsValid())
@@ -537,46 +541,25 @@ void APHBaseCharacter::InitializeDefaultAttributes() const
 
 		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SecondarySpec.Data);
 	}
-
-
-	
+	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
+	{
+		ApplyPeriodicEffectToSelf(EffectInfo);
+	}
+	ReapplyAllStartupRegenEffects();
 }
 
-
-void APHBaseCharacter::OnRep_PoiseDamage()
+void APHBaseCharacter::ReapplyAllStartupRegenEffects()
 {
+	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
+	{
+		if (EffectInfo.SetByCallerTag.MatchesTag(FGameplayTag::RequestGameplayTag("Attribute.Secondary.Vital.ManaRegenAmount")) ||
+			EffectInfo.SetByCallerTag.MatchesTag(FGameplayTag::RequestGameplayTag("Attribute.Secondary.Vital.StaminaRegenAmount")) ||
+			EffectInfo.SetByCallerTag.MatchesTag(FGameplayTag::RequestGameplayTag("Attribute.Secondary.Vital.HealthRegenAmount")))
+		{
+			ApplyPeriodicEffectToSelf(EffectInfo);
+		}
+	}
 }
-
-/* =========================== */
-/* === Poise System === */
-/* =========================== */
-
-float APHBaseCharacter::GetPoisePercentage() const
-{
-	const UPHAttributeSet* Attributes = Cast<UPHAttributeSet>(GetAttributeSet());
-	if (!Attributes) return 100.0f; // Assume full poise if attributes not found
-
-	const float PoiseThreshold = Attributes->GetPoise();
-	const float CurrentPoise = GetCurrentPoiseDamage();
-
-	return (PoiseThreshold > 0.0f) ? FMath::Clamp((1.0f - (CurrentPoise / PoiseThreshold)) * 100.0f, 0.0f, 100.0f) : 0.0f;
-}
-
-UAnimMontage* APHBaseCharacter::GetStaggerAnimation()
-{
-	return  StaggerMontage;
-}
-
-void APHBaseCharacter::ApplyPoiseDamage(float PoiseDamage)
-{
-	if (!HasAuthority()) return; // Server-side only
-
-	CurrentPoiseDamage = FMath::Max(0.0f, CurrentPoiseDamage + PoiseDamage);
-	TimeSinceLastPoiseHit = 0.0f; // Reset timer
-
-	ForceNetUpdate(); // Ensure replication
-}
-
 /* =========================== */
 /* === UI & MiniMap === */
 /* =========================== */
@@ -683,19 +666,4 @@ void APHBaseCharacter::SetupMiniMapCamera()
 	MiniMapSpringArm->bDoCollisionTest = false;
 	MiniMapCapture->ProjectionType = ECameraProjectionMode::Orthographic;
 	MiniMapCapture->OrthoWidth = 1500.f;
-}
-
-float APHBaseCharacter::GetCurrentPoiseDamage() const
-{
-	return CurrentPoiseDamage;
-}
-
-float APHBaseCharacter::GetTimeSinceLastPoiseHit() const
-{
-	return TimeSinceLastPoiseHit;
-}
-
-void APHBaseCharacter::SetTimeSinceLastPoiseHit(float NewTime)
-{
-	TimeSinceLastPoiseHit = NewTime;
 }

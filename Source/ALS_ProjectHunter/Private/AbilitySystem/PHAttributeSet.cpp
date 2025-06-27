@@ -253,34 +253,65 @@ void UPHAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 	SetEffectProperties(Data, Props);
 
 	const FGameplayAttribute Attribute = Data.EvaluatedData.Attribute;
-	
-	if(Attribute == GetHealthAttribute())
+
+	// Optional: check for source/target tags if needed
+	const FGameplayTagContainer* SourceTags = Data.EffectSpec.CapturedSourceTags.GetAggregatedTags();
+	const FGameplayTagContainer* TargetTags = Data.EffectSpec.CapturedTargetTags.GetAggregatedTags();
+
+	// Reusable clamp logic
+	auto ClampResource = [](TFunction<float()> Getter, TFunction<float()> MaxGetter, TFunction<void(float)> Setter)
 	{
-		SetHealth(FMath::Clamp(GetHealth(), 0.0f, GetMaxEffectiveHealth()));
-		SetMaxEffectiveHealth(GetMaxEffectiveHealth());
-		SetMaxHealth(GetMaxHealth());
-		SetReservedHealth(GetReservedHealth());
+		Setter(FMath::Clamp(Getter(), 0.0f, FMath::Max(1.0f, MaxGetter())));
+	};
+
+	// Clamp and handle each relevant resource
+	if (Attribute == GetHealthAttribute())
+	{
+		ClampResource(
+			[this]() { return GetHealth(); },
+			[this]() { return GetMaxEffectiveHealth(); },
+			[this](float V) { SetHealth(V); }
+		);
+
+		// Handle death
+		if (GetHealth() <= 0.0f)
+		{
+			// Trigger death logic here, e.g.:
+			// OnCharacterDeath.Broadcast();
+		}
 	}
-	if(Attribute == GetManaAttribute())
+	else if (Attribute == GetManaAttribute())
 	{
-		SetMana(  FMath::Clamp(GetMana(), 0.0f, GetMaxMana()));
-		SetMaxEffectiveMana(GetMaxEffectiveMana());
-		SetMaxMana(GetMaxMana());
-		SetReservedMana(GetReservedMana());
+		ClampResource(
+			[this]() { return GetMana(); },
+			[this]() { return GetMaxMana(); },
+			[this](float V) { SetMana(V); }
+		);
 	}
-	if(Attribute == GetStaminaAttribute())
+	else if (Attribute == GetStaminaAttribute())
 	{
-		SetStamina(FMath::Clamp(GetStamina(), 0.0f, GetMaxStamina()));
-		SetMaxEffectiveStamina(GetMaxEffectiveStamina());
-		SetMaxStamina(GetMaxStamina());
-		SetReservedStamina(GetReservedStamina());
+		ClampResource(
+			[this]() { return GetStamina(); },
+			[this]() { return GetMaxStamina(); },
+			[this](float V) { SetStamina(V); }
+		);
+	}
+	else if (Attribute == GetArcaneShieldAttribute())
+	{
+		ClampResource(
+			[this]() { return GetArcaneShield(); },
+			[this]() { return GetMaxArcaneShield(); },
+			[this](float V) { SetArcaneShield(V); }
+		);
 	}
 
+	// Update threshold tags after any valid change
 	if (Props.TargetASC)
 	{
 		UPHTagUtilityLibrary::UpdateAttributeThresholdTags(Props.TargetASC, this);
 	}
 }
+
 
 
 

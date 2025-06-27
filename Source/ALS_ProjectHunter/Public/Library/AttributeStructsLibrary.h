@@ -80,16 +80,16 @@ struct FInitialSecondaryAttributes
 
 	// === Regen ===
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
-	float HealthRegenRate = 1.f;
+	float HealthRegenRate = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
-	float ManaRegenRate = 1.f;
+	float ManaRegenRate = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
-	float StaminaRegenRate = 1.f;
+	float StaminaRegenRate = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
-	float ArcaneShieldRegenRate = 1.f;
+	float ArcaneShieldRegenRate = 0.f;
 
 	// === Regen Amounts ===
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")

@@ -119,7 +119,7 @@ public:
 	FGameplayAttributeData Covenant;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, Covenant); // +0.02 Minion Damage, +0.01 Minion Health
 	
-		/* ============================= */
+	/* ============================= */
 	/* === Secondary Attributes === */
 	/* ============================= */
 
