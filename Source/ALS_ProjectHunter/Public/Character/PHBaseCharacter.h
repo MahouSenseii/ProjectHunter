@@ -6,6 +6,7 @@
 #include "AbilitySystemInterface.h"
 #include "Character/ALSCharacter.h"
 #include "Components/EquipmentManager.h"
+#include "Components/StatsManager.h"
 #include "Interfaces/CombatSubInterface.h"
 #include "PaperSpriteComponent.h"
 #include "Player/PHPlayerController.h"
@@ -17,7 +18,6 @@
 #include "PHBaseCharacter.generated.h"
 
 
-struct FInitialGameplayEffectInfo;
 class UInteractableManager;
 class UCombatManager;
 class USpringArmComponent;
@@ -40,9 +40,6 @@ public:
 	APHBaseCharacter(const FObjectInitializer& ObjectInitializer);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	UFUNCTION(BlueprintCallable, Category="GAS|Vital")
-	void ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& EffectInfo);
 	
 	/** Called when possessed by a new controller */
 	virtual void PossessedBy(AController* NewController) override;
@@ -60,6 +57,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Manager")
 	UInventoryManager* GetInventoryManager() { return InventoryManager; }
+
+	UFUNCTION(BlueprintCallable, Category = "Manager")
+	UCombatManager* GetCombatManager() const { return CombatManager; }
+
+	UFUNCTION(BlueprintCallable, Category = "Manager")
+	UStatsManager* GetStatsManager() const { return StatsManager; }
 
 	/** Player Level */
 	UFUNCTION(BlueprintCallable, Category = "Character")
@@ -88,33 +91,6 @@ public:
 
 	//Changed Handle
 	virtual void OnGaitChanged(EALSGait PreviousGait) override;
-	/** Equipment Handles */
-
-	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	float GetStatBase(const FGameplayAttribute& Attr) const;
-
-	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	void ApplyFlatStatModifier(const FGameplayAttribute& Attr, float InValue) const;
-
-	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	void RemoveFlatStatModifier(const FGameplayAttribute& Attribute, float Delta);
-
-	
-	/** Primary attributes set at character spawn */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes|Init")
-	FInitialPrimaryAttributes PrimaryInitAttributes;
-
-	/** Secondary attributes */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes|Init")
-	FInitialSecondaryAttributes SecondaryInitAttributes;
-
-	/** Vital attributes */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes|Init")
-	FInitialVitalAttributes VitalInitAttributes;
-
-	// Store active periodic effects by SetByCaller ta
-	TMultiMap<FGameplayTag, FActiveGameplayEffectHandle> ActivePeriodicEffects;
-
 
 
 protected:
@@ -123,53 +99,15 @@ protected:
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	
-	// Clears all periodic effects currently applied to the character
-	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
-	void ClearAllPeriodicEffects();
-
-	// Checks if any valid periodic effect exists for the given tag
-	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
-	bool HasValidPeriodicEffect(FGameplayTag EffectTag) const;
-
-	// Removes all invalid handles from the periodic effect map
-	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
-	void PurgeInvalidPeriodicHandles();
-
-	// Removes all active periodic effects matching the given tag
-	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
-	void RemoveAllPeriodicEffectsByTag(FGameplayTag EffectTag);
-
-	// Triggered when a regen/degen tag changes (can force reapplication)
-	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
-	void OnRegenTagChanged(FGameplayTag ChangedTag, int32 NewCount);
-
-	// Triggered when any rate/amount attribute changes
-	void OnAnyVitalPeriodicStatChanged(const FOnAttributeChangeData& Data);
-
 
 	/** Ability System Initialization */
 	virtual void InitAbilityActorInfo();
-	
-	/** Effect Application */
-	UFUNCTION(BlueprintCallable)
-	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float InLevel) const;
-
-	UFUNCTION(BlueprintCallable)
-	FActiveGameplayEffectHandle ApplyEffectToSelfWithReturn(TSubclassOf<UGameplayEffect> InEffect, float InLevel);
-
-	/** Default Attribute Initialization */
-	void InitializeDefaultAttributes();
-	void ReapplyAllStartupRegenEffects();
 
 protected:
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Controller")
 	APHPlayerController* CurrentController;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GAS")
-	TArray<FInitialGameplayEffectInfo> StartupEffects;
-	
 	
 private:
 	/** Gameplay Ability System */
@@ -178,20 +116,7 @@ private:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GAS", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAttributeSet> AttributeSet;
-
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "GAS|Attributes", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UGameplayEffect> DefaultPrimaryAttributes;
-
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "GAS|Attributes", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UGameplayEffect> DefaultSecondaryCurrentAttributes;
-
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "GAS|Attributes", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UGameplayEffect> DefaultSecondaryMaxAttributes;
-
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "GAS|Attributes", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UGameplayEffect> DefaultVitalAttributes;
 	
-
 	/** Managers */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UEquipmentManager> EquipmentManager;
@@ -201,6 +126,9 @@ private:
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCombatManager> CombatManager;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UStatsManager> StatsManager;
 
 	/** MiniMap */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "MiniMap", meta = (AllowPrivateAccess = "true"))
@@ -221,14 +149,7 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ToolTip", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UConsumableToolTip> ConsumableToolTipClass;
-
-	/** Animation */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim", meta = (AllowPrivateAccess = "true"))
-	UAnimMontage* StaggerMontage;
 	
-
-	UPROPERTY(meta = (AllowPrivateAccess = "true"))
-	float TimeSinceLastPoiseHit = 0.0f;
 
 	/** Internal State */
 	/** If true, this character is controlled by a real player and expects ASC/Attributes from the PlayerState */
@@ -237,7 +158,7 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Defaults", meta = (AllowPrivateAccess = "true"))
 	int32 Level = 1;
+	
 	bool bIsInRecovery = false;
-	float TimeSinceLastRecovery = 0.0;
 	
 };

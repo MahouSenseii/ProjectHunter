@@ -53,6 +53,7 @@ public:
 	
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
+	bool ShouldUpdateThresholdTags(const FGameplayAttribute& Attribute) const;
 
 
 	TMap<FGameplayTag, TStaticFuncPtr<FGameplayAttribute()>> TagsToAttributes;
@@ -701,6 +702,10 @@ public:
 	FGameplayAttributeData StaminaRegenRate;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, StaminaRegenRate);
 
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaDegenRate, Category = "Vital Attribute|Stamina")
+	FGameplayAttributeData StaminaDegenRate;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, StaminaDegenRate);
+
 	/** Maximum rate at which stamina can regenerate per second. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxStaminaRegenRate, Category = "Vital Attribute|Stamina")
 	FGameplayAttributeData MaxStaminaRegenRate;
@@ -710,6 +715,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaRegenAmount, Category = "Vital Attribute|Stamina")
 	FGameplayAttributeData StaminaRegenAmount;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, StaminaRegenAmount);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaDegenAmount, Category = "Vital Attribute|Stamina")
+	FGameplayAttributeData StaminaDegenAmount;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, StaminaDegenAmount);
 
 	/** Maximum stamina regeneration per tick. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxStaminaRegenAmount, Category = "Vital Attribute|Stamina")
@@ -933,6 +942,8 @@ public:
 	/** Called when stamina regeneration rate changes. */
 	UFUNCTION()
 	void OnRep_StaminaRegenRate(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_StaminaDegenRate(const FGameplayAttributeData& OldAmount) const;
 
 	/** Called when max stamina regeneration rate changes. */
 	UFUNCTION()
@@ -941,6 +952,8 @@ public:
 	/** Called when stamina regeneration amount changes. */
 	UFUNCTION()
 	void OnRep_StaminaRegenAmount(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_StaminaDegenAmount(const FGameplayAttributeData& OldAmount) const;
 
 	/** Called when max stamina regeneration amount changes. */
 	UFUNCTION()

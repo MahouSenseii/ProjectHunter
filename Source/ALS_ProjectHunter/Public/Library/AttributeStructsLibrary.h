@@ -104,6 +104,12 @@ struct FInitialSecondaryAttributes
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
 	float ArcaneShieldRegenAmount = 0.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Degen")
+	float StaminaDegenAmount = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Degen")
+	float StaminaDegenRate = 0.f; 
+
 	// === Reserved (Flat) ===
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
 	float FlatReservedHealth = 0.f;

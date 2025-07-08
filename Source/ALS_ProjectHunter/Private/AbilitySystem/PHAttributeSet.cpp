@@ -24,13 +24,13 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CombatAlignment, COND_None, REPNOTIFY_Always);
 
 	// Primary Attribute
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Strength, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Intelligence, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Dexterity, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Endurance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Affliction, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Luck, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Covenant, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Strength, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Intelligence, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Dexterity, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Endurance, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Affliction, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Luck, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Covenant, COND_OwnerOnly, REPNOTIFY_Always);
 
 	//Secondary  Max Attribute
 
@@ -42,83 +42,85 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxEffectiveMana, COND_None, REPNOTIFY_Always);
 
 	// Regeneration 
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, HealthRegenRate, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, HealthRegenAmount, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedHealth, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedHealth, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedHealth, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PercentageReservedHealth, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, HealthRegenRate, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, HealthRegenAmount, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedHealth, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedHealth, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedHealth, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PercentageReservedHealth, COND_OwnerOnly, REPNOTIFY_Always);
 	
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaRegenRate, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaRegenAmount, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedMana, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedMana, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedMana, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PercentageReservedMana, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaRegenRate, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaRegenAmount, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedMana, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedMana, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedMana, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PercentageReservedMana, COND_OwnerOnly, REPNOTIFY_Always);
 
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaRegenRate, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaRegenAmount, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedStamina, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedStamina, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedStamina, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PercentageReservedStamina, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaRegenRate, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaRegenAmount, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaDegenRate, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaDegenAmount, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedStamina, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedStamina, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedStamina, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PercentageReservedStamina, COND_OwnerOnly, REPNOTIFY_Always);
 
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArcaneShieldRegenRate, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,ArcaneShieldRegenAmount, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedArcaneShield, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedArcaneShield, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedArcaneShield, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PercentageReservedArcaneShield, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArcaneShieldRegenRate, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,ArcaneShieldRegenAmount, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ReservedArcaneShield, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxReservedArcaneShield, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FlatReservedArcaneShield, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PercentageReservedArcaneShield, COND_OwnerOnly, REPNOTIFY_Always);
 
 	//Damages
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, GlobalDamages, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinPhysicalDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinFireDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinLightDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinLightningDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinCorruptionDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinIceDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, GlobalDamages, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinPhysicalDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinFireDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinLightDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinLightningDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinCorruptionDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MinIceDamage, COND_OwnerOnly, REPNOTIFY_Always);
 
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxPhysicalDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxFireDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightningDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxCorruptionDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxIceDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxPhysicalDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxFireDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightningDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxCorruptionDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxIceDamage, COND_OwnerOnly, REPNOTIFY_Always);
 	
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PhysicalFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FireFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PhysicalFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FireFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
 	
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PhysicalPercentBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FirePercentBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightPercentBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPercentBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionPercentBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IcePercentBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, PhysicalPercentBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FirePercentBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightPercentBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPercentBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionPercentBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IcePercentBonus, COND_OwnerOnly, REPNOTIFY_Always);
 	
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, DamageBonusWhileAtFullHP, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, DamageBonusWhileAtLowHP, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, DamageBonusWhileAtFullHP, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, DamageBonusWhileAtLowHP, COND_OwnerOnly, REPNOTIFY_Always);
 
 	// Other Offensive Stats
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AreaDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AreaOfEffect, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AttackRange, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AttackSpeed, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CastSpeed, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CritChance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CritMultiplier, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, DamageOverTime, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AreaDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AreaOfEffect, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AttackRange, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, AttackSpeed, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CastSpeed, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CritChance, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CritMultiplier, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, DamageOverTime, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ElementalDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, SpellsCritChance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, SpellsCritMultiplier, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MeleeDamage, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ProjectileCount, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ProjectileSpeed, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  RangedDamage, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, SpellsCritChance, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, SpellsCritMultiplier, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MeleeDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ProjectileCount, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ProjectileSpeed, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  RangedDamage, COND_OwnerOnly, REPNOTIFY_Always);
 
 
 	//Duration
@@ -133,66 +135,66 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	
 
 	//Resistances
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, GlobalDefenses, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Armour, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourPercentBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FireResistanceFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightResistanceFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningResistanceFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionResistanceFlatBonus, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceResistanceFlatBonus, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, GlobalDefenses, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Armour, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourPercentBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FireResistanceFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightResistanceFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningResistanceFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionResistanceFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceResistanceFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  BlockStrength, COND_None, REPNOTIFY_Always);
 
 	
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxFireResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightningResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxCorruptionResistance, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  MaxIceResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxFireResistance, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightResistance, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightningResistance, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxCorruptionResistance, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  MaxIceResistance, COND_OwnerOnly, REPNOTIFY_Always);
 
 
 
 	//Piercing
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourPiercing, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FirePiercing, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPiercing, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionPiercing, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  IcePiercing, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourPiercing, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FirePiercing, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LightningPiercing, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionPiercing, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  IcePiercing, COND_OwnerOnly, REPNOTIFY_Always);
 
-	//Chance to apply
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToBleed, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToCorrupt, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToFreeze, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToIgnite, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToPetrify, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToPurify, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToShock, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToStun, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToKnockBack, COND_None, REPNOTIFY_Always);
+	//Chance to apply but will still have a build up meeter 
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToBleed, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToCorrupt, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToFreeze, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToIgnite, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToPetrify, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToPurify, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToShock, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToStun, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ChanceToKnockBack, COND_OwnerOnly, REPNOTIFY_Always);
 
 	//Misc
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ComboCounter, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CoolDown, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LifeLeech, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaLeech, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MovementSpeed, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ComboCounter, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CoolDown, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LifeLeech, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaLeech, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MovementSpeed, COND_OwnerOnly, REPNOTIFY_Always);
 
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Poise, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StunRecovery, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaCostChanges, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LifeOnHit, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaOnHit, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaOnHit, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaCostChanges, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Poise, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StunRecovery, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaCostChanges, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, LifeOnHit, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ManaOnHit, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaOnHit, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, StaminaCostChanges, COND_OwnerOnly, REPNOTIFY_Always);
 
 	//Secondary Current Attribute
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Health, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Mana, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Stamina, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Mana, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Stamina, COND_OwnerOnly, REPNOTIFY_Always);
 
 
-	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Gems, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Gems, COND_OwnerOnly, REPNOTIFY_Always);
 }
 
 float UPHAttributeSet::GetAttributeValue(const FGameplayAttribute& Attribute) const 
@@ -306,7 +308,7 @@ void UPHAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 	}
 
 	// Update threshold tags after any valid change
-	if (Props.TargetASC)
+	if (Props.TargetASC && ShouldUpdateThresholdTags(Attribute))
 	{
 		UPHTagUtilityLibrary::UpdateAttributeThresholdTags(Props.TargetASC, this);
 	}
@@ -314,7 +316,17 @@ void UPHAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 
 
 
+bool UPHAttributeSet::ShouldUpdateThresholdTags(const FGameplayAttribute& Attribute) const
+{
+	static const TSet<FGameplayAttribute> TrackedThresholdAttributes = {
+		GetHealthAttribute(),
+		GetManaAttribute(),
+		GetStaminaAttribute(),
+		GetArcaneShieldAttribute()
+	};
 
+	return TrackedThresholdAttributes.Contains(Attribute);
+}
 
 void UPHAttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props)
 {
@@ -437,6 +449,11 @@ void UPHAttributeSet::OnRep_StaminaRegenRate(const FGameplayAttributeData& OldAm
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,StaminaRegenRate, OldAmount)
 }
 
+void UPHAttributeSet::OnRep_StaminaDegenRate(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,StaminaDegenRate, OldAmount)
+}
+
 void UPHAttributeSet::OnRep_MaxStaminaRegenRate(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,MaxStaminaRegenRate, OldAmount)
@@ -445,6 +462,11 @@ void UPHAttributeSet::OnRep_MaxStaminaRegenRate(const FGameplayAttributeData& Ol
 void UPHAttributeSet::OnRep_StaminaRegenAmount(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,StaminaRegenAmount, OldAmount)
+}
+
+void UPHAttributeSet::OnRep_StaminaDegenAmount(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet ,StaminaDegenAmount, OldAmount)
 }
 
 void UPHAttributeSet::OnRep_MaxStaminaRegenAmount(const FGameplayAttributeData& OldAmount) const

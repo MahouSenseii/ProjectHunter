@@ -9,7 +9,7 @@
 float UMMC_StaminaRegen::CalculateBaseMagnitude_Implementation(const FGameplayEffectSpec& Spec) const
 {
 	const FGameplayTag StaminaRegenTag = FGameplayTag::RequestGameplayTag(FName("Attribute.Secondary.Vital.StaminaRegenAmount"));
-	const FGameplayTag StaminaDegenTag = FGameplayTag::RequestGameplayTag(FName("Attributes_Secondary_Vital_StaminaDegen"));
+	const FGameplayTag StaminaDegenTag = FGameplayTag::RequestGameplayTag(FName("Attribute_Secondary_Vital_StaminaDegen"));
 	const FGameplayTag StaminaDegenValueTag = FGameplayTag::RequestGameplayTag(FName("Attribute.Secondary.Vital.StaminaDegen"));
 
 	const UAbilitySystemComponent* TargetASC = Spec.GetContext().GetOriginalInstigatorAbilitySystemComponent();

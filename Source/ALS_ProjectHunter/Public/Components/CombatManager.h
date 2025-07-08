@@ -29,7 +29,11 @@ protected:
 	UFUNCTION()
 	static bool RollForStatusEffect(const APHBaseCharacter* Attacker, EDamageTypes DamageType);
 
-public:	
+public:
+
 	
+	/** Animation */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim", meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* StaggerMontage;
 		
 };

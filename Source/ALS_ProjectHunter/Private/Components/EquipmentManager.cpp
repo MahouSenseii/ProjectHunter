@@ -312,7 +312,7 @@ void UEquipmentManager::ApplyAllEquipmentStatsToAttributes(APHBaseCharacter* Cha
 	// Apply all accumulated modifiers
 	for (const auto& Pair : ModifiedAttributes)
 	{
-		Character->ApplyFlatStatModifier(Pair.Key, Pair.Value);
+		Character->GetStatsManager()->ApplyFlatStatModifier(Pair.Key, Pair.Value);
 	}
 }
 
@@ -391,7 +391,7 @@ void UEquipmentManager::RemoveItemStatBonuses(UEquippableItem* Item, APHBaseChar
 			if (!Attr.ModifiedAttribute.IsValid()) continue;
 
 			const float Rolled = Stats.RolledValues.IsValidIndex(i) ? Stats.RolledValues[i] : 0.0f;
-			Character->ApplyFlatStatModifier(Attr.ModifiedAttribute, -Rolled);
+			Character->GetStatsManager()->ApplyFlatStatModifier(Attr.ModifiedAttribute, -Rolled);
 			//debug comment out later
 			UE_LOG(LogTemp, Log, TEXT("Removing %.2f from %s"), Rolled, *Attr.ModifiedAttribute.GetName());
 		}
