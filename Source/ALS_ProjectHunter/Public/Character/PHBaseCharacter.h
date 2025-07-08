@@ -159,6 +159,16 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Defaults", meta = (AllowPrivateAccess = "true"))
 	int32 Level = 1;
 	
-	bool bIsInRecovery = false;
+       bool bIsInRecovery = false;
+
+       /** True when the character is actively blocking with a shield */
+       UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
+       bool bIsBlocking = false;
+
+       UFUNCTION(BlueprintCallable, Category = "Combat")
+       bool IsBlocking() const { return bIsBlocking; }
+
+       UFUNCTION(BlueprintCallable, Category = "Combat")
+       void SetBlocking(bool bNewBlocking) { bIsBlocking = bNewBlocking; }
 	
 };

@@ -177,13 +177,28 @@ void UCombatManager::ApplyDamage(const APHBaseCharacter* Attacker,
     if (!Defender) return;
 
     FDamageHitResultByType HitResult = CalculateDamage(Attacker, Defender, BaseDamage, WeaponStats);
-    const float TotalDamage = HitResult.GetTotalDamage();
+    float TotalDamage = HitResult.GetTotalDamage();
 
     UPHAttributeSet* DefAtt = Cast<UPHAttributeSet>(Defender->GetAttributeSet());
     if (!DefAtt) return;
 
     UAbilitySystemComponent* ASC = Defender->GetAbilitySystemComponent();
     if (!ASC) return;
+
+    // Handle blocking logic
+    if (Defender->IsBlocking())
+    {
+        const float BlockPercent = FMath::Clamp(DefAtt->GetBlockStrength(), 0.f, 1.f);
+        TotalDamage *= (1.f - BlockPercent);
+
+        const float NewStamina = DefAtt->GetStamina() - TotalDamage;
+        ASC->SetNumericAttributeBase(UPHAttributeSet::GetStaminaAttribute(), NewStamina);
+
+        if (NewStamina <= 0.f && StaggerMontage)
+        {
+            Defender->PlayAnimMontage(StaggerMontage);
+        }
+    }
 
     const float NewHealth = DefAtt->GetHealth() - TotalDamage;
     ASC->SetNumericAttributeBase(UPHAttributeSet::GetHealthAttribute(), NewHealth);
