@@ -51,9 +51,20 @@ protected:
 
 public:
 
-	
-	/** Animation */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim", meta = (AllowPrivateAccess = "true"))
-	UAnimMontage* StaggerMontage;
+       /** True if the owner is currently blocking with a shield */
+       UPROPERTY(BlueprintReadWrite, Category = "Combat")
+       bool bIsBlocking = false;
+
+       /** Stamina consumed per point of damage blocked */
+       UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+       float StaminaPerBlockedDamage = 1.0f;
+
+       /** Set the blocking state */
+       UFUNCTION(BlueprintCallable, Category = "Combat")
+       void SetBlocking(bool bBlocking);
+
+       /** Animation */
+       UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim", meta = (AllowPrivateAccess = "true"))
+       UAnimMontage* StaggerMontage;
 		
 };

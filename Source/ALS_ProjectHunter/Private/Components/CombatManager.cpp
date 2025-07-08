@@ -185,14 +185,37 @@ void UCombatManager::ApplyDamage(const APHBaseCharacter* Attacker,
     UAbilitySystemComponent* ASC = Defender->GetAbilitySystemComponent();
     if (!ASC) return;
 
-    const float NewHealth = DefAtt->GetHealth() - TotalDamage;
+    const bool bDefBlocking = Defender->GetCombatManager() && Defender->GetCombatManager()->bIsBlocking;
+    const float BlockStrength = bDefBlocking ? FMath::Clamp(DefAtt->GetBlockStrength(), 0.f, 1.f) : 0.f;
+    const float DamageAfterBlock = TotalDamage * (1.f - BlockStrength);
+
+    bool bShouldStagger = false;
+
+    if (bDefBlocking && BlockStrength > 0.f)
+    {
+        const float BlockedDamage = TotalDamage * BlockStrength;
+        const float StaminaCost = BlockedDamage * Defender->GetCombatManager()->StaminaPerBlockedDamage;
+        const float NewStamina = DefAtt->GetStamina() - StaminaCost;
+        ASC->SetNumericAttributeBase(UPHAttributeSet::GetStaminaAttribute(), NewStamina);
+        if (NewStamina <= 0.f)
+        {
+            bShouldStagger = true;
+        }
+    }
+
+    const float NewHealth = DefAtt->GetHealth() - DamageAfterBlock;
     ASC->SetNumericAttributeBase(UPHAttributeSet::GetHealthAttribute(), NewHealth);
 
-    float FinalPoiseDamage = PoiseDamage > 0.f ? PoiseDamage : TotalDamage * 0.5f;
+    float FinalPoiseDamage = PoiseDamage > 0.f ? PoiseDamage : DamageAfterBlock * 0.5f;
     const float NewPoise = DefAtt->GetPoise() - FinalPoiseDamage;
     ASC->SetNumericAttributeBase(UPHAttributeSet::GetPoiseAttribute(), NewPoise);
 
-    if (NewPoise <= 0.f && StaggerMontage)
+    if (NewPoise <= 0.f)
+    {
+        bShouldStagger = true;
+    }
+
+    if (bShouldStagger && StaggerMontage)
     {
         Defender->PlayAnimMontage(StaggerMontage);
     }
@@ -213,4 +236,9 @@ EDamageTypes UCombatManager::GetHighestDamageType(const FDamageHitResultByType& 
     }
 
     return MaxType;
+}
+
+void UCombatManager::SetBlocking(bool bBlocking)
+{
+    bIsBlocking = bBlocking;
 }
