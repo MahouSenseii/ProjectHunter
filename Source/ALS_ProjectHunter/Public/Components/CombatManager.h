@@ -16,11 +16,19 @@
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ALS_PROJECTHUNTER_API UCombatManager : public UActorComponent
 {
-	GENERATED_BODY()
+        GENERATED_BODY()
 
-public:	
-	// Sets default values for this component's properties
-	UCombatManager();
+public:
+        // Sets default values for this component's properties
+        UCombatManager();
+
+       /** Returns true if the owner is currently blocking */
+       UFUNCTION(BlueprintCallable, Category = "Combat")
+       bool IsBlocking() const { return bIsBlocking; }
+
+       /** Set the blocking state */
+       UFUNCTION(BlueprintCallable, Category = "Combat")
+       void SetBlocking(bool bNewBlocking) { bIsBlocking = bNewBlocking; }
 
 protected:
 	// Called when the game starts
@@ -54,6 +62,11 @@ public:
 	
 	/** Animation */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim", meta = (AllowPrivateAccess = "true"))
-	UAnimMontage* StaggerMontage;
+       UAnimMontage* StaggerMontage;
+
+private:
+       /** True when the character is actively blocking with a shield */
+       UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+       bool bIsBlocking = false;
 		
 };
