@@ -186,7 +186,7 @@ void UCombatManager::ApplyDamage(const APHBaseCharacter* Attacker,
     if (!ASC) return;
 
     // Handle blocking logic
-    if (Defender->IsBlocking())
+    if (Defender->GetCombatManager() && Defender->GetCombatManager()->IsBlocking())
     {
         const float BlockPercent = FMath::Clamp(DefAtt->GetBlockStrength(), 0.f, 1.f);
         TotalDamage *= (1.f - BlockPercent);
