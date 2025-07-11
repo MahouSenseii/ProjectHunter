@@ -8,6 +8,7 @@
 #include "Item/EquippedObject.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Library/PHItemFunctionLibrary.h"
+#include "PHGameplayTags.h"
 
 UEquipmentManager::UEquipmentManager() { }
 
@@ -332,21 +333,45 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
 	FAppliedStats AppliedStats;
 	AppliedStats.Stats = Stats;
 
-	for (const FPHAttributeData& Attr : Stats)
-	{
-		if (!Attr.ModifiedAttribute.IsValid()) continue;
+        for (const FPHAttributeData& Attr : Stats)
+        {
+                if (!Attr.ModifiedAttribute.IsValid()) continue;
 
-		const float Rolled = Attr.RolledStatValue;
-		AppliedStats.RolledValues.Add(Rolled);
+                const float Rolled = Attr.RolledStatValue;
+                AppliedStats.RolledValues.Add(Rolled);
 
-		const float CurrentValue = ASC->GetNumericAttribute(Attr.ModifiedAttribute);
-		ASC->SetNumericAttributeBase(Attr.ModifiedAttribute, CurrentValue + Rolled);
-	}
+                const float CurrentValue = ASC->GetNumericAttribute(Attr.ModifiedAttribute);
+                ASC->SetNumericAttributeBase(Attr.ModifiedAttribute, CurrentValue + Rolled);
+        }
 
-	if (AppliedStats.Stats.Num() > 0)
-	{
-		AppliedItemStats.Add(Item, AppliedStats);
-	}
+        // === Apply Base Weapon Damage to Attributes ===
+        const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = Item->GetItemInfo().ItemData.WeaponBaseStats.BaseDamage;
+        for (const TPair<EDamageTypes, FDamageRange>& Pair : BaseDamageMap)
+        {
+                const FString TypeName = UEnum::GetValueAsString(Pair.Key).RightChop(15);
+
+                const FString MinKey = FString::Printf(TEXT("Min %s"), *TypeName);
+                const FString MaxKey = FString::Printf(TEXT("Max %s"), *TypeName);
+
+                if (const FGameplayAttribute* MinAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MinKey))
+                {
+                        Character->GetStatsManager()->ApplyFlatStatModifier(*MinAttr, Pair.Value.Min);
+                        AppliedStats.BaseDamageAttributes.Add(*MinAttr);
+                        AppliedStats.BaseDamageValues.Add(Pair.Value.Min);
+                }
+
+                if (const FGameplayAttribute* MaxAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MaxKey))
+                {
+                        Character->GetStatsManager()->ApplyFlatStatModifier(*MaxAttr, Pair.Value.Max);
+                        AppliedStats.BaseDamageAttributes.Add(*MaxAttr);
+                        AppliedStats.BaseDamageValues.Add(Pair.Value.Max);
+                }
+        }
+
+        if (AppliedStats.Stats.Num() > 0 || AppliedStats.BaseDamageAttributes.Num() > 0)
+        {
+                AppliedItemStats.Add(Item, AppliedStats);
+        }
 
 	// === Apply Passive Effects ===
 	const TArray<FItemPassiveEffectInfo>& Passives = Item->GetItemInfo().ItemData.PassiveEffects;
@@ -385,18 +410,26 @@ void UEquipmentManager::RemoveItemStatBonuses(UEquippableItem* Item, APHBaseChar
 	{
 		const FAppliedStats& Stats = AppliedItemStats[Item];
 
-		for (int32 i = 0; i < Stats.Stats.Num(); ++i)
-		{
-			const FPHAttributeData& Attr = Stats.Stats[i];
-			if (!Attr.ModifiedAttribute.IsValid()) continue;
+                for (int32 i = 0; i < Stats.Stats.Num(); ++i)
+                {
+                        const FPHAttributeData& Attr = Stats.Stats[i];
+                        if (!Attr.ModifiedAttribute.IsValid()) continue;
 
-			const float Rolled = Stats.RolledValues.IsValidIndex(i) ? Stats.RolledValues[i] : 0.0f;
-			Character->GetStatsManager()->ApplyFlatStatModifier(Attr.ModifiedAttribute, -Rolled);
-			//debug comment out later
-			UE_LOG(LogTemp, Log, TEXT("Removing %.2f from %s"), Rolled, *Attr.ModifiedAttribute.GetName());
-		}
+                        const float Rolled = Stats.RolledValues.IsValidIndex(i) ? Stats.RolledValues[i] : 0.0f;
+                        Character->GetStatsManager()->ApplyFlatStatModifier(Attr.ModifiedAttribute, -Rolled);
+                        UE_LOG(LogTemp, Log, TEXT("Removing %.2f from %s"), Rolled, *Attr.ModifiedAttribute.GetName());
+                }
 
-		AppliedItemStats.Remove(Item);
+                for (int32 i = 0; i < Stats.BaseDamageAttributes.Num(); ++i)
+                {
+                        const FGameplayAttribute& Attr = Stats.BaseDamageAttributes[i];
+                        const float Value = Stats.BaseDamageValues.IsValidIndex(i) ? Stats.BaseDamageValues[i] : 0.0f;
+                        if (!Attr.IsValid()) continue;
+
+                        Character->GetStatsManager()->ApplyFlatStatModifier(Attr, -Value);
+                }
+
+                AppliedItemStats.Remove(Item);
 	}
 
 	// === Remove Passive Effects ===
