@@ -546,13 +546,20 @@ public:
 USTRUCT()
 struct FAppliedStats
 {
-	GENERATED_BODY()
+        GENERATED_BODY()
 
-	UPROPERTY()
-	TArray<FPHAttributeData> Stats;
+        UPROPERTY()
+        TArray<FPHAttributeData> Stats;
 
-	UPROPERTY()
-	TArray<float> RolledValues; 
+        UPROPERTY()
+        TArray<float> RolledValues;
+
+        /** Attributes and values added from base weapon damage. */
+        UPROPERTY()
+        TArray<FGameplayAttribute> BaseDamageAttributes;
+
+        UPROPERTY()
+        TArray<float> BaseDamageValues;
 };
 
 
