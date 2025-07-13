@@ -5,8 +5,6 @@
 #include "AbilitySystem/PHAttributeSet.h"
 #include "Character/PHBaseCharacter.h"
 #include "AbilitySystemComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
-#include "Item/WeaponItem.h"
 #include "Library/PHCombatStructLibrary.h"
 
 /* =========================== */
@@ -57,9 +55,7 @@ bool UCombatManager::RollForStatusEffect(const APHBaseCharacter* Attacker, const
 /* ============================= */
 
 FDamageHitResultByType UCombatManager::CalculateDamage(const APHBaseCharacter* Attacker,
-                                                      const APHBaseCharacter* Defender,
-                                                      const FDamageByType& BaseDamage,
-                                                      const FBaseWeaponStats& WeaponStats) const
+                                                      const APHBaseCharacter* Defender) const
 {
     FDamageHitResultByType Result;
     if (!Attacker || !Defender) return Result;
@@ -68,10 +64,19 @@ FDamageHitResultByType UCombatManager::CalculateDamage(const APHBaseCharacter* A
     const UPHAttributeSet* DefAtt = Cast<UPHAttributeSet>(Defender->GetAttributeSet());
     if (!AttAtt || !DefAtt) return Result;
 
+    // Build base damage ranges from the attacker's attributes
+    FDamageByType BaseDamage;
+    BaseDamage.PhysicalDamage   = { AttAtt->GetMinPhysicalDamage(),   AttAtt->GetMaxPhysicalDamage() };
+    BaseDamage.FireDamage       = { AttAtt->GetMinFireDamage(),       AttAtt->GetMaxFireDamage() };
+    BaseDamage.IceDamage        = { AttAtt->GetMinIceDamage(),        AttAtt->GetMaxIceDamage() };
+    BaseDamage.LightningDamage  = { AttAtt->GetMinLightningDamage(),  AttAtt->GetMaxLightningDamage() };
+    BaseDamage.LightDamage      = { AttAtt->GetMinLightDamage(),      AttAtt->GetMaxLightDamage() };
+    BaseDamage.CorruptionDamage = { AttAtt->GetMinCorruptionDamage(), AttAtt->GetMaxCorruptionDamage() };
+
     const float GlobalDamage  = 1.f + AttAtt->GetGlobalDamages();
     const float GlobalDefense = 1.f - DefAtt->GetGlobalDefenses();
 
-    const bool bCrit = FMath::FRand() <= (AttAtt->GetCritChance() + WeaponStats.CritChance);
+    const bool bCrit = FMath::FRand() <= AttAtt->GetCritChance();
     const float CritMult = 1.f + AttAtt->GetCritMultiplier();
 
     auto GetFlatBonus = [&](EDamageTypes Type) -> float
@@ -170,13 +175,11 @@ FDamageHitResultByType UCombatManager::CalculateDamage(const APHBaseCharacter* A
 
 void UCombatManager::ApplyDamage(const APHBaseCharacter* Attacker,
                                  APHBaseCharacter* Defender,
-                                 const FDamageByType& BaseDamage,
-                                 const FBaseWeaponStats& WeaponStats,
                                  float PoiseDamage)
 {
     if (!Defender) return;
 
-    FDamageHitResultByType HitResult = CalculateDamage(Attacker, Defender, BaseDamage, WeaponStats);
+    FDamageHitResultByType HitResult = CalculateDamage(Attacker, Defender);
     float TotalDamage = HitResult.GetTotalDamage();
 
     UPHAttributeSet* DefAtt = Cast<UPHAttributeSet>(Defender->GetAttributeSet());
