@@ -231,3 +231,31 @@ EDamageTypes UCombatManager::GetHighestDamageType(const FDamageHitResultByType& 
 
     return MaxType;
 }
+
+void UCombatManager::IncreaseComboCounter(float Amount)
+{
+    APHBaseCharacter* OwnerCharacter = Cast<APHBaseCharacter>(GetOwner());
+    if (!OwnerCharacter) return;
+
+    UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
+    UPHAttributeSet* Attributes = Cast<UPHAttributeSet>(OwnerCharacter->GetAttributeSet());
+    if (!ASC || !Attributes) return;
+
+    const float CurrentValue = Attributes->GetComboCounter();
+    ASC->SetNumericAttributeBase(UPHAttributeSet::GetComboCounterAttribute(), CurrentValue + Amount);
+
+    GetWorld()->GetTimerManager().ClearTimer(ComboResetTimerHandle);
+    GetWorld()->GetTimerManager().SetTimer(ComboResetTimerHandle, this, &UCombatManager::ResetComboCounter, ComboResetTime, false);
+}
+
+void UCombatManager::ResetComboCounter()
+{
+    APHBaseCharacter* OwnerCharacter = Cast<APHBaseCharacter>(GetOwner());
+    if (!OwnerCharacter) return;
+
+    UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
+    if (ASC)
+    {
+        ASC->SetNumericAttributeBase(UPHAttributeSet::GetComboCounterAttribute(), 0.f);
+    }
+}

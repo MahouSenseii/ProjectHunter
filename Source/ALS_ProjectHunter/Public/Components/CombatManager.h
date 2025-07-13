@@ -53,13 +53,27 @@ protected:
 public:
 
 	
-	/** Animation */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim", meta = (AllowPrivateAccess = "true"))
-       UAnimMontage* StaggerMontage;
+/** Animation */
+UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim", meta = (AllowPrivateAccess = "true"))
+UAnimMontage* StaggerMontage;
+
+/** Increase combo counter and schedule a reset */
+UFUNCTION(BlueprintCallable, Category = "Combat")
+void IncreaseComboCounter(float Amount = 1.0f);
 
 private:
-       /** True when the character is actively blocking with a shield */
-       UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat", meta = (AllowPrivateAccess = "true"))
-       bool bIsBlocking = false;
+/** True when the character is actively blocking with a shield */
+UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+bool bIsBlocking = false;
+
+UFUNCTION()
+void ResetComboCounter();
+
+/** Time in seconds before the combo counter resets */
+UPROPERTY(EditAnywhere, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+float ComboResetTime = 5.0f;
+
+UPROPERTY()
+FTimerHandle ComboResetTimerHandle;
 		
 };
