@@ -5,9 +5,7 @@
 #include "CoreMinimal.h"
 #include "Character/PHBaseCharacter.h"
 #include "Components/ActorComponent.h"
-#include "Item/WeaponItem.h"
 #include "Library/PHCombatStructLibrary.h"
-#include "Library/PHItemStructLibrary.h"
 #include "CombatManager.generated.h"
 
 
@@ -41,17 +39,12 @@ protected:
        /** Calculate the final damage values after applying attacker bonuses and defender resistances */
        UFUNCTION(BlueprintCallable, Category = "Combat")
        FDamageHitResultByType CalculateDamage(const APHBaseCharacter* Attacker,
-                                              const APHBaseCharacter* Defender,
-                                              const FDamageByType& BaseDamage,
-                                              const FBaseWeaponStats& WeaponStats) const;
+                                              const APHBaseCharacter* Defender) const;
 
        /** Apply calculated damage and handle poise/stagger */
        UFUNCTION(BlueprintCallable, Category = "Combat")
        void ApplyDamage(const APHBaseCharacter* Attacker,
-                        APHBaseCharacter* Defender,
-                        const FDamageByType& BaseDamage,
-                        const FBaseWeaponStats& WeaponStats,
-                        float PoiseDamage = 0.f);
+                        APHBaseCharacter* Defender);
 
        /** Returns the damage type with the highest value in a hit result */
        UFUNCTION(BlueprintPure, Category = "Combat")
