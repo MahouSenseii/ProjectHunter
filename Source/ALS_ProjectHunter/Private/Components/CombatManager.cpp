@@ -181,6 +181,17 @@ void UCombatManager::ApplyDamage(const APHBaseCharacter* Attacker,
     FDamageHitResultByType HitResult = CalculateDamage(Attacker, Defender);
     float TotalDamage = HitResult.GetTotalDamage();
 
+    // Determine the damage type that dealt the most damage
+    const EDamageTypes HighestType = GetHighestDamageType(HitResult);
+    const FString TypeName = UEnum::GetValueAsString(HighestType).RightChop(15); // Trim enum prefix
+
+    UE_LOG(LogTemp, Log, TEXT("ApplyDamage: TotalDamage=%.0f, HighestType=%s"), TotalDamage, *TypeName);
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Orange,
+            FString::Printf(TEXT("Damage %.0f (%s)"), TotalDamage, *TypeName));
+    }
+
     UPHAttributeSet* DefAtt = Cast<UPHAttributeSet>(Defender->GetAttributeSet());
     if (!DefAtt) return;
 
