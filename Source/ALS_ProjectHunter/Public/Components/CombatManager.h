@@ -8,6 +8,9 @@
 #include "Library/PHCombatStructLibrary.h"
 #include "CombatManager.generated.h"
 
+// Delegate used to broadcast damage information after ApplyDamage runs
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDamageApplied, float, TotalDamage, EDamageTypes, HighestDamageType);
+
 
 
 
@@ -60,6 +63,10 @@ UAnimMontage* StaggerMontage;
 /** Increase combo counter and schedule a reset */
 UFUNCTION(BlueprintCallable, Category = "Combat")
 void IncreaseComboCounter(float Amount = 1.0f);
+
+       /** Event fired after damage has been applied */
+       UPROPERTY(BlueprintAssignable, Category = "Combat")
+       FOnDamageApplied OnDamageApplied;
 
 private:
 /** True when the character is actively blocking with a shield */

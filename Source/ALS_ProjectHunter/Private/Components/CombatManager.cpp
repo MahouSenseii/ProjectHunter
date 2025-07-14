@@ -224,6 +224,9 @@ void UCombatManager::ApplyDamage(const APHBaseCharacter* Attacker,
     {
         Defender->PlayAnimMontage(StaggerMontage);
     }
+
+    // Broadcast damage info for UI or other listeners
+    OnDamageApplied.Broadcast(TotalDamage, HighestType);
 }
 
 EDamageTypes UCombatManager::GetHighestDamageType(const FDamageHitResultByType& HitResult)
