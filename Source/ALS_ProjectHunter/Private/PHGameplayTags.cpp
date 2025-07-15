@@ -302,9 +302,12 @@ void FPHGameplayTags::InitializeNativeGameplayTags()
 	RegisterMiscAttributes();
 	RegisterVitals();
 	RegisterStatusEffectChances();
-	RegisterStatusEffectDurations();
-	RegisterConditions();
-	RegisterConditionTriggers();
+        RegisterStatusEffectDurations();
+        RegisterConditions();
+        RegisterConditionTriggers();
+
+        // Populate attribute lookup tables (e.g. BaseDamageToAttributesMap)
+        RegisterAllAttribute();
 }
 
 void FPHGameplayTags::RegisterPrimaryAttributes()
