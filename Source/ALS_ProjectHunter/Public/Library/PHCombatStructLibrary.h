@@ -5,6 +5,7 @@
 #include "PHCharacterEnumLibrary.h"
 #include  "Library/PHItemEnumLibrary.h"
 #include  "Library/PHItemStructLibrary.h"
+#include "Library/PHDamageTypeUtils.h"
 #include "PHCombatStructLibrary.generated.h"
 
 
@@ -177,7 +178,7 @@ struct FDamageHitResultByType
 			const EDamageTypes Type = Pair.Key;
 			const float Damage = Pair.Value;
 
-			FString TypeName = UEnum::GetValueAsString(Type).RightChop(15); // Trim "EDamageTypes::"
+                        FString TypeName = DamageTypeToString(Type);
 			bool bStatus = bAppliedStatusEffectPerType.Contains(Type) && bAppliedStatusEffectPerType[Type];
 			FName StatusName = bStatus ? StatusEffectNamePerType.FindRef(Type) : FName();
 

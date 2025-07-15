@@ -5,6 +5,7 @@
 
 #include "Library/PHCombatStructLibrary.h"
 #include "Library/PHItemEnumLibrary.h"
+#include "Library/PHDamageTypeUtils.h"
 
 FText UCombatFunctionLibrary::FormatDamageHitResult(const FDamageHitResultByType& HitResult)
 {
@@ -16,8 +17,8 @@ FText UCombatFunctionLibrary::FormatDamageHitResult(const FDamageHitResultByType
 		const EDamageTypes Type = Pair.Key;
 		const float Damage = Pair.Value;
 
-		// Get name and color
-		const FString TypeName = UEnum::GetValueAsString(Type).RightChop(15); // trim enum prefix
+                // Get name and color
+                const FString TypeName = DamageTypeToString(Type);
 		const FLinearColor Color = GetDamageColor(Type);
 		const FString ColorHex = Color.ToFColor(true).ToHex();
 
@@ -110,8 +111,8 @@ FText UCombatFunctionLibrary::GetStrongestDamageTypeName(const FDamageHitResultB
 		}
 	}
 
-	const FString TypeName = UEnum::GetValueAsString(MaxType).RightChop(15); // Trim "EDamageTypes::"
-	return FText::FromString(TypeName);
+        const FString TypeName = DamageTypeToString(MaxType);
+        return FText::FromString(TypeName);
 }
 
 FDamageTypeDisplayInfo UCombatFunctionLibrary::GetStrongestDamageTypeInfo(const FDamageHitResultByType& HitResult)
@@ -130,10 +131,10 @@ FDamageTypeDisplayInfo UCombatFunctionLibrary::GetStrongestDamageTypeInfo(const 
 		}
 	}
 
-	if (MaxType != EDamageTypes::DT_None)
-	{
-		const FString Name = UEnum::GetValueAsString(MaxType).RightChop(15);
-		Info.TypeName = FText::FromString(Name);
+        if (MaxType != EDamageTypes::DT_None)
+        {
+                const FString Name = DamageTypeToString(MaxType);
+                Info.TypeName = FText::FromString(Name);
 		Info.TypeColor = GetDamageColor(MaxType); // Reuse your existing color helper
 		Info.Type = MaxType;
 	}

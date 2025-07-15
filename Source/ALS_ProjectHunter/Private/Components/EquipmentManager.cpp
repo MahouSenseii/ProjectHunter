@@ -9,6 +9,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Library/PHItemFunctionLibrary.h"
 #include "PHGameplayTags.h"
+#include "Library/PHDamageTypeUtils.h"
 
 UEquipmentManager::UEquipmentManager() { }
 
@@ -348,7 +349,7 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
         const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = Item->GetItemInfo().ItemData.WeaponBaseStats.BaseDamage;
         for (const TPair<EDamageTypes, FDamageRange>& Pair : BaseDamageMap)
         {
-                const FString TypeName = UEnum::GetValueAsString(Pair.Key).RightChop(15);
+                const FString TypeName = DamageTypeToString(Pair.Key);
 
                 const FString MinKey = FString::Printf(TEXT("Min %s"), *TypeName);
                 const FString MaxKey = FString::Printf(TEXT("Max %s"), *TypeName);
