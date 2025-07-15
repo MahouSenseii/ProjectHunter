@@ -7,6 +7,7 @@
 #include "AbilitySystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Library/PHCombatStructLibrary.h"
+#include "Library/PHDamageTypeUtils.h"
 
 /* =========================== */
 /* === Constructor & Setup === */
@@ -183,7 +184,7 @@ void UCombatManager::ApplyDamage(const APHBaseCharacter* Attacker,
 
     // Determine the damage type that dealt the most damage
     const EDamageTypes HighestType = GetHighestDamageType(HitResult);
-    const FString TypeName = UEnum::GetValueAsString(HighestType).RightChop(15); // Trim enum prefix
+    const FString TypeName = DamageTypeToString(HighestType);
 
     UE_LOG(LogTemp, Log, TEXT("ApplyDamage: TotalDamage=%.0f, HighestType=%s"), TotalDamage, *TypeName);
     if (GEngine)
