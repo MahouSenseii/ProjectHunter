@@ -121,8 +121,7 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ProjectileCount, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ProjectileSpeed, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  RangedDamage, COND_OwnerOnly, REPNOTIFY_Always);
-
-
+	
 	//Duration
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, BurnDuration, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, BleedDuration, COND_None, REPNOTIFY_Always);
@@ -131,8 +130,6 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ShockDuration, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,PetrifyBuildUpDuration, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  PurifyDuration, COND_None, REPNOTIFY_Always);
-
-	
 
 	//Resistances
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, GlobalDefenses, COND_OwnerOnly, REPNOTIFY_Always);
@@ -145,16 +142,13 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CorruptionResistanceFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, IceResistanceFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  BlockStrength, COND_None, REPNOTIFY_Always);
-
 	
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxFireResistance, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightResistance, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxLightningResistance, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, MaxCorruptionResistance, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet,  MaxIceResistance, COND_OwnerOnly, REPNOTIFY_Always);
-
-
-
+	
 	//Piercing
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, ArmourPiercing, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, FirePiercing, COND_OwnerOnly, REPNOTIFY_Always);
@@ -192,8 +186,6 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Health, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Mana, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Stamina, COND_OwnerOnly, REPNOTIFY_Always);
-
-
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, Gems, COND_OwnerOnly, REPNOTIFY_Always);
 }
 
@@ -272,7 +264,7 @@ void UPHAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 		ClampResource(
 			[this]() { return GetHealth(); },
 			[this]() { return GetMaxEffectiveHealth(); },
-			[this](float V) { SetHealth(V); }
+			[this](float V) { SetHealth( V); }
 		);
 
 		// Handle death

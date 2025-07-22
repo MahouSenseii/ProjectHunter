@@ -83,6 +83,18 @@ void AEquippedObject::BeginPlay()
 	
 }
 
+UCombatManager* AEquippedObject::ConvertActorToCombatManager(AActor* InActor)
+{
+	if (InActor != nullptr)
+	{
+		if (UCombatManager* CombatManager =  InActor->FindComponentByClass<UCombatManager>())
+		{
+			return CombatManager;
+		}
+	}
+	return nullptr;
+}
+
 
 void AEquippedObject::SetMesh(UStaticMesh* Mesh) const
 {

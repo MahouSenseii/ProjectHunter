@@ -6,5 +6,5 @@
 /** Utility helper for converting damage type enums to name strings */
 FORCEINLINE FString DamageTypeToString(EDamageTypes Type)
 {
-    return UEnum::GetValueAsString(Type).RightChop(17);
+    return UEnum::GetValueAsString(Type).RightChop(15);
 }

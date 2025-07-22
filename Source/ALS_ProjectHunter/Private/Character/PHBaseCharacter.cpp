@@ -145,6 +145,9 @@ void APHBaseCharacter::InitAbilityActorInfo()
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 		Cast<UPHAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
+
+		StatsManager->ASC = Cast<UPHAbilitySystemComponent>(AbilitySystemComponent);
+		StatsManager->InitializeDefaultAttributes(); 
 	}
 	else
 	{

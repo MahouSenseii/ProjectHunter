@@ -305,6 +305,7 @@ void FPHGameplayTags::InitializeNativeGameplayTags()
 	RegisterStatusEffectDurations();
 	RegisterConditions();
 	RegisterConditionTriggers();
+	RegisterAllAttribute();
 }
 
 void FPHGameplayTags::RegisterPrimaryAttributes()

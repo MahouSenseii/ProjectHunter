@@ -319,6 +319,7 @@ void UStatsManager::OnAnyVitalPeriodicStatChanged(const FOnAttributeChangeData& 
 	}
 }
 
+
 void UStatsManager::InitializeDefaultAttributes()
 {
     check(Owner);

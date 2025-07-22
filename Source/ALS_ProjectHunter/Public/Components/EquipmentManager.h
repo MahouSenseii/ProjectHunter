@@ -72,6 +72,7 @@ public:
 	/** Removes a specific equipped item */
 	UFUNCTION(BlueprintCallable)
 	void RemoveEquippedItem(UBaseItem* Item, EEquipmentSlot Slot);
+	static void RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHBaseCharacter* Character);
 
 	/** Removes whatever item is currently in the slot */
 	UFUNCTION(BlueprintCallable)
@@ -86,6 +87,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void ApplyItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character);
+	void ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, APHBaseCharacter* Character);
 
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void RemoveItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character);

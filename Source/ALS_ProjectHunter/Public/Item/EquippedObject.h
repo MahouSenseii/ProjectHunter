@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/CombatManager.h"
 #include "GameFramework/Actor.h"
 #include "Library/PHItemStructLibrary.h"
 #include "EquippedObject.generated.h"
@@ -30,12 +31,15 @@ public:
 	FItemInformation GetItemInfo() { return  ItemInfo;}
 
 	UFUNCTION(BlueprintCallable)
-	void SetItemInfoRotated(bool inBool);
+	void SetItemInfoRotated(bool InBool);
 
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Converter")
+	static UCombatManager* ConvertActorToCombatManager(AActor* InActor);
 
 public:
 

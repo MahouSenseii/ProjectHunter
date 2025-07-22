@@ -23,35 +23,36 @@ public:
         // Sets default values for this component's properties
         UCombatManager();
 
-       /** Returns true if the owner is currently blocking */
-       UFUNCTION(BlueprintCallable, Category = "Combat")
-       bool IsBlocking() const { return bIsBlocking; }
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void CheckAliveStatus();
 
-       /** Set the blocking state */
-       UFUNCTION(BlueprintCallable, Category = "Combat")
-       void SetBlocking(bool bNewBlocking) { bIsBlocking = bNewBlocking; }
+	/** Returns true if the owner is currently blocking */
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	bool IsBlocking() const { return bIsBlocking; }
+
+	/** Set the blocking state */
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void SetBlocking(bool bNewBlocking) { bIsBlocking = bNewBlocking; }
+
 
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
+	UFUNCTION()
+	static bool RollForStatusEffect(const APHBaseCharacter* Attacker, EDamageTypes DamageType);
 
-       UFUNCTION()
-       static bool RollForStatusEffect(const APHBaseCharacter* Attacker, EDamageTypes DamageType);
-
-       /** Calculate the final damage values after applying attacker bonuses and defender resistances */
-       UFUNCTION(BlueprintCallable, Category = "Combat")
-       FDamageHitResultByType CalculateDamage(const APHBaseCharacter* Attacker,
-                                              const APHBaseCharacter* Defender) const;
+	/** Calculate the final damage values after applying attacker bonuses and defender resistances */
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	FDamageHitResultByType CalculateDamage(const APHBaseCharacter* Attacker, const APHBaseCharacter* Defender) const;
 
        /** Apply calculated damage and handle poise/stagger */
-       UFUNCTION(BlueprintCallable, Category = "Combat")
-       void ApplyDamage(const APHBaseCharacter* Attacker,
-                        APHBaseCharacter* Defender);
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void ApplyDamage(const APHBaseCharacter* Attacker,APHBaseCharacter* Defender);
 
-       /** Returns the damage type with the highest value in a hit result */
-       UFUNCTION(BlueprintPure, Category = "Combat")
-       static EDamageTypes GetHighestDamageType(const FDamageHitResultByType& HitResult);
+	/** Returns the damage type with the highest value in a hit result */
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	static EDamageTypes GetHighestDamageType(const FDamageHitResultByType& HitResult);
 
 public:
 
@@ -68,13 +69,16 @@ void IncreaseComboCounter(float Amount = 1.0f);
        UPROPERTY(BlueprintAssignable, Category = "Combat")
        FOnDamageApplied OnDamageApplied;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Owner", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<APHBaseCharacter> OwnerCharacter;
+	
 private:
 /** True when the character is actively blocking with a shield */
 UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat", meta = (AllowPrivateAccess = "true"))
 bool bIsBlocking = false;
 
 UFUNCTION()
-void ResetComboCounter();
+void ResetComboCounter() const;
 
 /** Time in seconds before the combo counter resets */
 UPROPERTY(EditAnywhere, Category = "Combat", meta = (AllowPrivateAccess = "true"))

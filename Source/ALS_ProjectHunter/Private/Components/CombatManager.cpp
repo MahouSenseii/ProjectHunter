@@ -19,10 +19,43 @@ UCombatManager::UCombatManager()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
+void UCombatManager::CheckAliveStatus()
+{
+    if (!OwnerCharacter) return;
+
+    UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
+    if (!ASC) return;
+
+    const float CurrentHealth = ASC->GetNumericAttributeBase(UPHAttributeSet::GetHealthAttribute());
+
+    if (CurrentHealth <= 0.f)
+    {
+        // Add "Dead" tag if not already present
+        const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Dead"));
+        if (!ASC->HasMatchingGameplayTag(DeadTag))
+        {
+            ASC->AddLooseGameplayTag(DeadTag);
+            UE_LOG(LogTemp, Log, TEXT("Dead tag added to character."));
+        }
+
+        // Trigger ragdoll
+        if (USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh())
+        {
+            Mesh->SetCollisionProfileName(FName("Ragdoll"));
+            Mesh->SetSimulatePhysics(true);
+            Mesh->WakeAllRigidBodies();
+            OwnerCharacter->GetCharacterMovement()->DisableMovement();
+            OwnerCharacter->RagdollStart();
+            UE_LOG(LogTemp, Log, TEXT("Character ragdolled."));
+        }
+    }
+}
+
 // Called when the game starts
 void UCombatManager::BeginPlay()
 {
 	Super::BeginPlay();
+    OwnerCharacter = Cast<APHBaseCharacter>(GetOwner());
 }
 
 /* ==================================== */
@@ -228,6 +261,7 @@ void UCombatManager::ApplyDamage(const APHBaseCharacter* Attacker,
 
     // Broadcast damage info for UI or other listeners
     OnDamageApplied.Broadcast(TotalDamage, HighestType);
+    CheckAliveStatus();
 }
 
 EDamageTypes UCombatManager::GetHighestDamageType(const FDamageHitResultByType& HitResult)
@@ -249,7 +283,7 @@ EDamageTypes UCombatManager::GetHighestDamageType(const FDamageHitResultByType& 
 
 void UCombatManager::IncreaseComboCounter(float Amount)
 {
-    APHBaseCharacter* OwnerCharacter = Cast<APHBaseCharacter>(GetOwner());
+     OwnerCharacter = Cast<APHBaseCharacter>(GetOwner());
     if (!OwnerCharacter) return;
 
     UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
@@ -263,9 +297,8 @@ void UCombatManager::IncreaseComboCounter(float Amount)
     GetWorld()->GetTimerManager().SetTimer(ComboResetTimerHandle, this, &UCombatManager::ResetComboCounter, ComboResetTime, false);
 }
 
-void UCombatManager::ResetComboCounter()
+void UCombatManager::ResetComboCounter() const
 {
-    APHBaseCharacter* OwnerCharacter = Cast<APHBaseCharacter>(GetOwner());
     if (!OwnerCharacter) return;
 
     UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
