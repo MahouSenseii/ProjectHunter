@@ -10,7 +10,7 @@
 #include "Engine/TargetPoint.h"
 #include "Library/InteractionEnumLibrary.h"
 #include "InteractableManager.generated.h"
-
+DECLARE_LOG_CATEGORY_EXTERN(LogInteractableManager, Log, All);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHoldingChangedDelegate, float, Value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMashingChangedDelegate, float, Value);
 

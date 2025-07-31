@@ -6,6 +6,7 @@
 #include "Character/ALSPlayerController.h"
 #include "Components/CanvasPanelSlot.h"
 
+DEFINE_LOG_CATEGORY(LogWidgetManager);
 /* ============================= */
 /* === Initialization Header === */
 /* ============================= */
@@ -31,7 +32,7 @@ void UWidgetManager::WidgetCheck(APHBaseCharacter* Owner)
 
 	if (Execute_GetActiveWidget(this) != EWidgets::AW_None)
 	{
-		UE_LOG(LogTemp, Log, TEXT("WidgetCheck: Found active widget %d"), static_cast<int32>(Execute_GetActiveWidget(this)));
+		UE_LOG(LogWidgetManager, Log, TEXT("WidgetCheck: Found active widget %d"), static_cast<int32>(Execute_GetActiveWidget(this)));
 		Execute_CloseActiveWidget(this);
 	}
 	else
@@ -56,7 +57,7 @@ void UWidgetManager::OpenNewWidget_Implementation(EWidgets Widget, const bool bI
 {
 	if (!OwnerCharacter)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UWidgetManager::OpenNewWidget: OwnerCharacter is null"));
+		UE_LOG(LogWidgetManager, Warning, TEXT("UWidgetManager::OpenNewWidget: OwnerCharacter is null"));
 		return;
 	}
 
@@ -93,7 +94,7 @@ void UWidgetManager::OpenNewWidget_Implementation(EWidgets Widget, const bool bI
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("No widget class found for widget: %d"), static_cast<int32>(Widget));
+		UE_LOG(LogWidgetManager, Warning, TEXT("No widget class found for widget: %d"), static_cast<int32>(Widget));
 	}
 }
 

@@ -8,11 +8,13 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Library/PHCombatStructLibrary.h"
 #include "Library/PHDamageTypeUtils.h"
+#include "UI/Widgets/DamagePopup.h"
 
 /* =========================== */
 /* === Constructor & Setup === */
 /* =========================== */
 
+class UDamagePopup;
 // Sets default values for this component's properties
 UCombatManager::UCombatManager()
 {
@@ -56,6 +58,7 @@ void UCombatManager::BeginPlay()
 {
 	Super::BeginPlay();
     OwnerCharacter = Cast<APHBaseCharacter>(GetOwner());
+    OnDamageApplied.AddDynamic(this, &UCombatManager::InitPopup);
 }
 
 /* ==================================== */
@@ -258,10 +261,55 @@ void UCombatManager::ApplyDamage(const APHBaseCharacter* Attacker,
     {
         Defender->PlayAnimMontage(StaggerMontage);
     }
-
     // Broadcast damage info for UI or other listeners
-    OnDamageApplied.Broadcast(TotalDamage, HighestType);
+    OnDamageApplied.Broadcast(TotalDamage, HighestType, HitResult.bCrit);
     CheckAliveStatus();
+}
+
+void UCombatManager::InitPopup(float DamageAmount, EDamageTypes DamageType, bool bIsCrit)
+{
+    if (!DamagePopupClass || !OwnerCharacter) return;
+
+    // Base height above the defender's head
+    FVector BaseLocation = OwnerCharacter->GetActorLocation() + FVector(0.f, 0.f, 120.f);
+
+    // Add small random X/Y offset to avoid overlap
+    float RandX = FMath::FRandRange(-50.f, 40.f);
+    float RandY = FMath::FRandRange(-50.f, 40.f);
+
+    FVector PopupLocation = BaseLocation + FVector(RandX, RandY, 0.f);
+
+    UWidgetComponent* PopupComp = NewObject<UWidgetComponent>(OwnerCharacter);
+    if (!PopupComp) return;
+
+    PopupComp->RegisterComponent();
+    PopupComp->AttachToComponent(OwnerCharacter->GetRootComponent(), FAttachmentTransformRules::KeepWorldTransform);
+    PopupComp->SetWorldLocation(PopupLocation);
+    PopupComp->SetWidgetSpace(EWidgetSpace::World);
+    PopupComp->SetDrawSize(FVector2D(50.f, 25.f));
+    PopupComp->SetWidgetClass(DamagePopupClass);
+    PopupComp->SetTwoSided(true);
+
+    if (APlayerCameraManager* CamManager = GetWorld()->GetFirstPlayerController()->PlayerCameraManager)
+    {
+        FVector CamLocation = CamManager->GetCameraLocation();
+        FVector ToCamera = (CamLocation - PopupComp->GetComponentLocation()).GetSafeNormal();
+        FRotator LookAtRotation = ToCamera.Rotation();
+        PopupComp->SetWorldRotation(LookAtRotation);
+    }
+
+
+    if (UDamagePopup* Popup = Cast<UDamagePopup>(PopupComp->GetUserWidgetObject()))
+    {
+        Popup->SetDamageData(static_cast<int32>(DamageAmount), DamageType, bIsCrit);
+    }
+
+    // Auto-destroy after 1.5s
+    FTimerHandle TimerHandle;
+    OwnerCharacter->GetWorldTimerManager().SetTimer(TimerHandle, [PopupComp]()
+    {
+        if (PopupComp) PopupComp->DestroyComponent();
+    }, 1.5f, false);
 }
 
 EDamageTypes UCombatManager::GetHighestDamageType(const FDamageHitResultByType& HitResult)

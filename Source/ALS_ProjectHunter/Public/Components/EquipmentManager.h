@@ -18,6 +18,9 @@ class ACharacterCapture;
 /**
  *  Manages character equipment and inventory interactions.
  */
+
+DECLARE_LOG_CATEGORY_EXTERN(LogEquipmentManager, Log, All);
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UEquipmentManager : public UActorComponent
 {

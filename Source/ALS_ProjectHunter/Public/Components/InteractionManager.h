@@ -12,6 +12,7 @@ class APHPlayerController;
 class APHPlayerCharacter;
 class UInteractableManager;
 
+DECLARE_LOG_CATEGORY_EXTERN(LogInteract, Log, All);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNewInteractableAssigned, UInteractableManager*, NewInteractable);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRemoveCurrentInteractable, UInteractableManager*, RemovedIntercatable);
 

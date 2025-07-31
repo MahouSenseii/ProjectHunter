@@ -11,7 +11,7 @@
 #include "Item/ConsumableItem.h"
 #include "Item/EquippableItem.h"
 #include "Kismet/KismetMathLibrary.h"
-
+DEFINE_LOG_CATEGORY(LogInventoryManager)
 // Sets default values for this component's properties
 UInventoryManager::UInventoryManager(): SpawnableItems(nullptr), MasterDropList(nullptr), OwnerCharacter(nullptr)
 {
@@ -53,13 +53,13 @@ void UInventoryManager::InitializeInventoryManager()
 		OwnerCharacter = Cast<APHBaseCharacter>(GetOwner());
 		if (!OwnerCharacter)
 		{
-			UE_LOG(LogTemp, Error, TEXT("Failed to cast owner to AALSBaseCharacter."));
+			UE_LOG(LogInventoryManager, Error, TEXT("Failed to cast owner to AALSBaseCharacter."));
 			return;
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("InventoryManager: InitializeInventoryManager :Failed to  Get Owner  ."));
+		UE_LOG(LogInventoryManager, Error, TEXT("InventoryManager: InitializeInventoryManager :Failed to  Get Owner  ."));
 		return;
 	}
 
@@ -131,7 +131,7 @@ void UInventoryManager::SetItemInTiles(UBaseItem* Item, const FTile& TopLeft)
 			}
 			else
 			{
-				UE_LOG(LogTemp, Warning, TEXT("SetItemInTiles: Invalid index for Tile (%d, %d)"), Tile.X, Tile.Y);
+				UE_LOG(LogInventoryManager, Warning, TEXT("SetItemInTiles: Invalid index for Tile (%d, %d)"), Tile.X, Tile.Y);
 			}
 		}
 	}
@@ -145,7 +145,7 @@ void UInventoryManager::ClearItemFromTiles(UBaseItem* Item, const FTile& TopLeft
 	// Double-check TopLeftItemMap consistency (optional warning)
 	if (!TopLeftItemMap.Contains(TopLeft) || TopLeftItemMap[TopLeft] != Item)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ClearItemFromTiles: TopLeft map mismatch for item %s at tile (%d, %d)"),
+		UE_LOG(LogInventoryManager, Warning, TEXT("ClearItemFromTiles: TopLeft map mismatch for item %s at tile (%d, %d)"),
 			*Item->GetItemInfo().ItemInfo.ItemName.ToString(), TopLeft.X, TopLeft.Y);
 	}
 
@@ -184,7 +184,7 @@ bool UInventoryManager::CanAcceptItemAt(UBaseItem* NewItem, const int32 Index)
 {
 	if (!IsValid(NewItem) || !InventoryList.IsValidIndex(Index))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("CanAcceptItemAt: Invalid item or index %d"), Index);
+		UE_LOG(LogInventoryManager, Warning, TEXT("CanAcceptItemAt: Invalid item or index %d"), Index);
 		return false;
 	}
 
@@ -203,7 +203,7 @@ bool UInventoryManager::CanAcceptItemAt(UBaseItem* NewItem, const int32 Index)
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("CanAcceptItemAt: Stack size would exceed max (%d + %d > %d)"), ExistingQty, NewQty, MaxStack);
+			UE_LOG(LogInventoryManager, Warning, TEXT("CanAcceptItemAt: Stack size would exceed max (%d + %d > %d)"), ExistingQty, NewQty, MaxStack);
 			return false;
 		}
 	}
@@ -267,13 +267,13 @@ void UInventoryManager::ValidateTileMap()
 
 				if (!InventoryList.IsValidIndex(Index))
 				{
-					UE_LOG(LogTemp, Error, TEXT("[ValidateTileMap] Invalid index for tile (%d, %d)"), Tile.X, Tile.Y);
+					UE_LOG(LogInventoryManager, Error, TEXT("[ValidateTileMap] Invalid index for tile (%d, %d)"), Tile.X, Tile.Y);
 					continue;
 				}
 
 				if (InventoryList[Index] != Item)
 				{
-					UE_LOG(LogTemp, Error, TEXT("[ValidateTileMap] Tile (%d, %d) does not reference item %s (Expected: %s)"),
+					UE_LOG(LogInventoryManager, Error, TEXT("[ValidateTileMap] Tile (%d, %d) does not reference item %s (Expected: %s)"),
 						Tile.X, Tile.Y,
 						*GetNameSafe(InventoryList[Index]),
 						*Item->GetItemInfo().ItemInfo.ItemName.ToString());
@@ -304,7 +304,7 @@ void UInventoryManager::ClearAllSlots()
 	OnInventoryChanged.Broadcast();
 
 	// 4. Debug log
-	UE_LOG(LogTemp, Warning, TEXT("InventoryList and TopLeftItemMap have been cleared."));
+	UE_LOG(LogInventoryManager, Warning, TEXT("InventoryList and TopLeftItemMap have been cleared."));
 }
 
 
@@ -333,7 +333,7 @@ TMap<UBaseItem*, FTile> UInventoryManager::GetAllItems()
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("GetAllItems: Found null item at tile (%d, %d)"), Pair.Key.X, Pair.Key.Y);
+			UE_LOG(LogInventoryManager, Warning, TEXT("GetAllItems: Found null item at tile (%d, %d)"), Pair.Key.X, Pair.Key.Y);
 		}
 	}
 
@@ -383,7 +383,7 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
 {
 	if (!IsValid(Item))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("DropItemInInventory: Item is invalid."));
+		UE_LOG(LogInventoryManager, Warning, TEXT("DropItemInInventory: Item is invalid."));
 		return false;
 	}
 
@@ -393,7 +393,7 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
 	UWorld* World = GetWorld();
 	if (!World)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("DropItemInInventory: Invalid world context."));
+		UE_LOG(LogInventoryManager, Warning, TEXT("DropItemInInventory: Invalid world context."));
 		return false;
 	}
 
@@ -451,7 +451,7 @@ bool UInventoryManager::DropItemInInventory(UBaseItem* Item)
 		return true;
 	}
 
-	UE_LOG(LogTemp, Error, TEXT("Failed to spawn pickup for item %s"), *Item->GetItemInfo().ItemInfo.ItemName.ToString());
+	UE_LOG(LogInventoryManager, Error, TEXT("Failed to spawn pickup for item %s"), *Item->GetItemInfo().ItemInfo.ItemName.ToString());
 	return false;
 }
 
@@ -475,7 +475,7 @@ bool UInventoryManager::IsRoomAvailable(UBaseItem* Item, int32 TopLeftIndex)
 {
 	if (!IsValid(Item))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Item is not valid."));
+		UE_LOG(LogInventoryManager, Warning, TEXT("Item is not valid."));
 		return false;
 	}
 
@@ -505,7 +505,7 @@ bool UInventoryManager::ForEachTile(UBaseItem* Item, int32 TopLeftIndex, const T
 {
 	if (!Item)  // Check for null Item
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Item is null. Aborting ForEachTile."));
+		UE_LOG(LogInventoryManager, Warning, TEXT("Item is null. Aborting ForEachTile."));
 		return false;
 	}
 
@@ -515,7 +515,7 @@ bool UInventoryManager::ForEachTile(UBaseItem* Item, int32 TopLeftIndex, const T
 	const FVector2D Dimensions = Item->GetDimensions();
 	if (Dimensions.X <= 0 || Dimensions.Y <= 0)  // Check for valid dimensions
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Invalid item dimensions. Aborting ForEachTile."));
+		UE_LOG(LogInventoryManager, Warning, TEXT("Invalid item dimensions. Aborting ForEachTile."));
 		return false;
 	}
 
@@ -527,7 +527,7 @@ bool UInventoryManager::ForEachTile(UBaseItem* Item, int32 TopLeftIndex, const T
 			Func(Tile);  // Call the lambda function for each tile
 
 			// Debug log to display the tile coordinates
-			UE_LOG(LogTemp, Warning, TEXT("Processing tile at coordinates (%d, %d)"), x, y);
+			UE_LOG(LogInventoryManager, Warning, TEXT("Processing tile at coordinates (%d, %d)"), x, y);
 		}
 	}
 	return true;  // return true when completed
@@ -629,7 +629,7 @@ void UInventoryManager::RandomizeInventory()
 {
 	if (SpawnableItems == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SpawnableItems DataTable is null."));
+		UE_LOG(LogInventoryManager, Warning, TEXT("SpawnableItems DataTable is null."));
 		return;
 	}
 	if (OwnerCharacter)
@@ -675,7 +675,7 @@ void UInventoryManager::RandomizeInventory()
 				{
 					if (const bool bItemAdded = SpawnItemByName(SelectedItemName, SpawnableItems); !bItemAdded)
 					{
-						UE_LOG(LogTemp, Warning, TEXT("Failed to add item %s to inventory, stopping item generation."), *SelectedItemName.ToString());
+						UE_LOG(LogInventoryManager, Warning, TEXT("Failed to add item %s to inventory, stopping item generation."), *SelectedItemName.ToString());
 						break; // Stop the loop as item could not be added to the inventory
 					}
 				}

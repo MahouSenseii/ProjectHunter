@@ -13,7 +13,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAttributeInfoSignature, const FPHAt
 class UAttributeInfo;
 
 /**
- * 
+ * @class UAttributeMenuWidgetController
+ * @brief Handles widget-related functionalities for attribute display in the UI.
+ *
+ * UAttributeMenuWidgetController extends UPHWidgetController to provide methods for
+ * binding callbacks to attribute dependencies and broadcasting initial attribute values.
+ * It uses the Gameplay Ability System to manage and respond to attribute changes.
  */
 UCLASS(BlueprintType, Blueprintable)
 class ALS_PROJECTHUNTER_API UAttributeMenuWidgetController : public UPHWidgetController

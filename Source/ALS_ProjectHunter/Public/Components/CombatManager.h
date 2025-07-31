@@ -9,7 +9,7 @@
 #include "CombatManager.generated.h"
 
 // Delegate used to broadcast damage information after ApplyDamage runs
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDamageApplied, float, TotalDamage, EDamageTypes, HighestDamageType);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDamageApplied, float, TotalDamage, EDamageTypes, HighestDamageType, bool, IsCrit);
 
 
 
@@ -50,6 +50,10 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void ApplyDamage(const APHBaseCharacter* Attacker,APHBaseCharacter* Defender);
 
+	UFUNCTION(BlueprintCallable, Category="Combat|UI")
+	void InitPopup(float DamageAmount, EDamageTypes DamageType, bool bIsCrit);
+
+
 	/** Returns the damage type with the highest value in a hit result */
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	static EDamageTypes GetHighestDamageType(const FDamageHitResultByType& HitResult);
@@ -66,25 +70,29 @@ UFUNCTION(BlueprintCallable, Category = "Combat")
 void IncreaseComboCounter(float Amount = 1.0f);
 
        /** Event fired after damage has been applied */
-       UPROPERTY(BlueprintAssignable, Category = "Combat")
-       FOnDamageApplied OnDamageApplied;
+	UPROPERTY(BlueprintAssignable, Category = "Combat")
+	FOnDamageApplied OnDamageApplied;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Owner", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<APHBaseCharacter> OwnerCharacter;
+
+	UPROPERTY(EditDefaultsOnly, Category="UI")
+	TSubclassOf<UUserWidget> DamagePopupClass;
+
 	
 private:
-/** True when the character is actively blocking with a shield */
-UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat", meta = (AllowPrivateAccess = "true"))
-bool bIsBlocking = false;
+	/** True when the character is actively blocking with a shield */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	bool bIsBlocking = false;
 
-UFUNCTION()
-void ResetComboCounter() const;
+	UFUNCTION()
+	void ResetComboCounter() const;
 
-/** Time in seconds before the combo counter resets */
-UPROPERTY(EditAnywhere, Category = "Combat", meta = (AllowPrivateAccess = "true"))
-float ComboResetTime = 5.0f;
+	/** Time in seconds before the combo counter resets */
+	UPROPERTY(EditAnywhere, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	float ComboResetTime = 5.0f;
 
-UPROPERTY()
-FTimerHandle ComboResetTimerHandle;
+	UPROPERTY()
+	FTimerHandle ComboResetTimerHandle;
 		
 };

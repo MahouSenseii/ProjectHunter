@@ -12,7 +12,7 @@
 #include "Library/PHDamageTypeUtils.h"
 
 UEquipmentManager::UEquipmentManager() { }
-
+DEFINE_LOG_CATEGORY(LogEquipmentManager);
 void UEquipmentManager::BeginDestroy()
 {
 	// Clear all equipment data
@@ -166,7 +166,7 @@ void UEquipmentManager::HandleHasMesh(UBaseItem* Item, EEquipmentSlot Slot)
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Equip Item came back null (Check EquipmentManager 107)"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("Equip Item came back null (Check EquipmentManager 107)"));
 	}
 }
 
@@ -219,27 +219,27 @@ void UEquipmentManager::RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHB
 {
 	if (!WeaponItem)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("RemoveWeaponBaseDamage failed: WeaponItem is nullptr"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveWeaponBaseDamage failed: WeaponItem is nullptr"));
 		return;
 	}
 
 	if (!Character)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("RemoveWeaponBaseDamage failed: Character is nullptr"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveWeaponBaseDamage failed: Character is nullptr"));
 		return;
 	}
 
 	UStatsManager* StatsManager = Character->GetStatsManager();
 	if (!StatsManager)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("RemoveWeaponBaseDamage failed: Character has no StatsManager"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveWeaponBaseDamage failed: Character has no StatsManager"));
 		return;
 	}
 
 	const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = WeaponItem->GetItemInfo().ItemData.WeaponBaseStats.BaseDamage;
 	if (BaseDamageMap.Num() == 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Weapon has no base damage defined, nothing to remove."));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("Weapon has no base damage defined, nothing to remove."));
 		return;
 	}
 
@@ -253,21 +253,21 @@ void UEquipmentManager::RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHB
 		if (const FGameplayAttribute* MinAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MinKey))
 		{
 			StatsManager->ApplyFlatStatModifier(*MinAttr, -Pair.Value.Min);
-			UE_LOG(LogTemp, Log, TEXT("Removed weapon base damage MIN: %s = %.2f"), *MinAttr->GetName(), -Pair.Value.Min);
+			UE_LOG(LogEquipmentManager, Log, TEXT("Removed weapon base damage MIN: %s = %.2f"), *MinAttr->GetName(), -Pair.Value.Min);
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("No Min attribute found to remove for key: %s"), *MinKey);
+			UE_LOG(LogEquipmentManager, Warning, TEXT("No Min attribute found to remove for key: %s"), *MinKey);
 		}
 
 		if (const FGameplayAttribute* MaxAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MaxKey))
 		{
 			StatsManager->ApplyFlatStatModifier(*MaxAttr, -Pair.Value.Max);
-			UE_LOG(LogTemp, Log, TEXT("Removed weapon base damage MAX: %s = %.2f"), *MaxAttr->GetName(), -Pair.Value.Max);
+			UE_LOG(LogEquipmentManager, Log, TEXT("Removed weapon base damage MAX: %s = %.2f"), *MaxAttr->GetName(), -Pair.Value.Max);
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("No Max attribute found to remove for key: %s"), *MaxKey);
+			UE_LOG(LogEquipmentManager, Warning, TEXT("No Max attribute found to remove for key: %s"), *MaxKey);
 		}
 	}
 }
@@ -293,7 +293,7 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 {
 	if (!IsValid(Item) || !IsValid(OwnerCharacter) || !Class)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Invalid parameters in AttachItem"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("Invalid parameters in AttachItem"));
 		return;
 	}
 
@@ -308,7 +308,7 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 
 		if (!IsValid(SpawnedActor))
 		{
-			UE_LOG(LogTemp, Error, TEXT("Failed to spawn equipped object"));
+			UE_LOG(LogEquipmentManager, Error, TEXT("Failed to spawn equipped object"));
 			return;
 		}
 
@@ -319,7 +319,7 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 		const FName SlotToAttachTo = UPHItemFunctionLibrary::GetSocketNameForSlot(Slot);
 		if (!OwnerCharacter->GetMesh()->DoesSocketExist(SlotToAttachTo))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Socket %s does not exist on character"), *SlotToAttachTo.ToString());
+			UE_LOG(LogEquipmentManager, Warning, TEXT("Socket %s does not exist on character"), *SlotToAttachTo.ToString());
 			return;
 		}
 
@@ -330,7 +330,7 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("Mesh for item is null!"));
+			UE_LOG(LogEquipmentManager, Error, TEXT("Mesh for item is null!"));
 			return;
 		}
 
@@ -463,13 +463,13 @@ void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, APHBa
 {
 	if (!WeaponItem)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ApplyWeaponBaseDamage failed: WeaponItem is nullptr"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyWeaponBaseDamage failed: WeaponItem is nullptr"));
 		return;
 	}
 
 	if (!Character)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ApplyWeaponBaseDamage failed: Character is nullptr"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyWeaponBaseDamage failed: Character is nullptr"));
 		return;
 	}
 
@@ -477,14 +477,14 @@ void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, APHBa
 	UStatsManager* StatsManager = Character->GetStatsManager();
 	if (!StatsManager)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ApplyWeaponBaseDamage failed: Character has no StatsManager"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyWeaponBaseDamage failed: Character has no StatsManager"));
 		return;
 	}
 
 	const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = WeaponItem->GetItemInfo().ItemData.WeaponBaseStats.BaseDamage;
 	if (BaseDamageMap.Num() == 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Weapon has no base damage defined."));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("Weapon has no base damage defined."));
 		return;
 	}
 
@@ -500,21 +500,21 @@ void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, APHBa
 		if (const FGameplayAttribute* MinAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MinKey))
 		{
 			StatsManager->ApplyFlatStatModifier(*MinAttr, Pair.Value.Min);
-			UE_LOG(LogTemp, Log, TEXT("Applied weapon base damage MIN: %s = %.2f"), *MinAttr->GetName(), Pair.Value.Min);
+			UE_LOG(LogEquipmentManager, Log, TEXT("Applied weapon base damage MIN: %s = %.2f"), *MinAttr->GetName(), Pair.Value.Min);
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("No Min attribute found for damage type key: %s"), *MinKey);
+			UE_LOG(LogEquipmentManager, Warning, TEXT("No Min attribute found for damage type key: %s"), *MinKey);
 		}
 
 		if (const FGameplayAttribute* MaxAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MaxKey))
 		{
 			StatsManager->ApplyFlatStatModifier(*MaxAttr, Pair.Value.Max);
-			UE_LOG(LogTemp, Log, TEXT("Applied weapon base damage MAX: %s = %.2f"), *MaxAttr->GetName(), Pair.Value.Max);
+			UE_LOG(LogEquipmentManager, Log, TEXT("Applied weapon base damage MAX: %s = %.2f"), *MaxAttr->GetName(), Pair.Value.Max);
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("No Max attribute found for damage type key: %s"), *MaxKey);
+			UE_LOG(LogEquipmentManager, Warning, TEXT("No Max attribute found for damage type key: %s"), *MaxKey);
 		}
 	}
 }
@@ -538,7 +538,7 @@ void UEquipmentManager::RemoveItemStatBonuses(UEquippableItem* Item, APHBaseChar
 
                         const float Rolled = Stats.RolledValues.IsValidIndex(i) ? Stats.RolledValues[i] : 0.0f;
                         Character->GetStatsManager()->ApplyFlatStatModifier(Attr.ModifiedAttribute, -Rolled);
-                        UE_LOG(LogTemp, Log, TEXT("Removing %.2f from %s"), Rolled, *Attr.ModifiedAttribute.GetName());
+                        UE_LOG(LogEquipmentManager, Log, TEXT("Removing %.2f from %s"), Rolled, *Attr.ModifiedAttribute.GetName());
                 }
 
                 for (int32 i = 0; i < Stats.BaseDamageAttributes.Num(); ++i)
@@ -587,13 +587,13 @@ bool UEquipmentManager::DropItem(UBaseItem* Item)
 {
 	if (!IsValid(Item))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("DropItem failed: Item is invalid"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("DropItem failed: Item is invalid"));
 		return false;
 	}
 
 	if (!GetWorld())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("DropItem failed: World context is null"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("DropItem failed: World context is null"));
 		return false;
 	}
 
@@ -601,7 +601,7 @@ bool UEquipmentManager::DropItem(UBaseItem* Item)
 	const TSubclassOf<AItemPickup> Class = Item->GetItemInfo().ItemInfo.PickupClass;
 	if (!Class)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("DropItem failed: Pickup class is null"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("DropItem failed: Pickup class is null"));
 		return false;
 	}
 
@@ -613,7 +613,7 @@ bool UEquipmentManager::DropItem(UBaseItem* Item)
 	AItemPickup* DroppedItem = GetWorld()->SpawnActor<AItemPickup>(Class, GetGroundSpawnLocation(), FRotator::ZeroRotator, SpawnParams);
 	if (!IsValid(DroppedItem))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("DropItem failed: Unable to spawn item pickup"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("DropItem failed: Unable to spawn item pickup"));
 		return false;
 	}
 
@@ -630,7 +630,7 @@ UInventoryManager* UEquipmentManager::GetInventoryManager() const
 	// Validate OwnerCharacter first
 	if (!IsValid(OwnerCharacter))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("GetInventoryManager failed: OwnerCharacter is null"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("GetInventoryManager failed: OwnerCharacter is null"));
 		return nullptr;
 	}
 
@@ -643,7 +643,7 @@ FVector UEquipmentManager::GetGroundSpawnLocation() const
 	// Validate OwnerCharacter
 	if (!IsValid(OwnerCharacter))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("GetGroundSpawnLocation failed: OwnerCharacter is null"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("GetGroundSpawnLocation failed: OwnerCharacter is null"));
 		return FVector::ZeroVector;
 	}
 
@@ -666,7 +666,7 @@ FVector UEquipmentManager::GetGroundSpawnLocation() const
 	}
 
 	// If no valid floor is found, log a warning and return a safe default location
-	UE_LOG(LogTemp, Warning, TEXT("GetGroundSpawnLocation: No valid floor found, using fallback location"));
+	UE_LOG(LogEquipmentManager, Warning, TEXT("GetGroundSpawnLocation: No valid floor found, using fallback location"));
 	return OwnerCharacter->GetActorLocation() + FVector(0.0f, 0.0f, 50.0f); // Slightly above the character
 }
 

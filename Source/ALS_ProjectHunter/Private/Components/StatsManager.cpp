@@ -14,7 +14,7 @@ namespace
 	constexpr float MinAllowedEffectPeriod = 0.1f;
 }
 
-
+DEFINE_LOG_CATEGORY(LogStatsManager);
 // Sets default values for this component's properties
 UStatsManager::UStatsManager()
 {
@@ -196,7 +196,7 @@ void UStatsManager::ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& 
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StatsManager] Missing SetByCallerTag for %s! Default magnitude not set."),
+		UE_LOG(LogStatsManager, Warning, TEXT("[StatsManager] Missing SetByCallerTag for %s! Default magnitude not set."),
 			*EffectInfo.EffectClass->GetName());
 	}
 	
@@ -212,7 +212,7 @@ void UStatsManager::ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& 
 	}
 
 #if WITH_EDITOR
-	UE_LOG(LogTemp, Log, TEXT("[GAS] Applied %s with Amount %.2f, Period %.2f"),
+	UE_LOG(LogStatsManager, Log, TEXT("[GAS] Applied %s with Amount %.2f, Period %.2f"),
 		*EffectInfo.EffectClass->GetName(), RawAmount, ClampedRate);
 #endif
 }

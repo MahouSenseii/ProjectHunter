@@ -42,6 +42,7 @@ float UMMC_MaxStamina::CalculateBaseMagnitude_Implementation(const FGameplayEffe
 	Reserved = FMath::Max( Reserved, 0.0f);
 	
 	ICombatSubInterface* CombatSubInterface =  Cast<ICombatSubInterface>(Spec.GetContext().GetSourceObject());
+	
 	const int32 PlayerLevel = CombatSubInterface->GetPlayerLevel();
 
 	// Base hp 100 +( 5 * Endurance) + ( 6 * PlayerLevel )

@@ -7,6 +7,9 @@
 #include "Interfaces/WidgetInterface.h"
 #include "WidgetManager.generated.h"
 
+
+DECLARE_LOG_CATEGORY_EXTERN(LogWidgetManager, Log, All);
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UWidgetManager : public UActorComponent, public IWidgetInterface
 {

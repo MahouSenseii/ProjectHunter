@@ -9,6 +9,8 @@
 #include "Components/InteractableManager.h"
 #include "Components/SpawnableLootManager.h"
 
+DEFINE_LOG_CATEGORY(LogLoot);
+
 ABaseChest::ABaseChest()
 {
 	// Override parent logic to ensure SkeletalMesh is used instead of StaticMesh
@@ -21,7 +23,7 @@ ABaseChest::ABaseChest()
 	// Setup ItemSpawnBox if not already created
 	ItemSpawnBox = CreateDefaultSubobject<UBoxComponent>(TEXT("ItemSpawnBox"));
 	ItemSpawnBox->SetupAttachment(RootComponent);
-	const FVector Location(0.0f, -105.0f, 60.0f);
+	const FVector Location(0.0f, 105.0f, 60.0f);
 	const FRotator Rotation(0.0f, 0.0f, 0.0f);
 	const FVector Scale(3.0f, 2.0f, 0.5f);
 	SkeletalMesh->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
@@ -62,7 +64,7 @@ void ABaseChest::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)
 	{
 		CurrentInteractor = Interactor;
 		SetOwner(Interactor);
-		UE_LOG(LogTemp, Warning, TEXT("AnimToPlay is: %s"), *GetNameSafe(AnimToPlay));
+		UE_LOG(LogLoot, Warning, TEXT("AnimToPlay is: %s"), *GetNameSafe(AnimToPlay));
 		GetAnimationToPlay(AnimToPlay);
 		if (SpawnableLootManager->SpawnableItems)
 		{

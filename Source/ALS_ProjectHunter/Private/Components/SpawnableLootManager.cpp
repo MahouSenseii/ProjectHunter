@@ -5,6 +5,8 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Library/PHItemStructLibrary.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogLoot, Log, All);
+
 // Sets default values for this component's properties
 USpawnableLootManager::USpawnableLootManager()
 	: SpawnableItems(nullptr), MasterDropList(nullptr), SpawnBox(nullptr)
@@ -39,7 +41,7 @@ int32 USpawnableLootManager::GenerateDropAmount(UPHAttributeSet* AttributeSet)
 	const int32 ScaledValue = FMath::TruncToInt(AdjustedRandom * Range);
 	const int32 LootAmountRoll = Min + ScaledValue;
 
-	UE_LOG(LogTemp, Log, TEXT("Luck=%f | Ratio=%.3f | Factor=%.3f | Roll=%.2f | Loot=%d"),
+	UE_LOG(LogLoot, Log, TEXT("Luck=%f | Ratio=%.3f | Factor=%.3f | Roll=%.2f | Loot=%d"),
 		PlayerLuck, LuckRatio, LuckFactor, AdjustedRandom, LootAmountRoll);
 
 	return LootAmountRoll;
@@ -52,7 +54,7 @@ FTransform USpawnableLootManager::GetSpawnLocation() const
 {
 	if (!SpawnBox || !GetWorld()) 
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SpawnBox is null or World is not available, using default transform"));
+		UE_LOG(LogLoot, Warning, TEXT("SpawnBox is null or World is not available, using default transform"));
 		return FTransform();
 	}
 
@@ -89,7 +91,7 @@ FTransform USpawnableLootManager::GetSpawnLocation() const
 	
 		// Fallback: just drop to approximate floor height
 		FVector DefaultSpawn = SpawnPointXY + FVector(0, 0, 30.0f);
-		UE_LOG(LogTemp, Warning, TEXT("No ground hit. Using fallback spawn height."));
+		UE_LOG(LogLoot, Warning, TEXT("No ground hit. Using fallback spawn height."));
 		return FTransform(DefaultSpawn);
 	
 }
@@ -99,7 +101,7 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
 {
 	if (!DataTable) 
 	{
-		UE_LOG(LogTemp, Warning, TEXT("DataTable is null"));
+		UE_LOG(LogLoot, Warning, TEXT("DataTable is null"));
 		return;
 	}
 
@@ -107,14 +109,14 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
 	const FItemInformation* ItemInfo = DataTable->FindRow<FItemInformation>(ItemName, TEXT("LookupItemInfo"));
 	if (!ItemInfo) 
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Item %s not found in DataTable"), *ItemName.ToString());
+		UE_LOG(LogLoot, Warning, TEXT("Item %s not found in DataTable"), *ItemName.ToString());
 		return;
 	}
 
 	// Check if world is valid before spawning
 	if (!GetWorld()) 
 	{
-		UE_LOG(LogTemp, Warning, TEXT("World is null, cannot spawn item %s"), *ItemName.ToString());
+		UE_LOG(LogLoot, Warning, TEXT("World is null, cannot spawn item %s"), *ItemName.ToString());
 		return;
 	}
 
@@ -122,7 +124,7 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
 	PickUpClass = ItemInfo->ItemInfo.PickupClass;
 	if (!PickUpClass) 
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Pickup class is null for item: %s"), *ItemName.ToString());
+		UE_LOG(LogLoot, Warning, TEXT("Pickup class is null for item: %s"), *ItemName.ToString());
 		return;
 	}
 
@@ -130,7 +132,7 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
 	AItemPickup* SpawnedItem = GetWorld()->SpawnActor<AItemPickup>(PickUpClass, SpawnTransform);
 	if (!SpawnedItem) 
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Failed to spawn actor for item %s"), *ItemName.ToString());
+		UE_LOG(LogLoot, Warning, TEXT("Failed to spawn actor for item %s"), *ItemName.ToString());
 		return;
 	}
 
@@ -143,56 +145,79 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
 
 void USpawnableLootManager::GetSpawnItem(UPHAttributeSet* AttributeSet)
 {
-	if (!SpawnableItems) 
-	{
-		UE_LOG(LogTemp, Warning, TEXT("SpawnableItems DataTable is null."));
-		return;
-	}
+    if (!SpawnableItems) 
+    {
+        UE_LOG(LogLoot, Warning, TEXT("[Loot] SpawnableItems DataTable is NULL!"));
+        return;
+    }
 
-	if (bLooted)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Loot has already been claimed. Skipping spawn."));
-		return;
-	}
+    if (bLooted)
+    {
+        UE_LOG(LogLoot, Warning, TEXT("[Loot] Chest already looted. Skipping spawn."));
+        return;
+    }
 
-	// total drop rating
-	int32 TotalDropRating = 0;
-	for (const auto& Row : SpawnableItems->GetRowMap())
-	{
-		if (const FDropTable* ItemInfo = SpawnableItems->FindRow<FDropTable>(Row.Key, TEXT("SpawnRatingCalc")))
-		{
-			TotalDropRating += ItemInfo->DropRating;
-		}
-	}
+    // Calculate total drop rating
+    int32 TotalDropRating = 0;
+    for (const auto& Row : SpawnableItems->GetRowMap())
+    {
+        if (const FDropTable* ItemInfo = SpawnableItems->FindRow<FDropTable>(Row.Key, TEXT("SpawnRatingCalc")))
+        {
+            TotalDropRating += ItemInfo->DropRating;
+        }
+    }
 
-	const int32 NumberOfItemsToSpawn = GenerateDropAmount(AttributeSet);
-	for (int32 i = 0; i < NumberOfItemsToSpawn; ++i)
-	{
-		int32 RandomScore = FMath::RandRange(1, TotalDropRating);
-		FName SelectedItemName;
+    UE_LOG(LogLoot, Warning, TEXT("[Loot] TotalDropRating = %d"), TotalDropRating);
 
-		for (const auto& Row : SpawnableItems->GetRowMap())
-		{
-			if (const FDropTable* ItemInfo = SpawnableItems->FindRow<FDropTable>(Row.Key, TEXT("ItemRoll")))
-			{
-				RandomScore -= ItemInfo->DropRating;
-				if (RandomScore <= 0)
-				{
-					SelectedItemName = Row.Key;
-					break;
-				}
-			}
-		}
+    if (TotalDropRating <= 0)
+    {
+        UE_LOG(LogLoot, Warning, TEXT("[Loot] TotalDropRating is 0. No items can be spawned."));
+        return;
+    }
 
-		if (SelectedItemName.IsNone())
-		{
-			UE_LOG(LogTemp, Warning, TEXT("No item selected to spawn."));
-			continue;
-		}
+    const int32 NumberOfItemsToSpawn = GenerateDropAmount(AttributeSet);
+    UE_LOG(LogLoot, Warning, TEXT("[Loot] NumberOfItemsToSpawn = %d"), NumberOfItemsToSpawn);
 
-		const FTransform SpawnTransform = GetSpawnLocation();
-		SpawnItemByName(SelectedItemName, MasterDropList, SpawnTransform);
-	}
+    if (NumberOfItemsToSpawn <= 0)
+    {
+        UE_LOG(LogLoot, Warning, TEXT("[Loot] GenerateDropAmount returned 0. No items to spawn."));
+        return;
+    }
 
-	bLooted = true;
+    for (int32 i = 0; i < NumberOfItemsToSpawn; ++i)
+    {
+        int32 RandomScore = FMath::RandRange(1, TotalDropRating);
+        UE_LOG(LogLoot, Warning, TEXT("[Loot] Roll #%d: RandomScore = %d"), i + 1, RandomScore);
+
+        FName SelectedItemName;
+        for (const auto& Row : SpawnableItems->GetRowMap())
+        {
+            if (const FDropTable* ItemInfo = SpawnableItems->FindRow<FDropTable>(Row.Key, TEXT("ItemRoll")))
+            {
+                RandomScore -= ItemInfo->DropRating;
+                if (RandomScore <= 0)
+                {
+                    SelectedItemName = Row.Key;
+                    UE_LOG(LogLoot, Warning, TEXT("[Loot] Selected item: %s"), *SelectedItemName.ToString());
+                    break;
+                }
+            }
+        }
+
+        if (SelectedItemName.IsNone())
+        {
+            UE_LOG(LogLoot, Warning, TEXT("[Loot] No item selected. Check DropRating values in DataTable."));
+            continue;
+        }
+
+        const FTransform SpawnTransform = GetSpawnLocation();
+        UE_LOG(LogLoot, Warning, TEXT("[Loot] Spawning %s at Location: %s"), 
+            *SelectedItemName.ToString(), *SpawnTransform.GetLocation().ToString());
+
+        SpawnItemByName(SelectedItemName, MasterDropList, SpawnTransform);
+    }
+
+    bLooted = true;
+    UE_LOG(LogLoot, Warning, TEXT("[Loot] Spawn completed. Marking chest as looted."));
 }
+

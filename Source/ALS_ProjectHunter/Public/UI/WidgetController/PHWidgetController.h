@@ -34,7 +34,16 @@ struct FWidgetControllerParams
 };
 
 /**
- * 
+ * @class UPHWidgetController
+ * @brief A controller class for managing and coordinating widgets within the application.
+ *
+ * The UPHWidgetController class is responsible for handling the lifecycle, state,
+ * and behavior of widgets. This includes creating, updating, and removing widgets,
+ * as well as managing interactions between widgets and other components of the
+ * application.
+ *
+ * The class provides a centralized interface for widget operations, ensuring
+ * consistency and reusability across the application.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UPHWidgetController : public UObject

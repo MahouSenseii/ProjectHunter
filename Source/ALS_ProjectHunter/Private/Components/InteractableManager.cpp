@@ -13,7 +13,7 @@
 #include "UI/InteractableWidget.h"
 
 class UEnhancedInputLocalPlayerSubsystem;
-
+DEFINE_LOG_CATEGORY(LogInteractableManager);
 UInteractableManager::UInteractableManager()
 {
 	PrimaryComponentTick.bCanEverTick = false;
@@ -31,7 +31,7 @@ UInteractableManager::UInteractableManager()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to find widget class at the specified path."));
+		UE_LOG(LogInteractableManager, Error, TEXT("Failed to find widget class at the specified path."));
 	}
 
 	ResetInteractable();
@@ -98,7 +98,7 @@ void UInteractableManager::SetupInteractableReferences(USphereComponent* InInter
 {
 	if (!IsValid(InInteractableArea) || !IsValid(InInteractionWidget) || InHighlightableObject.Num() == 0)
 	{
-		UE_LOG(LogTemp, Error, TEXT("One or more input parameters are null or empty."));
+		UE_LOG(LogInteractableManager, Error, TEXT("One or more input parameters are null or empty."));
 		return;
 	}
 	InteractableArea = InInteractableArea;
@@ -118,7 +118,7 @@ void UInteractableManager::SetupHighlightableObjects(TSet<UPrimitiveComponent*> 
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Invalid Component in Highlightable Objects."));
+			UE_LOG(LogInteractableManager, Warning, TEXT("Invalid Component in Highlightable Objects."));
 		}
 	}
 }

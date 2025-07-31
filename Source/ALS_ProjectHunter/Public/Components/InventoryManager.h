@@ -12,7 +12,7 @@ class UInteractableWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGemsChanged);
-
+DECLARE_LOG_CATEGORY_EXTERN(LogInventoryManager, Log, All);
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UInventoryManager : public UActorComponent
 {

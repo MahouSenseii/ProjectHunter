@@ -6,12 +6,12 @@
 #include "Character/PHBaseCharacter.h"
 #include "Math/Vector.h"
 #include "Components/InteractableManager.h"
-#include "Components/SphereComponent.h"
 #include "Character/Player/PHPlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Item/EquippableItem.h"
 #include "Library/FL_InteractUtility.h"
 
+
+DEFINE_LOG_CATEGORY(LogInteract);
 // Sets default values for this component's properties
 UInteractionManager::UInteractionManager()
 {
@@ -56,12 +56,12 @@ void UInteractionManager::UpdateInteraction()
 void UInteractionManager::SetCurrentInteraction(UInteractableManager* NewInteractable)
 {
 	// Log the attempt to set a new interactable
-	UE_LOG(LogTemp, Warning, TEXT("Setting Current Interaction"));
+	UE_LOG(LogInteract, Warning, TEXT("Setting Current Interaction"));
 
 	// If the new interactable is the same as the current, no action is needed
 	if (NewInteractable == CurrentInteractable)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("New and Current Interactables are the same. No change needed."));
+		UE_LOG(LogInteract, Warning, TEXT("New and Current Interactables are the same. No change needed."));
 		return;
 	}
 
@@ -69,7 +69,7 @@ void UInteractionManager::SetCurrentInteraction(UInteractableManager* NewInterac
 	if (IsValid(CurrentInteractable))
 	{
 		RemoveInteractionFromCurrent(CurrentInteractable);
-		UE_LOG(LogTemp, Warning, TEXT("Removed Interaction from Current Interactable"));
+		UE_LOG(LogInteract, Warning, TEXT("Removed Interaction from Current Interactable"));
 	}
 
 	// Update to the new interactable and add interaction if valid
@@ -77,7 +77,7 @@ void UInteractionManager::SetCurrentInteraction(UInteractableManager* NewInterac
 	if (IsValid(CurrentInteractable))
 	{
 		AddInteraction(CurrentInteractable);
-		UE_LOG(LogTemp, Warning, TEXT("Added Interaction to New Interactable"));
+		UE_LOG(LogInteract, Warning, TEXT("Added Interaction to New Interactable"));
 	}
 }
 
@@ -138,7 +138,7 @@ void UInteractionManager::MaxOfFloatArray(const TArray<float>& FloatArray, float
 		{
 			OutMaxValue = Value;
 			OutMaxIndex = Index;
-			UE_LOG(LogTemp, Warning, TEXT("New maximum value found: %f at index %d."), OutMaxValue, OutMaxIndex);
+			UE_LOG(LogInteract, Warning, TEXT("New maximum value found: %f at index %d."), OutMaxValue, OutMaxIndex);
 		}
 	}
 }
@@ -173,13 +173,13 @@ void UInteractionManager::AssignCurrentInteraction()
 	{
 		SetCurrentInteraction(ValidElements[MaxIndex]);
 
-		UE_LOG(LogTemp, Warning, TEXT("Selected: %s with Score %.3f"),
+		UE_LOG(LogInteract, Warning, TEXT("Selected: %s with Score %.3f"),
 			*ValidElements[MaxIndex]->GetOwner()->GetName(), MaxScore);
 	}
 	else
 	{
 		SetCurrentInteraction(nullptr);
-		UE_LOG(LogTemp, Warning, TEXT("No valid interactable found"));
+		UE_LOG(LogInteract, Warning, TEXT("No valid interactable found"));
 	}
 }
 
@@ -190,7 +190,7 @@ void UInteractionManager::RemoveInteractionFromCurrent(UInteractableManager* Int
 	// This could be a critical error and should not happen.
 	if (!IsValid(Interactable) || !IsValid(OwnerController) || !IsValid(CurrentInteractable))
 	{
-		UE_LOG(LogTemp, Error, TEXT("Invalid parameters in RemoveInteractionFromCurrent. This should not happen under normal conditions."));
+		UE_LOG(LogInteract, Error, TEXT("Invalid parameters in RemoveInteractionFromCurrent. This should not happen under normal conditions."));
 		return;
 	}
 
@@ -223,11 +223,11 @@ bool UInteractionManager::ShouldUpdateInteraction()
 		const bool bCanUpdate = (! OwnerPawn->GetCharacterMovement()->IsFalling()) && (!InteractableList.IsEmpty());
 		if ( OwnerPawn->GetCharacterMovement()->IsFalling())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Cannot update interaction. Character might be falling."));
+			UE_LOG(LogInteract, Warning, TEXT("Cannot update interaction. Character might be falling."));
 		}
 		if(InteractableList.IsEmpty())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Cannot update interaction. InteractionList is Empty"));
+			UE_LOG(LogInteract, Warning, TEXT("Cannot update interaction. InteractionList is Empty"));
 		}
 		return bCanUpdate;
 	}

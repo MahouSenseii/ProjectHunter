@@ -55,7 +55,7 @@ void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 void APHBaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-	
+	StatsManager->Owner = this; 
 	InitAbilityActorInfo();
 	
 	CurrentController = Cast<APHPlayerController>(NewController);
@@ -145,7 +145,7 @@ void APHBaseCharacter::InitAbilityActorInfo()
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 		Cast<UPHAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
-
+		
 		StatsManager->ASC = Cast<UPHAbilitySystemComponent>(AbilitySystemComponent);
 		StatsManager->InitializeDefaultAttributes(); 
 	}

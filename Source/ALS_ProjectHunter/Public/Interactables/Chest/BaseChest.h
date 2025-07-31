@@ -13,6 +13,8 @@ class UBoxComponent;
  * It inherits from ABaseInteractable class and provides implementations for chest-specific functionality.
  */
 
+DECLARE_LOG_CATEGORY_EXTERN(LogLoot, Log, All);
+
 UCLASS()
 class ALS_PROJECTHUNTER_API ABaseChest : public ABaseInteractable
 {
