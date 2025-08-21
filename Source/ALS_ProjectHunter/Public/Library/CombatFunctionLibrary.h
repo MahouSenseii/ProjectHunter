@@ -35,5 +35,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Combat|Display")
 	static FDamageTypeDisplayInfo GetStrongestDamageTypeInfo(const FDamageHitResultByType& HitResult);
 
-
+	static FString DamageTypeToString(EDamageTypes Type);
+	
 };

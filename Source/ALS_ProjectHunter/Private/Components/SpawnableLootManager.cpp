@@ -2,6 +2,7 @@
 #include "AbilitySystem/PHAttributeSet.h"
 #include "Components/BoxComponent.h"
 #include "Interactables/Pickups/ItemPickup.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Library/PHItemStructLibrary.h"
 
@@ -9,7 +10,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogLoot, Log, All);
 
 // Sets default values for this component's properties
 USpawnableLootManager::USpawnableLootManager()
-	: SpawnableItems(nullptr), MasterDropList(nullptr), SpawnBox(nullptr)
+	: MinMaxLootAmount(), SpawnableItems(nullptr), MasterDropList(nullptr), SpawnBox(nullptr)
 {
 	PrimaryComponentTick.bCanEverTick = false; // Disabled ticking for performance
 }
@@ -17,6 +18,8 @@ USpawnableLootManager::USpawnableLootManager()
 void USpawnableLootManager::BeginPlay()
 {
 	Super::BeginPlay();
+
+	MinMaxLootAmount = FVector2D(0, 10);
 }
 
 int32 USpawnableLootManager::GenerateDropAmount(UPHAttributeSet* AttributeSet)
@@ -24,28 +27,52 @@ int32 USpawnableLootManager::GenerateDropAmount(UPHAttributeSet* AttributeSet)
 	const float PlayerLuck = AttributeSet ? AttributeSet->GetLuck() : 0.0f;
 
 	// Normalize Luck against configurable MaxPlayerLuck
-	const float LuckRatio = FMath::Clamp(PlayerLuck / MaxPlayerLuck, 0.0f, 1.0f);
-	const float LuckFactor = LuckRatio / (LuckRatio + LuckSoftCapConstant);
+	const float LuckRatio  = (MaxPlayerLuck > 0.f) ? FMath::Clamp(PlayerLuck / MaxPlayerLuck, 0.0f, 1.0f) : 0.f;
+	const float LuckFactor = (LuckRatio + LuckSoftCapConstant > 0.f)
+		? (LuckRatio / (LuckRatio + LuckSoftCapConstant))
+		: 0.f;
 
-	// Quadratic randomness
-	const float RandomFloat = UKismetMathLibrary::RandomFloat();
-	const float SquaredRandom = RandomFloat * RandomFloat;
 
-	// Tilt the randomness slightly based on Luck
-	const float AdjustedRandom = FMath::Lerp(SquaredRandom, RandomFloat, LuckFactor);
+	// First, decide if *any* loot should drop at all
+	const float LuckBonus = 0.35f * LuckFactor; // tweak bonus scale
+	const float DropChance = FMath::Clamp(BaseDropChance + LuckBonus, 0.f, 0.99f);
 
-	const int32 Min = FMath::TruncToInt(MinMaxLootAmount.X);
-	const int32 Max = FMath::TruncToInt(MinMaxLootAmount.Y);
-	const int32 Range = Max - Min;
+	if (UKismetMathLibrary::RandomFloat() >= DropChance)
+	{
+		UE_LOG(LogLoot, Log, TEXT("No drop: DropChance=%.2f | LuckFactor=%.3f"), DropChance, LuckFactor);
+		return 0; // nothing drops
+	}
 
-	const int32 ScaledValue = FMath::TruncToInt(AdjustedRandom * Range);
-	const int32 LootAmountRoll = Min + ScaledValue;
+	// Quadratic randomness, then tilt toward linear as Luck increases
+	const float Rand0_1       = UKismetMathLibrary::RandomFloat();         // [0,1)
+	const float SquaredRandom = Rand0_1 * Rand0_1;                         // favors low values
+	const float AdjustedRandom = FMath::Lerp(SquaredRandom, Rand0_1, LuckFactor); // favors higher values with luck
 
-	UE_LOG(LogLoot, Log, TEXT("Luck=%f | Ratio=%.3f | Factor=%.3f | Roll=%.2f | Loot=%d"),
-		PlayerLuck, LuckRatio, LuckFactor, AdjustedRandom, LootAmountRoll);
+	// Resolve min/max and range
+	const int32 MinIn  = FMath::FloorToInt(MinMaxLootAmount.X);
+	const int32 MaxIn  = FMath::FloorToInt(MinMaxLootAmount.Y);
+	const int32 RealMin = FMath::Min(MinIn, MaxIn);
+	const int32 RealMax = FMath::Max(MinIn, MaxIn);
+	const int32 Range   = RealMax - RealMin;
 
-	return LootAmountRoll;
+	// Degenerate ranges (e.g., Min==Max) just return that value
+	if (Range <= 0)
+	{
+		UE_LOG(LogLoot, Log, TEXT("Luck=%f | Ratio=%.3f | Factor=%.3f | Roll=%.3f | Loot=%d (degenerate range %d==%d)"),
+			PlayerLuck, LuckRatio, LuckFactor, AdjustedRandom, RealMin, RealMin, RealMax);
+		return RealMin;
+	}
+
+	// Make MAX inclusive by using (Range + 1) before flooring
+	const int32 LootUnclamped = RealMin + FMath::FloorToInt(AdjustedRandom * (Range + 1));
+	const int32 Loot = FMath::Clamp(LootUnclamped, RealMin, RealMax);
+
+	UE_LOG(LogLoot, Log, TEXT("Luck=%f | Ratio=%.3f | Factor=%.3f | Roll=%.3f | Min=%d Max=%d -> Loot=%d"),
+		PlayerLuck, LuckRatio, LuckFactor, AdjustedRandom, RealMin, RealMax, Loot);
+
+	return Loot;
 }
+
 
 
 
@@ -99,48 +126,60 @@ FTransform USpawnableLootManager::GetSpawnLocation() const
 
 void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* DataTable, const FTransform SpawnTransform)
 {
-	if (!DataTable) 
-	{
-		UE_LOG(LogLoot, Warning, TEXT("DataTable is null"));
-		return;
-	}
+    if (!DataTable)
+    {
+        UE_LOG(LogLoot, Warning, TEXT("DataTable is null"));
+        return;
+    }
 
-	// Safe row lookup
-	const FItemInformation* ItemInfo = DataTable->FindRow<FItemInformation>(ItemName, TEXT("LookupItemInfo"));
-	if (!ItemInfo) 
-	{
-		UE_LOG(LogLoot, Warning, TEXT("Item %s not found in DataTable"), *ItemName.ToString());
-		return;
-	}
+    // Use a different name to avoid confusion with the pickup's ItemInfo
+    const FItemInformation* Row = DataTable->FindRow<FItemInformation>(ItemName, TEXT("LookupItemInfo"));
+    if (!Row)
+    {
+        UE_LOG(LogLoot, Warning, TEXT("Item %s not found in DataTable"), *ItemName.ToString());
+        return;
+    }
 
-	// Check if world is valid before spawning
-	if (!GetWorld()) 
-	{
-		UE_LOG(LogLoot, Warning, TEXT("World is null, cannot spawn item %s"), *ItemName.ToString());
-		return;
-	}
+    if (!GetWorld())
+    {
+        UE_LOG(LogLoot, Warning, TEXT("World is null, cannot spawn item %s"), *ItemName.ToString());
+        return;
+    }
 
-	// Set the Pickup class
-	PickUpClass = ItemInfo->ItemInfo.PickupClass;
-	if (!PickUpClass) 
-	{
-		UE_LOG(LogLoot, Warning, TEXT("Pickup class is null for item: %s"), *ItemName.ToString());
-		return;
-	}
+    // Pull the pickup class from the row
+    TSubclassOf<AItemPickup> ClassToSpawn = Row->ItemInfo.PickupClass; // keep your same path: Row->ItemInfo.StaticMesh etc.
+    if (!*ClassToSpawn)
+    {
+        UE_LOG(LogLoot, Warning, TEXT("Pickup class is null for item: %s"), *ItemName.ToString());
+        return;
+    }
 
-	// Spawn the item
-	AItemPickup* SpawnedItem = GetWorld()->SpawnActor<AItemPickup>(PickUpClass, SpawnTransform);
-	if (!SpawnedItem) 
-	{
-		UE_LOG(LogLoot, Warning, TEXT("Failed to spawn actor for item %s"), *ItemName.ToString());
-		return;
-	}
+    FActorSpawnParameters Params;
+    Params.Owner = GetOwner();
+    Params.Instigator = Cast<APawn>(GetOwner());
+    Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
+    // Deferred spawn so we can set data BEFORE construction script runs
+    AItemPickup* Item = GetWorld()->SpawnActorDeferred<AItemPickup>(ClassToSpawn, SpawnTransform, Params.Owner, Params.Instigator, Params.SpawnCollisionHandlingOverride);
+    if (!Item)
+    {
+        UE_LOG(LogLoot, Warning, TEXT("Failed to begin deferred spawn for item %s"), *ItemName.ToString());
+        return;
+    }
 
-	// Assign properties
-	SpawnedItem->ItemInfo = *ItemInfo;
-	SpawnedItem->SetNewMesh(ItemInfo->ItemInfo.StaticMesh);
-	SpawnedItem->OnConstruction(SpawnTransform);
+    // Assign properties BEFORE FinishSpawningActor (so Construction Script sees them)
+    Item->ItemInfo = *Row;
+    if (Row->ItemInfo.StaticMesh)
+    {
+        Item->SetNewMesh(Row->ItemInfo.StaticMesh);
+    }
+
+    UGameplayStatics::FinishSpawningActor(Item, SpawnTransform);
+
+    UE_LOG(LogLoot, Log, TEXT("Spawned %s | Mesh=%s | Class=%s"),
+        *ItemName.ToString(),
+        Row->ItemInfo.StaticMesh ? *Row->ItemInfo.StaticMesh->GetName() : TEXT("None"),
+        *ClassToSpawn->GetName());
 }
 
 void USpawnableLootManager::GetSpawnItem(UPHAttributeSet* AttributeSet)
@@ -184,38 +223,56 @@ void USpawnableLootManager::GetSpawnItem(UPHAttributeSet* AttributeSet)
         return;
     }
 
-    for (int32 i = 0; i < NumberOfItemsToSpawn; ++i)
-    {
-        int32 RandomScore = FMath::RandRange(1, TotalDropRating);
-        UE_LOG(LogLoot, Warning, TEXT("[Loot] Roll #%d: RandomScore = %d"), i + 1, RandomScore);
+	for (int32 i = 0; i < NumberOfItemsToSpawn; ++i)
+	{
+		int32 RandomScore = FMath::RandRange(1, TotalDropRating);
+		UE_LOG(LogLoot, Warning, TEXT("[Loot] Roll #%d: RandomScore = %d"), i + 1, RandomScore);
 
-        FName SelectedItemName;
-        for (const auto& Row : SpawnableItems->GetRowMap())
-        {
-            if (const FDropTable* ItemInfo = SpawnableItems->FindRow<FDropTable>(Row.Key, TEXT("ItemRoll")))
-            {
-                RandomScore -= ItemInfo->DropRating;
-                if (RandomScore <= 0)
-                {
-                    SelectedItemName = Row.Key;
-                    UE_LOG(LogLoot, Warning, TEXT("[Loot] Selected item: %s"), *SelectedItemName.ToString());
-                    break;
-                }
-            }
-        }
+		FName SelectedItemName;
+		for (const auto& Row : SpawnableItems->GetRowMap())
+		{
+			if (const FDropTable* ItemInfo = SpawnableItems->FindRow<FDropTable>(Row.Key, TEXT("ItemRoll")))
+			{
+				RandomScore -= ItemInfo->DropRating;
+				if (RandomScore <= 0)
+				{
+					SelectedItemName = Row.Key;
 
-        if (SelectedItemName.IsNone())
-        {
-            UE_LOG(LogLoot, Warning, TEXT("[Loot] No item selected. Check DropRating values in DataTable."));
-            continue;
-        }
+					// Log which item was picked
+					UE_LOG(LogLoot, Warning, TEXT("[Loot] Selected item: %s"), *SelectedItemName.ToString());
 
-        const FTransform SpawnTransform = GetSpawnLocation();
-        UE_LOG(LogLoot, Warning, TEXT("[Loot] Spawning %s at Location: %s"), 
-            *SelectedItemName.ToString(), *SpawnTransform.GetLocation().ToString());
+					break;
+				}
+			}
+		}
 
-        SpawnItemByName(SelectedItemName, MasterDropList, SpawnTransform);
-    }
+		if (SelectedItemName.IsNone())
+		{
+			UE_LOG(LogLoot, Warning, TEXT("[Loot] No item selected. Check DropRating values in DataTable."));
+			continue;
+		}
+
+		// Log where it's spawning
+		// Log where it's spawning
+		FTransform SpawnTransform = GetSpawnLocation();
+
+		// 180° yaw (turn-around). Use (0,0,180) for roll(X) or (180,0,0) for pitch(Y).
+		const FRotator DesiredRot(0.f, 180.f, 0.f);
+		SpawnTransform.SetRotation(DesiredRot.Quaternion());
+
+		// Raise Z by 180 units (or use your GroundOffsetZ instead)
+		SpawnTransform.AddToTranslation(FVector(0.f, 0.f, 180.f));
+
+		// Optional: log rotation too
+		UE_LOG(LogLoot, Warning, TEXT("[Loot] Spawning %s at Location: %s, Rot: %s"),
+			*SelectedItemName.ToString(),
+			*SpawnTransform.GetLocation().ToString(),
+			*SpawnTransform.GetRotation().Rotator().ToCompactString());
+
+
+		SpawnItemByName(SelectedItemName, MasterDropList, SpawnTransform);
+	}
+
 
     bLooted = true;
     UE_LOG(LogLoot, Warning, TEXT("[Loot] Spawn completed. Marking chest as looted."));

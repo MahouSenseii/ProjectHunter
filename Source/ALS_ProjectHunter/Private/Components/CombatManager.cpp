@@ -1,7 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Components/CombatManager.h"
-#include "EngineUtils.h"
 #include "AbilitySystem/PHAttributeSet.h"
 #include "Character/PHBaseCharacter.h"
 #include "AbilitySystemComponent.h"
@@ -9,7 +7,6 @@
 #include "Library/PHCombatStructLibrary.h"
 #include "Library/PHDamageTypeUtils.h"
 #include "UI/Widgets/DamagePopup.h"
-
 /* =========================== */
 /* === Constructor & Setup === */
 /* =========================== */
@@ -329,6 +326,46 @@ EDamageTypes UCombatManager::GetHighestDamageType(const FDamageHitResultByType& 
     return MaxType;
 }
 
+void UCombatManager::HandleAlignmentShift(APHBaseCharacter* Defender)
+{
+    if (!Defender) return;
+
+    UPHAttributeSet* AttrSet = Cast<UPHAttributeSet>(Defender->GetAttributeSet());
+    if (!AttrSet || AttrSet->GetCombatAlignment() == 2)
+    {
+        return;
+    }
+
+    // Only increase hit count if not already enemy
+    TimesHitBeforeEnemy++;
+
+    if (TimesHitBeforeEnemy < 3)
+    {
+        AttrSet->SetCombatAlignmentBP(ECombatAlignment::Enemy);
+
+        // Remove interaction-related components
+        if (UWidgetComponent* Widget = Defender->FindComponentByClass<UWidgetComponent>())
+        {
+            Widget->DestroyComponent();
+        }
+
+        if (UActorComponent* Manager = Defender->FindComponentByClass<UActorComponent>())
+        {
+            Manager->DestroyComponent(); // Replace with actual InteractableManager class if needed
+        }
+
+        if (UActorComponent* Area = Defender->FindComponentByClass<UPrimitiveComponent>())
+        {
+            Area->DestroyComponent();
+        }
+
+        UE_LOG(LogTemp, Warning, TEXT("NPC %s turned hostile after 3 hits."), *Defender->GetName());
+    }
+}
+
+
+
+
 void UCombatManager::IncreaseComboCounter(float Amount)
 {
      OwnerCharacter = Cast<APHBaseCharacter>(GetOwner());
@@ -344,6 +381,7 @@ void UCombatManager::IncreaseComboCounter(float Amount)
     GetWorld()->GetTimerManager().ClearTimer(ComboResetTimerHandle);
     GetWorld()->GetTimerManager().SetTimer(ComboResetTimerHandle, this, &UCombatManager::ResetComboCounter, ComboResetTime, false);
 }
+
 
 void UCombatManager::ResetComboCounter() const
 {

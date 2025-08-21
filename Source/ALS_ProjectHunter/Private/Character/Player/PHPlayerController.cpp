@@ -5,7 +5,7 @@
 
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
-#include "Character/Player/PHPlayerCharacter.h"
+
 #include "Components/InteractableManager.h"
 #include "Components/WidgetManager.h"
 
@@ -18,6 +18,12 @@ APHPlayerController::APHPlayerController(const FObjectInitializer& ObjectInitial
 	InteractionManager->OnNewInteractableAssigned.AddDynamic(this, &APHPlayerController::SetCurrentInteractable);
 	InteractionManager->OnRemoveCurrentInteractable.AddDynamic(this, &APHPlayerController::RemoveCurrentInteractable);
 	WidgetManager = CreateDefaultSubobject<UWidgetManager>(TEXT("WidgetManager"));
+
+}
+
+void APHPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
 
 }
 

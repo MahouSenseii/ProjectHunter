@@ -15,7 +15,7 @@ void UDamagePopup::SetDamageData(int32 InAmount, EDamageTypes InType, bool bIsCr
 		DamageText->SetColorAndOpacity(FSlateColor(GetColorForDamageType(DamageType)));
 
 		// Apply outline if crit
-		FSlateFontInfo FontInfo = DamageText->Font;
+		FSlateFontInfo FontInfo = DamageText->GetFont();
 
 		if (bIsCritical)
 		{

@@ -80,6 +80,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot|Luck")
 	float MaxPlayerLuck = 100.0f;
 
+	/** Base probability (0–1) that at least one item drops before quantity roll */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Loot|Drop Settings")
+	float BaseDropChance = 0.45f;
+
 
 private:
 	/** The class of pickup item to spawn */

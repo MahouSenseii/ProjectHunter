@@ -23,7 +23,8 @@ template<class T>
 using TStaticFuncPtr = TBaseStaticDelegateInstance<FGameplayAttribute(), FDefaultTSDelegateUserPolicy>::FFuncPtr;
 
 /**
- * 
+ * Represents an attribute set defining various character traits and attributes.
+ * This includes primary attributes (e.g., Strength, Dexterity) and secondary attributes (e.g., specific damage types).
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UPHAttributeSet : public UAttributeSet
@@ -52,8 +53,9 @@ public:
 	FOnAttributeChangeSignature OnCombatAlignmentChange;
 	
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
+	static void ClampResource(const TFunctionRef<float()>& Getter, const TFunctionRef<float()>& MaxGetter, const TFunctionRef<void(float)>& Setter);
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
-	bool ShouldUpdateThresholdTags(const FGameplayAttribute& Attribute) const;
+	static bool ShouldUpdateThresholdTags(const FGameplayAttribute& Attribute);
 
 
 	TMap<FGameplayTag, TStaticFuncPtr<FGameplayAttribute()>> TagsToAttributes;
@@ -73,15 +75,15 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	TMap<FString, FGameplayAttribute> AllAttributesMap;
 
-        /*
-         *Combat Indicators
-         */
+    /*
+    *Combat Indicators
+    */
 
 	UPROPERTY(BlueprintReadOnly, Category = "Combat Alignment", ReplicatedUsing = OnRep_CombatAlignment)
 	FGameplayAttributeData CombatAlignment;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, CombatAlignment)
  
-/* ============================= */
+	/* ============================= */
 	/* === Primary Attributes === */
 	/* ============================= */
 
@@ -581,7 +583,10 @@ public:
 	FGameplayAttributeData Poise;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, Poise);
 
-
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Weight, Category = "Vital Attribute|Misc")
+	FGameplayAttributeData Weight;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, Weight);
+	
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PoiseResistance, Category = "Vital Attribute|Misc")
 	FGameplayAttributeData PoiseResistance;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, PoiseResistance);
@@ -1312,6 +1317,8 @@ public:
 	void OnRep_MovementSpeed(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_Poise(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_Weight(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_PoiseResistance(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()

@@ -1,4 +1,4 @@
-// Copyright@2024 Quentin Davis 
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -13,17 +13,5 @@ UCLASS()
 class ALS_PROJECTHUNTER_API APHPlayerCharacter : public APHBaseCharacter
 {
 	GENERATED_BODY()
-
-public:
-
- 
 	
-	APHPlayerCharacter(const FObjectInitializer& ObjectInitializer);
-
-	
-protected:
-
-private:
-
 };
-

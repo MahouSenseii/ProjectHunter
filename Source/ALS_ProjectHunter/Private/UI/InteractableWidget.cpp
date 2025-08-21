@@ -62,6 +62,21 @@ void UInteractableWidget::NativeDestruct()
 		DynamicCircularMaterial->ConditionalBeginDestroy();
 		DynamicCircularMaterial = nullptr;
 	}
+
+	// Check if the cast was successful
+	if (AALSPlayerController* ALSPlayerController = GetALSPlayerController())
+	{
+		// Remove the dynamic event binding for HandleGamepadStateChange
+		ALSPlayerController->OnGamepadStateChanged.RemoveDynamic(this, &UInteractableWidget::HandleGamepadStateChange);
+
+		// Optionally, log for debugging purposes
+		UE_LOG(LogTemp, Warning, TEXT("Event HandleGamepadStateChange has been unbound."));
+	}
+	else
+	{
+		// Log a warning if unable to unbind event. Consider making this an error if it's a critical issue.
+		UE_LOG(LogTemp, Warning, TEXT("Unable to unbind event HandleGamepadStateChange as ALSPlayerController is NULL."));
+	}
     
 	Super::NativeDestruct();
 }
@@ -139,7 +154,6 @@ void UInteractableWidget::InitializePlayerControllerAndBindings()
 	{
 		// Log a warning if the player controller is null. Consider making this an error if it's a critical issue.
 		UE_LOG(LogPlayerController, Warning, TEXT("ALSPlayerController is NULL"));
-		// Consider adding more error-handling code here.
 	}
 }
 
@@ -167,31 +181,6 @@ AALSPlayerController* UInteractableWidget::GetALSPlayerController() const
 	}
 
 	return ALSPlayerController;
-}
-
-
-// Function called before the object is destroyed
-void UInteractableWidget::BeginDestroy()
-{
-	// Call parent implementation of BeginDestroy
-	Super::BeginDestroy();
-
-	// Attempt to get the ALSPlayerController
-
-	// Check if the cast was successful
-	if (AALSPlayerController* ALSPlayerController = GetALSPlayerController())
-	{
-		// Remove the dynamic event binding for HandleGamepadStateChange
-		ALSPlayerController->OnGamepadStateChanged.RemoveDynamic(this, &UInteractableWidget::HandleGamepadStateChange);
-
-		// Optionally, log for debugging purposes
-		UE_LOG(LogTemp, Warning, TEXT("Event HandleGamepadStateChange has been unbound."));
-	}
-	else
-	{
-		// Log a warning if unable to unbind event. Consider making this an error if it's a critical issue.
-		UE_LOG(LogTemp, Warning, TEXT("Unable to unbind event HandleGamepadStateChange as ALSPlayerController is NULL."));
-	}
 }
 
 

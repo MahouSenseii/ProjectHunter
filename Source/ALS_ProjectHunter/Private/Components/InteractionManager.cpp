@@ -25,16 +25,21 @@ UInteractionManager::UInteractionManager()
 void UInteractionManager::BeginPlay()
 {
 	Super::BeginPlay();
-	OwnerController = Cast<APHPlayerController>(GetOwner());
 
 	// Initialize a timer to call UpdateInteraction method
-	FTimerHandle UpdateInteractionTimerHandle;
 	constexpr float LoopInterval = 0.1f; // Time between each call to UpdateInteraction
 	constexpr float InitialDelay = 1.0f; // Initial delay before the timer starts
 
 	// Set the timer to call UpdateInteraction. This timer will call UpdateInteraction every 0.1 seconds after a 1.0 second delay.
 	GetWorld()->GetTimerManager().SetTimer(UpdateInteractionTimerHandle, this,
 		&UInteractionManager::UpdateInteraction, LoopInterval, true, InitialDelay);
+}
+
+void UInteractionManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	UpdateInteractionTimerHandle.Invalidate();
 }
 
 // Determines whether interaction should be updated and updates if needed.
@@ -91,7 +96,7 @@ void UInteractionManager::AddInteraction(UInteractableManager* Interactable)
 		{
 			// Optionally remove previous interaction; can be conditional based on your requirements
 			OnRemoveCurrentInteractable.Broadcast(CurrentInteractable);
-			RemoveInteractionFromCurrent(nullptr);
+
 		}
 				
 		// Highlight the new interactable object, assuming OwnerCharacter and its Controller are always valid

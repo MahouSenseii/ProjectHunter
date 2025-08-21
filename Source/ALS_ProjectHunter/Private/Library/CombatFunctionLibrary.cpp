@@ -141,3 +141,17 @@ FDamageTypeDisplayInfo UCombatFunctionLibrary::GetStrongestDamageTypeInfo(const 
 
 	return Info;
 }
+
+FString UCombatFunctionLibrary::DamageTypeToString(const EDamageTypes Type)
+{
+	switch (Type)
+	{
+	case EDamageTypes::DT_Physical:   return TEXT("Physical");
+	case EDamageTypes::DT_Fire:       return TEXT("Fire");
+	case EDamageTypes::DT_Ice:        return TEXT("Ice");
+	case EDamageTypes::DT_Lightning:  return TEXT("Lightning");
+	case EDamageTypes::DT_Light:      return TEXT("Light");
+	case EDamageTypes::DT_Corruption: return TEXT("Corruption");
+	default:                          return TEXT("Unknown");
+	}
+}

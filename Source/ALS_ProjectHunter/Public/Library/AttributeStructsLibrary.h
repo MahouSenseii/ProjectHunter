@@ -78,7 +78,7 @@ struct FInitialSecondaryAttributes
 {
 	GENERATED_BODY()
 
-	// === Regen ===
+	// === Regen === //
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
 	float HealthRegenRate = 0.f;
 
@@ -91,7 +91,7 @@ struct FInitialSecondaryAttributes
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
 	float ArcaneShieldRegenRate = 0.f;
 
-	// === Regen Amounts ===
+	// === Regen Amounts === //
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Regen")
 	float HealthRegenAmount = 0.f;
 
@@ -110,7 +110,7 @@ struct FInitialSecondaryAttributes
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Degen")
 	float StaminaDegenRate = 0.f; 
 
-	// === Reserved (Flat) ===
+	// === Reserved (Flat) === //
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
 	float FlatReservedHealth = 0.f;
 
@@ -123,7 +123,7 @@ struct FInitialSecondaryAttributes
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
 	float FlatReservedArcaneShield = 0.f;
 
-	// === Reserved (Percentage) ===
+	// === Reserved (Percentage) === //
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
 	float PercentageReservedHealth = 0.f;
 
@@ -136,7 +136,7 @@ struct FInitialSecondaryAttributes
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reserved")
 	float PercentageReservedArcaneShield = 0.f;
 
-	// === Resistances (Flat) ===
+	// === Resistances (Flat) === //
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
 	float FireResistanceFlat = 0.f;
 
@@ -152,7 +152,7 @@ struct FInitialSecondaryAttributes
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
 	float CorruptionResistanceFlat = 0.f;
 
-	// === Resistances (Percent) ===
+	// === Resistances (Percent) === //
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
 	float FireResistancePercent = 0.f;
 
@@ -168,7 +168,7 @@ struct FInitialSecondaryAttributes
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resistances")
 	float CorruptionResistancePercent = 0.f;
 
-	// === Utility ===
+	// === Utility === //
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Utility")
 	float Gems = 0.f;
 

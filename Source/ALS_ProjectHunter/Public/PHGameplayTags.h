@@ -174,6 +174,7 @@ public:
 	/* === Miscellaneous === */
 	/* ==================== */
 	static FGameplayTag Attributes_Secondary_Misc_Poise;
+	static FGameplayTag Attributes_Secondary_Misc_Weight;
 	static FGameplayTag Attributes_Secondary_Misc_StunRecovery;
 	static FGameplayTag Attributes_Secondary_Misc_ManaCostChanges;
 	static FGameplayTag Attributes_Secondary_Misc_CoolDown;
@@ -188,9 +189,10 @@ public:
 	static FGameplayTag Attributes_Secondary_Misc_CritMultiplier;
 	static FGameplayTag Attributes_Secondary_Money_Gems;
 	static FGameplayTag Attributes_Secondary_Misc_CombatAlignment;
+	static FGameplayTag Relation_HostileToSource;
 
 	/* ==================== */
-	/* === Vitals === */
+	/* ====== Vitals ====== */
 	/* ==================== */
 
 	static FGameplayTag Attributes_Vital_Health;

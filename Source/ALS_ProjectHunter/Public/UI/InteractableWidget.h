@@ -32,7 +32,7 @@ public:
 
 	void InitializePlayerControllerAndBindings();
 	AALSPlayerController* GetALSPlayerController() const;
-	void BeginDestroy();
+	
 	UFUNCTION() void InitializeMaterials();
 	UFUNCTION() void InitializeDynamicMaterial(UMaterialInterface* MaterialToSet, UMaterialInstanceDynamic*& DynamicMaterialRef);
 	UFUNCTION() void InitializeUIStates();

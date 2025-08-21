@@ -585,6 +585,10 @@ struct FItemInformation: public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
 	FEquippableItemData ItemData;
 
+	// Set in BP will be all stats that the item can generate
+	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")
+	UDataTable* StatsDataTable;
+
 	FORCEINLINE bool IsValid() const
 	{
 		return ItemInfo.IsValid() || ItemData.IsValid();

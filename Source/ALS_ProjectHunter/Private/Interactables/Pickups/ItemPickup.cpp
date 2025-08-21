@@ -61,6 +61,7 @@ void AItemPickup::BeginPlay()
 		InteractableManager->InputType = EInteractType::Single;
 		InteractableManager->InteractableResponse = EInteractableResponseType::OnlyOnce;
 	}
+	
 }
 
 void AItemPickup::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)

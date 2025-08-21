@@ -32,6 +32,7 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 	InventoryManager = CreateDefaultSubobject<UInventoryManager>(TEXT("InventoryManager"));
 	CombatManager = CreateDefaultSubobject<UCombatManager>(TEXT("Combat Manager"));
 	StatsManager = CreateDefaultSubobject<UStatsManager>(TEXT("Stats Manager"));
+	
 
 	// GAS Setup
 	if (!bIsPlayer)
@@ -40,10 +41,9 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 		AbilitySystemComponent->SetIsReplicated(true);
 		AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 		AttributeSet = CreateDefaultSubobject<UPHAttributeSet>("Attribute Set");
+		
 	}
 	
-	// Mini-map
-	MiniMapIndicator = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Mini-Map Indicator"));
 }
 
 void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -271,16 +271,3 @@ void APHBaseCharacter::CloseToolTip(UInteractableManager* InteractableManager)
 	}
 }
 
-void APHBaseCharacter::SetupMiniMapCamera()
-{
-	MiniMapSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("MiniMapSpringArm"));
-	MiniMapSpringArm->SetupAttachment(RootComponent);
-	MiniMapCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("MiniMapCapture"));
-	MiniMapCapture->SetupAttachment(MiniMapSpringArm);
-
-	MiniMapSpringArm->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
-	MiniMapSpringArm->TargetArmLength = 600.f;
-	MiniMapSpringArm->bDoCollisionTest = false;
-	MiniMapCapture->ProjectionType = ECameraProjectionMode::Orthographic;
-	MiniMapCapture->OrthoWidth = 1500.f;
-}

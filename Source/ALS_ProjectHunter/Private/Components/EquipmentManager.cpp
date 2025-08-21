@@ -649,7 +649,7 @@ FVector UEquipmentManager::GetGroundSpawnLocation() const
 
 	// Generate a random forward offset within a reasonable range
 	const FVector ForwardOffset = OwnerCharacter->GetActorForwardVector() * 200.0f;
-	const FVector RandomOffset = UKismetMathLibrary::RandomUnitVector() * 50.0f; // Slight randomness
+	const FVector RandomOffset = UKismetMathLibrary::RandomUnitVector() * 50.0f;
 
 	// Compute initial target location
 	FVector TargetLocation = OwnerCharacter->GetActorLocation() + ForwardOffset + RandomOffset;

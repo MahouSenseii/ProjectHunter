@@ -80,10 +80,7 @@ public:
 
 	UFUNCTION()
 	void CloseToolTip(UInteractableManager* InteractableManager);
-
-	/** MiniMap Setup */
-	UFUNCTION()
-	void SetupMiniMapCamera();
+	
 
 	/** Regeneration & Tick */
 	virtual void Tick(float DeltaSeconds) override;
@@ -92,13 +89,14 @@ public:
 	//Changed Handle
 	virtual void OnGaitChanged(EALSGait PreviousGait) override;
 
+	
 
 protected:
 	/** Begin Play */
 	virtual void BeginPlay() override;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
+	
 
 	/** Ability System Initialization */
 	virtual void InitAbilityActorInfo();
@@ -129,16 +127,7 @@ private:
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStatsManager> StatsManager;
-
-	/** MiniMap */
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "MiniMap", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<USceneCaptureComponent2D> MiniMapCapture = nullptr;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "MiniMap", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<USpringArmComponent> MiniMapSpringArm = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MiniMap", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UPaperSpriteComponent> MiniMapIndicator;
+	
 
 	/** UI - ToolTips */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "ToolTip", meta = (AllowPrivateAccess = "true"))

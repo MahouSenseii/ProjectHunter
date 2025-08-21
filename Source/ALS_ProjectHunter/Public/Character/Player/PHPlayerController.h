@@ -32,6 +32,7 @@ class ALS_PROJECTHUNTER_API APHPlayerController : public AALSPlayerController, p
 public:
 
 	APHPlayerController(const FObjectInitializer& ObjectInitializer);
+	virtual void OnPossess(APawn* InPawn) override;
 	virtual void BeginPlay() override;
 	virtual AActor* GetCurrentInteractableObject_Implementation() override;
 	virtual void InitializeInteractionWithObject_Implementation(UInteractableManager* Interactable) override;

@@ -34,6 +34,7 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable)
 	void WidgetCheck(APHBaseCharacter* Owner);
+	
 
 	virtual void SetActiveWidget_Implementation(EWidgets Widget) override;
 	virtual EWidgets GetActiveWidget_Implementation() override;

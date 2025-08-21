@@ -5,34 +5,47 @@
 
 #include "AbilitySystemComponent.h"
 #include "PHGameplayTags.h"
+#include "GameplayTagContainer.h"
+#include "Logging/LogMacros.h"
+// MMC_StaminaRegen.cpp
+
 
 float UMMC_StaminaRegen::CalculateBaseMagnitude_Implementation(const FGameplayEffectSpec& Spec) const
 {
-	const FGameplayTag StaminaRegenTag = FGameplayTag::RequestGameplayTag(FName("Attribute.Secondary.Vital.StaminaRegenAmount"));
-	const FGameplayTag StaminaDegenTag = FGameplayTag::RequestGameplayTag(FName("Attribute_Secondary_Vital_StaminaDegen"));
-	const FGameplayTag StaminaDegenValueTag = FGameplayTag::RequestGameplayTag(FName("Attribute.Secondary.Vital.StaminaDegen"));
+    // Always prefer your native tag singletons to avoid string typos
+    const auto& Tags = FPHGameplayTags::Get();
 
-	const UAbilitySystemComponent* TargetASC = Spec.GetContext().GetOriginalInstigatorAbilitySystemComponent();
-	if (!TargetASC)
-		return 0.f;
+    const FGameplayTag RegenAmountTag = Tags.Attributes_Secondary_Vital_StaminaRegenAmount; // "Attribute.Secondary.Vital.StaminaRegenAmount"
+    const FGameplayTag DegenTag       = Tags.Attributes_Secondary_Vital_StaminaDegen;       // "Attribute.Secondary.Vital.StaminaDegen"
 
-	float Amount = 0.0f;
-	float AmountDegen = 0.0f;
+    float RegenAmount = 0.0f;   // +stamina / tick
+    float DegenAmount = 0.0f;   // -stamina / tick
 
-	if (!Spec.GetSetByCallerMagnitude(StaminaRegenTag, false, Amount))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Missing SetByCaller tag: %s"), *StaminaRegenTag.ToString());
-	}
+    // Pull the SetByCaller magnitudes that your StatsManager rows supply
+    // Row A should set RegenAmountTag; Row B should set DegenTag (the value)
+    if (!Spec.GetSetByCallerMagnitude(RegenAmountTag, /*warnIfNotFound*/ false, RegenAmount))
+    {
+        UE_LOG(LogTemp, Verbose, TEXT("[MMC_StaminaRegen] Missing SetByCaller %s (using 0)."),
+            *RegenAmountTag.ToString());
+    }
 
-	if (!Spec.GetSetByCallerMagnitude(StaminaDegenValueTag, false, AmountDegen))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Missing SetByCaller tag: %s"), *StaminaDegenValueTag.ToString());
-	}
+    if (!Spec.GetSetByCallerMagnitude(DegenTag, /*warnIfNotFound*/ false, DegenAmount))
+    {
+        UE_LOG(LogTemp, Verbose, TEXT("[MMC_StaminaRegen] Missing SetByCaller %s (using 0)."),
+            *DegenTag.ToString());
+    }
 
-	if (TargetASC->HasMatchingGameplayTag(StaminaDegenTag))
-	{
-		Amount = -FMath::Abs(AmountDegen); // Convert regen to drain
-	}
+    // Decide whether we are in "degen mode" by checking the TARGET's tags.
+    // (StatsManager re-applies the effect when this trigger tag toggles.)
+    const FGameplayTagContainer* TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
+    const bool bShouldDegen = (TargetTags && TargetTags->HasTag(DegenTag));
 
-	return Amount;
+    // If degen is active, return a negative amount based on DegenAmount.
+    // Otherwise, return the (positive) regen amount.
+    if (bShouldDegen)
+    {
+        return -FMath::Abs(DegenAmount);
+    }
+
+    return RegenAmount;
 }

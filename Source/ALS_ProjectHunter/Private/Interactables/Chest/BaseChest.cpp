@@ -69,7 +69,8 @@ void ABaseChest::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)
 		if (SpawnableLootManager->SpawnableItems)
 		{
 
-			if (const APHBaseCharacter* AlsCharacter = Cast<APHBaseCharacter>(CurrentInteractor))
+			if (APHPlayerController* InteractorController = Cast<APHPlayerController>(CurrentInteractor))
+			if (const APHBaseCharacter* AlsCharacter = Cast<APHBaseCharacter>(InteractorController->PossessedCharacter))
 			{
 				SpawnableLootManager->GetSpawnItem(Cast<UPHAttributeSet>(AlsCharacter->GetAttributeSet()));
 
