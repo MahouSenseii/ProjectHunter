@@ -7,11 +7,11 @@
 
 UMMC_MaxEffectiveMana::UMMC_MaxEffectiveMana()
 {
-	MaxManaDef.AttributeToCapture = UPHAttributeSet::GetMaxHealthAttribute();
+	MaxManaDef.AttributeToCapture = UPHAttributeSet::GetMaxManaAttribute();
 	MaxManaDef.AttributeSource = EGameplayEffectAttributeCaptureSource::Target;
 	MaxManaDef.bSnapshot = false;
 
-	ReservedAmountDef.AttributeToCapture = UPHAttributeSet::GetReservedHealthAttribute();
+	ReservedAmountDef.AttributeToCapture = UPHAttributeSet::GetReservedManaAttribute();
 	ReservedAmountDef.AttributeSource = EGameplayEffectAttributeCaptureSource::Target;
 	ReservedAmountDef.bSnapshot = false;
 

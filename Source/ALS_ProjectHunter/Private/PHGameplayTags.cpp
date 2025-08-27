@@ -68,7 +68,8 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaPercentageReserved)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxStaminaRegenAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaReservedAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxStaminaReservedAmount)
-DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaDegen)
+DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaDegenAmount)
+DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaDegenRate)
 
 // === Secondary Attributes: Arcane Shield
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ArcaneShield)
@@ -288,6 +289,15 @@ DEFINE_GAMEPLAY_TAG(Condition_HasBowEquipped)
 DEFINE_GAMEPLAY_TAG(Condition_HasShieldEquipped)
 DEFINE_GAMEPLAY_TAG(Condition_HasStaffEquipped)
 
+// === Effects ====
+DEFINE_GAMEPLAY_TAG(Effect_Stamina_RegenActive)
+DEFINE_GAMEPLAY_TAG(Effect_Stamina_DegenActive)
+DEFINE_GAMEPLAY_TAG(Effect_Health_RegenActive)
+DEFINE_GAMEPLAY_TAG(Effect_Mana_RegenActive)
+DEFINE_GAMEPLAY_TAG(Effect_Health_DegenActive)
+DEFINE_GAMEPLAY_TAG(Effect_Mana_DegenActive)
+
+
 #undef DEFINE_GAMEPLAY_TAG
 
 /* ============================= */
@@ -471,9 +481,15 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 		FName("Attribute.Secondary.Vital.MaxStaminaReservedAmount"),
 		TEXT("Maximum stamina that can be reserved."));
 
-	Attributes_Secondary_Vital_StaminaDegen = TagsManager.AddNativeGameplayTag(
-	FName("Attribute.Secondary.Vital.StaminaDegen"),
-	TEXT("Stamina Degen."));
+	Attributes_Secondary_Vital_StaminaDegenAmount = TagsManager.AddNativeGameplayTag(
+	FName("Attribute.Secondary.Vital.StaminaDegenAmount"),
+	TEXT("Stamina Degen Amount."));
+
+	
+	Attributes_Secondary_Vital_StaminaDegenRate = TagsManager.AddNativeGameplayTag(
+	FName("Attribute.Secondary.Vital.StaminaDegenRate"),
+	TEXT("Stamina Degen Rate."));
+
 
 	/* === Arcane Shield === */
 	Attributes_Secondary_Vital_ArcaneShield = TagsManager.AddNativeGameplayTag(
@@ -511,6 +527,30 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 	Attributes_Secondary_Vital_ArcaneShieldPercentageReserved = TagsManager.AddNativeGameplayTag(
 		FName("Attribute.Secondary.Vital.ArcaneShieldPercentageReserved"),
 		TEXT("Percentage of arcane shield reserved."));
+
+	Effect_Stamina_RegenActive = TagsManager.AddNativeGameplayTag(
+	FName("Effect.Stamina.RegenActive"),
+	TEXT("Stamina is regenerating."));
+
+	Effect_Stamina_DegenActive = TagsManager.AddNativeGameplayTag(
+		FName("Effect.Stamina.DegenActive"),
+		TEXT("Stamina is degeneration."));
+
+	Effect_Health_RegenActive = TagsManager.AddNativeGameplayTag(
+		FName("Effect.Health.RegenActive"),
+		TEXT("Health is regeneration."));
+
+	Effect_Mana_RegenActive = TagsManager.AddNativeGameplayTag(
+		FName("Effect.Mana.RegenActive"),
+		TEXT("Mana is regeneration."));
+
+	Effect_Health_DegenActive = TagsManager.AddNativeGameplayTag(
+		FName("Effect.Health.DegenActive"),
+		TEXT("Health is degeneration."));
+
+	Effect_Mana_DegenActive = TagsManager.AddNativeGameplayTag(
+		FName("Effect.Mana.DegenActive"),
+		TEXT("Mana is degeneration."));
 }
 
 

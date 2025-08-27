@@ -7,11 +7,11 @@
 
 UMMC_MaxEffectiveStamina::UMMC_MaxEffectiveStamina()
 {
-	MaxStaminaDef.AttributeToCapture = UPHAttributeSet::GetMaxHealthAttribute();
+	MaxStaminaDef.AttributeToCapture = UPHAttributeSet::GetMaxStaminaAttribute();
 	MaxStaminaDef.AttributeSource = EGameplayEffectAttributeCaptureSource::Target;
 	MaxStaminaDef.bSnapshot = false;
 
-	ReservedAmountDef.AttributeToCapture = UPHAttributeSet::GetReservedHealthAttribute();
+	ReservedAmountDef.AttributeToCapture = UPHAttributeSet::GetReservedStaminaAttribute();
 	ReservedAmountDef.AttributeSource = EGameplayEffectAttributeCaptureSource::Target;
 	ReservedAmountDef.bSnapshot = false;
 

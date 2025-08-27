@@ -9,7 +9,7 @@
 #include "Components/InteractableManager.h"
 #include "Components/SpawnableLootManager.h"
 
-DEFINE_LOG_CATEGORY(LogLoot);
+DEFINE_LOG_CATEGORY(LogChestLoot);
 
 ABaseChest::ABaseChest()
 {
@@ -64,7 +64,7 @@ void ABaseChest::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)
 	{
 		CurrentInteractor = Interactor;
 		SetOwner(Interactor);
-		UE_LOG(LogLoot, Warning, TEXT("AnimToPlay is: %s"), *GetNameSafe(AnimToPlay));
+		UE_LOG(LogChestLoot, Warning, TEXT("AnimToPlay is: %s"), *GetNameSafe(AnimToPlay));
 		GetAnimationToPlay(AnimToPlay);
 		if (SpawnableLootManager->SpawnableItems)
 		{

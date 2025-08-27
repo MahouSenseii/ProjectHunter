@@ -86,8 +86,6 @@ public:
 
 	// Removes all active periodic effects matching the given tag
 	UFUNCTION(BlueprintCallable, Category = "GAS|Periodic")
-	void RemoveAllPeriodicEffectsByTag(FGameplayTag EffectTag);
-	
 	void RemovePeriodicEffectByTag(FGameplayTag EffectTag);
 
 	void ReapplyAllStartupRegenEffects();

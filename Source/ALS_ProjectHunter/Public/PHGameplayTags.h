@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "AttributeSet.h"
 #include "GameplayTagContainer.h"
-#include "NativeGameplayTags.h"
 
 /**
  * Singleton containing all native gameplay tags.
@@ -94,7 +93,9 @@ public:
 	static FGameplayTag Attributes_Secondary_Vital_MaxStaminaRegenAmount;
 	static FGameplayTag Attributes_Secondary_Vital_StaminaReservedAmount;
 	static FGameplayTag Attributes_Secondary_Vital_MaxStaminaReservedAmount;
-	static FGameplayTag Attributes_Secondary_Vital_StaminaDegen;
+	static FGameplayTag Attributes_Secondary_Vital_StaminaDegenAmount;
+	static FGameplayTag Attributes_Secondary_Vital_StaminaDegenRate;
+
 
 	/** Arcane Shield */
 	static FGameplayTag Attributes_Secondary_Vital_ArcaneShield;
@@ -342,6 +343,17 @@ public:
 	static FGameplayTag Condition_HasBowEquipped;
 	static FGameplayTag Condition_HasShieldEquipped;
 	static FGameplayTag Condition_HasStaffEquipped;
+
+	
+	/* === Effects  === */
+	static FGameplayTag Effect_Stamina_RegenActive;
+	static FGameplayTag Effect_Stamina_DegenActive;
+	static FGameplayTag Effect_Health_RegenActive;
+	static FGameplayTag Effect_Mana_RegenActive;
+	static FGameplayTag Effect_Health_DegenActive;
+	static FGameplayTag Effect_Mana_DegenActive;
+
+
 	
 	/* ============================= */
 	/* === Tag-to-Attribute Mapping === */
@@ -353,8 +365,6 @@ public:
 	static  TMap<FString, FGameplayAttribute> FlatDamageToAttributesMap;
 	static TMap<FString, FGameplayAttribute> PercentDamageToAttributesMap;
 	static TMap<FString, FGameplayAttribute> AllAttributesMap;
-	
-	TArray<FGameplayAttribute> GetAttributesByTagPrefix(const FString& Prefix);
 
 
 private:

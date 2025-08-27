@@ -122,7 +122,7 @@ void APHBaseCharacter::OnGaitChanged(EALSGait PreviousGait)
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
 	if (!ASC) return;
 
-	const FGameplayTag& StaminaDegenTag = FPHGameplayTags::Get().Attributes_Secondary_Vital_StaminaDegen;
+	const FGameplayTag& StaminaDegenTag = FPHGameplayTags::Get().Effect_Stamina_DegenActive;
 
 	if (Gait == EALSGait::Sprinting)
 	{

@@ -300,10 +300,6 @@ void UStatsManager::PurgeInvalidPeriodicHandles()
 	}
 }
 
-void UStatsManager::RemoveAllPeriodicEffectsByTag(FGameplayTag EffectTag)
-{
-	RemovePeriodicEffectByTag(EffectTag);
-}
 
 void UStatsManager::RemovePeriodicEffectByTag(FGameplayTag EffectTag)
 {
