@@ -651,7 +651,12 @@ void UStatsManager::InitializeDefaultAttributes()
         SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxArcaneShieldRegenAmount, 
             ValidateInitValue(SecondaryInitAttributes.ArcaneShieldRegenAmount, TEXT("MaxArcaneShieldRegenAmount")));
 
+    	
+
         ASC->ApplyGameplayEffectSpecToSelf(*SecondarySpec.Data);
+
+
+
     }
 
     // === STARTING CURRENT HEALTH / MANA / STAMINA ===
