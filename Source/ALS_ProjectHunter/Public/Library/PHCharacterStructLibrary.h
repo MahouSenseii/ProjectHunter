@@ -118,6 +118,9 @@ struct FInitialGameplayEffectInfo
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString DisplayName = "Unnamed Effect";
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<UGameplayEffect> EffectClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
