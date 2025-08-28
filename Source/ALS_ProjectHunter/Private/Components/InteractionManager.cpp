@@ -38,8 +38,11 @@ void UInteractionManager::BeginPlay()
 void UInteractionManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-
-	UpdateInteractionTimerHandle.Invalidate();
+    
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(UpdateInteractionTimerHandle);
+	}
 }
 
 // Determines whether interaction should be updated and updates if needed.
@@ -211,7 +214,7 @@ void UInteractionManager::RemoveInteractionFromCurrent(UInteractableManager* Int
 
 void UInteractionManager::ToggleHighlight(const bool bShouldHighlight) const
 {
-	if (IsValid(CurrentInteractable) && IsValid(OwnerController) && IsValid(OwnerController))
+	if (IsValid(CurrentInteractable) && IsValid(OwnerController))
 	{
 		CurrentInteractable->ToggleHighlight(bShouldHighlight, OwnerController);
 	}

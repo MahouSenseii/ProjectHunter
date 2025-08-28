@@ -64,6 +64,8 @@ protected:
 	// Array for storing interactable objects
 	UPROPERTY(BlueprintReadOnly, EditInstanceOnly) TArray<UInteractableManager*> InteractableList;
 
+	
+
 public:	
 
 	UFUNCTION(BlueprintCallable, Category = "Interaction")

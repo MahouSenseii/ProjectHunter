@@ -228,18 +228,17 @@ void UInteractableManager::DurationPress(AActor* Interactor)
 
 void UInteractableManager::IsKeyDown()
 {
-	// Only proceed if we have a valid interactor that supports interaction
-	if (!RefInteractor || !RefInteractor->Implements<UInteractionProcessInterface>())
+	
+	const APlayerController* PlayerController = Cast<APlayerController>(RefInteractor);
+	if (!PlayerController)
 	{
-		ClearInteractionTimer(); // Stop checking key input
+		ClearInteractionTimer();
 		return;
 	}
-
-	// Cast interactor to PlayerController and check if the interaction key is still held
-	const APlayerController* PlayerController = Cast<APlayerController>(RefInteractor);
+    
 	if (!PlayerController->IsInputKeyDown(PressedInteractionKey))
 	{
-		ClearInteractionTimer(); // Player released key early
+		ClearInteractionTimer();
 		return;
 	}
 

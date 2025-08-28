@@ -124,6 +124,31 @@ void ABaseInteractable::BeginPlay()
 	
 }
 
+void ABaseInteractable::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	// Remove from all interaction lists on destroy
+	if (InteractableManager)
+	{
+		// Find all player controllers and remove this from their lists
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+		{
+			if (const APHPlayerController* PHController = Cast<APHPlayerController>(It->Get()))
+			{
+				if (PHController->InteractionManager)
+				{
+					PHController->InteractionManager->RemoveFromInteractionList(InteractableManager);
+					if (PHController->InteractionManager->GetCurrentInteractable() == InteractableManager)
+					{
+						PHController->InteractionManager->SetCurrentInteraction(nullptr);
+					}
+				}
+			}
+		}
+	}
+}
+
 void ABaseInteractable::SetupMeshVisibility() const
 {
 	// Toggles the visibility based on the validity of the StaticMesh.
