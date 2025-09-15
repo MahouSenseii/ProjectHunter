@@ -3,13 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PHGameplayTags.h"
 #include "Components/ActorComponent.h"
 #include "Library/AttributeStructsLibrary.h"
 #include "StatsManager.generated.h"
 
 class UPHAbilitySystemComponent;
 class APHBaseCharacter;
+class UAttributeConfigDataAsset;
 DECLARE_LOG_CATEGORY_EXTERN(LogStatsManager, Log, All);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -47,6 +47,10 @@ public:
 
 	void InitializeDefaultAttributes();
 
+	// Initialize with level scaling (for mobs)
+	UFUNCTION(BlueprintCallable, Category = "Mob Configuration")
+	void InitializeMobAttributesAtLevel(int32 Level);
+	
 	/* =========================== */
 	/* ===   Attribute Access  === */
 	/* =========================== */
@@ -113,6 +117,17 @@ protected:
 	
 	APHBaseCharacter* GetOwnerSafe() const;
 
+	// Helper function for data asset initialization
+	void InitializeAttributesFromConfig(const TSubclassOf<UGameplayEffect>& EffectClass, 
+	                                   const TArray<FAttributeInitConfig>& AttributeConfigs,
+	                                   const FString& CategoryName) const;
+
+	// Validation helper
+	static float ValidateInitValue(float Value, const FString& AttributeName);
+
+	// Simple level scaling for regular data assets
+	void ApplyLevelScalingToConfig() const;
+
 public:
 	/* =========================== */
 	/* ===   Blueprint Exposed === */
@@ -128,20 +143,28 @@ public:
 	TArray<FInitialGameplayEffectInfo> StartupEffects;
 
 	/* =========================== */
-	/* ===   Initial Attributes === */
+	/* ===   Configuration      === */
 	/* =========================== */
 	
-	// Primary attributes set at character spawn
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes|Init")
-	FInitialPrimaryAttributes PrimaryInitAttributes;
+	// Data asset reference replaces all the manual structs
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Configuration")
+	TObjectPtr<UAttributeConfigDataAsset> AttributeConfig;
 
-	// Secondary attributes
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes|Init")
-	FInitialSecondaryAttributes SecondaryInitAttributes;
+	// Level for mob scaling
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Configuration")
+	int32 MobLevel = 1;
 
-	// Vital attributes
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes|Init")
-	FInitialVitalAttributes VitalInitAttributes;
+	// Additional scaling multiplier
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Configuration")
+	float DifficultyMultiplier = 1.0f;
+
+	// Elite status for bonus stats
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Configuration")
+	bool bIsElite = false;
+
+	// Variant string for special types
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Configuration")
+	FString MobVariant = TEXT("Normal");
 
 	/* =========================== */
 	/* ===   Default Effects   === */

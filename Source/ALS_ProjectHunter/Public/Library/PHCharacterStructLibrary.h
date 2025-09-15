@@ -145,3 +145,6 @@ struct FInitialGameplayEffectInfo
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Categories = "Attributes.Secondary.Vital"))
 	FGameplayTag TriggerTag;
 };
+
+
+

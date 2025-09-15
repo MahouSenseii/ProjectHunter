@@ -63,8 +63,10 @@ protected:
 
 	// Array for storing interactable objects
 	UPROPERTY(BlueprintReadOnly, EditInstanceOnly) TArray<UInteractableManager*> InteractableList;
-
+	UPROPERTY(BlueprintReadOnly, EditInstanceOnly) TArray<UInteractableManager*> SavedInteractableList;
 	
+	void ScheduleNextUpdate();
+	void UpdateInteractionAdaptive();
 
 public:	
 
@@ -85,6 +87,7 @@ public:
 	/// Finds the maximum value in a given float array and its corresponding index
 	UFUNCTION(BlueprintCallable, Category = "Math Utils")
 	static void MaxOfFloatArray(const TArray<float>& FloatArray, float& OutMaxValue, int32& OutMaxIndex);
+	bool IsValidForInteraction() const;
 
 	// Assign the current interaction
 	UFUNCTION(BlueprintCallable, Category = "Interactable")
@@ -103,6 +106,17 @@ public:
 	UFUNCTION(BlueprintGetter) TArray<UInteractableManager*> GetInteractableList() const { return InteractableList; }
 	UFUNCTION(BlueprintCallable) void AddToInteractionList(UInteractableManager* InInteractable);
 	UFUNCTION(BlueprintCallable) void RemoveFromInteractionList(UInteractableManager* InInteractable);
-	
+
+private:
+
+	// Optimization: Track list state without duplicating
+	int32 LastListVersion = 0;
+	int32 CurrentListVersion = 0;
+    
+	// Cache for view direction to detect looking around
+	FVector LastLookDirection;
+    
+	UPROPERTY(EditAnywhere, Category = "Interaction|Optimization")
+	float LookSensitivity = 0.98f;
 		
 };

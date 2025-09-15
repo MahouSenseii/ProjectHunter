@@ -251,7 +251,7 @@ public:
 
 
 
-		/* ============================= */
+	/* ============================= */
 	/* === Other Offensive Stats === */
 	/* ============================= */
 
@@ -335,15 +335,158 @@ public:
 	FGameplayAttributeData SpellsCritMultiplier;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, SpellsCritMultiplier);
 
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChainCount, Category = "Secondary Attribute|Offensive")
+	FGameplayAttributeData ChainCount;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, ChainCount);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ForkCount, Category = "Secondary Attribute|Offensive")
+	FGameplayAttributeData ForkCount;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, ForkCount);
+
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChainDamage, Category = "Secondary Attribute|Offensive")
+	FGameplayAttributeData ChainDamage;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, ChainDamage);
+
+	/* ============================= */
+	/* === Damage Conversion === */
+	/* ============================= */
+
+	/** Physical Damage Conversions */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToFire, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData PhysicalToFire;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, PhysicalToFire);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToIce, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData PhysicalToIce;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, PhysicalToIce);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToLightning, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData PhysicalToLightning;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, PhysicalToLightning);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToLight, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData PhysicalToLight;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, PhysicalToLight);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToCorruption, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData PhysicalToCorruption;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, PhysicalToCorruption);
+
+	/** Fire Damage Conversions */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToPhysical, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData FireToPhysical;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, FireToPhysical);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToIce, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData FireToIce;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, FireToIce);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToLightning, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData FireToLightning;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, FireToLightning);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToLight, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData FireToLight;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, FireToLight);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToCorruption, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData FireToCorruption;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, FireToCorruption);
+
+	/** Ice Damage Conversions */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToPhysical, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData IceToPhysical;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, IceToPhysical);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToFire, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData IceToFire;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, IceToFire);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToLightning, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData IceToLightning;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, IceToLightning);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToLight, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData IceToLight;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, IceToLight);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToCorruption, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData IceToCorruption;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, IceToCorruption);
+
+	/** Lightning Damage Conversions */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToPhysical, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData LightningToPhysical;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, LightningToPhysical);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToFire, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData LightningToFire;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, LightningToFire);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToIce, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData LightningToIce;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, LightningToIce);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToLight, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData LightningToLight;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, LightningToLight);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToCorruption, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData LightningToCorruption;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, LightningToCorruption);
+
+	/** Light Damage Conversions */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToPhysical, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData LightToPhysical;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, LightToPhysical);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToFire, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData LightToFire;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, LightToFire);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToIce, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData LightToIce;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, LightToIce);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToLightning, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData LightToLightning;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, LightToLightning);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToCorruption, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData LightToCorruption;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, LightToCorruption);
+
+	/** Corruption Damage Conversions */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToPhysical, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData CorruptionToPhysical;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, CorruptionToPhysical);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToFire, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData CorruptionToFire;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, CorruptionToFire);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToIce, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData CorruptionToIce;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, CorruptionToIce);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToLightning, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData CorruptionToLightning;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, CorruptionToLightning);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToLight, Category = "Secondary Attribute|Conversion")
+	FGameplayAttributeData CorruptionToLight;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, CorruptionToLight);
+
 	/* =================================== */
 	/* === Chance to Apply Ailments === */
 	/* =================================== */
-
+	
 	/** Increases the chance to apply bleed effects. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToBleed, Category = "Secondary Attribute|Ailments")
 	FGameplayAttributeData ChanceToBleed;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, ChanceToBleed);
-
+	
 	/** Increases the chance to apply corruption effects. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToCorrupt, Category = "Secondary Attribute|Ailments")
 	FGameplayAttributeData ChanceToCorrupt;
@@ -385,7 +528,7 @@ public:
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, ChanceToStun);
 
 
-		/* ============================= */
+	/* ============================= */
 	/* === Duration Attributes === */
 	/* ============================= */
 
@@ -516,6 +659,27 @@ public:
 	FGameplayAttributeData MaxLightningResistance;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, MaxLightningResistance);
 
+
+	/*Reflection*/
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectPhysical, Category = "Secondary Attribute|Reflection")
+	FGameplayAttributeData ReflectPhysical;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, ReflectPhysical);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectElemental, Category = "Secondary Attribute|Reflection")
+	FGameplayAttributeData ReflectElemental;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, ReflectElemental);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectChancePhysical, Category = "Secondary Attribute|Reflection")
+	FGameplayAttributeData ReflectChancePhysical;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, ReflectChancePhysical);
+
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectChanceElemental, Category = "Secondary Attribute|Reflection")
+	FGameplayAttributeData ReflectChanceElemental;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, ReflectChanceElemental);
+	
+
 	/* ============================= */
 	/* === Piercing Attributes === */
 	/* ============================= */
@@ -611,13 +775,17 @@ public:
 	FGameplayAttributeData StaminaOnHit;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, StaminaOnHit);
 
-
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaCostChanges, Category = "Vital Attribute|Misc")
 	FGameplayAttributeData StaminaCostChanges;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, StaminaCostChanges);
 
-	
-	
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AuraEffect, Category = "Vital Attribute|Misc")
+	FGameplayAttributeData AuraEffect;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, AuraEffect);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AuraRadius, Category = "Vital Attribute|Misc")
+	FGameplayAttributeData AuraRadius;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, AuraRadius);
 	
 
 	/* ============================= */
@@ -1162,6 +1330,18 @@ public:
 	UFUNCTION()
 	void OnRep_LightPercentBonus(const FGameplayAttributeData& OldAmount) const;
 
+
+	/** Reflection */
+	UFUNCTION()
+	void OnRep_ReflectPhysical(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_ReflectElemental(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_ReflectChancePhysical(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_ReflectChanceElemental(const FGameplayAttributeData& OldAmount) const;
+	
+
 	/** Lightning Damage */
 	UFUNCTION()
 	void OnRep_MinLightningDamage(const FGameplayAttributeData& OldAmount) const;
@@ -1181,6 +1361,107 @@ public:
 	void OnRep_PhysicalFlatBonus(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_PhysicalPercentBonus(const FGameplayAttributeData& OldAmount) const;
+
+
+	/* ============================= */
+/* === Damage Conversion OnRep Functions === */
+/* ============================= */
+
+/** Physical Damage Conversion OnRep Functions */
+UFUNCTION()
+void OnRep_PhysicalToFire(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_PhysicalToIce(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_PhysicalToLightning(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_PhysicalToLight(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_PhysicalToCorruption(const FGameplayAttributeData& OldAmount) const;
+
+/** Fire Damage Conversion OnRep Functions */
+UFUNCTION()
+void OnRep_FireToPhysical(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_FireToIce(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_FireToLightning(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_FireToLight(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_FireToCorruption(const FGameplayAttributeData& OldAmount) const;
+
+/** Ice Damage Conversion OnRep Functions */
+UFUNCTION()
+void OnRep_IceToPhysical(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_IceToFire(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_IceToLightning(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_IceToLight(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_IceToCorruption(const FGameplayAttributeData& OldAmount) const;
+
+/** Lightning Damage Conversion OnRep Functions */
+UFUNCTION()
+void OnRep_LightningToPhysical(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_LightningToFire(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_LightningToIce(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_LightningToLight(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_LightningToCorruption(const FGameplayAttributeData& OldAmount) const;
+
+/** Light Damage Conversion OnRep Functions */
+UFUNCTION()
+void OnRep_LightToPhysical(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_LightToFire(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_LightToIce(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_LightToLightning(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_LightToCorruption(const FGameplayAttributeData& OldAmount) const;
+
+/** Corruption Damage Conversion OnRep Functions */
+UFUNCTION()
+void OnRep_CorruptionToPhysical(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_CorruptionToFire(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_CorruptionToIce(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_CorruptionToLightning(const FGameplayAttributeData& OldAmount) const;
+
+UFUNCTION()
+void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 
 	/* ============================= */
 	/* === Offensive Stats Replication Functions === */
@@ -1222,6 +1503,12 @@ public:
 	void OnRep_ProjectileSpeed(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_RangedDamage(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_ChainCount(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_ForkCount(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_ChainDamage(const FGameplayAttributeData& OldAmount) const;
 
 	/* ============================= */
 	/* === Resistance Replication Functions === */
@@ -1284,7 +1571,7 @@ public:
 	void OnRep_BlockStrength(const FGameplayAttributeData& OldAmount) const;
 
 	
-		/* ============================= */
+	/* ============================= */
 	/* === Piercing Replication Functions === */
 	/* ============================= */
 
@@ -1334,6 +1621,11 @@ public:
 	UFUNCTION()
 	void OnRep_StaminaCostChanges(const FGameplayAttributeData& OldAmount) const;
 
+	UFUNCTION()
+	void OnRep_AuraEffect(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_AuraRadius(const FGameplayAttributeData& OldAmount) const;
+
 	/* ============================= */
 	/* === Chance To Apply Ailments Replication === */
 	/* ============================= */
@@ -1377,6 +1669,12 @@ public:
 	void OnRep_PurifyDuration(const FGameplayAttributeData& OldAmount) const;
 
 private:
+
+	// Helper functions for reserve calculations
+	void RecalculateHealthReserves();
+	void RecalculateManaReserves(); 
+	void RecalculateStaminaReserves();
+	void RecalculateArcaneShieldReserves();
 
 	/** Utility function for setting effect properties */
 	static void SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props);

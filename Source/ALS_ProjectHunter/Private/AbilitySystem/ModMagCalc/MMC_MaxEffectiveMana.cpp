@@ -42,3 +42,4 @@ float UMMC_MaxEffectiveMana::CalculateBaseMagnitude_Implementation(const FGamepl
 
 	return MaxHealth - ReservedAmount ;
 }
+

@@ -70,7 +70,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	bool IsRoomAvailable(UBaseItem* Item, int32 TopLeftIndex);
 
-	bool ForEachTile(UBaseItem* Item, int32 TopLeftIndex, const TFunction<void(FTile)>& Func);
+	bool ForEachTile(UBaseItem* Item, int32 TopLeftIndex, const TFunction<bool(FTile)>& Func);
 
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	bool IsTileValid(FTile Tile) const;
@@ -86,42 +86,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Add")
 	bool TryToAddItemToInventoryRotated(UBaseItem* Item);
-
-	
-	/* ============================= */
-	/* ===        Shop           === */
-	/* ============================= */
-
-	UFUNCTION(BlueprintCallable, Category = "Shop")
-	void RandomizeInventory();
-
-	UFUNCTION(BlueprintCallable, Category = "Shop")
-	int32 GetGeneratedItemAmount() const;
-
-	UFUNCTION(BlueprintCallable, Category = "Shop")
-	bool SpawnItemByName(const FName ItemName, const UDataTable* DataTable);
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintGetter, Category = "Shop")
-	int32 GetGems() const { return Gems; }
-
-	UFUNCTION(BlueprintCallable, Category = "Shop")
-	void AddGems(int32 InAmount) { Gems += InAmount; }
-
-	UFUNCTION(BlueprintCallable, Category = "Shop")
-	void SubtractGems(int32 InAmount) { Gems -= InAmount; }
-
-	UFUNCTION(BlueprintCallable, Category = "Shop")
-	bool HasEnoughGems(UBaseItem* Item) const;
-
-	static int32 CalculateStackedItemValue(const FItemInformation& ItemData);
-	static int32 CalculateValue(const FItemInformation& ItemData);
-	UFUNCTION(BlueprintCallable, Category = "Shop")
-	bool ExecuteItemTrade(const TArray<UBaseItem*>& Items, UInventoryManager* Seller, UInventoryManager* Buyer, const TArray<int32>& OptionalTargetTileIndices, FString& OutMessage);
-
-	static bool CanBuyerAffordItems(const TArray<UBaseItem*>& Items, UInventoryManager* Seller, int32& OutTotalCost, FString& OutMessage);
-	static bool FindPlacementIndices(const TArray<UBaseItem*>& Items, UInventoryManager* Buyer, const TArray<int32>& OptionalTargetTileIndices, TArray<int32>& OutValidIndices, FString& OutMessage);
-	static void FinalizeTrade(const TArray<UBaseItem*>& Items, UInventoryManager* Seller, UInventoryManager* Buyer, const TArray<int32>& ValidIndices, int32 TotalCost);
-
 	
 	void RebuildTopLeftMap();
 
@@ -177,7 +141,7 @@ public:
 	int32 Rows = 10;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
-	int32 Colums = 14;
+	int32 Columns = 14;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
 	float TileSize = 20.0f;

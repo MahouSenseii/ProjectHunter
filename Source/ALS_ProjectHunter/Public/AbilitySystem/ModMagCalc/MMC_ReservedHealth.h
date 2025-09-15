@@ -22,8 +22,9 @@ public:
 
 private:
 
-	FGameplayEffectAttributeCaptureDefinition HealthFlatDef;
-	FGameplayEffectAttributeCaptureDefinition HealthPercentageDef;
-	FGameplayEffectAttributeCaptureDefinition MaxHealthDef;
-	FGameplayEffectAttributeCaptureDefinition ReservedHealthDef;
+	mutable FGameplayEffectAttributeCaptureDefinition HealthFlatDef;
+	mutable FGameplayEffectAttributeCaptureDefinition HealthPercentageDef;
+	mutable FGameplayEffectAttributeCaptureDefinition MaxHealthDef;
+	mutable FGameplayEffectAttributeCaptureDefinition ReservedHealthDef;
+
 };

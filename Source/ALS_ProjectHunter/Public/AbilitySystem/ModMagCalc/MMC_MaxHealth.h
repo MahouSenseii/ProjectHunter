@@ -22,6 +22,7 @@ public:
 
 private:
 
-	FGameplayEffectAttributeCaptureDefinition StrengthDef;
-	FGameplayEffectAttributeCaptureDefinition ReservedDef;
+	mutable FGameplayEffectAttributeCaptureDefinition StrengthDef;
+	mutable FGameplayEffectAttributeCaptureDefinition ReservedDef;
+
 };

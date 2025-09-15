@@ -15,16 +15,16 @@ class ALS_PROJECTHUNTER_API UMMC_ReservedMana : public UGameplayModMagnitudeCalc
 	GENERATED_BODY()
 
 public:
-
 	UMMC_ReservedMana();
 
 	
 	virtual float CalculateBaseMagnitude_Implementation(const FGameplayEffectSpec& Spec) const override;
 
 private:
+	mutable FGameplayEffectAttributeCaptureDefinition ManaFlatDef;
+	mutable FGameplayEffectAttributeCaptureDefinition ManaPercentageDef;
+	mutable FGameplayEffectAttributeCaptureDefinition MaxManaDef;
+	mutable FGameplayEffectAttributeCaptureDefinition ReservedManaDef;
 
-	FGameplayEffectAttributeCaptureDefinition ManaFlatDef;
-	FGameplayEffectAttributeCaptureDefinition ManaPercentageDef;
-	FGameplayEffectAttributeCaptureDefinition MaxManaDef;
 	
 };

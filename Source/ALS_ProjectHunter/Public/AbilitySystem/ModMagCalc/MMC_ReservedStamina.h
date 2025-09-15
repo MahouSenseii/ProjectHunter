@@ -22,8 +22,11 @@ public:
 	virtual float CalculateBaseMagnitude_Implementation(const FGameplayEffectSpec& Spec) const override;
 
 private:
+	
+	mutable FGameplayEffectAttributeCaptureDefinition StaminaFlatDef;
+	mutable FGameplayEffectAttributeCaptureDefinition StaminaPercentageDef;
+	mutable FGameplayEffectAttributeCaptureDefinition MaxStaminaDef;
+	mutable FGameplayEffectAttributeCaptureDefinition ReservedStaminaDef;
 
-	FGameplayEffectAttributeCaptureDefinition StaminaFlatDef;
-	FGameplayEffectAttributeCaptureDefinition StaminaPercentageDef;
-	FGameplayEffectAttributeCaptureDefinition MaxStaminaDef;
+
 };

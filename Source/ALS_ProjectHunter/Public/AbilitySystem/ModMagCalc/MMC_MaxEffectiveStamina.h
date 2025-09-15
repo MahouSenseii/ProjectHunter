@@ -21,6 +21,7 @@ public:
 
 private:
 
-	FGameplayEffectAttributeCaptureDefinition MaxStaminaDef;
-	FGameplayEffectAttributeCaptureDefinition ReservedAmountDef;
+	mutable FGameplayEffectAttributeCaptureDefinition MaxStaminaDef;
+	mutable FGameplayEffectAttributeCaptureDefinition ReservedAmountDef;
+
 };

@@ -228,18 +228,14 @@ bool UInventoryGrid::HandleOwnedItemDrop(UBaseItem* Payload, const int32 Index) 
 bool UInventoryGrid::HandleUnownedItemDrop(UBaseItem* Payload, int32 Index)
 {
     bool WasAdded = false;
-    if (!OtherInventory)
-    {
-		return false;
-    }
     
     if (OwnerInventory->IsRoomAvailable(Payload, Index))
     {
-        BuySellLogic(Payload, WasAdded);
+        //BuySellLogic(Payload, WasAdded);
     }
     else
     {
-        BuySellLogic(Payload, WasAdded);
+        //BuySellLogic(Payload, WasAdded);
         if (WasAdded)
         {
             return OwnerInventory->TryToAddItemToInventory(Payload, true);
@@ -253,9 +249,21 @@ bool UInventoryGrid::HandleUnownedItemDrop(UBaseItem* Payload, int32 Index)
     return WasAdded; // Return true if the item was added, false otherwise
 }
 
+void UInventoryGrid::BuySellLogic(UBaseItem* Item, bool& WasAdded)
+{
+}
+
+void UInventoryGrid::ProcessTransaction(UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer)
+{
+}
+
+void UInventoryGrid::HandleFailedTransaction(UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer)
+{
+}
+
 
 bool UInventoryGrid::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
-	UDragDropOperation* InOperation)
+                                      UDragDropOperation* InOperation)
 {
 	// Convert mouse position to local coordinates
 	const FVector2D MousePositionLocal = InGeometry.AbsoluteToLocal(InDragDropEvent.GetScreenSpacePosition());
@@ -300,7 +308,7 @@ void UInventoryGrid::GridInitialize(UInventoryManager* PlayerInventory, float In
 	if (UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(GridBorder))
 	{
 		// Calculate and set grid size based on the number of rows and columns
-		const float InSizeX = OwnerInventory->Colums * TileSize;
+		const float InSizeX = OwnerInventory->Columns * TileSize;
 		const float InSizeY = OwnerInventory->Rows * TileSize;
 
 		CanvasSlot->SetSize(FVector2D(InSizeX, InSizeY));
@@ -334,7 +342,7 @@ void UInventoryGrid::CreateLineSegments()
 
 void UInventoryGrid::CreateVerticalLines()
 {
-	for (int32 x = 0; x <= OwnerInventory->Colums; x++)  // Changed the loop condition
+	for (int32 x = 0; x <= OwnerInventory->Columns; x++)  // Changed the loop condition
 	{
 		const float XLocal = x * TileSize;
 
@@ -362,7 +370,7 @@ void UInventoryGrid::CreateHorizontalLines()
 
 		// Initialize the FVector2D objects for Start and End
 		const FVector2D Start(0.0f, YLocal);
-		const float EndX = OwnerInventory->Colums * TileSize;
+		const float EndX = OwnerInventory->Columns * TileSize;
 		const FVector2D End(EndX, YLocal);
 
 		// Initialize the FLine struct
@@ -400,26 +408,72 @@ UBaseItem* UInventoryGrid::GetPayload(UDragDropOperation* DragDropOperation)
 
 void UInventoryGrid::Refresh()
 {
-	if (IsValid(GridCanvas) && IsValid(OwnerInventory))
-	{
-		// Clear all children from GridCanvas before re-populating
-		GridCanvas->ClearChildren();
-
-		// Retrieve all items from OwnerInventory
-		const TMap<UBaseItem*, FTile>& RetrievedItems = OwnerInventory->GetAllItems();
-
-		// Iterate over each item in the inventory and add it to the grid
-		for (const auto& ItemPair : RetrievedItems)
-		{
-			UBaseItem* Item = ItemPair.Key;
-			const FTile& TopLeftTile = ItemPair.Value;
-
-			AddItemToGrid(Item, TopLeftTile);
-		}
-	}
-	else
+	if (!IsValid(GridCanvas) || !IsValid(OwnerInventory))
 	{
 		LogInvalidPointers();
+		return;
+	}
+
+	// Get current items from inventory
+	const TMap<UBaseItem*, FTile>& CurrentItems = OwnerInventory->GetAllItems();
+    
+	// Track which widgets to keep/remove
+	TArray<UWidget*> WidgetsToRemove;
+	TSet<UBaseItem*> ItemsToAdd;
+    
+	// Collect current items that need widgets
+	for (const auto& ItemPair : CurrentItems)
+	{
+		ItemsToAdd.Add(ItemPair.Key);
+	}
+    
+	// Check existing widgets
+	for (UWidget* Child : GridCanvas->GetAllChildren())
+	{
+		if (UItemWidget* ItemWidget = Cast<UItemWidget>(Child))
+		{
+			if (ItemWidget->ItemObject && ItemsToAdd.Contains(ItemWidget->ItemObject))
+			{ 
+				// Update position if needed
+				const FTile* TilePtr = CurrentItems.Find(ItemWidget->ItemObject);
+				if (TilePtr)
+				{
+					UpdateItemWidgetPosition(ItemWidget, *TilePtr);
+					ItemsToAdd.Remove(ItemWidget->ItemObject);
+				}
+			}
+			else
+			{
+				// Item no longer exists, mark for removal
+				WidgetsToRemove.Add(Child);
+			}
+		}
+	}
+    
+	// Remove outdated widgets
+	for (UWidget* Widget : WidgetsToRemove)
+	{
+		GridCanvas->RemoveChild(Widget);
+	}
+    
+	// Add new items
+	for (UBaseItem* Item : ItemsToAdd)
+	{
+		if (const FTile* TilePtr = CurrentItems.Find(Item))
+		{
+			AddItemToGrid(Item, *TilePtr);
+		}
+	}
+}
+
+void UInventoryGrid::UpdateItemWidgetPosition(UItemWidget* ItemWidget, const FTile& TopLeftTile) const
+{
+	if (UCanvasPanelSlot* PHSlot = Cast<UCanvasPanelSlot>(ItemWidget->Slot))
+	{
+		FVector2D NewPosition;
+		NewPosition.X = TopLeftTile.X * TileSize;
+		NewPosition.Y = TopLeftTile.Y * TileSize;
+		PHSlot->SetPosition(NewPosition);
 	}
 }
 
@@ -547,145 +601,4 @@ void UInventoryGrid::ForEachItem(TMap<UBaseItem*, FTile> ItemTileMap, const std:
 		// Call the callback function with the item and tile
 		Callback(Item, TopLeftTile);
 	}
-}
-
-void UInventoryGrid::BuySellLogic(UBaseItem* Item, bool& WasAdded)
-{
-	 if (!IsValid(Item) || !IsValid(OwnerInventory))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("BuySellLogic: Invalid Item or OwnerInventory."));
-        WasAdded = false;
-        return;
-    }
-
-	 const FTile SetTiles = { DraggedItemTopLeft.X, DraggedItemTopLeft.Y };
-
-    // If the item already belongs to the owner, just reposition it without buying or selling.
-    if (Item->GetItemInfo().ItemInfo.OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID())
-    {
-        if (OwnerInventory->IsRoomAvailable(Item, OwnerInventory->TileToIndex(SetTiles)))
-        {
-            OwnerInventory->AddItemAt(Item, OwnerInventory->TileToIndex(SetTiles));
-            WasAdded = true;
-        }
-        else
-        {
-            WasAdded = false;
-        }
-        return;
-    }
-
-    // Ensure the other inventory is valid.
-    if (!IsValid(OtherInventory))
-    {
-        OwnerInventory->RemoveItemInInventory(Item);
-        WasAdded = false;
-        return;
-    }
-
-    // Determine the buyer and seller based on the current item owner.
-
-	 // Determine the seller and buyer explicitly
-    UInventoryManager* Seller = Item->GetItemInfo().ItemInfo.OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->
-                                                                               GetID()
-	                                ? OwnerInventory
-	                                : OtherInventory;
-    UInventoryManager* Buyer = Seller == OwnerInventory ? OtherInventory : OwnerInventory;
-
-    if (!Seller || !Buyer)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("BuySellLogic: Seller or Buyer is not valid."));
-        WasAdded = false;
-        return;
-    }
-
-    // Check if the buyer has enough gems
-    if (Buyer->HasEnoughGems(Item))
-    {
-        if (OwnerInventory->IsRoomAvailable(Item, OwnerInventory->TileToIndex(SetTiles)))
-        {
-            ProcessTransaction(Item, Seller, Buyer);
-            Buyer->AddItemAt(Item, Buyer->TileToIndex(SetTiles));
-            WasAdded = true;
-        }
-        else if (OwnerInventory->TryToAddItemToInventory(Item, true))
-        {
-            WasAdded = true;
-        }
-        else
-        {
-            OwnerInventory->DropItemInInventory(Item);
-            WasAdded = false;
-        }
-    }
-    else
-    {
-        HandleFailedTransaction(Item, Seller, Buyer);
-        WasAdded = false;
-    }
-
-    Refresh(); // Refresh UI or state to reflect changes.
-}
-
-
-auto UInventoryGrid::ProcessTransaction(UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer) -> void
-{
-	const int32 OriginalValue = Seller->CalculateValue(Item-> GetItemInfo());
-	int32 TransactionValue = OriginalValue;
-
-	if (Seller->GetOwnerCharacter()->IsPlayerControlled())
-	{
-		// Halve the item's value when selling by the player.
-		TransactionValue /= 2;
-	}
-
-	Buyer->SubtractGems(TransactionValue);
-	Seller->AddGems(TransactionValue);
-}
-
-void UInventoryGrid::HandleFailedTransaction(UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer)
-{
-	if (Buyer && Buyer->ContainsItem(Item))
-	{
-		Buyer->RemoveItemInInventory(Item);
-	}
-
-	if (Seller && !Seller->TryToAddItemToInventory(Item, true))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("HandleFailedTransaction: Failed to return item to seller's inventory."));
-	}
-}
-
-
-UInventoryManager* UInventoryGrid::FindOwners(UBaseItem* Item, UInventoryManager*& Other) const
-{
-	if (!Item || !OwnerInventory || !OwnerInventory->GetOwnerCharacter() ||
-		!OwnerInventory->GetOwnerCharacter()->GetInventoryManager())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("FindOwners: Invalid parameters or states."));
-		return nullptr;  // Early return for null checks and invalid states.
-	}
-
-	// If the Item's OwnerID matches the character ID of the owner of OwnerInventory,
-	// this inventory is the owner of the item.
-	if (Item->GetItemInfo().ItemInfo.OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID())
-	{
-		// The item belongs to the OwnerInventory.
-		// Set 'Other' to represent the non-owner inventory in this scenario.
-		Other = OtherInventory;
-		return OwnerInventory;
-	}
-	else
-	{
-		// The item does not belong to the OwnerInventory, meaning it belongs to some 'Other' inventory.
-		// In this case, we confirm that 'OtherInventory' is this 'Other' inventory,
-		// and since 'Other' is meant to represent the alternative, it should reflect the 'OwnerInventory' in this context.
-		Other = OwnerInventory;
-		return OtherInventory;
-	}
-}
-
-
-void UInventoryGrid::BuyFromAnotherID()
-{
 }

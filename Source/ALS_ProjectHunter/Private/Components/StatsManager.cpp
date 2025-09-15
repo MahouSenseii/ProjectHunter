@@ -1,18 +1,16 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Components/StatsManager.h"
-
-#include "PHGameplayTags.h"
+#include "AbilitySystem/Data/AttributeConfigDataAsset.h"
+#include "Library/AttributeStructsLibrary.h"
+#include "Library/PHCharacterStructLibrary.h"
 #include "AbilitySystem/PHAbilitySystemComponent.h"
 #include "Character/PHBaseCharacter.h"
-#include "Library/PHCharacterStructLibrary.h"
 
 namespace
 {
 	constexpr float MinAllowedEffectPeriod = 0.1f;
 }
-
-
 
 DEFINE_LOG_CATEGORY(LogStatsManager);
 
@@ -41,27 +39,27 @@ void UStatsManager::DebugPrintStartupEffects() const
 }
 #endif
 
-
 // Sets default values for this component's properties
 UStatsManager::UStatsManager()
 {
-	// We don't need tick for this component
+	// We don't need a tick for this component
 	PrimaryComponentTick.bCanEverTick = false;
 	
-	// Don't initialize Owner here - it will be null in constructor
+	// Don't initialize Owner here - it will be null in the constructor
 	Owner = nullptr;
 	ASC = nullptr;
-	bIsInitialized = false; // Add this flag to header file
+	bIsInitialized = false;
+	bIsInitializingAttributes = false;
 }
 
 void UStatsManager::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	// Initialize Owner here when component is properly attached
+	// Initialize Owner here when the component is properly attached
 	Owner = GetOwner<APHBaseCharacter>();
 	
-	// Auto-initialize if Owner has ASC ready
+	// Auto-initialize if the Owner has ASC ready
 	if (Owner && Owner->GetAbilitySystemComponent())
 	{
 		InitStatsManager(Cast<UPHAbilitySystemComponent>(Owner->GetAbilitySystemComponent()));
@@ -114,9 +112,6 @@ void UStatsManager::ApplyFlatStatModifier(const FGameplayAttribute& Attr, const 
 	const float CurrentValue = ASC->GetNumericAttribute(Attr);
 	const float NewValue = CurrentValue + InValue;
 
-	// May add later if needed if going - causes issues or to clamp max  
-	// const float ClampedValue = FMath::Clamp(NewValue, 0.f, MaxAllowed);
-
 	ASC->SetNumericAttributeBase(Attr, NewValue);
 }
 
@@ -127,7 +122,6 @@ void UStatsManager::RemoveFlatStatModifier(const FGameplayAttribute& Attribute, 
 	const float CurrentValue = ASC->GetNumericAttribute(Attribute);
 	const float NewValue = CurrentValue - Delta;
 
-	// Optional clamp to prevent negatives if needed
 	ASC->SetNumericAttributeBase(Attribute, NewValue);
 }
 
@@ -164,7 +158,7 @@ void UStatsManager::InitStatsManager(UPHAbilitySystemComponent* InASC)
         return;
     }
 
-    // THIRD: NOW we can validate StartupEffects (after ASC is assigned)
+    // THIRD: Validate StartupEffects
 	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
 	{
 		if (!EffectInfo.EffectClass)
@@ -238,7 +232,11 @@ void UStatsManager::InitStatsManager(UPHAbilitySystemComponent* InASC)
     {
         ApplyPeriodicEffectToSelf(EffectInfo);
     }
+
+#if WITH_EDITOR
 	DebugPrintStartupEffects();
+#endif
+
     bIsInitializingAttributes = false;
     bIsInitialized = true;
     
@@ -287,10 +285,10 @@ void UStatsManager::ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& 
 		return;
 	}
 
-	// Remove existing effect if it exists
+	// Remove the existing effect if it exists
 	if (EffectInfo.SetByCallerTag.IsValid())
 	{
-		RemovePeriodicEffectByTag(EffectInfo.SetByCallerTag); // Use dedicated removal method
+		RemovePeriodicEffectByTag(EffectInfo.SetByCallerTag);
 	}
 
 	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
@@ -327,12 +325,7 @@ void UStatsManager::ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& 
 	
 	FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), ASC);
 
-	if (EffectInfo.SetByCallerTag.IsValid() && Handle.IsValid())
-	{
-		ActivePeriodicEffects.Add(EffectInfo.SetByCallerTag, Handle);
-	}
-
-	 if (Handle.IsValid())
+	if (Handle.IsValid())
     {
         if (EffectInfo.SetByCallerTag.IsValid())
         {
@@ -410,7 +403,6 @@ void UStatsManager::PurgeInvalidPeriodicHandles()
 	}
 }
 
-
 void UStatsManager::RemovePeriodicEffectByTag(FGameplayTag EffectTag)
 {
 	if (!ASC || !EffectTag.IsValid()) return;
@@ -435,7 +427,6 @@ void UStatsManager::RemovePeriodicEffectByTag(FGameplayTag EffectTag)
 	{
 		ActivePeriodicEffects.Remove(EffectTag);
 	}
-
     
 #if WITH_EDITOR
 	if (RemovedCount > 0)
@@ -444,7 +435,6 @@ void UStatsManager::RemovePeriodicEffectByTag(FGameplayTag EffectTag)
 			RemovedCount, *EffectTag.ToString());
 	}
 #endif
-	
 }
 
 void UStatsManager::OnRegenTagChanged(FGameplayTag ChangedTag, int32 NewCount)
@@ -471,8 +461,6 @@ void UStatsManager::OnRegenTagChanged(FGameplayTag ChangedTag, int32 NewCount)
 	}
 }
 
-
-
 void UStatsManager::OnAnyVitalPeriodicStatChanged(const FOnAttributeChangeData& Data)
 {
 	// Prevent recursive calls during initialization
@@ -496,185 +484,191 @@ APHBaseCharacter* UStatsManager::GetOwnerSafe() const
 	return nullptr; 
 }
 
+float UStatsManager::ValidateInitValue(float Value, const FString& AttributeName)
+{
+	if (FMath::IsNaN(Value) || !FMath::IsFinite(Value))
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Invalid init value for %s: %f"), *AttributeName, Value);
+		return 0.0f;
+	}
+	return FMath::Clamp(Value, -9999.0f, 9999.0f);
+}
+
+void UStatsManager::InitializeAttributesFromConfig(const TSubclassOf<UGameplayEffect>& EffectClass, 
+                                                   const TArray<FAttributeInitConfig>& AttributeConfigs,
+                                                   const FString& CategoryName) const
+{
+	if (!EffectClass || !ASC || AttributeConfigs.IsEmpty()) 
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("Cannot initialize %s attributes - invalid parameters"), *CategoryName);
+		return;
+	}
+
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	Context.AddSourceObject(Owner);
+	
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, Context);
+	if (!SpecHandle.IsValid()) 
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Failed to create effect spec for %s attributes"), *CategoryName);
+		return;
+	}
+
+	int32 SetCount = 0;
+	int32 SkippedCount = 0;
+	
+	for (const FAttributeInitConfig& Config : AttributeConfigs)
+	{
+		// Skip disabled attributes
+		if (!Config.bEnabled)
+		{
+			SkippedCount++;
+			continue;
+		}
+		
+		if (!Config.AttributeTag.IsValid())
+		{
+			UE_LOG(LogStatsManager, Warning, TEXT("Invalid tag in %s config: %s"), 
+				   *CategoryName, *Config.DisplayName);
+			SkippedCount++;
+			continue;
+		}
+
+		// Validate and clamp the value
+		float ClampedValue = FMath::Clamp(Config.DefaultValue, Config.MinValue, Config.MaxValue);
+		ClampedValue = ValidateInitValue(ClampedValue, Config.DisplayName);
+		
+		// Set the magnitude
+		SpecHandle.Data->SetSetByCallerMagnitude(Config.AttributeTag, ClampedValue);
+		SetCount++;
+		
+		UE_LOG(LogStatsManager, Verbose, TEXT("Set %s.%s = %.2f (range: %.1f-%.1f)"), 
+			   *CategoryName, *Config.DisplayName, ClampedValue, Config.MinValue, Config.MaxValue);
+	}
+
+	// Apply the effect if we set any values
+	if (SetCount > 0)
+	{
+		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+		UE_LOG(LogStatsManager, Log, TEXT("Applied %s attributes: %d set, %d skipped"), 
+			   *CategoryName, SetCount, SkippedCount);
+	}
+	else
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("No valid %s attributes to apply"), *CategoryName);
+	}
+}
+
+void UStatsManager::ApplyLevelScalingToConfig() const
+{
+	if (!AttributeConfig || MobLevel <= 1) return;
+
+	float HealthScaling = 1.0f + (0.15f * (MobLevel - 1)); // 15% HP per level
+	float DamageScaling = 1.0f + (0.10f * (MobLevel - 1)); // 10% damage per level
+	
+	// Apply scaling to specific attributes
+	for (FAttributeInitConfig& Config : AttributeConfig->VitalAttributes)
+	{
+		if (Config.AttributeTag.MatchesTag(FGameplayTag::RequestGameplayTag("Attributes.Vital.Health")))
+		{
+			Config.DefaultValue *= HealthScaling;
+		}
+	}
+
+	for (FAttributeInitConfig& Config : AttributeConfig->PrimaryAttributes) 
+	{
+		if (Config.AttributeTag.MatchesTag(FGameplayTag::RequestGameplayTag("Attributes.Primary.Strength")))
+		{
+			Config.DefaultValue *= DamageScaling;
+		}
+	}
+}
+
 void UStatsManager::InitializeDefaultAttributes()
 {
-    check(Owner);
-    if (!IsValid(ASC)) return;
+	check(Owner);
+	if (!IsValid(ASC)) return;
+	
+	bIsInitializingAttributes = true;
 
-    auto ValidateInitValue = [](float Value, const FString& Name) -> float
-    {
-        if (FMath::IsNaN(Value) || !FMath::IsFinite(Value))
-        {
-            UE_LOG(LogStatsManager, Error, TEXT("Invalid init value for %s: %f"), *Name, Value);
-            return 0.0f;
-        }
-        return FMath::Clamp(Value, -9999.0f, 9999.0f);
-    };
-    
-    FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-    Context.AddSourceObject(Owner);
+	if (AttributeConfig)
+	{
+		// Apply level scaling to mob configs if needed
+		if (MobLevel > 1)
+		{
+			ApplyLevelScalingToConfig();
+		}
 
-    const auto& PHTags = FPHGameplayTags::Get();
+		// Use the data asset configuration
+		InitializeAttributesFromConfig(DefaultPrimaryAttributes, AttributeConfig->PrimaryAttributes, TEXT("Primary"));
+		
+		// Apply max attributes first (they set the caps)
+		ApplyEffectToSelf(DefaultSecondaryMaxAttributes, 1.0f);
+		
+		// Then apply current secondary attributes
+		InitializeAttributesFromConfig(DefaultSecondaryCurrentAttributes, AttributeConfig->SecondaryAttributes, TEXT("Secondary"));
+		
+		// Finally, apply vital attributes
+		InitializeAttributesFromConfig(DefaultVitalAttributes, AttributeConfig->VitalAttributes, TEXT("Vital"));
+	}
+	else
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("No AttributeConfig asset assigned for %s!"), *Owner->GetName());
+	}
 
-    // === PRIMARY ATTRIBUTES ===
-    FGameplayEffectSpecHandle PrimarySpec = ASC->MakeOutgoingSpec(DefaultPrimaryAttributes, 1.0f, Context);
-    if (PrimarySpec.IsValid())
-    {
-        PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Strength, 
-            ValidateInitValue(PrimaryInitAttributes.Strength, TEXT("Strength")));
-        PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Intelligence, 
-            ValidateInitValue(PrimaryInitAttributes.Intelligence, TEXT("Intelligence")));
-        PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Dexterity, 
-            ValidateInitValue(PrimaryInitAttributes.Dexterity, TEXT("Dexterity")));
-        PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Endurance, 
-            ValidateInitValue(PrimaryInitAttributes.Endurance, TEXT("Endurance")));
-        PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Affliction, 
-            ValidateInitValue(PrimaryInitAttributes.Affliction, TEXT("Affliction")));
-        PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Luck, 
-            ValidateInitValue(PrimaryInitAttributes.Luck, TEXT("Luck")));
-        PrimarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Primary_Covenant, 
-            ValidateInitValue(PrimaryInitAttributes.Covenant, TEXT("Covenant")));
+	bIsInitializingAttributes = false;
+	UE_LOG(LogStatsManager, Log, TEXT("Attributes initialized for %s (Level: %d)"), *Owner->GetName(), MobLevel);
+}
 
-        ASC->ApplyGameplayEffectSpecToSelf(*PrimarySpec.Data);
-    }
+void UStatsManager::InitializeMobAttributesAtLevel(int32 Level)
+{
+	if (!Owner || !ASC) return;
 
-    // === SECONDARY MAX ATTRIBUTES (Caps / Limits) ===
-    FGameplayEffectSpecHandle SecondaryMaxSpec = ASC->MakeOutgoingSpec(DefaultSecondaryMaxAttributes, 1.0f, Context);
-    if (SecondaryMaxSpec.IsValid())
-    {
-        ASC->ApplyGameplayEffectSpecToSelf(*SecondaryMaxSpec.Data);
-    }
+	// Calculate scaling factors
+	float LevelMultiplier = 1.0f + (0.15f * (Level - 1)); // 15% per level
+	float EliteMultiplier = bIsElite ? 1.5f : 1.0f; // 50% more of elite
+	float FinalMultiplier = LevelMultiplier * DifficultyMultiplier * EliteMultiplier;
 
-    // === SECONDARY ATTRIBUTES (Rates, Amounts, Resistances, Bonuses) ===
-    FGameplayEffectSpecHandle SecondarySpec = ASC->MakeOutgoingSpec(DefaultSecondaryCurrentAttributes, 1.0f, Context);
-    if (SecondarySpec.IsValid())
-    {
-        // Vital Regen Rates
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_HealthRegenRate, 
-            ValidateInitValue(SecondaryInitAttributes.HealthRegenRate, TEXT("HealthRegenRate")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ManaRegenRate, 
-            ValidateInitValue(SecondaryInitAttributes.ManaRegenRate, TEXT("ManaRegenRate")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_StaminaRegenRate, 
-            ValidateInitValue(SecondaryInitAttributes.StaminaRegenRate, TEXT("StaminaRegenRate")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ArcaneShieldRegenRate, 
-            ValidateInitValue(SecondaryInitAttributes.ArcaneShieldRegenRate, TEXT("ArcaneShieldRegenRate")));
+	if (AttributeConfig)
+	{
+		// Copy config arrays so we can modify them
+		TArray<FAttributeInitConfig> ModifiedPrimary = AttributeConfig->PrimaryAttributes;
+		TArray<FAttributeInitConfig> ModifiedSecondary = AttributeConfig->SecondaryAttributes;
+		TArray<FAttributeInitConfig> ModifiedVital = AttributeConfig->VitalAttributes;
 
-        // Vital Regen Amounts
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_HealthRegenAmount, 
-            ValidateInitValue(SecondaryInitAttributes.HealthRegenAmount, TEXT("HealthRegenAmount")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ManaRegenAmount, 
-            ValidateInitValue(SecondaryInitAttributes.ManaRegenAmount, TEXT("ManaRegenAmount")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_StaminaRegenAmount, 
-            ValidateInitValue(SecondaryInitAttributes.StaminaRegenAmount, TEXT("StaminaRegenAmount")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ArcaneShieldRegenAmount, 
-            ValidateInitValue(SecondaryInitAttributes.ArcaneShieldRegenAmount, TEXT("ArcaneShieldRegenAmount")));
+		// Apply scaling to health and damage
+		for (FAttributeInitConfig& Config : ModifiedVital)
+		{
+			if (Config.AttributeTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("Attributes.Vital.Health")))
+			{
+				Config.DefaultValue = FMath::RoundToInt(Config.DefaultValue * FinalMultiplier);
+			}
+		}
 
-        // Flat Reserved Amounts
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_HealthFlatReservedAmount, 
-            ValidateInitValue(SecondaryInitAttributes.FlatReservedHealth, TEXT("FlatReservedHealth")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ManaFlatReservedAmount, 
-            ValidateInitValue(SecondaryInitAttributes.FlatReservedMana, TEXT("FlatReservedMana")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_StaminaFlatReservedAmount, 
-            ValidateInitValue(SecondaryInitAttributes.FlatReservedStamina, TEXT("FlatReservedStamina")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ArcaneShieldFlatReservedAmount, 
-            ValidateInitValue(SecondaryInitAttributes.FlatReservedArcaneShield, TEXT("FlatReservedArcaneShield")));
+		for (FAttributeInitConfig& Config : ModifiedPrimary)
+		{
+			if (Config.AttributeTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("Attributes.Primary.Strength")))
+			{
+				Config.DefaultValue = FMath::RoundToInt(Config.DefaultValue * (1.0f + (0.10f * (Level - 1))));
+			}
+		}
 
-        // Percentage Reserved
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_HealthPercentageReserved, 
-            ValidateInitValue(SecondaryInitAttributes.PercentageReservedHealth, TEXT("PercentageReservedHealth")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ManaPercentageReserved, 
-            ValidateInitValue(SecondaryInitAttributes.PercentageReservedMana, TEXT("PercentageReservedMana")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_StaminaPercentageReserved, 
-            ValidateInitValue(SecondaryInitAttributes.PercentageReservedStamina, TEXT("PercentageReservedStamina")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ArcaneShieldPercentageReserved, 
-            ValidateInitValue(SecondaryInitAttributes.PercentageReservedArcaneShield, TEXT("PercentageReservedArcaneShield")));
+		// Apply the scaled attributes
+		bIsInitializingAttributes = true;
+		InitializeAttributesFromConfig(DefaultPrimaryAttributes, ModifiedPrimary, TEXT("Primary"));
+		ApplyEffectToSelf(DefaultSecondaryMaxAttributes, 1.0f);
+		InitializeAttributesFromConfig(DefaultSecondaryCurrentAttributes, ModifiedSecondary, TEXT("Secondary"));
+		InitializeAttributesFromConfig(DefaultVitalAttributes, ModifiedVital, TEXT("Vital"));
+		bIsInitializingAttributes = false;
 
-        // Flat Resistances
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_FireResistanceFlat, 
-            ValidateInitValue(SecondaryInitAttributes.FireResistanceFlat, TEXT("FireResistanceFlat")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_IceResistanceFlat, 
-            ValidateInitValue(SecondaryInitAttributes.IceResistanceFlat, TEXT("IceResistanceFlat")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_LightningResistanceFlat, 
-            ValidateInitValue(SecondaryInitAttributes.LightningResistanceFlat, TEXT("LightningResistanceFlat")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_LightResistanceFlat, 
-            ValidateInitValue(SecondaryInitAttributes.LightResistanceFlat, TEXT("LightResistanceFlat")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_CorruptionResistanceFlat, 
-            ValidateInitValue(SecondaryInitAttributes.CorruptionResistanceFlat, TEXT("CorruptionResistanceFlat")));
-
-        // Percentage Resistances
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_FireResistancePercentage, 
-            ValidateInitValue(SecondaryInitAttributes.FireResistancePercent, TEXT("FireResistancePercent")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_IceResistancePercentage, 
-            ValidateInitValue(SecondaryInitAttributes.IceResistancePercent, TEXT("IceResistancePercent")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_LightningResistancePercentage, 
-            ValidateInitValue(SecondaryInitAttributes.LightningResistancePercent, TEXT("LightningResistancePercent")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_LightResistancePercentage, 
-            ValidateInitValue(SecondaryInitAttributes.LightResistancePercent, TEXT("LightResistancePercent")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_CorruptionResistancePercentage, 
-            ValidateInitValue(SecondaryInitAttributes.CorruptionResistancePercent, TEXT("CorruptionResistancePercent")));
-
-        // Misc Stats
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Money_Gems, 
-            ValidateInitValue(SecondaryInitAttributes.Gems, TEXT("Gems")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_LifeLeech, 
-            ValidateInitValue(SecondaryInitAttributes.LifeLeech, TEXT("LifeLeech")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_ManaLeech, 
-            ValidateInitValue(SecondaryInitAttributes.ManaLeech, TEXT("ManaLeech")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_MovementSpeed, 
-            ValidateInitValue(SecondaryInitAttributes.MovementSpeed, TEXT("MovementSpeed")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_CritChance, 
-            ValidateInitValue(SecondaryInitAttributes.CritChance, TEXT("CritChance")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_CritMultiplier, 
-            ValidateInitValue(SecondaryInitAttributes.CritMultiplier, TEXT("CritMultiplier")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_Poise, 
-            ValidateInitValue(SecondaryInitAttributes.Poise, TEXT("Poise")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_StunRecovery, 
-            ValidateInitValue(SecondaryInitAttributes.StunRecovery, TEXT("StunRecovery")));
-
-        // Max Vital Regen Rates
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxHealthRegenRate, 
-            ValidateInitValue(SecondaryInitAttributes.HealthRegenRate, TEXT("MaxHealthRegenRate")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxManaRegenRate, 
-            ValidateInitValue(SecondaryInitAttributes.ManaRegenRate, TEXT("MaxManaRegenRate")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxStaminaRegenRate, 
-            ValidateInitValue(SecondaryInitAttributes.StaminaRegenRate, TEXT("MaxStaminaRegenRate")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxArcaneShieldRegenRate, 
-            ValidateInitValue(SecondaryInitAttributes.ArcaneShieldRegenRate, TEXT("MaxArcaneShieldRegenRate")));
-
-        // Max Vital Regen Amounts
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxHealthRegenAmount, 
-            ValidateInitValue(SecondaryInitAttributes.HealthRegenAmount, TEXT("MaxHealthRegenAmount")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxManaRegenAmount, 
-            ValidateInitValue(SecondaryInitAttributes.ManaRegenAmount, TEXT("MaxManaRegenAmount")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxStaminaRegenAmount, 
-            ValidateInitValue(SecondaryInitAttributes.StaminaRegenAmount, TEXT("MaxStaminaRegenAmount")));
-        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxArcaneShieldRegenAmount, 
-            ValidateInitValue(SecondaryInitAttributes.ArcaneShieldRegenAmount, TEXT("MaxArcaneShieldRegenAmount")));
-
-    	
-
-        ASC->ApplyGameplayEffectSpecToSelf(*SecondarySpec.Data);
-
-
-
-    }
-
-    // === STARTING CURRENT HEALTH / MANA / STAMINA ===
-    FGameplayEffectSpecHandle VitalSpec = ASC->MakeOutgoingSpec(DefaultVitalAttributes, 1.0f, Context);
-    if (VitalSpec.IsValid())
-    {
-        VitalSpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Vital_Health, 
-            ValidateInitValue(VitalInitAttributes.Health, TEXT("Health")));
-        VitalSpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Vital_Mana, 
-            ValidateInitValue(VitalInitAttributes.Mana, TEXT("Mana")));
-        VitalSpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Vital_Stamina, 
-            ValidateInitValue(VitalInitAttributes.Stamina, TEXT("Stamina")));
-
-        ASC->ApplyGameplayEffectSpecToSelf(*VitalSpec.Data);
-    }
-
-    UE_LOG(LogStatsManager, Log, TEXT("Attributes initialized successfully for %s"), 
-        *Owner->GetName());
+		UE_LOG(LogStatsManager, Log, TEXT("Mob %s: Level=%d, Elite=%s, Multiplier=%.2fx"), 
+			   *Owner->GetName(), Level, bIsElite ? TEXT("Yes") : TEXT("No"), FinalMultiplier);
+	}
+	else
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("No AttributeConfig for mob level initialization!"));
+		InitializeDefaultAttributes();
+	}
 }
 
 void UStatsManager::ReapplyAllStartupRegenEffects()
@@ -689,4 +683,3 @@ void UStatsManager::ReapplyAllStartupRegenEffects()
 		}
 	}
 }
-

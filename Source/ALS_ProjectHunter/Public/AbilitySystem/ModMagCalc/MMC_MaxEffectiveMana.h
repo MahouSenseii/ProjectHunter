@@ -21,6 +21,8 @@ public:
 
 private:
 
-	FGameplayEffectAttributeCaptureDefinition MaxManaDef;
-	FGameplayEffectAttributeCaptureDefinition ReservedAmountDef;
+
+	mutable FGameplayEffectAttributeCaptureDefinition MaxManaDef;
+	mutable FGameplayEffectAttributeCaptureDefinition ReservedAmountDef;
+
 };

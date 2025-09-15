@@ -70,6 +70,7 @@ public:
 	/** Refreshes the UI grid by reloading all items */
 	UFUNCTION(BlueprintCallable)
 	void Refresh();
+	void UpdateItemWidgetPosition(UItemWidget* ItemWidget, const FTile& TopLeftTile) const;
 
 	/** Adds an item to the grid at a specified tile */
 	void AddItemToGrid(UBaseItem* Item, const FTile TopLeftTile);
@@ -157,8 +158,8 @@ public:
 	static void HandleFailedTransaction(UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer);
 
 	/** Finds the owner of an item and its associated inventory */
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	UInventoryManager* FindOwners(UBaseItem* Item, UInventoryManager*& Other) const;
+	/*UFUNCTION(BlueprintCallable, BlueprintPure)
+	UInventoryManager* FindOwners(UBaseItem* Item, UInventoryManager*& Other) const;*/
 
 
 	void BuyFromAnotherID();

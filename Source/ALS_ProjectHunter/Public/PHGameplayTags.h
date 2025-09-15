@@ -20,7 +20,8 @@ public:
 
 	/** Initializes all native gameplay tags. */
 	static void InitializeNativeGameplayTags();
-
+	static void EnsureStatusEffectAttributesRegistered();
+	static void InitRegister();
 	static void RegisterPrimaryAttributes();
     static void RegisterSecondaryVitals();
     static void RegisterDamageTags();
@@ -40,6 +41,7 @@ public:
 	static void RegisterAllAttributes();
 	static void RegisterAllAttribute();
 
+	
 	/* ========================== */
 	/* === Primary Attributes === */
 	/* ========================== */
@@ -252,6 +254,7 @@ public:
 	static FGameplayTag Condition_RecentlyHit;
 	static FGameplayTag Condition_RecentlyCrit;
 	static FGameplayTag Condition_RecentlyBlocked;
+	static FGameplayTag Condition_RecentlyReflected;
 	static FGameplayTag Condition_TakingDamage;
 	static FGameplayTag Condition_DealingDamage;
 	static FGameplayTag Condition_RecentlyUsedSkill;
@@ -305,6 +308,7 @@ public:
 	static FGameplayTag Condition_Self_CannotHealHPAbove50Percent;
 	static FGameplayTag Condition_Self_CannotHealStamina50Percent;
 	static FGameplayTag Condition_Self_CannotHealMana50Percent;
+	static FGameplayTag Condition_Self_LowArcaneShield;
 	static FGameplayTag Condition_Self_ZeroArcaneShield;
 
 	/* === Ailment & Status Effects (Target) === */
@@ -368,6 +372,5 @@ public:
 
 
 private:
-	/** Singleton instance */
 	static FPHGameplayTags GameplayTags;
 };

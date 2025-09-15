@@ -42,3 +42,4 @@ float UMMC_MaxEffectiveStamina::CalculateBaseMagnitude_Implementation(const FGam
 
 	return MaxHealth - ReservedAmount ;
 }
+
