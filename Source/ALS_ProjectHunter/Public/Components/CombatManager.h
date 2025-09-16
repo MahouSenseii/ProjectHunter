@@ -1,4 +1,4 @@
-// CombatManager.h
+// Copyright@2024 Quentin Davis 
 #pragma once
 
 #include "CoreMinimal.h"

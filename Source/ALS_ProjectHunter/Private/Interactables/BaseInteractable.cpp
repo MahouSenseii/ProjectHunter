@@ -238,7 +238,7 @@ UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 			if(CastController->InteractionManager)
 			{
 				CastController->InteractionManager->RemoveFromInteractionList(InteractableManager);
-				CastController->InteractionManager->RemoveInteractionFromCurrent(InteractableManager);
+				CastController->InteractionManager->RemoveFromInteractionList(InteractableManager);
 			}
 		}
 	}

@@ -24,6 +24,7 @@ class AALSPlayerController;
 /**
  * Handles interactables and manages interaction behavior.
  */
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UInteractableManager : public UActorComponent
 {

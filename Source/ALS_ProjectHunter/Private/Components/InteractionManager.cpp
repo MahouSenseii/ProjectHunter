@@ -1,456 +1,433 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
+// InteractionManager.cpp - CORRECTED VERSION
 #include "Components/InteractionManager.h"
-
 #include "Character/PHBaseCharacter.h"
-#include "Math/Vector.h"
-#include "Components/InteractableManager.h"
 #include "Character/Player/PHPlayerController.h"
+#include "Components/InteractableManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Library/FL_InteractUtility.h"
-
-
-struct FSpatialHash
-{
-	TMap<FIntPoint, TArray<UInteractableManager*>> Grid;
-	float CellSize = 200.0f; // Adjust based on your interaction range
-    
-	FIntPoint GetCell(const FVector& Location)
-	{
-		return FIntPoint(
-			FMath::FloorToInt(Location.X / CellSize),
-			FMath::FloorToInt(Location.Y / CellSize)
-		);
-	}
-    
-	void Add(UInteractableManager* Interactable)
-	{
-		FIntPoint Cell = GetCell(Interactable->GetOwner()->GetActorLocation());
-		Grid.FindOrAdd(Cell).Add(Interactable);
-	}
-    
-	void Remove(UInteractableManager* Interactable)
-	{
-		FIntPoint Cell = GetCell(Interactable->GetOwner()->GetActorLocation());
-		if (auto* CellArray = Grid.Find(Cell))
-		{
-			CellArray->Remove(Interactable);
-			if (CellArray->Num() == 0)
-			{
-				Grid.Remove(Cell);
-			}
-		}
-	}
-    
-	TArray<UInteractableManager*> GetNearby(const FVector& Location, float Radius)
-	{
-		TArray<UInteractableManager*> Result;
-		int32 CellRadius = FMath::CeilToInt(Radius / CellSize);
-		FIntPoint CenterCell = GetCell(Location);
-        
-		// Check all cells that could contain items within radius
-		for (int32 X = -CellRadius; X <= CellRadius; X++)
-		{
-			for (int32 Y = -CellRadius; Y <= CellRadius; Y++)
-			{
-				FIntPoint Cell(CenterCell.X + X, CenterCell.Y + Y);
-				if (auto* CellArray = Grid.Find(Cell))
-				{
-					Result.Append(*CellArray);
-				}
-			}
-		}
-        
-		return Result;
-	}
-};
-
 
 DEFINE_LOG_CATEGORY(LogInteract);
-// Sets default values for this component's properties
-UInteractionManager::UInteractionManager(): LastLookDirection()
+
+// FSpatialGrid Implementation
+void FSpatialGrid::Add(UInteractableManager* Interactable)
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = false;
-	// ...
+    if (!Interactable || !Interactable->GetOwner()) return;
+    
+    FIntPoint Cell = GetCell(Interactable->GetOwner()->GetActorLocation());
+    Grid.FindOrAdd(Cell).Add(Interactable);
 }
 
+void FSpatialGrid::Remove(UInteractableManager* Interactable)
+{
+    if (!Interactable || !Interactable->GetOwner()) return;
+    
+    FIntPoint Cell = GetCell(Interactable->GetOwner()->GetActorLocation());
+    if (auto* CellArray = Grid.Find(Cell))
+    {
+        CellArray->Remove(Interactable);
+        if (CellArray->Num() == 0)
+        {
+            Grid.Remove(Cell);
+        }
+    }
+}
+
+void FSpatialGrid::Move(UInteractableManager* Interactable, const FVector& OldLocation, const FVector& NewLocation)
+{
+    FIntPoint OldCell = GetCell(OldLocation);
+    FIntPoint NewCell = GetCell(NewLocation);
+    
+    if (OldCell != NewCell)
+    {
+        // Remove from old cell
+        if (auto* OldCellArray = Grid.Find(OldCell))
+        {
+            OldCellArray->Remove(Interactable);
+            if (OldCellArray->Num() == 0)
+            {
+                Grid.Remove(OldCell);
+            }
+        }
+        
+        // Add to a new cell
+        Grid.FindOrAdd(NewCell).Add(Interactable);
+    }
+}
+
+TArray<UInteractableManager*> FSpatialGrid::GetNearby(const FVector& Location, float Radius) const
+{
+    TArray<UInteractableManager*> Result;
+    
+    const int32 CellRadius = FMath::CeilToInt(Radius / CellSize);
+    const FIntPoint CenterCell = GetCell(Location);
+    
+    // Pre-allocate based on estimated cell count
+    const int32 EstimatedCells = (CellRadius * 2 + 1) * (CellRadius * 2 + 1);
+    Result.Reserve(EstimatedCells * 5); // Estimate 5 items per cell
+    
+    for (int32 X = -CellRadius; X <= CellRadius; X++)
+    {
+        for (int32 Y = -CellRadius; Y <= CellRadius; Y++)
+        {
+            const FIntPoint Cell(CenterCell.X + X, CenterCell.Y + Y);
+            if (const auto* CellArray = Grid.Find(Cell))
+            {
+                Result.Append(*CellArray);
+            }
+        }
+    }
+    
+    return Result;
+}
+
+// UInteractionManager Implementation
+UInteractionManager::UInteractionManager(): CachedPlayerLocation(), CachedLookDirection(), LastLookDirection()
+{
+    PrimaryComponentTick.bCanEverTick = false;
+
+    // Pre-allocate arrays for performance
+    CandidateCache.Reserve(50);
+    NearbyCache.Reserve(100);
+}
 
 void UInteractionManager::BeginPlay()
 {
-	Super::BeginPlay();
-	ScheduleNextUpdate();
-
+    Super::BeginPlay();
+    
+    // Initialize controller and cache camera manager
+    OwnerController = Cast<APHPlayerController>(GetOwner());
+    if (OwnerController)
+    {
+        // Cache camera manager for performance
+        CachedCamera = OwnerController->PlayerCameraManager;
+    }
+    
+    // Configure spatial grid
+    SpatialGrid.CellSize = SpatialGridCellSize;
+    
+    ScheduleNextUpdate();
 }
 
 void UInteractionManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::EndPlay(EndPlayReason);
+    Super::EndPlay(EndPlayReason);
     
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().ClearTimer(UpdateInteractionTimerHandle);
-	}
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(UpdateTimerHandle);
+    }
 }
 
 void UInteractionManager::ScheduleNextUpdate()
 {
-	// Adapt update rate based on number of nearby interactables
-	float UpdateInterval = 0.1f; // Default
+    float UpdateInterval; // Default
     
-	if (InteractableList.Num() == 0)
-	{
-		UpdateInterval = 0.5f; // Slow when nothing around
-	}
-	else if (InteractableList.Num() < 3)
-	{
-		UpdateInterval = 0.15f; // Moderate for few items
-	}
-	else if (InteractableList.Num() < 10)
-	{
-		UpdateInterval = 0.1f; // Normal for several items
-	}
-	else
-	{
-		UpdateInterval = 0.05f; // Fast for many items (high density loot)
-	}
+    // Adaptive timing based on nearby item count
+    const int32 NearbyCount = bUseSpatialPartitioning ? 
+        SpatialGrid.GetNearby(CachedPlayerLocation, InteractMaxDistance * 1.5f).Num() :
+        InteractableList.Num();
     
-	GetWorld()->GetTimerManager().SetTimer(
-		UpdateInteractionTimerHandle,
-		this,
-		&UInteractionManager::UpdateInteractionAdaptive,
-		UpdateInterval,
-		false // Non-looping, we'll reschedule each time
-	);
+    if (NearbyCount == 0)
+    {
+        UpdateInterval = 0.5f; // Very slow when nothing around
+    }
+    else if (NearbyCount < 5)
+    {
+        UpdateInterval = 0.2f; // Moderate for a few items
+    }
+    else if (NearbyCount < 15)
+    {
+        UpdateInterval = 0.1f; // Normal for several items
+    }
+    else
+    {
+        UpdateInterval = 0.05f; // Fast for high density
+    }
+    
+    GetWorld()->GetTimerManager().SetTimer(
+        UpdateTimerHandle,
+        this,
+        &UInteractionManager::UpdateInteractionOptimized,
+        UpdateInterval,
+        false
+    );
 }
 
-void UInteractionManager::UpdateInteractionAdaptive()
+void UInteractionManager::UpdateInteractionOptimized()
 {
-	UpdateInteraction();
-	ScheduleNextUpdate(); 
+    // Cache player data once per update
+    CachePlayerData();
+    
+    // Check if an update is needed
+    if (ShouldUpdateInteraction())
+    {
+        AssignCurrentInteraction();
+    }
+    
+    ScheduleNextUpdate();
 }
 
-
-// Determines whether interaction should be updated and updates if needed.
-void UInteractionManager::UpdateInteraction()
+void UInteractionManager::CachePlayerData()
 {
-	// Lazy initialization of controller
-	if (!OwnerController)
-	{
-		OwnerController = Cast<APHPlayerController>(GetOwner());
-		if (!OwnerController) return;
-	}
+    if (!IsValidForInteraction()) return;
     
-	bool bShouldUpdate = false;
+    const APHBaseCharacter* Character = Cast<APHBaseCharacter>(OwnerController->PossessedCharacter);
+    CachedPlayerLocation = Character->GetActorLocation();
     
-	// Check 1: Has the list changed? (using version counter instead of copying array)
-	if (CurrentListVersion != LastListVersion)
-	{
-		LastListVersion = CurrentListVersion;
-		bShouldUpdate = true;
-		UE_LOG(LogInteract, Verbose, TEXT("Interactable list changed"));
-	}
-    
-	// Check 2: Is the player looking in a different direction? (critical for high item density)
-	if (!bShouldUpdate && OwnerController->PossessedCharacter)
-	{
-		// Get current look direction (camera forward vector)
-		FVector CurrentLookDirection;
-		if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(OwnerController->PossessedCharacter))
-		{
-			CurrentLookDirection = Character->GetCamera()->GetActorForwardVector();
-		}
-		else
-		{
-			CurrentLookDirection = OwnerController->PossessedCharacter->GetActorForwardVector();
-		}
-        
-		// Check if look direction changed enough to matter
-		float DotProduct = FVector::DotProduct(CurrentLookDirection, LastLookDirection);
-		if (DotProduct < LookSensitivity) // Player looked away enough
-		{
-			bShouldUpdate = true;
-			LastLookDirection = CurrentLookDirection;
-			UE_LOG(LogInteract, Verbose, TEXT("Player look direction changed (dot: %.3f)"), DotProduct);
-		}
-	}
-    
-	// Perform the update if needed
-	if (bShouldUpdate && ShouldUpdateInteraction())
-	{
-		AssignCurrentInteraction();
-	}
+    // Use cached camera manager reference
+    if (CachedCamera)
+    {
+        CachedLookDirection = CachedCamera->GetActorForwardVector();
+    }
+    else
+    {
+        CachedLookDirection = Character->GetActorForwardVector();
+    }
 }
 
-// Sets the current interactable object. If the new interactable differs from the current,
-// the interaction with the current is removed, and the new interactable is set.
-// Useful for managing interactions in networked multiplayer scenarios and accessible via Blueprints.
-void UInteractionManager::SetCurrentInteraction(UInteractableManager* NewInteractable)
+bool UInteractionManager::ShouldUpdateInteraction()
 {
-	// Log the attempt to set a new interactable
-	UE_LOG(LogInteract, Warning, TEXT("Setting Current Interaction"));
-
-	// If the new interactable is the same as the current, no action is needed
-	if (NewInteractable == CurrentInteractable)
-	{
-		UE_LOG(LogInteract, Warning, TEXT("New and Current Interactables are the same. No change needed."));
-		return;
-	}
-
-	// Remove interaction from the current interactable, if it exists
-	if (IsValid(CurrentInteractable))
-	{
-		RemoveInteractionFromCurrent(CurrentInteractable);
-		UE_LOG(LogInteract, Warning, TEXT("Removed Interaction from Current Interactable"));
-	}
-
-	// Update to the new interactable and add interaction if valid
-	CurrentInteractable = NewInteractable;
-	if (IsValid(CurrentInteractable))
-	{
-		AddInteraction(CurrentInteractable);
-		UE_LOG(LogInteract, Warning, TEXT("Added Interaction to New Interactable"));
-	}
-}
-
-
-
-void UInteractionManager::AddInteraction(UInteractableManager* Interactable)
-{
-	if (IsValid(Interactable))
-	{
-		if(CurrentInteractable != Interactable)
-		{
-			// Optionally remove previous interaction; can be conditional based on your requirements
-			OnRemoveCurrentInteractable.Broadcast(CurrentInteractable);
-
-		}
-				
-		// Highlight the new interactable object, assuming OwnerCharacter and its Controller are always valid
-		Interactable->ToggleHighlight(true, OwnerController);
-		
-		// Set the current interactable object
-		CurrentInteractable = Interactable;
-		OnNewInteractableAssigned.Broadcast(Interactable);
-	}
-	
-}
-
-
-
-
-
-
-/**
- * Find the maximum value and its index in a given array of floats.
- *
- * @param FloatArray - The array of floats to search through.
- * @param OutMaxValue - The maximum value found, or -FLT_MAX if array is empty.
- * @param OutMaxIndex - The index of the maximum value, or -1 if array is empty.
- */
-
-void UInteractionManager::MaxOfFloatArray(const TArray<float>& FloatArray, float& OutMaxValue, int32& OutMaxIndex)
-{
-	// Check if the float array is empty, and if so, return defaults
-	if (FloatArray.Num() == 0)
-	{
-		OutMaxValue = -FLT_MAX;
-		OutMaxIndex = -1;
-		return;
-	}
-
-	// Initialize maximum value and index to the first element in the array
-	OutMaxValue = FloatArray[0];
-	OutMaxIndex = 0;
-
-	// Loop through each element in the float array to find the maximum value and its index
-	for (int32 Index = 0; Index < FloatArray.Num(); ++Index)
-	{
-		if (const float& Value = FloatArray[Index]; Value >= OutMaxValue)
-		{
-			OutMaxValue = Value;
-			OutMaxIndex = Index;
-			UE_LOG(LogInteract, Warning, TEXT("New maximum value found: %f at index %d."), OutMaxValue, OutMaxIndex);
-		}
-	}
-}
-
-bool UInteractionManager::IsValidForInteraction() const
-{
-	// Check if we have a valid controller
-	if (!IsValid(OwnerController))
-	{
-		UE_LOG(LogInteract, Warning, TEXT("IsValidForInteraction: OwnerController is invalid"));
-		return false;
-	}
+    if (!IsValidForInteraction()) return false;
     
-	// Check if controller has a possessed character
-	if (!IsValid(OwnerController->PossessedCharacter))
-	{
-		UE_LOG(LogInteract, Warning, TEXT("IsValidForInteraction: PossessedCharacter is invalid"));
-		return false;
-	}
+    const APHBaseCharacter* Character = Cast<APHBaseCharacter>(OwnerController->PossessedCharacter);
     
-	// Optional: Check if character is in a valid state for interaction
-	APHBaseCharacter* Character = Cast<APHBaseCharacter>(OwnerController->PossessedCharacter);
-	if (!Character)
-	{
-		UE_LOG(LogInteract, Warning, TEXT("IsValidForInteraction: Failed to cast to PHBaseCharacter"));
-		return false;
-	}
-	
-	return true;
+    // Don't update if falling
+    if (Character->GetCharacterMovement()->IsFalling()) return false;
+    
+    // Check if a list version changed
+    if (CurrentListVersion != LastListVersion)
+    {
+        LastListVersion = CurrentListVersion;
+        return true;
+    }
+    
+    // Check if you look a direction changed significantly
+    const float DotProduct = FVector::DotProduct(CachedLookDirection, LastLookDirection);
+    if (DotProduct < LookSensitivity)
+    {
+        LastLookDirection = CachedLookDirection;
+        return true;
+    }
+    
+    return false;
 }
 
 void UInteractionManager::AssignCurrentInteraction()
 {
-	    if (!IsValidForInteraction()) return;
-
-    const APHBaseCharacter* OwnerPawn = Cast<APHBaseCharacter>(OwnerController->PossessedCharacter);
-    const FVector OwnerLocation = OwnerPawn->GetActorLocation();
-    const FVector OwnerForward = OwnerPawn->GetCamera()->GetActorForwardVector();
+    if (!IsValidForInteraction()) return;
     
-    // Early filtering for performance with many items
-    TArray<UInteractableManager*> CandidateInteractables;
-    CandidateInteractables.Reserve(InteractableList.Num());
+    // Clear candidate cache
+    CandidateCache.Reset();
     
-    // First pass: Quick distance culling
-    const float MaxDistanceSq = FMath::Square(InteractMaxDistance > 0.f ? InteractMaxDistance : 800.f);
-    
-    for (UInteractableManager* Interactable : InteractableList)
+    // Get nearby interactables using spatial partitioning
+    if (bUseSpatialPartitioning)
     {
-        if (!IsValid(Interactable) || !Interactable->IsInteractable)
-            continue;
-            
-        // Quick distance check (squared to avoid sqrt)
-        float DistanceSq = FVector::DistSquared(OwnerLocation, Interactable->GetOwner()->GetActorLocation());
-        if (DistanceSq <= MaxDistanceSq)
-        {
-            CandidateInteractables.Add(Interactable);
-        }
-    }
-    
-    // If we filtered down to a reasonable number, do the full scoring
-    if (CandidateInteractables.Num() > 0)
-    {
-        TArray<float> Scores;
-        TArray<UInteractableManager*> ValidElements;
-        
-        UFL_InteractUtility::GetInteractableScores(
-            CandidateInteractables, // Use filtered list instead of full list
-            OwnerLocation,
-            OwnerForward,
-            InteractMaxDistance > 0.f ? InteractMaxDistance : 800.f,
-            InteractThreshold,
-            Scores,
-            ValidElements,
-            bDebugMode
-        );
-        
-        float MaxScore;
-        int32 MaxIndex;
-        MaxOfFloatArray(Scores, MaxScore, MaxIndex);
-        
-        if (MaxIndex != INDEX_NONE)
-        {
-            SetCurrentInteraction(ValidElements[MaxIndex]);
-            UE_LOG(LogInteract, Verbose, TEXT("Selected: %s with Score %.3f (from %d candidates)"),
-                *ValidElements[MaxIndex]->GetOwner()->GetName(), MaxScore, CandidateInteractables.Num());
-        }
-        else
-        {
-            SetCurrentInteraction(nullptr);
-        }
+        NearbyCache = SpatialGrid.GetNearby(CachedPlayerLocation, InteractMaxDistance);
     }
     else
     {
-        SetCurrentInteraction(nullptr);
-        UE_LOG(LogInteract, Verbose, TEXT("No interactables in range"));
+        // Fallback to using the maintained InteractableList
+        NearbyCache.Reset();
+        const float MaxDistanceSq = FMath::Square(InteractMaxDistance);
+        
+        for (UInteractableManager* Interactable : InteractableList)
+        {
+            if (!IsValid(Interactable) || !Interactable->IsInteractable) continue;
+            
+            const float DistanceSq = FVector::DistSquared(CachedPlayerLocation, 
+                Interactable->GetOwner()->GetActorLocation());
+                
+            if (DistanceSq <= MaxDistanceSq)
+            {
+                NearbyCache.Add(Interactable);
+            }
+        }
+    }
+    
+    // Limit candidates to prevent frame spikes
+    const int32 MaxCandidates = FMath::Min(NearbyCache.Num(), MaxCandidatesPerFrame);
+    
+    // Create and score candidates
+    float BestScore = 0.0f;
+    UInteractableManager* BestInteractable = nullptr;
+    
+    for (int32 i = 0; i < MaxCandidates; ++i)
+    {
+        UInteractableManager* Interactable = NearbyCache[i];
+        if (!IsValid(Interactable) || !Interactable->IsInteractable) continue;
+        
+        FInteractionCandidate Candidate = CreateCandidate(Interactable);
+        
+        // Quick distance check
+        if (Candidate.DistanceSq > FMath::Square(InteractMaxDistance)) continue;
+        
+        const float Score = CalculateInteractionScore(Candidate);
+        
+        if (Score > BestScore && Score >= InteractThreshold)
+        {
+            BestScore = Score;
+            BestInteractable = Interactable;
+        }
+    }
+    
+    SetCurrentInteraction(BestInteractable);
+    
+    if (bDebugMode)
+    {
+        UE_LOG(LogInteract, Verbose, TEXT("Evaluated %d candidates, selected: %s (Score: %.3f)"),
+            MaxCandidates, 
+            BestInteractable ? *BestInteractable->GetOwner()->GetName() : TEXT("None"),
+            BestScore);
     }
 }
 
-
-
-
-void UInteractionManager::RemoveInteractionFromCurrent(UInteractableManager* Interactable)
+FInteractionCandidate UInteractionManager::CreateCandidate(UInteractableManager* Interactable) const
 {
-	// Early exit if any of the involved objects are not valid.
-	// This could be a critical error and should not happen.
-	if (!IsValid(Interactable) || !IsValid(OwnerController) || !IsValid(CurrentInteractable))
-	{
-		UE_LOG(LogInteract, Error, TEXT("Invalid parameters in RemoveInteractionFromCurrent. This should not happen under normal conditions."));
-		return;
-	}
-
-	
-	// Toggle off the highlight for the current interactable object.
-	ToggleHighlight(false);
-	CurrentInteractable = nullptr;
-
-	// Perform any cleanup or state reset required when an interaction ends.
-	OnRemoveCurrentInteractable.Broadcast(Interactable);
+    const FVector InteractableLocation = Interactable->GetOwner()->GetActorLocation();
+    const FVector ToInteractable = (InteractableLocation - CachedPlayerLocation).GetSafeNormal();
+    
+    return FInteractionCandidate(
+        Interactable,
+        FVector::DistSquared(CachedPlayerLocation, InteractableLocation),
+        FVector::DotProduct(CachedLookDirection, ToInteractable)
+    );
 }
 
-
-void UInteractionManager::ToggleHighlight(const bool bShouldHighlight) const
+float UInteractionManager::CalculateInteractionScore(const FInteractionCandidate& Candidate) const
 {
-	if (IsValid(CurrentInteractable) && IsValid(OwnerController))
-	{
-		CurrentInteractable->ToggleHighlight(bShouldHighlight, OwnerController);
-	}
-}
-
-
-
-bool UInteractionManager::ShouldUpdateInteraction()
-{
-	if (IsValid(OwnerController) && IsValid(OwnerController->PossessedCharacter))
-	{
-		
-		const APHBaseCharacter* OwnerPawn = Cast<APHBaseCharacter>(OwnerController->PossessedCharacter);
-		const bool bCanUpdate = (! OwnerPawn->GetCharacterMovement()->IsFalling()) && (!InteractableList.IsEmpty());
-		if ( OwnerPawn->GetCharacterMovement()->IsFalling())
-		{
-			UE_LOG(LogInteract, Warning, TEXT("Cannot update interaction. Character might be falling."));
-		}
-		if(InteractableList.IsEmpty())
-		{
-			UE_LOG(LogInteract, Warning, TEXT("Cannot update interaction. InteractionList is Empty"));
-		}
-		return bCanUpdate;
-	}
-	
-	return false;
+    // Normalize distance (closer = higher score)
+    const float MaxDistanceSq = FMath::Square(InteractMaxDistance);
+    const float NormalizedDistance = 1.0f - (Candidate.DistanceSq / MaxDistanceSq);
+    
+    // Dot product is already normalized (-1 to 1), convert to (0 to 1)
+    const float NormalizedDot = (Candidate.DotProduct + 1.0f) * 0.5f;
+    
+    // Weighted combination
+    return (NormalizedDot * DotWeight) + (NormalizedDistance * DistanceWeight);
 }
 
 void UInteractionManager::AddToInteractionList(UInteractableManager* InInteractable)
 {
-	if (!InInteractable) return;
+    if (!InInteractable) return;
     
-	InteractableList.Add(InInteractable);
-	CurrentListVersion++; // Increment version on change
+    // Always maintain the list for fallback
+    InteractableList.AddUnique(InInteractable);
     
-	UE_LOG(LogInteract, Verbose, TEXT("Added %s to interaction list (count: %d)"), 
-		   *InInteractable->GetOwner()->GetName(), InteractableList.Num());
+    // Also add to spatial grid if enabled
+    if (bUseSpatialPartitioning)
+    {
+        SpatialGrid.Add(InInteractable);
+    }
+    
+    CurrentListVersion++;
+    
+    UE_LOG(LogInteract, Verbose, TEXT("Added %s to interaction system (count: %d)"), 
+        *InInteractable->GetOwner()->GetName(), InteractableList.Num());
 }
 
 void UInteractionManager::RemoveFromInteractionList(UInteractableManager* InInteractable)
 {
-	if (!InInteractable) return;
+    if (!InInteractable) return;
     
-	InteractableList.Remove(InInteractable);
-	CurrentListVersion++; // Increment version on change
+    // Always maintain the list for fallback
+    InteractableList.Remove(InInteractable);
     
-	// If we removed the current interactable, clear it immediately
-	if (CurrentInteractable == InInteractable)
-	{
-		SetCurrentInteraction(nullptr);
-	}
+    // Also remove from spatial grid if enabled
+    if (bUseSpatialPartitioning)
+    {
+        SpatialGrid.Remove(InInteractable);
+    }
     
-	UE_LOG(LogInteract, Verbose, TEXT("Removed %s from interaction list (count: %d)"), 
-		   *InInteractable->GetOwner()->GetName(), InteractableList.Num());
+    if (CurrentInteractable == InInteractable)
+    {
+        SetCurrentInteraction(nullptr);
+    }
+    
+    CurrentListVersion++;
+    
+    UE_LOG(LogInteract, Verbose, TEXT("Removed %s from interaction system (count: %d)"), 
+        *InInteractable->GetOwner()->GetName(), InteractableList.Num());
 }
 
+void UInteractionManager::UpdateInteractableLocation(UInteractableManager* Interactable, const FVector& OldLocation)
+{
+    if (!Interactable || !bUseSpatialPartitioning) return;
+    
+    const FVector NewLocation = Interactable->GetOwner()->GetActorLocation();
+    SpatialGrid.Move(Interactable, OldLocation, NewLocation);
+}
 
+void UInteractionManager::SetCurrentInteraction(UInteractableManager* NewInteractable)
+{
+    if (NewInteractable == CurrentInteractable) return;
+    
+    if (IsValid(CurrentInteractable))
+    {
+        RemoveInteractionFromCurrent(CurrentInteractable);
+    }
+    
+    CurrentInteractable = NewInteractable;
+    
+    if (IsValid(CurrentInteractable))
+    {
+        AddInteraction(CurrentInteractable);
+    }
+}
+
+void UInteractionManager::AddInteraction(UInteractableManager* Interactable)
+{
+    if (!IsValid(Interactable)) return;
+    
+    if (CurrentInteractable != Interactable)
+    {
+        OnRemoveCurrentInteractable.Broadcast(CurrentInteractable);
+    }
+    
+    Interactable->ToggleHighlight(true, OwnerController);
+    CurrentInteractable = Interactable;
+    OnNewInteractableAssigned.Broadcast(Interactable);
+}
+
+void UInteractionManager::RemoveInteractionFromCurrent(UInteractableManager* Interactable)
+{
+    if (!IsValid(Interactable) || !IsValid(OwnerController) || CurrentInteractable != Interactable) return;
+    
+    ToggleHighlight(false);
+    CurrentInteractable = nullptr;
+    OnRemoveCurrentInteractable.Broadcast(Interactable);
+}
+
+void UInteractionManager::ToggleHighlight(const bool bShouldHighlight) const
+{
+    if (IsValid(CurrentInteractable) && IsValid(OwnerController))
+    {
+        CurrentInteractable->ToggleHighlight(bShouldHighlight, OwnerController);
+    }
+}
+
+bool UInteractionManager::IsValidForInteraction() const
+{
+    return IsValid(OwnerController) && 
+           IsValid(OwnerController->PossessedCharacter);
+}
+
+void UInteractionManager::MaxOfFloatArray(const TArray<float>& FloatArray, float& OutMaxValue, int32& OutMaxIndex)
+{
+    if (FloatArray.Num() == 0)
+    {
+        OutMaxValue = -FLT_MAX;
+        OutMaxIndex = -1;
+        return;
+    }
+    
+    OutMaxValue = FloatArray[0];
+    OutMaxIndex = 0;
+    
+    for (int32 Index = 1; Index < FloatArray.Num(); ++Index)
+    {
+        if (FloatArray[Index] > OutMaxValue)
+        {
+            OutMaxValue = FloatArray[Index];
+            OutMaxIndex = Index;
+        }
+    }
+}

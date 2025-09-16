@@ -1,4 +1,4 @@
-// Copyright@2024 Quentin Davis
+// Copyright@2024 Quentin Davis 
 
 #pragma once
 

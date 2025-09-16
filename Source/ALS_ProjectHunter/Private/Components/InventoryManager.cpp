@@ -12,10 +12,10 @@
 DEFINE_LOG_CATEGORY(LogInventoryManager);
 
 UInventoryManager::UInventoryManager()
-	: RarityMinMaxClamp()
-	, SpawnableItems(nullptr)
+	: SpawnableItems(nullptr)
 	, MasterDropList(nullptr)
 	, MinMaxLootAmount()
+	, RarityMinMaxClamp()
 	, OwnerCharacter(nullptr)
 {
 	PrimaryComponentTick.bCanEverTick = false;
