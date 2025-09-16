@@ -27,10 +27,6 @@ void UItemWidget::NativeConstruct()
 
 void UItemWidget::NativeDestruct()
 {
-   /* if (IsValid(ItemToolTip))
-    {
-        ItemToolTip->RemoveFromParent();
-    }*/
 	Super::NativeDestruct();
 }
 

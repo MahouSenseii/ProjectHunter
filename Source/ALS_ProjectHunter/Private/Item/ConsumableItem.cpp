@@ -32,7 +32,7 @@ void UConsumableItem::UseItem(AActor* Target)
 
 		if (APHBaseCharacter* Player = Cast<APHBaseCharacter>(Target))
 		{
-			Player->GetInventoryManager()->RemoveItemInInventory(this);
+			Player->GetInventoryManager()->RemoveItemFromInventory(this);
 		}
 		else
 		{

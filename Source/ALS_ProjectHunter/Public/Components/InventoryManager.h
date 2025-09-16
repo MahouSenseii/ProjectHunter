@@ -13,6 +13,7 @@ class UInteractableWidget;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGemsChanged);
 DECLARE_LOG_CATEGORY_EXTERN(LogInventoryManager, Log, All);
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UInventoryManager : public UActorComponent
 {
@@ -24,104 +25,132 @@ public:
 	/* ============================= */
 
 	UInventoryManager();
-	void GenerateID();
 
 	/* ============================= */
 	/* ===      Core Logic       === */
 	/* ============================= */
 
+	// Initialization
+	UFUNCTION(BlueprintCallable)
+	void InitializeInventoryManager();
+	
+	void GenerateID();
+
+	// Character Management
 	UFUNCTION(BlueprintCallable)
 	APHBaseCharacter* SetPlayerCharacter();
 
 	UFUNCTION(BlueprintCallable)
-	APHBaseCharacter* GetOwnerCharacter() const;
+	APHBaseCharacter* GetOwnerCharacter() const { return OwnerCharacter; }
+
+	// Inventory Properties
+	UFUNCTION(BlueprintCallable)
+	FString GetID() const { return InventoryID; }
 
 	UFUNCTION(BlueprintCallable)
-	FString GetID() { return InventoryID; }
+	int32 GetTileSize() const { return TileSize; }
 
 	UFUNCTION(BlueprintCallable)
-	int32 GetTileSize() { return TileSize; }
+	int32 GetOccupiedSlotCount() const { return OccupiedSlotCount; }
 
+	UFUNCTION(BlueprintCallable)
+	int32 GetTotalSlotCount() const { return Rows * Columns; }
+
+	// Inventory Management
 	UFUNCTION(BlueprintCallable, Category = "Base")
 	void ResizeInventory();
 
 	void ClearAllSlots();
 
+	// Coordinate Conversion
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Converters")
-	int32 TileToIndex(FTile Tile);
+	int32 TileToIndex(const FTile& Tile) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Converters")
-	void IndexToTile(int32 Index, FTile& Tile);
+	FTile IndexToTile(int32 Index) const;
 
+	// Item Queries
 	UFUNCTION(BlueprintCallable, Category = "Converters")
-	TMap<UBaseItem*, FTile> GetAllItems();
-
-	UFUNCTION(BlueprintCallable, Category = "Remove")
-	void RemoveItemInInventory(UBaseItem* Item);
-	
-	void ForEachOccupiedTile(UBaseItem* Item, const TFunctionRef<void(const FTile&)>& Func) const;
-
-	UFUNCTION(BlueprintCallable, Category = "Remove")
-	bool DropItemInInventory(UBaseItem* Item);
+	TMap<UBaseItem*, FTile> GetAllItems() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Checker")
-	bool GetItemAtTile(int32 Index, UBaseItem*& RetrievedItem);
+	bool GetItemAtTile(int32 Index, UBaseItem*& RetrievedItem) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Checker")
-	bool IsRoomAvailable(UBaseItem* Item, int32 TopLeftIndex);
-
-	bool ForEachTile(UBaseItem* Item, int32 TopLeftIndex, const TFunction<bool(FTile)>& Func);
-
-	UFUNCTION(BlueprintCallable, Category = "Checker")
-	bool IsTileValid(FTile Tile) const;
+	UBaseItem* GetItemAt(int32 Index) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	bool ContainsItem(const UBaseItem* Item) const;
 
+	UFUNCTION(BlueprintCallable, Category = "Checker")
+	FTile GetItemTopLeft(const UBaseItem* Item) const;
+
+	// Item Addition
 	UFUNCTION(BlueprintCallable, Category = "Add")
-	bool TryToAddItemToInventory(UBaseItem* Item, bool CheckRotated);
+	bool TryToAddItemToInventory(UBaseItem* Item, bool CheckRotated = true);
 
 	UFUNCTION(BlueprintCallable, Category = "Add")
-	void AddItemAt(UBaseItem* Item, int32 TopLeftIndex);
+	bool TryToAddItemAt(UBaseItem* Item, int32 TopLeftIndex);
 
 	UFUNCTION(BlueprintCallable, Category = "Add")
-	bool TryToAddItemToInventoryRotated(UBaseItem* Item);
+	bool TryToAddItemAtTile(UBaseItem* Item, const FTile& TopLeftTile);
+
+	// Item Removal
+	UFUNCTION(BlueprintCallable, Category = "Remove")
+	bool RemoveItemFromInventory(UBaseItem* Item);
 	
-	void RebuildTopLeftMap();
+	UFUNCTION(BlueprintCallable, Category = "Remove")
+	bool DropItemFromInventory(UBaseItem* Item);
+
+	// Space Checking
+	UFUNCTION(BlueprintCallable, Category = "Checker")
+	bool IsRoomAvailable(UBaseItem* Item, int32 TopLeftIndex) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Checker")
+	bool IsRoomAvailableAtTile(UBaseItem* Item, const FTile& TopLeftTile) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Checker")
+	bool IsTileValid(const FTile& Tile) const;
+
+	// Helper Functions
+	static bool AreItemsStackable(const UBaseItem* A, const UBaseItem* B);
+	static bool CanStackItems(const UBaseItem* ExistingItem, const UBaseItem* NewItem);
+	TArray<FTile> GetOccupiedTilesForItem(const UBaseItem* Item) const;
+	
+	// Validation (Editor only)
+#if WITH_EDITOR
+	void ValidateInventoryIntegrity() const;
+#endif
 
 protected:
 	virtual void BeginPlay() override;
-	void InitializeInventoryManager();
 
+
+	// Internal Helpers
 	UFUNCTION()
-	FVector GetSpawnLocation() const;
-
-
-public:
-
-	
-	/* ============================= */
-	/* ===       Helpers         === */
-	/* ============================= */
-
-	static bool AreItemsStackable(UBaseItem* A, UBaseItem* B);
-	bool CanAcceptItemAt(UBaseItem* NewItem, int32 Index);
-	UBaseItem* GetItemAt(int32 Index) const;
-
-	TArray<FTile> GetOccupiedTilesForItem(UBaseItem* Item) const;
-	void ValidateTileMap();
+	FVector GetDropLocation() const;
 
 private:
-	
+	// Internal Item Management
+	bool TryToAddItemRotated(UBaseItem* Item);
+	bool TryPlaceItemAtFirstAvailable(UBaseItem* Item, bool CheckRotated);
+	bool InternalAddItemAt(UBaseItem* Item, const FTile& TopLeftTile);
 	void SetItemInTiles(UBaseItem* Item, const FTile& TopLeft);
-	void ClearItemFromTiles(UBaseItem* Item, const FTile& TopLeft);
-
+	void ClearItemFromTiles(const UBaseItem* Item, const FTile& TopLeft);
+	static bool ForEachTile(const UBaseItem* Item, const FTile& StartTile, TFunctionRef<bool(const FTile&)> Func);
 	
+	// Fast Lookup Management
+	void RegisterItemInLookups(UBaseItem* Item, const FTile& TopLeft);
+	void UnregisterItemFromLookups(UBaseItem* Item);
+	void InvalidateCaches() const;
 
+
+	// Stacking
+	bool TryStackItem(UBaseItem* Item);
 
 public:
 	/* ============================= */
-	/* ===         Events         === */
+	/* ===         Events        === */
 	/* ============================= */
 
 	UPROPERTY(BlueprintAssignable)
@@ -131,11 +160,8 @@ public:
 	FOnGemsChanged OnGemsChanged;
 
 	/* ============================= */
-	/* ===        Public Vars     === */
+	/* ===     Configuration     === */
 	/* ============================= */
-
-	UPROPERTY(BlueprintReadOnly)
-	TArray<UBaseItem*> InventoryList;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
 	int32 Rows = 10;
@@ -146,6 +172,27 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Grid")
 	float TileSize = 20.0f;
 
+	// Drop Configuration
+	UPROPERTY(EditDefaultsOnly, Category = "Inventory|Dropping")
+	float ItemDropDistance = 200.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Inventory|Dropping")
+	float ItemDropHeightOffset = 120.0f;
+
+	// Shop/Generation
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Shop")
+	UDataTable* SpawnableItems;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Shop")
+	UDataTable* MasterDropList;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Shop")
+	float MinThreshold = .35f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Shop")
+	FVector2D MinMaxLootAmount;
+
+	// Runtime State
 	UPROPERTY(BlueprintReadWrite, Category = "Checker")
 	bool Generated = false;
 
@@ -161,31 +208,39 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	TObjectPtr<UInventoryManager> OtherInventory = nullptr;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Shop")
-	UDataTable* SpawnableItems;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Shop")
-	UDataTable* MasterDropList;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Shop")
-	float MinThreshold = .35f;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Shop")
-	FVector2D MinMaxLootAmount;
-
+protected:
 	UPROPERTY(BlueprintReadOnly)
 	APHBaseCharacter* OwnerCharacter;
 
-
 private:
 	/* ============================= */
-	/* ===       Private Vars  ==== */
+	/* ===    Private State      === */
 	/* ============================= */
-	UPROPERTY()
-	int32 Gems = 1000;
+	
+	// Core Inventory Data
+	UPROPERTY(Transient)
+	TArray<UBaseItem*> InventoryList;
 
 	UPROPERTY(Transient)
 	TMap<FTile, UBaseItem*> TopLeftItemMap;
-	
+
+	// Fast Lookup Tables
+	mutable TMultiMap<FName, UBaseItem*> StackableItemsCache;
+	mutable bool bStackableCacheDirty = true;
+
+	UPROPERTY(Transient)
+	TMap<const UBaseItem*, FTile> ItemToTopLeftMap;  // Reverse lookup for O(1) position finding
+
+	// Cached Data
+	UPROPERTY(Transient)
+	int32 OccupiedSlotCount = 0;
+
+	mutable TMap<UBaseItem*, FTile> CachedAllItems;
+	mutable bool bAllItemsCacheDirty = true;
+
+	// Inventory Properties
+	UPROPERTY()
+	int32 Gems = 1000;
+
 	FString InventoryID = "";
 };

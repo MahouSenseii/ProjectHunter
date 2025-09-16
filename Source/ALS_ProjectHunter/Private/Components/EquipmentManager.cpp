@@ -151,7 +151,7 @@ void UEquipmentManager::HandleHasMesh(UBaseItem* Item, EEquipmentSlot Slot)
 		// Try adding old equipment back to inventory; if it fails, drop it
 		if (!GetInventoryManager()->TryToAddItemToInventory(EquippedItem, true))
 		{
-			GetInventoryManager()->DropItemInInventory(EquippedItem);
+			GetInventoryManager()->DropItemFromInventory(EquippedItem);
 		}
 
 		// Remove the currently equipped item from the slot
@@ -181,7 +181,7 @@ void UEquipmentManager::HandleNoMesh(UBaseItem* Item, EEquipmentSlot Slot)
 		if (!GetInventoryManager()->TryToAddItemToInventory(*EquippedItem, true))
 		{
 			// If adding to inventory fails, drop the item.
-			GetInventoryManager()->DropItemInInventory(*EquippedItem);
+			GetInventoryManager()->DropItemFromInventory(*EquippedItem);
 		}
 		
 		// Remove the equipped item from the slot.

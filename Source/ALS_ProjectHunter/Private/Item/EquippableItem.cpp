@@ -11,16 +11,16 @@ UEquippableItem::UEquippableItem(): StatsDataTable(nullptr)
 {
 }
 
-void UEquippableItem::Initialize(FItemInformation& ItemInfo)
+void UEquippableItem::Initialize( FItemInformation& ItemInfo)
 {
 	Super::Initialize(ItemInfo);
-
 	if (!ItemInfo.ItemData.Affixes.bAffixesGenerated)
 	{
 		ItemInfos.ItemData.Affixes = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
 		ItemInfos = UPHItemFunctionLibrary::GenerateItemName(ItemInfo.ItemData.Affixes, ItemInfo);
 	}
 }
+
 
 bool UEquippableItem::CanEquipItem(const APHBaseCharacter* Character) const
 {
@@ -49,7 +49,7 @@ FItemStatRequirement UEquippableItem::GetStatRequirements() const
 void UEquippableItem::RerollAllMods()
 {
 	UPHItemFunctionLibrary::RerollModifiers(this, StatsDataTable, true, true, {});
-	UPHItemFunctionLibrary::GenerateItemName(ItemInfos.ItemData.Affixes, GetItemInfo()); // Rebuild name from new affixes
+	UPHItemFunctionLibrary::GenerateItemName(ItemInfos.ItemData.Affixes, GetItemInfo());
 }
 
 TArray<FPHAttributeData> UEquippableItem::GetItemStats() const

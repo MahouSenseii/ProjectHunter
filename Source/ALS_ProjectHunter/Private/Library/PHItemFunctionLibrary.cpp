@@ -410,10 +410,10 @@ EItemRarity UPHItemFunctionLibrary::DetermineWeaponRank(const int32 BaseRankPoin
     return EItemRarity::IR_GradeF; // Default to F if below 55 points
 }
 
-FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& ItemStats, FItemInformation& ItemInfo)
+FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& ItemStats, const FItemInformation& ItemInfo)
 {
 	const FText UnknownAffixText = NSLOCTEXT("Item", "UnidentifiedAffix", "???");
-
+	FItemInformation Result = ItemInfo;
 	const FPHAttributeData* HighestPrefix = nullptr;
 	const FPHAttributeData* HighestSuffix = nullptr;
 
@@ -446,8 +446,7 @@ FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& It
 		: FText::GetEmpty();
 	
 	const FText ItemSubTypeName = UEnum::GetDisplayValueAsText(ItemInfo.ItemInfo.ItemSubType);
-
-	// 🔥 Build final name 
+	
 	FString FullName;
 
 	if (!PrefixName.IsEmpty())
@@ -462,8 +461,8 @@ FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& It
 		FullName += TEXT(" of The ") + SuffixName.ToString();
 	}
 
-	ItemInfo.ItemInfo.ItemName = FText::FromString(FullName);
-	return ItemInfo;
+	Result.ItemInfo.ItemName = FText::FromString(FullName);
+	return Result;
 }
 
 

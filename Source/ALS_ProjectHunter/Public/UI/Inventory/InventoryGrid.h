@@ -141,7 +141,7 @@ private:
 	bool HandleOwnedItemDrop(UBaseItem* Payload, int32 Index) const;
 
 	/** Handles item dropping when the item belongs to another inventory */
-	bool HandleUnownedItemDrop(UBaseItem* Payload, int32 Index);
+	bool HandleUnownedItemDrop(UBaseItem* Payload, int32 Index) const;
 
 /* ============================= */
 /* === TRANSACTIONS & TRADING === */

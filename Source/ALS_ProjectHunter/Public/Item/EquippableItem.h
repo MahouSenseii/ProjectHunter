@@ -21,7 +21,7 @@ public:
 	// Sets default values for this actor's properties
 	UEquippableItem();
 	
-	virtual void Initialize(FItemInformation& ItemInfo) override;
+	virtual void Initialize( FItemInformation& ItemInfo) override;
 
 	UFUNCTION(BlueprintCallable)
 	bool CanEquipItem(const APHBaseCharacter* Character) const;

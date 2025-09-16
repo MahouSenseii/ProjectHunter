@@ -46,7 +46,7 @@ public:
 	static FPHItemStats GenerateStats(const UDataTable* StatsThatCanBeGenerated);
 	static int32 GetRankPointsValue(ERankPoints Rank);
 	static EItemRarity DetermineWeaponRank(int32 BaseRankPoints, const FPHItemStats& Stats);
-	static FItemInformation GenerateItemName(const FPHItemStats& ItemStats, FItemInformation& ItemInfo);
+	static FItemInformation GenerateItemName(const FPHItemStats& ItemStats, const FItemInformation& ItemInfo);
 	static void RerollModifiers(UEquippableItem* Item, const UDataTable* ModPool, bool bRerollPrefixes, bool bRerollSuffixes,
 	                            const TArray<FGuid>& LockedModifiers);
 	static FPHAttributeData RollSingleMod(const UDataTable* ModPool, bool bIsPrefix);

@@ -154,13 +154,12 @@ FReply UInventoryGrid::NativeOnPreviewKeyDown(const FGeometry& InGeometry, const
 		{
 			if (UBaseItem* OutPayload = GetPayload(CurrentOperation))
 			{
-				OutPayload->Rotate();
+				OutPayload->ToggleRotation();
 				if (UItemWidget* DragVisual = Cast<UItemWidget>(CurrentOperation->DefaultDragVisual))
 				{
 					CurrentOperation->Offset = FVector2D (0.5f,0.5f);
 					DragVisual->Refresh();
-						CurrentOperation->Offset = FVector2D (-0.25f,-0.25f);
-					
+					CurrentOperation->Offset = FVector2D (-0.25f,-0.25f);
 				}
 			}
 		}
@@ -208,9 +207,9 @@ bool UInventoryGrid::HandleOwnedItemDrop(UBaseItem* Payload, const int32 Index) 
 	}
 
 	// Step 2: Try to place item directly at specified location
-	if (OwnerInventory->CanAcceptItemAt(Payload, Index))
+	if (OwnerInventory->IsRoomAvailable(Payload, Index))
 	{
-		OwnerInventory->AddItemAt(Payload, Index);
+		OwnerInventory->TryToAddItemAt(Payload, Index);
 		return true;
 	}
 
@@ -221,11 +220,11 @@ bool UInventoryGrid::HandleOwnedItemDrop(UBaseItem* Payload, const int32 Index) 
 	}
 
 	// Step 4: No valid space — drop to world
-	return OwnerInventory->DropItemInInventory(Payload);
+	return OwnerInventory->DropItemFromInventory(Payload);
 }
 
 
-bool UInventoryGrid::HandleUnownedItemDrop(UBaseItem* Payload, int32 Index)
+bool UInventoryGrid::HandleUnownedItemDrop(UBaseItem* Payload, const int32 Index) const
 {
     bool WasAdded = false;
     
@@ -244,7 +243,7 @@ bool UInventoryGrid::HandleUnownedItemDrop(UBaseItem* Payload, int32 Index)
     
     if (WasAdded)
     {
-        OwnerInventory->AddItemAt(Payload, Index);
+        OwnerInventory->TryToAddItemAt(Payload, Index);
     }
     return WasAdded; // Return true if the item was added, false otherwise
 }
@@ -435,8 +434,7 @@ void UInventoryGrid::Refresh()
 			if (ItemWidget->ItemObject && ItemsToAdd.Contains(ItemWidget->ItemObject))
 			{ 
 				// Update position if needed
-				const FTile* TilePtr = CurrentItems.Find(ItemWidget->ItemObject);
-				if (TilePtr)
+				if (const FTile* TilePtr = CurrentItems.Find(ItemWidget->ItemObject))
 				{
 					UpdateItemWidgetPosition(ItemWidget, *TilePtr);
 					ItemsToAdd.Remove(ItemWidget->ItemObject);
@@ -558,7 +556,7 @@ void UInventoryGrid::AddItemToGrid(UBaseItem* Item, const FTile TopLeftTile)
 
 void UInventoryGrid::OnItemRemoved(UBaseItem* InItemInfo)
 {
-	OwnerInventory->RemoveItemInInventory(InItemInfo);
+	OwnerInventory->RemoveItemFromInventory(InItemInfo);
 }
 
 bool UInventoryGrid::IsRoomAvailableforPayload(UBaseItem* Payload) const 
