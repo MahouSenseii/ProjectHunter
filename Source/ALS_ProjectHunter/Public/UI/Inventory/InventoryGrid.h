@@ -66,11 +66,12 @@ public:
 	/** Initializes the grid with the given inventory and tile size */
 	UFUNCTION(BlueprintCallable)
 	void GridInitialize(UInventoryManager* PlayerInventory, float InTileSize);
+	void CleanupDelegateBindings();
 
 	/** Refreshes the UI grid by reloading all items */
 	UFUNCTION(BlueprintCallable)
 	void Refresh();
-	void UpdateItemWidgetPosition(UItemWidget* ItemWidget, const FTile& TopLeftTile) const;
+	void UpdateItemWidgetPosition(const UItemWidget* ItemWidget, const FTile& TopLeftTile) const;
 
 	/** Adds an item to the grid at a specified tile */
 	void AddItemToGrid(UBaseItem* Item, const FTile TopLeftTile);
@@ -161,12 +162,9 @@ public:
 	/*UFUNCTION(BlueprintCallable, BlueprintPure)
 	UInventoryManager* FindOwners(UBaseItem* Item, UInventoryManager*& Other) const;*/
 
-
-	void BuyFromAnotherID();
-
 	/* ============================= */
-/* === UI PAINTING FUNCTIONS === */
-/* ============================= */
+	/* === UI PAINTING FUNCTIONS === */
+	/* ============================= */
 protected:
 	virtual int32 NativePaint(
 		const FPaintArgs& Args,
@@ -198,7 +196,8 @@ public:
 /* ============================= */
 public:
 	/** The size of each tile */
-	float TileSize = 0.0;
+	UPROPERTY()
+	float TileSize = 0.0f;
 
 	/** Stores the position of the dragged item */
 	FIntPoint DraggedItemTopLeft = FIntPoint(0, 0);

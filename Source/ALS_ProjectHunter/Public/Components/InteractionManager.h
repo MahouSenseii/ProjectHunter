@@ -73,10 +73,10 @@ public:
     float InteractMaxDistance = 400.0f;
 
     UPROPERTY(EditAnywhere, Category = "Scoring")
-    float DotWeight = 0.9f;
+    float DotWeight = 0.7f;
 
     UPROPERTY(EditAnywhere, Category = "Scoring")
-    float DistanceWeight = 0.1f;
+    float DistanceWeight = 0.3f;
 
     UPROPERTY(EditAnywhere, Category = "Debug")
     bool bDebugMode = false;
@@ -89,7 +89,7 @@ public:
     float SpatialGridCellSize = 200.0f;
     
     UPROPERTY(EditAnywhere, Category = "Optimization")
-    int32 MaxCandidatesPerFrame = 20;
+    int32 MaxCandidatesPerFrame = 15;
     
     UPROPERTY(EditAnywhere, Category = "Optimization")
     bool bUseSpatialPartitioning = true;
@@ -173,6 +173,8 @@ public:
 private:
     void RemoveInteractionFromCurrent(UInteractableManager* Interactable);
     void AddInteraction(UInteractableManager* Interactable);
+
+    
     
     // Optimized scoring
     float CalculateInteractionScore(const FInteractionCandidate& Candidate) const;

@@ -13,25 +13,19 @@ class UImage;
 class UMenuButton;
 class UWidgetManager;
 
-/**
- * Example widget that dynamically creates tabs & buttons
- * from a TArray<FMenuWidgetStuct>.
- */
 UCLASS()
 class ALS_PROJECTHUNTER_API UPHWidgetSwitcher : public UPHUserWidget
 {
     GENERATED_BODY()
 
 protected:
-    // The top-level switcher to which we'll add each tab as a child
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UWidgetSwitcher> Switcher = nullptr;
 
-    // Your main data source
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Setup")
     TArray<FMenuWidgetStuct> ButtonMapper;
 
-    // Use FMenuButtonArray instead of raw TArray<UMenuButton*>
+    // GC-safe storage
     UPROPERTY()
     TMap<EWidgetsSwitcher, FMenuButtonArray> TabButtons;
 
@@ -41,7 +35,13 @@ protected:
     UPROPERTY()
     TMap<EWidgetsSwitcher, UWidget*> SwitcherPanels;
 
-    // If you want custom color styles
+    // Performance cache - avoids repeated lookups
+    UPROPERTY()
+    TMap<TObjectPtr<UButton>, EWidgets> ButtonToWidgetMap;
+
+    UPROPERTY()
+    TObjectPtr<UWidgetManager> CachedWidgetManager;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Style")
     FLinearColor HoverColor = FLinearColor::Yellow;
 
@@ -51,60 +51,48 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Style")
     FLinearColor ClickedColor = FLinearColor::Blue;
 
+    UPROPERTY(EditAnywhere, Category = "ButtonSize")
+    float ButtonHeight = 60.0f;
+
+    UPROPERTY(EditAnywhere, Category = "ButtonSize")
+    float ButtonWidth = 120.0f;
+
 public:
     virtual void NativeConstruct() override;
 
 protected:
-
-
+    // Optimized methods
     TMap<EWidgetsSwitcher, TArray<FMenuWidgetStuct>> GroupButtonMapperBySwitcher();
-    UButton* CreateLBButton();
-    UButton* CreateRBButton();
+    UButton* CreateNavigationButton(const FString& TexturePath, bool bIsLeftButton);
     void BuildTabPanel(EWidgetsSwitcher SwitcherType, TArray<FMenuWidgetStuct>& Buttons);
-
-    // Creates panels + LB/RB + MenuButtons from ButtonMapper
-    //void BuildTabsAndButtons();
-
-    // Helper to bind dynamic delegates for a newly created UMenuButton
+    void BuildTabsAndButtons();
+    
+    UWidget* CreateMenuButton(FMenuWidgetStuct& MenuInfo);
     void BindMenuButtonDelegates(const UMenuButton* InButton);
-
-    // Called when any "middle" button's OnClicked is triggered
+    
+    // Optimized event handlers with caching
     UFUNCTION()
     void OnAnyButtonClicked();
-
-    // Called when any "middle" button's OnHovered is triggered
+    
     UFUNCTION()
     void OnAnyButtonHovered();
-
-    void BuildTabsAndButtons();
-    // Called when any "middle" button's OnUnhovered is triggered
+    
     UFUNCTION()
     void OnAnyButtonUnhovered();
 
-    UWidget* CreateMenuButton(FMenuWidgetStuct& MenuInfo);
-
-
-    // Called when LB or RB is clicked
     UFUNCTION()
     void OnLBClicked();
 
     UFUNCTION()
     void OnRBClicked();
 
-    // Helpers to handle color states
-    void HoverButton(EWidgets WidgetType) const;
-    void
-    UnHoverButton(EWidgets WidgetType) const;
-    void ClickButton(EWidgets WidgetType) const;
+    // Helper methods
+    UWidgetManager* GetWidgetManager();
     static void SetButtonColor(const UMenuButton* InButton, const FLinearColor& InColor);
-
-    // Sub-tab focusing
     void FocusButtonOnTab(EWidgetsSwitcher SwitcherType, int32 ButtonIndex);
     void MoveFocusOnTab(EWidgetsSwitcher SwitcherType, int32 Direction);
-
-    UPROPERTY(EditAnywhere, Category = "ButtonSize")
-    float ButtonHeight = 60.0f;
-
-    UPROPERTY(EditAnywhere, Category = "ButtonSize")
-    float ButtonWidth = 120.0f;
+    
+    // Optimized button state management
+    void UpdateButtonState(EWidgets WidgetType, const FLinearColor& Color);
+    UMenuButton* FindMenuButton(EWidgets WidgetType);
 };

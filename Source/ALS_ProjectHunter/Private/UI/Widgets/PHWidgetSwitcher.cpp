@@ -2,9 +2,11 @@
 #include "Blueprint/WidgetTree.h"
 #include "Character/Player/PHPlayerController.h"
 #include "Components/Button.h"
-#include "Components/ButtonSlot.h"
-#include "Components/CanvasPanel.h"
-#include "Components/CanvasPanelSlot.h"
+#include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
+#include "Components/SizeBox.h"
+#include "Components/Image.h"
+#include "Components/ScaleBoxSlot.h"
 #include "Components/WidgetManager.h"
 #include "Library/WidgetStructLibrary.h"
 #include "UI/Widgets/MenuButton.h"
@@ -15,17 +17,21 @@ void UPHWidgetSwitcher::NativeConstruct()
 
     if (!Switcher)
     {
-        UE_LOG(LogTemp, Warning, TEXT("No Switcher bound in UMG!"));
+        UE_LOG(LogTemp, Error, TEXT("No Switcher bound in UMG!"));
         return;
     }
 
-    // Build out the tabs and their buttons
+    // Cache widget manager once
+    CachedWidgetManager = GetWidgetManager();
+    
     BuildTabsAndButtons();
 }
 
 TMap<EWidgetsSwitcher, TArray<FMenuWidgetStuct>> UPHWidgetSwitcher::GroupButtonMapperBySwitcher()
 {
     TMap<EWidgetsSwitcher, TArray<FMenuWidgetStuct>> MapperGroups;
+    MapperGroups.Reserve(ButtonMapper.Num()); // Pre-allocate
+    
     for (const FMenuWidgetStuct& Item : ButtonMapper)
     {
         if (Item.WidgetsSwitcher != EWidgetsSwitcher::WS_None)
@@ -36,8 +42,7 @@ TMap<EWidgetsSwitcher, TArray<FMenuWidgetStuct>> UPHWidgetSwitcher::GroupButtonM
     return MapperGroups;    
 }
 
-
-UButton* UPHWidgetSwitcher::CreateLBButton()
+UButton* UPHWidgetSwitcher::CreateNavigationButton(const FString& TexturePath, bool bIsLeftButton)
 {
     UButton* Button = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass());
     Button->SetBackgroundColor(FLinearColor(0, 0, 0, 0));
@@ -45,66 +50,65 @@ UButton* UPHWidgetSwitcher::CreateLBButton()
     UImage* Image = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass());
     Button->AddChild(Image);
 
-    if (UTexture2D* Texture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, TEXT("/Game/Images/Buttons/Gamepad/T_Gamepad_LB.T_Gamepad_LB"))))
+    if (UTexture2D* Texture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *TexturePath)))
     {
         Image->SetBrushFromTexture(Texture);
     }
 
-    Button->OnClicked.AddDynamic(this, &UPHWidgetSwitcher::OnLBClicked);
-    return Button;
-}
-
-UButton* UPHWidgetSwitcher::CreateRBButton()
-{
-    UButton* Button = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass());
-    Button->SetBackgroundColor(FLinearColor(0, 0, 0, 0));
-
-    UImage* Image = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass());
-    Button->AddChild(Image);
-
-    if (UTexture2D* Texture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, TEXT("/Game/Images/Buttons/Gamepad/T_Gamepad_RB.T_Gamepad_RB"))))
+    // Bind to optimized handlers
+    if (bIsLeftButton)
     {
-        Image->SetBrushFromTexture(Texture);
+        Button->OnClicked.AddDynamic(this, &UPHWidgetSwitcher::OnLBClicked);
+    }
+    else
+    {
+        Button->OnClicked.AddDynamic(this, &UPHWidgetSwitcher::OnRBClicked);
     }
 
-    Button->OnClicked.AddDynamic(this, &UPHWidgetSwitcher::OnRBClicked);
     return Button;
 }
 
-
-void UPHWidgetSwitcher::BuildTabPanel(EWidgetsSwitcher SwitcherType,  TArray<FMenuWidgetStuct>& Buttons)
+void UPHWidgetSwitcher::BuildTabPanel(EWidgetsSwitcher SwitcherType, TArray<FMenuWidgetStuct>& Buttons)
 {
+    // RESPONSIVE HIERARCHY - Maintains scaling while fixing alignment
+    
+    // 1. ScaleBox for responsive scaling across devices
     UScaleBox* ScaleBox = WidgetTree->ConstructWidget<UScaleBox>(UScaleBox::StaticClass());
     ScaleBox->SetStretch(EStretch::ScaleToFit);
     ScaleBox->SetStretchDirection(EStretchDirection::Both);
-
+    
+    // 2. SizeBox for size constraints (important for mobile/desktop)
     USizeBox* SizeBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
-    SizeBox->ClearWidthOverride();
-
-    UCanvasPanel* Canvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass());
+    SizeBox->ClearWidthOverride();  // Auto-width
+    SizeBox->SetHeightOverride(ButtonHeight + 20.0f); // Consistent height with padding
+    
+    // 3. HorizontalBox for button layout
     UHorizontalBox* HBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
-
-    if (UCanvasPanelSlot* HBoxSlot = Cast<UCanvasPanelSlot>(Canvas->AddChild(HBox)))
+    
+    // Add LB button
+    UButton* LBButton = CreateNavigationButton(TEXT("/Game/Images/Buttons/Gamepad/T_Gamepad_LB.T_Gamepad_LB"), true);
+    if (UHorizontalBoxSlot* LBSlot = Cast<UHorizontalBoxSlot>(HBox->AddChild(LBButton)))
     {
-        HBoxSlot->SetAnchors(FAnchors(0.5f, 0.5f)); // Center anchor
-        HBoxSlot->SetAlignment(FVector2D(0.5f, 0.5f)); // Center alignment
-
-        // Explicitly center with zero offsets
-        HBoxSlot->SetPosition(FVector2D(0.f, 0.f));
-        HBoxSlot->SetSize(FVector2D(0.f, 0.f));
-        HBoxSlot->SetAutoSize(true);
+        LBSlot->SetHorizontalAlignment(HAlign_Center);
+        LBSlot->SetVerticalAlignment(VAlign_Center);
+        LBSlot->SetPadding(FMargin(5.0f));
     }
-
-
-    // Add LB
-    HBox->AddChild(CreateLBButton());
+    
     TArray<TObjectPtr<UMenuButton>> LocalButtons;
+    LocalButtons.Reserve(Buttons.Num());
 
+    // Create menu buttons
     for (FMenuWidgetStuct& Info : Buttons)
     {
         if (UWidget* Widget = CreateMenuButton(Info))
         {
-            HBox->AddChild(Widget);
+            if (UHorizontalBoxSlot* ButtonSlot = Cast<UHorizontalBoxSlot>(HBox->AddChild(Widget)))
+            {
+                ButtonSlot->SetHorizontalAlignment(HAlign_Center);
+                ButtonSlot->SetVerticalAlignment(VAlign_Center);
+                ButtonSlot->SetPadding(FMargin(5.0f));
+            }
+            
             LocalButtons.Add(Info.MenuButton);
 
             // Update original ButtonMapper reference
@@ -116,133 +120,88 @@ void UPHWidgetSwitcher::BuildTabPanel(EWidgetsSwitcher SwitcherType,  TArray<FMe
                     break;
                 }
             }
+
+            // Cache button mapping for performance
+            if (Info.MenuButton && Info.MenuButton->MenuButton)
+            {
+                ButtonToWidgetMap.Add(Info.MenuButton->MenuButton, Info.Widget);
+            }
         }
     }
 
+    // Add RB button
+    UButton* RBButton = CreateNavigationButton(TEXT("/Game/Images/Buttons/Gamepad/T_Gamepad_RB.T_Gamepad_RB"), false);
+    if (UHorizontalBoxSlot* RBSlot = Cast<UHorizontalBoxSlot>(HBox->AddChild(RBButton)))
+    {
+        RBSlot->SetHorizontalAlignment(HAlign_Center);
+        RBSlot->SetVerticalAlignment(VAlign_Center);
+        RBSlot->SetPadding(FMargin(5.0f));
+    }
+
+    // Assemble hierarchy with proper alignment
+    if (UScaleBoxSlot* SizeBoxSlot = Cast<UScaleBoxSlot>(ScaleBox->AddChild(SizeBox)))
+    {
+        SizeBoxSlot->SetHorizontalAlignment(HAlign_Center);
+        SizeBoxSlot->SetVerticalAlignment(VAlign_Center);
+    }
     
-    HBox->AddChild(CreateRBButton());
+    SizeBox->AddChild(HBox);
 
-    FMenuButtonArray Struct;
-    Struct.Buttons = LocalButtons;
-
-    TabButtons.Add(SwitcherType, Struct);
+    // Store tab data
+    FMenuButtonArray ButtonArray;
+    ButtonArray.Buttons = LocalButtons;
+    TabButtons.Add(SwitcherType, ButtonArray);
     TabFocusedIndex.Add(SwitcherType, 0);
 
-    SizeBox->AddChild(Canvas);
-    ScaleBox->AddChild(SizeBox);
+    // Add the responsive hierarchy to switcher
     Switcher->AddChild(ScaleBox);
-    
-    SwitcherPanels.Add(SwitcherType, Canvas);
+    SwitcherPanels.Add(SwitcherType, ScaleBox);
 }
-
 
 void UPHWidgetSwitcher::BuildTabsAndButtons()
 {
-    for (TMap<EWidgetsSwitcher, TArray<FMenuWidgetStuct>>
-        GroupedTabs = GroupButtonMapperBySwitcher(); auto& Pair : GroupedTabs)
+    TMap<EWidgetsSwitcher, TArray<FMenuWidgetStuct>> GroupedTabs = GroupButtonMapperBySwitcher();
+    
+    for (auto& Pair : GroupedTabs)
     {
         BuildTabPanel(Pair.Key, Pair.Value);
     }
 }
 
-
-void UPHWidgetSwitcher::BindMenuButtonDelegates(const UMenuButton* InButton)
-{
-    if (!InButton || !InButton->MenuButton)
-    {
-        return;
-    }
-
-    UE_LOG(LogTemp, Log, TEXT("Binding delegates for button: %s"), *InButton->GetName());
-
-    InButton->MenuButton->OnClicked.AddDynamic(this, &UPHWidgetSwitcher::OnAnyButtonClicked);
-    InButton->MenuButton->OnHovered.AddDynamic(this, &UPHWidgetSwitcher::OnAnyButtonHovered);
-    InButton->MenuButton->OnUnhovered.AddDynamic(this, &UPHWidgetSwitcher::OnAnyButtonUnhovered);
-}
-
-void UPHWidgetSwitcher::OnAnyButtonClicked()
-{
-    // Identify which button was actually clicked (the hovered one)
-    for (const FMenuWidgetStuct& Entry : ButtonMapper)
-    {
-        if (const UMenuButton* Btn = Entry.MenuButton)
-        {
-            if (Btn->MenuButton && Btn->MenuButton->IsHovered())
-            {
-                // Found the clicked button
-                ClickButton(Entry.Widget);
-                break;
-            }
-        }
-    }
-}
-
-void UPHWidgetSwitcher::OnAnyButtonHovered()
-{
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Green, TEXT("OnAnyButtonHovered() called"));
-    }
-
-    //Un-comment to enable checks for onbutton Hovered 
-    //  UE_LOG(LogTemp, Log, TEXT("OnAnyButtonHovered() called"));
-
-    for (const FMenuWidgetStuct& Entry : ButtonMapper)
-    {
-        if (const UMenuButton* Btn = Entry.MenuButton)
-        {
-            if (Btn->MenuButton && Btn->MenuButton->IsHovered())
-            {
-                //Un-comment to enable checks for onbutton Hovered 
-                /*  if (GEngine)
-                  {
-                      GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, FString::Printf(TEXT("Hovered over button: %s"), *Btn->MenuTextBlock->GetText().ToString()));
-                  }*/
-
-                UE_LOG(LogTemp, Log, TEXT("Hovered over button: %s"), *Btn->MenuTextBlock->GetText().ToString());
-                
-                HoverButton(Entry.Widget);
-                break;
-            }
-        }
-    }
-}
-
-
-
-
-void UPHWidgetSwitcher::OnAnyButtonUnhovered()
-{
-    for (const FMenuWidgetStuct& Entry : ButtonMapper)
-    {
-        if (const UMenuButton* Btn = Entry.MenuButton)
-        {
-            // if it's not hovered now, revert color
-            if (!Btn->MenuButton->IsHovered())
-            {
-                UnHoverButton(Entry.Widget);
-            }
-        }
-    }
-}
-
 UWidget* UPHWidgetSwitcher::CreateMenuButton(FMenuWidgetStuct& MenuInfo)
 {
-    if (!MenuInfo.MenuButtonClass) return nullptr;
+    if (!MenuInfo.MenuButtonClass)
+    {
+        UE_LOG(LogTemp, Error, TEXT("MenuButtonClass is null for widget type: %d"), (int32)MenuInfo.Widget);
+        return nullptr;
+    }
 
+    // Create the menu button widget
     UMenuButton* Button = CreateWidget<UMenuButton>(GetWorld(), MenuInfo.MenuButtonClass);
-    if (!Button) return nullptr;
+    if (!Button)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to create MenuButton"));
+        return nullptr;
+    }
 
+    // Configure button properties
     Button->MenuTextBlock->SetText(FText::FromString(MenuInfo.MenuText));
     Button->WidgetType = MenuInfo.Widget;
     Button->WidgetSwitcher = MenuInfo.WidgetsSwitcher;
-
+    
+    // Bind delegates and initialize
     BindMenuButtonDelegates(Button);
     MenuInfo.MenuButton = Button;
-
     Button->PHInitialize();
 
+    // sizing with consistent dimensions
     USizeBox* Wrapper = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+    if (!Wrapper)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to create SizeBox wrapper"));
+        return Button; // Return the button directly if wrapper creation fails
+    }
+
     Wrapper->SetWidthOverride(ButtonWidth);
     Wrapper->SetHeightOverride(ButtonHeight);
     Wrapper->AddChild(Button);
@@ -250,156 +209,185 @@ UWidget* UPHWidgetSwitcher::CreateMenuButton(FMenuWidgetStuct& MenuInfo)
     return Wrapper;
 }
 
-void UPHWidgetSwitcher::HoverButton(const EWidgets WidgetType) const
+
+void UPHWidgetSwitcher::BindMenuButtonDelegates(const UMenuButton* InButton)
 {
-    // Apply hover color to that button
-    const UMenuButton* Button = nullptr;
-    for (const FMenuWidgetStuct& Item : ButtonMapper)
+    if (!InButton || !InButton->MenuButton)
     {
-        if (Item.Widget == WidgetType)
-        {
-            Button = Item.MenuButton;
-            break;
-        }
+        UE_LOG(LogTemp, Error, TEXT("Cannot bind delegates: Invalid button"));
+        return;
     }
-    SetButtonColor(Button, HoverColor);
+
+    // UButton delegates don't pass parameters - use the original approach but optimized
+    InButton->MenuButton->OnClicked.AddDynamic(this, &UPHWidgetSwitcher::OnAnyButtonClicked);
+    InButton->MenuButton->OnHovered.AddDynamic(this, &UPHWidgetSwitcher::OnAnyButtonHovered);  
+    InButton->MenuButton->OnUnhovered.AddDynamic(this, &UPHWidgetSwitcher::OnAnyButtonUnhovered);
 }
 
-void UPHWidgetSwitcher::UnHoverButton(const EWidgets WidgetType) const
+// OPTIMIZED EVENT HANDLERS - Use cached mapping for O(1) lookup
+void UPHWidgetSwitcher::OnAnyButtonClicked()
 {
-    // Apply normal/unhover color
-    const UMenuButton* Button = nullptr;
-    for (const FMenuWidgetStuct& Item : ButtonMapper)
+    // Find which button was clicked using the cached mapping
+    for (const auto& Pair : ButtonToWidgetMap)
     {
-        if (Item.Widget == WidgetType)
+        if (Pair.Key && Pair.Key->IsHovered()) // The clicked button is currently hovered
         {
-            Button = Item.MenuButton;
-            break;
+            UpdateButtonState(Pair.Value, ClickedColor);
+            
+            // Handle widget switching
+            if (CachedWidgetManager)
+            {
+                if (const UMenuButton* MenuButton = FindMenuButton(Pair.Value))
+                {
+                    CachedWidgetManager->Execute_SwitchWidgetTo(
+                        OwnerCharacter, Pair.Value, MenuButton->WidgetSwitcher, nullptr);
+                    CachedWidgetManager->OpenNewWidget_Implementation(Pair.Value, false);
+                }
+            }
+            break; // Found the clicked button, exit loop
         }
     }
-    SetButtonColor(Button, UnHoverColor);
 }
 
-void UPHWidgetSwitcher::ClickButton(const EWidgets WidgetType) const
+void UPHWidgetSwitcher::OnAnyButtonHovered()
 {
-    const UMenuButton* Button = nullptr;
+    // Find which button was hovered using the cached mapping
+    for (const auto& Pair : ButtonToWidgetMap)
+    {
+        if (Pair.Key && Pair.Key->IsHovered())
+        {
+            UpdateButtonState(Pair.Value, HoverColor);
+            break; // Found the hovered button, exit loop
+        }
+    }
+}
+
+void UPHWidgetSwitcher::OnAnyButtonUnhovered()
+{
+    // Check all buttons and unhover any that are no longer hovered
+    for (const auto& Pair : ButtonToWidgetMap)
+    {
+        if (Pair.Key && !Pair.Key->IsHovered())
+        {
+            UpdateButtonState(Pair.Value, UnHoverColor);
+        }
+    }
+}
+
+// OPTIMIZED HELPER METHODS
+UWidgetManager* UPHWidgetSwitcher::GetWidgetManager()
+{
+    if (CachedWidgetManager)
+    {
+        return CachedWidgetManager;
+    }
+
+    if (OwnerCharacter)
+    {
+        // Use consistent controller access
+        if (const APHPlayerController* PC = Cast<APHPlayerController>(OwnerCharacter->GetController()))
+        {
+            CachedWidgetManager = PC->GetWidgetManager();
+        }
+    }
+    
+    return CachedWidgetManager;
+}
+
+void UPHWidgetSwitcher::UpdateButtonState(EWidgets WidgetType, const FLinearColor& Color)
+{
+    UMenuButton* Button = FindMenuButton(WidgetType);
+    SetButtonColor(Button, Color);
+}
+
+UMenuButton* UPHWidgetSwitcher::FindMenuButton(EWidgets WidgetType)
+{
+    // Cache frequently accessed buttons
+    static TMap<EWidgets, TWeakObjectPtr<UMenuButton>> ButtonCache;
+    
+    if (auto CachedButton = ButtonCache.Find(WidgetType))
+    {
+        if (CachedButton->IsValid())
+        {
+            return CachedButton->Get();
+        }
+    }
+
+    // Fallback to search
     for (const FMenuWidgetStuct& Item : ButtonMapper)
     {
-        if (Item.Widget == WidgetType)
+        if (Item.Widget == WidgetType && Item.MenuButton)
         {
-            Button = Item.MenuButton;
-            if(const APHPlayerController* PC = Cast<APHPlayerController>(Cast<APHPlayerController>(OwnerCharacter->GetController())))
-            {
-                check(PC->GetWidgetManager());
-                
-                PC->GetWidgetManager()->Execute_SwitchWidgetTo(OwnerCharacter,
-                    WidgetType,Button->WidgetSwitcher, nullptr);
-            }
-            break;
+            ButtonCache.Add(WidgetType, Item.MenuButton);
+            return Item.MenuButton;
         }
     }
-    SetButtonColor(Button, ClickedColor);
-
-    // Let the WidgetManager know which sub-tab is active
-    if (Button && OwnerCharacter)
-    {
-        if (const APHPlayerController* PC = Cast<APHPlayerController>(OwnerCharacter->GetAlsController()))
-        {
-            if (UWidgetManager* Manager = PC->GetWidgetManager())
-            {
-                Manager->OpenNewWidget_Implementation( WidgetType, false);
-            }
-        }
-    }
+    
+    return nullptr;
 }
 
 void UPHWidgetSwitcher::OnLBClicked()
 {
-    if (const APHPlayerController* PC = Cast<APHPlayerController>(OwnerCharacter->GetAlsController()))
+    if (UWidgetManager* Manager = GetWidgetManager())
     {
-        if (UWidgetManager* Manager = PC->GetWidgetManager())
-        {
-            const EWidgetsSwitcher CurrentTab = Manager->GetActiveTab_Implementation();
-            MoveFocusOnTab(CurrentTab, -1);
-        }
+        const EWidgetsSwitcher CurrentTab = Manager->GetActiveTab_Implementation();
+        MoveFocusOnTab(CurrentTab, -1);
     }
 }
 
 void UPHWidgetSwitcher::OnRBClicked()
 {
-    if (const APHPlayerController* PC = Cast<APHPlayerController>(OwnerCharacter->GetAlsController()))
+    if (UWidgetManager* Manager = GetWidgetManager())
     {
-        if (UWidgetManager* Manager = PC->GetWidgetManager())
-        {
-            const EWidgetsSwitcher CurrentTab = Manager->GetActiveTab_Implementation();
-            MoveFocusOnTab(CurrentTab, +1);
-        }
+        const EWidgetsSwitcher CurrentTab = Manager->GetActiveTab_Implementation();
+        MoveFocusOnTab(CurrentTab, +1);
     }
 }
 
 void UPHWidgetSwitcher::SetButtonColor(const UMenuButton* InButton, const FLinearColor& InColor)
 {
-    if (!InButton) return;
-    //InButton->MenuButton->SetBackgroundColor(InColor);
+    if (!InButton || !InButton->MenuTextBlock) return;
+    
     InButton->MenuTextBlock->SetColorAndOpacity(InColor);
+    // Optionally set background color too
+    // InButton->MenuButton->SetBackgroundColor(InColor);
 }
 
-// Moves highlight or "focus" to a certain index in the sub-tab's button array
 void UPHWidgetSwitcher::FocusButtonOnTab(EWidgetsSwitcher SwitcherType, const int32 ButtonIndex)
 {
-    if (!TabButtons.Contains(SwitcherType))
-    {
-        return;
-    }
+    const FMenuButtonArray* ButtonArrayStruct = TabButtons.Find(SwitcherType);
+    if (!ButtonArrayStruct) return;
 
-    // Grab the struct first
-    const FMenuButtonArray& ButtonArrayStruct = TabButtons[SwitcherType];
-    const TArray<TObjectPtr<UMenuButton>>& Buttons = ButtonArrayStruct.Buttons;
+    const TArray<TObjectPtr<UMenuButton>>& Buttons = ButtonArrayStruct->Buttons;
+    if (!Buttons.IsValidIndex(ButtonIndex)) return;
 
-    if (Buttons.IsValidIndex(ButtonIndex))
+    // Update focus states
+    for (int32 i = 0; i < Buttons.Num(); ++i)
     {
-        // Highlight the newly focused button, un-highlight others
-        for (int32 i = 0; i < Buttons.Num(); ++i)
+        const UMenuButton* ThisButton = Buttons[i].Get();
+        if (!ThisButton) continue;
+
+        const FLinearColor Color = (i == ButtonIndex) ? HoverColor : UnHoverColor;
+        SetButtonColor(ThisButton, Color);
+        
+        if (ThisButton->MenuButton)
         {
-            const UMenuButton* ThisButton = Buttons[i].Get();
-            if (!ThisButton) 
-            {
-                continue;
-            }
-
-            if (i == ButtonIndex)
-            {
-                SetButtonColor(ThisButton, HoverColor);
-                ThisButton->MenuButton->SetBackgroundColor(HoverColor);
-            }
-            else
-            {
-                ThisButton->MenuButton->SetBackgroundColor(UnHoverColor);
-                SetButtonColor(ThisButton, UnHoverColor);
-            }
+            ThisButton->MenuButton->SetBackgroundColor(Color);
         }
     }
 }
 
-// Cycles the focus left/right among the "middle" buttons on a sub-tab
 void UPHWidgetSwitcher::MoveFocusOnTab(EWidgetsSwitcher SwitcherType, int32 Direction)
 {
-    if (!TabButtons.Contains(SwitcherType))
-    {
-        return;
-    }
+    const FMenuButtonArray* ButtonArrayStruct = TabButtons.Find(SwitcherType);
+    if (!ButtonArrayStruct) return;
 
-    // Grab the struct first
-    const FMenuButtonArray& ButtonArrayStruct = TabButtons[SwitcherType];
-    const TArray<TObjectPtr<UMenuButton>>& Buttons = ButtonArrayStruct.Buttons;
+    const TArray<TObjectPtr<UMenuButton>>& Buttons = ButtonArrayStruct->Buttons;
+    if (Buttons.Num() == 0) return;
 
-    if (Buttons.Num() == 0)
-    {
-        return;
-    }
+    int32* FocusedIndex = TabFocusedIndex.Find(SwitcherType);
+    if (!FocusedIndex) return;
 
-    int32& FocusedIndex = TabFocusedIndex[SwitcherType];
-    FocusedIndex = (FocusedIndex + Direction + Buttons.Num()) % Buttons.Num();
-
-    FocusButtonOnTab(SwitcherType, FocusedIndex);
+    *FocusedIndex = (*FocusedIndex + Direction + Buttons.Num()) % Buttons.Num();
+    FocusButtonOnTab(SwitcherType, *FocusedIndex);
 }

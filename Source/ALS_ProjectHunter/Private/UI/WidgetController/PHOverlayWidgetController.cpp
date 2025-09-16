@@ -192,7 +192,7 @@ void UPHOverlayWidgetController::BindCallbacksToDependencies()
             {
                 for (const FGameplayTag& Tag : AssetTags)
                 {
-                    // TODO: Broadcast the tag to the Widget Controller.
+                    OnEffectAssetTagsChanged.Broadcast(AssetTags);                    
                     UE_LOG(LogTemp, Log, TEXT("Effect Asset Tag: %s"), *Tag.ToString());
                 }
             }

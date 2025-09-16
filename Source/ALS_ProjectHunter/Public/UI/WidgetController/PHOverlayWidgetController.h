@@ -29,6 +29,9 @@
  * Thread-safety: This class is not thread-safe unless specified otherwise.
  */
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEffectAssetTagsChanged, const FGameplayTagContainer&, AssetTags);
+
+
 UCLASS(BlueprintType, Blueprintable)
 class ALS_PROJECTHUNTER_API UPHOverlayWidgetController : public UPHWidgetController
 {
@@ -36,8 +39,12 @@ class ALS_PROJECTHUNTER_API UPHOverlayWidgetController : public UPHWidgetControl
 
 public:
 
+	
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Effects")
+	FOnEffectAssetTagsChanged OnEffectAssetTagsChanged;
 
 protected:
 	UFUNCTION()
