@@ -95,15 +95,15 @@ public:
 
 	/** Get read-only access to item information */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	FItemInformation GetItemInfo() const { return ItemInfos; }
+	const FItemInformation& GetItemInfo() const { return ItemInfos; }
 
 	/** Get the item's display name */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	FText GetItemName() const { return ItemInfos.ItemInfo.ItemName; }
+	const FText& GetItemName() const { return ItemInfos.ItemInfo.ItemName; }
 
 	/** Get the item's description */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	FText GetItemDescription() const { return ItemInfos.ItemInfo.ItemDescription; }
+	const FText& GetItemDescription() const { return ItemInfos.ItemInfo.ItemDescription; }
 
 	/** Get the item's type */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
@@ -130,7 +130,7 @@ public:
 	void SetEquipmentData(const FEquippableItemData& InData);
 
 	/** Get equipment data for this item */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Equipment", meta = (DisplayName = "Get Equipment Data"))
 	const FEquippableItemData& GetEquipmentData() const { return ItemInfos.ItemData; }
 
 	/* ============================= */

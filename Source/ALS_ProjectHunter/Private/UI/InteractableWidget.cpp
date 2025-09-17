@@ -389,7 +389,7 @@ FLinearColor UInteractableWidget::GetImageBackgroundColorandOpacity() const
 	case EItemRarity::IR_GradeS:
 		Color = Color_GradeS;
 		break;
-	case EItemRarity::IR_Unkown:  // Note: "Unknown" is the correct spelling
+	case EItemRarity::IR_Unknown:  // Note: "Unknown" is the correct spelling
 		Color = Color_GradeUnkown; // Consider renaming to Color_GradeUnknown
 		break;
 	case EItemRarity::IR_Corrupted:

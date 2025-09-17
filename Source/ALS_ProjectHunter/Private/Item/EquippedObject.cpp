@@ -1,106 +1,390 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Item/EquippedObject.h"
-#include "Components/TimelineComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SplineComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/CombatManager.h"
+#include "Character/PHBaseCharacter.h"
 #include "Library/PHItemFunctionLibrary.h"
-#include "Library/PHItemStructLibrary.h"
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
 
-// Sets default values
+#define LOCTEXT_NAMESPACE "EquippedObject"
+
 AEquippedObject::AEquippedObject()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
-	// Create and set the default scene component as the root component
-	DefaultScene = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultScene"));
-	RootComponent = DefaultScene;
-
-	// Create other components
-	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
-	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
-	DamageSpline = CreateDefaultSubobject<USplineComponent>(TEXT("DamageSpline"));
-
-	// Attach other components to DefaultScene
-	StaticMesh->SetupAttachment(DefaultScene);
-	SkeletalMesh->SetupAttachment(DefaultScene);
-	DamageSpline->SetupAttachment(DefaultScene);
-
-	// Set properties for the StaticMesh
-	StaticMesh->SetStaticMesh(ItemInfo.ItemInfo.StaticMesh);
-	if (StaticMesh)
-	{
-		StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	}
-
-	if(!ItemStats.bAffixesGenerated)
-	{
-		ItemStats = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
-		ItemInfo = UPHItemFunctionLibrary::GenerateItemName(ItemStats,ItemInfo);
-	}
-		
-
+    PrimaryActorTick.bCanEverTick = false;
+    
+    // Create components
+    DefaultScene = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultScene"));
+    RootComponent = DefaultScene;
+    
+    StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
+    StaticMesh->SetupAttachment(DefaultScene);
+    StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    
+    SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
+    SkeletalMesh->SetupAttachment(DefaultScene);
+    
+    DamageSpline = CreateDefaultSubobject<USplineComponent>(TEXT("DamageSpline"));
+    DamageSpline->SetupAttachment(DefaultScene);
 }
 
-void AEquippedObject::Destroyed()
+void AEquippedObject::PostInitializeComponents()
 {
-	// Clean up components
-	if (StaticMesh)
-	{
-		StaticMesh->DestroyComponent();
-	}
-	if (SkeletalMesh)
-	{
-		SkeletalMesh->DestroyComponent();
-	}
-	if (DamageSpline)
-	{
-		DamageSpline->DestroyComponent();
-	}
-	
-	Super::Destroyed();
+    Super::PostInitializeComponents();
+    
+    // Generate stats after properties have been set from Blueprint/Editor
+    if (!ItemStats.bAffixesGenerated && StatsDataTable)
+    {
+        ItemStats = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
+        ItemInfo = UPHItemFunctionLibrary::GenerateItemName(ItemStats, ItemInfo);
+    }
+    
+    // Set initial durability
+    CurrentDurability = MaxDurability;
+    
+    // Set static mesh if available
+    if (StaticMesh && ItemInfo.ItemInfo.StaticMesh)
+    {
+        StaticMesh->SetStaticMesh(ItemInfo.ItemInfo.StaticMesh);
+    }
 }
 
-void AEquippedObject::SetItemInfo(FItemInformation Info)
-{
-	ItemInfo = Info;
-}
-
-void AEquippedObject::SetItemInfoRotated(bool inBool)
-{ ItemInfo.ItemInfo.Rotated = inBool; }
-
-// Called when the game starts or when spawned
 void AEquippedObject::BeginPlay()
 {
-	Super::BeginPlay();
-
-	if (DefaultScene == NULL)
-	{
-		DefaultScene = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultScene"));
-		DefaultScene = RootComponent;
-	}
-	
+    Super::BeginPlay();
 }
 
-UCombatManager* AEquippedObject::ConvertActorToCombatManager(AActor* InActor)
+#if WITH_EDITOR
+void AEquippedObject::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
-	if (InActor != nullptr)
-	{
-		if (UCombatManager* CombatManager =  InActor->FindComponentByClass<UCombatManager>())
-		{
-			return CombatManager;
-		}
-	}
-	return nullptr;
+    Super::PostEditChangeProperty(PropertyChangedEvent);
+    
+    if (PropertyChangedEvent.Property)
+    {
+        const FName PropertyName = PropertyChangedEvent.Property->GetFName();
+        
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(AEquippedObject, ItemInfo))
+        {
+            FString ErrorMsg;
+            if (!ValidateItemInfo(ItemInfo, ErrorMsg))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Invalid ItemInfo: %s"), *ErrorMsg);
+            }
+        }
+    }
+}
+#endif
+
+// === IEquippable Interface Implementation ===
+
+void AEquippedObject::OnEquipped_Implementation(AActor* NewOwner)
+{
+    if (!NewOwner)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("OnEquipped: NewOwner is null"));
+        return;
+    }
+    
+    SetOwningCharacter(Cast<AALSBaseCharacter>(NewOwner));
+    bIsEquipped = true;
+    
+    // Apply stats to owner
+    ApplyStatsToOwner(NewOwner);
+    
+    // Attach to owner
+    if (USkeletalMeshComponent* OwnerMesh = NewOwner->FindComponentByClass<USkeletalMeshComponent>())
+    {
+        AttachToComponent(OwnerMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, 
+                         GetAttachmentSocket_Implementation());
+    }
+    
+    // Broadcast event
+    OnEquipped.Broadcast(this, NewOwner);
 }
 
+void AEquippedObject::OnUnequipped_Implementation()
+{
+    if (OwningCharacter)
+    {
+        RemoveStatsFromOwner(OwningCharacter);
+    }
+    
+    // Detach from owner
+    DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+    
+    AActor* PreviousOwner = OwningCharacter;
+    OwningCharacter = nullptr;
+    bIsEquipped = false;
+    
+    // Broadcast event
+    OnUnequipped.Broadcast(this);
+}
+
+bool AEquippedObject::CanBeEquippedBy_Implementation(AActor* Actor) const
+{
+    if (!Actor || IsBroken())
+    {
+        return false;
+    }
+    
+    // Check stat requirements if it's a character
+    if (const APHBaseCharacter* Character = Cast<APHBaseCharacter>(Actor))
+    {
+        // TODO: Add stat requirement checks here
+        // Example: return Character->MeetsRequirements(ItemInfo.ItemData.StatRequirements);
+    }
+    
+    return true;
+}
+
+FName AEquippedObject::GetAttachmentSocket_Implementation() const
+{
+    // Check if item has a specific socket defined
+    if (!ItemInfo.ItemInfo.AttachmentSocket.IsNone())
+    {
+        return ItemInfo.ItemInfo.AttachmentSocket;
+    }
+    
+    // Return default socket based on item type
+    switch (ItemInfo.ItemInfo.ItemType)
+    {
+        case EItemType::IT_Weapon:
+            return DefaultAttachmentSocket;
+        case EItemType::IT_Shield:
+            return FName("ShieldSocket");
+        case EItemType::IT_Armor:
+            return FName("ArmorSocket");
+        default:
+            return DefaultAttachmentSocket;
+    }
+}
+
+FItemInformation AEquippedObject::GetEquippableItemInfo_Implementation() const
+{
+    return ItemInfo;
+}
+
+void AEquippedObject::ApplyStatsToOwner_Implementation(AActor* RefOnwer)
+{
+    if (!RefOnwer)
+    {
+        return;
+    }
+    
+    UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(RefOnwer);
+    if (!ASC)
+    {
+        return;
+    }
+    
+    // Apply each stat as a gameplay effect
+    for (const FPHAttributeData& Stat : ItemStats.GetAllStats())
+    {
+        // TODO: Apply stat modifiers to owner
+        // This would require creating gameplay effects based on stats
+        // Example: ASC->ApplyModToAttribute(Stat.AttributeName, EGameplayModOp::Additive, Stat.Value);
+    }
+}
+
+void AEquippedObject::RemoveStatsFromOwner_Implementation(AActor* RefOwner)
+{
+    if (!RefOwner)
+    {
+        return;
+    }
+    
+    UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(RefOwner);
+    if (!ASC)
+    {
+        return;
+    }
+    
+    // Remove stat effects
+    // This would require tracking applied effects and removing them
+}
+
+EEquipmentSlot AEquippedObject::GetEquipmentSlot_Implementation() const
+{
+    return ItemInfo.ItemInfo.EquipmentSlot;
+}
+
+// === Setters with Validation ===
+
+bool AEquippedObject::SetItemInfo(const FItemInformation& Info)
+{
+    FString ErrorMsg;
+    if (!ValidateItemInfo(Info, ErrorMsg))
+    {
+        UE_LOG(LogTemp, Error, TEXT("SetItemInfo failed: %s"), *ErrorMsg);
+        return false;
+    }
+    
+    FItemInformation OldInfo = ItemInfo;
+    ItemInfo = Info;
+    
+    // Update mesh if needed
+    if (StaticMesh && ItemInfo.ItemInfo.StaticMesh)
+    {
+        StaticMesh->SetStaticMesh(ItemInfo.ItemInfo.StaticMesh);
+    }
+    
+    // Broadcast change event
+    OnItemInfoChanged.Broadcast(OldInfo, ItemInfo);
+    
+    return true;
+}
+
+void AEquippedObject::SetItemInfoRotated(bool bRotated)
+{
+    ItemInfo.ItemInfo.Rotated = bRotated;
+}
 
 void AEquippedObject::SetMesh(UStaticMesh* Mesh) const
 {
-	if(StaticMesh)
-	{
-		StaticMesh->SetStaticMesh(Mesh);
-	}
+    ItemInfo.ItemInfo.StaticMesh = Mesh;
 }
 
+UCombatManager* AEquippedObject::ConvertActorToCombatManager(const AActor* InActor)
+{
+    return InActor ? InActor->FindComponentByClass<UCombatManager>() : nullptr;
+}
+
+bool AEquippedObject::SetOwningCharacter(AALSBaseCharacter* InOwner)
+{
+    if (InOwner == OwningCharacter)
+    {
+        return true; // No change needed
+    }
+    
+    if (bIsEquipped && InOwner != nullptr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Cannot change owner while equipped"));
+        return false;
+    }
+    
+    OwningCharacter = InOwner;
+    return true;
+}
+
+void AEquippedObject::SetDurability(float NewDurability)
+{
+    const float OldDurability = CurrentDurability;
+    CurrentDurability = FMath::Clamp(NewDurability, 0.0f, MaxDurability);
+    
+    if (OldDurability != CurrentDurability)
+    {
+        OnDurabilityChanged.Broadcast(CurrentDurability);
+        
+        if (CurrentDurability <= 0.0f && OldDurability > 0.0f)
+        {
+            OnItemBroken.Broadcast(this);
+        }
+    }
+}
+
+void AEquippedObject::ModifyDurability(float DeltaDurability)
+{
+    SetDurability(CurrentDurability + DeltaDurability);
+}
+
+bool AEquippedObject::SetMesh(UStaticMesh* Mesh)
+{
+    if (!StaticMesh)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SetMesh: StaticMesh component is null"));
+        return false;
+    }
+    
+    if (!Mesh)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SetMesh: Mesh parameter is null"));
+        return false;
+    }
+    
+    StaticMesh->SetStaticMesh(Mesh);
+    return true;
+}
+
+// === Validation Functions ===
+
+bool AEquippedObject::ValidateItemInfo(const FItemInformation& Info, FString& OutError) const
+{
+    if (Info.ItemInfo.ItemName.IsEmpty())
+    {
+        OutError = TEXT("Item name cannot be empty");
+        return false;
+    }
+    
+    if (Info.ItemInfo.Dimensions.X <= 0 || Info.ItemInfo.Dimensions.Y <= 0)
+    {
+        OutError = FString::Printf(TEXT("Invalid dimensions: %dx%d"), 
+                                   Info.ItemInfo.Dimensions.X, 
+                                   Info.ItemInfo.Dimensions.Y);
+        return false;
+    }
+    
+    if (!Info.ItemInfo.ItemImage && !Info.ItemInfo.StaticMesh)
+    {
+        OutError = TEXT("Item must have either an icon or a mesh");
+        return false;
+    }
+    
+    if (Info.ItemInfo.MaxStackSize < 0)
+    {
+        OutError = TEXT("Max stack size cannot be negative");
+        return false;
+    }
+    
+    OutError.Empty();
+    return true;
+}
+
+bool AEquippedObject::IsValidForEquipping() const
+{
+    return !IsBroken() && !ItemInfo.ItemInfo.ItemName.IsEmpty();
+}
+
+// === Pooling Support ===
+
+void AEquippedObject::ResetForPool()
+{
+    // Reset all state
+    bIsEquipped = false;
+    bIsFromPool = true;
+    OwningCharacter = nullptr;
+    CurrentDurability = MaxDurability;
+    CurrentActorHit.Empty();
+    PrevTracePoints.Empty();
+    
+    // Detach from any parent
+    DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+    
+    // Hide the actor
+    SetActorHiddenInGame(true);
+    SetActorEnableCollision(false);
+    SetActorTickEnabled(false);
+    
+    // Clear mesh
+    if (StaticMesh)
+    {
+        StaticMesh->SetStaticMesh(nullptr);
+    }
+}
+
+void AEquippedObject::InitializeFromPool(const FItemInformation& Info)
+{
+    // Set new item info
+    SetItemInfo(Info);
+    
+    // Reset durability
+    CurrentDurability = MaxDurability;
+    
+    // Show the actor
+    SetActorHiddenInGame(false);
+    SetActorEnableCollision(true);
+    SetActorTickEnabled(PrimaryActorTick.bStartWithTickEnabled);
+}
+
+#undef LOCTEXT_NAMESPACE

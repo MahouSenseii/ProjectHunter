@@ -26,8 +26,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool CanEquipItem(const APHBaseCharacter* Character) const;
 
-	UFUNCTION(BlueprintCallable, Category = "Item")
-	FItemStatRequirement GetStatRequirements() const;
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Requirements", meta = (DisplayName = "Get Stat Requirements"))
+	const FItemStatRequirement& GetStatRequirements() const;
 	
 
 	UFUNCTION(BlueprintCallable, Category = "Modifiers")
@@ -36,6 +36,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	TArray<FPHAttributeData> GetItemStats() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stats", meta = (DisplayName = "Get Full Item Stats"))
 	const FPHItemStats& GetFullItemStats() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Item")

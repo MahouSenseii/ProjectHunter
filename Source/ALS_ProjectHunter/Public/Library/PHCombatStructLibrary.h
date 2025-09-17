@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "PHCharacterEnumLibrary.h"
 #include  "Library/PHItemEnumLibrary.h"
 #include  "Library/PHItemStructLibrary.h"
 #include "Library/PHDamageTypeUtils.h"
@@ -39,106 +38,106 @@ struct FDamageByType
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FDamageRange PhysicalDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FDamageRange PhysicalDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FDamageRange FireDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FDamageRange IceDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FDamageRange LightningDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FDamageRange LightDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FDamageRange CorruptionDamage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FDamageRange FireDamage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FDamageRange IceDamage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FDamageRange LightningDamage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FDamageRange LightDamage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FDamageRange CorruptionDamage;
-
-	// Add operator +=
-	FDamageByType& operator+=(const FDamageByType& Other)
+	/* -------- helpers on FDamageRange -------- */
+	static FORCEINLINE FDamageRange AddRanges(const FDamageRange& A, const FDamageRange& B)
 	{
-		PhysicalDamage   += Other.PhysicalDamage;
-		FireDamage       += Other.FireDamage;
-		IceDamage        += Other.IceDamage;
-		LightningDamage  += Other.LightningDamage;
-		LightDamage      += Other.LightDamage;
-		CorruptionDamage += Other.CorruptionDamage;
+		return { A.Min + B.Min, A.Max + B.Max };
+	}
+
+	static FORCEINLINE FDamageRange ScaleRange(const FDamageRange& R, float S)
+	{
+		return { R.Min * S, R.Max * S };
+	}
+
+	/* -------- compound ops on THIS struct -------- */
+	FORCEINLINE FDamageByType& operator+=(const FDamageByType& Other)
+	{
+		PhysicalDamage   = AddRanges(PhysicalDamage,   Other.PhysicalDamage);
+		FireDamage       = AddRanges(FireDamage,       Other.FireDamage);
+		IceDamage        = AddRanges(IceDamage,        Other.IceDamage);
+		LightningDamage  = AddRanges(LightningDamage,  Other.LightningDamage);
+		LightDamage      = AddRanges(LightDamage,      Other.LightDamage);
+		CorruptionDamage = AddRanges(CorruptionDamage, Other.CorruptionDamage);
 		return *this;
 	}
 
-	// Add operator *= (scale all damage types by a float)
-	FDamageByType& operator*=(float Scale)
+	FORCEINLINE FDamageByType& operator*=(float Scale)
 	{
-		PhysicalDamage   *= Scale;
-		FireDamage       *= Scale;
-		IceDamage        *= Scale;
-		LightningDamage  *= Scale;
-		LightDamage      *= Scale;
-		CorruptionDamage *= Scale;
+		PhysicalDamage   = ScaleRange(PhysicalDamage,   Scale);
+		FireDamage       = ScaleRange(FireDamage,       Scale);
+		IceDamage        = ScaleRange(IceDamage,        Scale);
+		LightningDamage  = ScaleRange(LightningDamage,  Scale);
+		LightDamage      = ScaleRange(LightDamage,      Scale);
+		CorruptionDamage = ScaleRange(CorruptionDamage, Scale);
 		return *this;
 	}
 
-	// Optional: support a clean 'FDamageByType * float' usage
-	friend FDamageByType operator*(const FDamageByType& Dmg, float Scale)
+	/* -------- non-compound ops -------- */
+	friend FORCEINLINE FDamageByType operator+(FDamageByType A, const FDamageByType& B)
 	{
-		FDamageByType Result = Dmg;
-		Result *= Scale;
-		return Result;
+		A += B;
+		return A;
+	}
+	friend FORCEINLINE FDamageByType operator*(FDamageByType A, float Scale)
+	{
+		A *= Scale;
+		return A;
+	}
+	friend FORCEINLINE FDamageByType operator*(float Scale, FDamageByType A)
+	{
+		A *= Scale;
+		return A;
 	}
 
-	friend FDamageByType operator+(const FDamageByType& A, const FDamageByType& B)
+	/* -------- queries / rolls -------- */
+	FORCEINLINE float GetTotalDamageByType(EDamageTypes Type) const
 	{
-		FDamageByType Result = A;
-		Result += B;
-		return Result;
-	}
-
-	float GetTotalDamageByType(EDamageTypes DamageType) const
-	{
-		switch (DamageType)
+		const auto Avg = [](const FDamageRange& R){ return (R.Min + R.Max) * 0.5f; };
+		switch (Type)
 		{
-		case EDamageTypes::DT_Physical:    return (PhysicalDamage.Min + PhysicalDamage.Max) * 0.5f;
-		case EDamageTypes::DT_Fire:        return (FireDamage.Min + FireDamage.Max) * 0.5f;
-		case EDamageTypes::DT_Ice:         return (IceDamage.Min + IceDamage.Max) * 0.5f;
-		case EDamageTypes::DT_Lightning:   return (LightningDamage.Min + LightningDamage.Max) * 0.5f;
-		case EDamageTypes::DT_Light:       return (LightDamage.Min + LightDamage.Max) * 0.5f;
-		case EDamageTypes::DT_Corruption:  return (CorruptionDamage.Min + CorruptionDamage.Max) * 0.5f;
-		default:                           return 0.f;
+			case EDamageTypes::DT_Physical:   return Avg(PhysicalDamage);
+			case EDamageTypes::DT_Fire:       return Avg(FireDamage);
+			case EDamageTypes::DT_Ice:        return Avg(IceDamage);
+			case EDamageTypes::DT_Lightning:  return Avg(LightningDamage);
+			case EDamageTypes::DT_Light:      return Avg(LightDamage);
+			case EDamageTypes::DT_Corruption:    return Avg(CorruptionDamage); // rename it if you standardized to Corruption
+			default:                          return 0.f;
 		}
 	}
 
-	float RollDamageByType(EDamageTypes DamageType) const
+	FORCEINLINE float RollDamageByType(EDamageTypes Type) const
 	{
-		switch (DamageType)
+		switch (Type)
 		{
-		case EDamageTypes::DT_Physical:    return FMath::RandRange(PhysicalDamage.Min,   PhysicalDamage.Max);
-		case EDamageTypes::DT_Fire:        return FMath::RandRange(FireDamage.Min,       FireDamage.Max);
-		case EDamageTypes::DT_Ice:         return FMath::RandRange(IceDamage.Min,        IceDamage.Max);
-		case EDamageTypes::DT_Lightning:   return FMath::RandRange(LightningDamage.Min,  LightningDamage.Max);
-		case EDamageTypes::DT_Light:       return FMath::RandRange(LightDamage.Min,      LightDamage.Max);
-		case EDamageTypes::DT_Corruption:  return FMath::RandRange(CorruptionDamage.Min, CorruptionDamage.Max);
-		default:                           return 0.f;
+			case EDamageTypes::DT_Physical:   return FMath::FRandRange(PhysicalDamage.Min,   PhysicalDamage.Max);
+			case EDamageTypes::DT_Fire:       return FMath::FRandRange(FireDamage.Min,       FireDamage.Max);
+			case EDamageTypes::DT_Ice:        return FMath::FRandRange(IceDamage.Min,        IceDamage.Max);
+			case EDamageTypes::DT_Lightning:  return FMath::FRandRange(LightningDamage.Min,  LightningDamage.Max);
+			case EDamageTypes::DT_Light:      return FMath::FRandRange(LightDamage.Min,      LightDamage.Max);
+			case EDamageTypes::DT_Corruption:    return FMath::FRandRange(CorruptionDamage.Min, CorruptionDamage.Max);
+			default:                          return 0.f;
 		}
 	}
 
-	FDamageByType RollAllTypes() const
+	FORCEINLINE FDamageByType RollAllTypes() const
 	{
-		FDamageByType Rolled;
-
-		Rolled.PhysicalDamage   = { RollDamageByType(EDamageTypes::DT_Physical),   RollDamageByType(EDamageTypes::DT_Physical) };
-		Rolled.FireDamage       = { RollDamageByType(EDamageTypes::DT_Fire),       RollDamageByType(EDamageTypes::DT_Fire) };
-		Rolled.IceDamage        = { RollDamageByType(EDamageTypes::DT_Ice),        RollDamageByType(EDamageTypes::DT_Ice) };
-		Rolled.LightningDamage  = { RollDamageByType(EDamageTypes::DT_Lightning),  RollDamageByType(EDamageTypes::DT_Lightning) };
-		Rolled.LightDamage      = { RollDamageByType(EDamageTypes::DT_Light),      RollDamageByType(EDamageTypes::DT_Light) };
-		Rolled.CorruptionDamage = { RollDamageByType(EDamageTypes::DT_Corruption), RollDamageByType(EDamageTypes::DT_Corruption) };
-
-		return Rolled;
+		FDamageByType R;
+		// If a “roll” should return a *point* damage, mirroring to Min/Max is fine:
+		R.PhysicalDamage   = { RollDamageByType(EDamageTypes::DT_Physical),   RollDamageByType(EDamageTypes::DT_Physical) };
+		R.FireDamage       = { RollDamageByType(EDamageTypes::DT_Fire),       RollDamageByType(EDamageTypes::DT_Fire) };
+		R.IceDamage        = { RollDamageByType(EDamageTypes::DT_Ice),        RollDamageByType(EDamageTypes::DT_Ice) };
+		R.LightningDamage  = { RollDamageByType(EDamageTypes::DT_Lightning),  RollDamageByType(EDamageTypes::DT_Lightning) };
+		R.LightDamage      = { RollDamageByType(EDamageTypes::DT_Light),      RollDamageByType(EDamageTypes::DT_Light) };
+		R.CorruptionDamage = { RollDamageByType(EDamageTypes::DT_Corruption),    RollDamageByType(EDamageTypes::DT_Corruption) };
+		return R;
 	}
-
-
 };
 
 

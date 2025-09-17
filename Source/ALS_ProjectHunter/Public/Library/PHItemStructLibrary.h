@@ -4,10 +4,12 @@
 #include "Library/ALSCharacterEnumLibrary.h"
 #include "PHItemEnumLibrary.h"
 #include "Engine/DataTable.h"
+#include "Engine/EngineTypes.h" 
 #include "GameplayEffect.h"
 #include "PHItemStructLibrary.generated.h"
 
 
+class UItemDefinitionAsset;
 /* ============================= */
 /* === Forward Declarations === */
 /* ============================= */
@@ -62,9 +64,11 @@ struct FDamageRange
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Max = 0.0f;
 
-	FDamageRange& operator+=(const FDamageRange& Other) { Min += Other.Min; Max += Other.Max; return *this; }
-	FDamageRange& operator*=(float Scale) { Min *= Scale; Max *= Scale; return *this; }
-	friend FDamageRange operator*(const FDamageRange& Range, float Scale) { return FDamageRange{ Range.Min * Scale, Range.Max * Scale }; }
+	FDamageRange operator+(const FDamageRange& Other) const { return FDamageRange{ Min + Other.Min, Max + Other.Max }; }
+	FDamageRange operator*(const float Scale) const { return FDamageRange{ Min * Scale, Max * Scale }; }
+    
+	float GetAverage() const { return (Min + Max) * 0.5f; }
+	float GetRange() const { return Max - Min; }
 };
 
 /* ============================= */
@@ -172,6 +176,50 @@ struct FItemStatRequirement
 /* === Affix & Modifier Structs === */
 /* ============================= */
 
+
+USTRUCT(BlueprintType)
+struct FInventoryWeightInfo
+{
+	GENERATED_BODY()
+    
+	UPROPERTY(BlueprintReadOnly)
+	float CurrentWeight = 0.0f;
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MaxWeight = 100.0f;
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float OverweightSpeedPenalty = 0.5f;  // 50% speed reduction when overweight
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float OverweightThreshold = 0.9f;  // 90% capacity triggers "heavy" status
+    
+	float GetWeightPercent() const 
+	{ 
+		return MaxWeight > 0 ? CurrentWeight / MaxWeight : 0.0f; 
+	}
+    
+	bool IsOverweight() const 
+	{ 
+		return CurrentWeight > MaxWeight; 
+	}
+    
+	bool IsHeavy() const 
+	{ 
+		return GetWeightPercent() >= OverweightThreshold; 
+	}
+    
+	float GetRemainingCapacity() const 
+	{ 
+		return FMath::Max(0.0f, MaxWeight - CurrentWeight); 
+	}
+    
+	bool CanAddWeight(float AdditionalWeight) const 
+	{ 
+		return (CurrentWeight + AdditionalWeight) <= MaxWeight; 
+	}
+};
+
 USTRUCT(BlueprintType)
 struct FPHAttributeData : public FTableRowBase
 {
@@ -245,7 +293,7 @@ struct FPHAttributeData : public FTableRowBase
 };
 
 USTRUCT(BlueprintType)
-struct FPHItemStats // Affixes 
+struct FPHItemStats  
 {
 	GENERATED_BODY()
 
@@ -264,22 +312,82 @@ struct FPHItemStats // Affixes
         UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
         TArray<FPHAttributeData> Crafted;
 
-        TArray<FPHAttributeData> GetAllStats() const
+
+
+	FORCEINLINE TArray<FPHAttributeData> GetAllStats() const
         {
-                TArray<FPHAttributeData> Out;
-                Out.Append(Prefixes);
-                Out.Append(Suffixes);
-                Out.Append(Implicits);
-                // Crafted affixes were previously omitted; include them so the
-                // caller receives a complete list of generated stats.
-                Out.Append(Crafted);
-                return Out;
+        	TArray<FPHAttributeData> Out;
+        	const int32 TotalSize = Prefixes.Num() + Suffixes.Num() + Implicits.Num() + Crafted.Num();
+        	Out.Reserve(TotalSize); 
+        	Out.Append(Prefixes);
+        	Out.Append(Suffixes);
+        	Out.Append(Implicits);
+        	Out.Append(Crafted);
+        	return Out;
+        }
+
+
+	int32 GetTotalAffixCount() const
+        {
+        	return Prefixes.Num() + Suffixes.Num() + Implicits.Num() + Crafted.Num();
+        }
+    
+	bool HasAnyAffixes() const
+        {
+        	return GetTotalAffixCount() > 0;
+        }
+    
+	void ClearAllAffixes()
+        {
+        	Prefixes.Empty();
+        	Suffixes.Empty();
+        	Implicits.Empty();
+        	Crafted.Empty();
+        	bAffixesGenerated = false;
         }
 };
 
 /* ============================= */
 /* === Equippable & Item Data Structs === */
 /* ============================= */
+
+
+USTRUCT(BlueprintType)
+struct FItemDurability
+{
+	GENERATED_BODY()
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Durability")
+	float MaxDurability = 100.0f;
+    
+	UPROPERTY(BlueprintReadWrite, Category = "Durability")
+	float CurrentDurability = 100.0f;
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Durability")
+	float DurabilityLossRate = 1.0f;
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Durability")
+	bool bCanBreak = true;
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Durability")
+	float BrokenWeightMultiplier = 1.5f;  // Broken items might be heavier
+    
+	float GetDurabilityPercent() const 
+	{ 
+		return MaxDurability > 0 ? CurrentDurability / MaxDurability : 0.0f; 
+	}
+    
+	bool IsBroken() const 
+	{ 
+		return bCanBreak && CurrentDurability <= 0.0f; 
+	}
+    
+	FItemDurability()
+	{
+		CurrentDurability = MaxDurability;
+	}
+};
+
 USTRUCT(BlueprintType)
 struct FEquippableItemData
 {
@@ -326,6 +434,9 @@ struct FEquippableItemData
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Requirements")
     TMap<EItemRequiredStatsCategory, float> RequirementStats;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Durability")
+	FItemDurability Durability;
+
     FEquippableItemData()
         : EquipSlot(EEquipmentSlot::ES_None)
 	{}
@@ -338,7 +449,39 @@ struct FEquippableItemData
 
     	return  bHasValidAffixes || bHasPassiveEffects || bHasWeaponType;
     }
+	
+	// on-demand, transient cache for quick lookups
+	mutable TOptional<TMap<EItemRequiredStatsCategory, float>> CachedReqMap;
 
+	const TMap<EItemRequiredStatsCategory, float>& GetRequirementMap() const
+	{
+		if (!CachedReqMap.IsSet())
+		{
+			TMap<EItemRequiredStatsCategory, float> M;
+			M.Add(EItemRequiredStatsCategory::ISC_RequiredLevel,        StatRequirements.RequiredLevel);
+			M.Add(EItemRequiredStatsCategory::ISC_RequiredStrength,     StatRequirements.RequiredStrength);
+			M.Add(EItemRequiredStatsCategory::ISC_RequiredDexterity,    StatRequirements.RequiredDexterity);
+			M.Add(EItemRequiredStatsCategory::ISC_RequiredIntelligence, StatRequirements.RequiredIntelligence);
+			M.Add(EItemRequiredStatsCategory::ISC_RequiredEndurance,    StatRequirements.RequiredEndurance);
+			M.Add(EItemRequiredStatsCategory::ISC_RequiredAffliction,   StatRequirements.RequiredAffliction);
+			M.Add(EItemRequiredStatsCategory::ISC_RequiredLuck,         StatRequirements.RequiredLuck);
+			M.Add(EItemRequiredStatsCategory::ISC_RequiredCovenant,     StatRequirements.RequiredCovenant);
+			CachedReqMap = MoveTemp(M);
+		}
+		return CachedReqMap.GetValue();
+	}
+	
+	bool MeetsRequirements(const FItemStatRequirement& PlayerStats) const
+    {
+    	return PlayerStats.RequiredLevel >= StatRequirements.RequiredLevel &&
+			   PlayerStats.RequiredStrength >= StatRequirements.RequiredStrength &&
+			   PlayerStats.RequiredIntelligence >= StatRequirements.RequiredIntelligence &&
+			   PlayerStats.RequiredDexterity >= StatRequirements.RequiredDexterity &&
+			   PlayerStats.RequiredEndurance >= StatRequirements.RequiredEndurance &&
+			   PlayerStats.RequiredAffliction >= StatRequirements.RequiredAffliction &&
+			   PlayerStats.RequiredLuck >= StatRequirements.RequiredLuck &&
+			   PlayerStats.RequiredCovenant >= StatRequirements.RequiredCovenant;
+    }
 
 };
 
@@ -409,6 +552,100 @@ struct FDefenseStats
 	FDefenseStats() = default;
 };
 
+
+UENUM(BlueprintType)
+enum class EPHAttachmentRule : uint8
+{
+	KeepRelative  UMETA(DisplayName="Keep Relative"),
+	KeepWorld     UMETA(DisplayName="Keep World"),
+	SnapToTarget  UMETA(DisplayName="Snap To Target"),
+};
+
+FORCEINLINE EAttachmentRule ToEngineRule(EPHAttachmentRule R)
+{
+	switch (R)
+	{
+	case EPHAttachmentRule::KeepRelative: return EAttachmentRule::KeepRelative;
+	case EPHAttachmentRule::KeepWorld:    return EAttachmentRule::KeepWorld;
+	case EPHAttachmentRule::SnapToTarget: return EAttachmentRule::SnapToTarget;
+	default:                               return EAttachmentRule::KeepRelative;
+	}
+}
+
+
+USTRUCT(BlueprintType)
+struct FItemAttachmentRules
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attachment")
+    EPHAttachmentRule LocationRule = EPHAttachmentRule::SnapToTarget;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attachment")
+    EPHAttachmentRule RotationRule = EPHAttachmentRule::SnapToTarget;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attachment")
+    EPHAttachmentRule ScaleRule    = EPHAttachmentRule::KeepRelative;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attachment")
+    bool bWeldSimulatedBodies = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attachment")
+    FTransform AttachmentOffset;
+
+    // Convert to engine type
+    FAttachmentTransformRules ToAttachmentRules() const
+    {
+        return FAttachmentTransformRules(
+            ToEngineRule(LocationRule),
+            ToEngineRule(RotationRule),
+            ToEngineRule(ScaleRule),
+            bWeldSimulatedBodies
+        );
+    }
+
+    // Presets
+    static FItemAttachmentRules SnapToTarget()
+    {
+        FItemAttachmentRules R;
+        R.LocationRule = EPHAttachmentRule::SnapToTarget;
+        R.RotationRule = EPHAttachmentRule::SnapToTarget;
+        R.ScaleRule    = EPHAttachmentRule::SnapToTarget;
+        return R;
+    }
+
+    static FItemAttachmentRules KeepRelative()
+    {
+        FItemAttachmentRules R;
+        R.LocationRule = EPHAttachmentRule::KeepRelative;
+        R.RotationRule = EPHAttachmentRule::KeepRelative;
+        R.ScaleRule    = EPHAttachmentRule::KeepRelative;
+        return R;
+    }
+
+    static FItemAttachmentRules KeepWorld()
+    {
+        FItemAttachmentRules R;
+        R.LocationRule = EPHAttachmentRule::KeepWorld;
+        R.RotationRule = EPHAttachmentRule::KeepWorld;
+        R.ScaleRule    = EPHAttachmentRule::KeepWorld;
+        return R;
+    }
+
+    static FItemAttachmentRules WeaponDefault()
+    {
+        FItemAttachmentRules R;
+        R.LocationRule = EPHAttachmentRule::SnapToTarget;
+        R.RotationRule = EPHAttachmentRule::SnapToTarget;
+        R.ScaleRule    = EPHAttachmentRule::KeepRelative;
+        R.bWeldSimulatedBodies = true;
+        return R;
+    }
+};
+
+
+
+
 USTRUCT(BlueprintType)
 struct FItemBase: public FTableRowBase
 {
@@ -421,7 +658,7 @@ struct FItemBase: public FTableRowBase
 	TSubclassOf<AItemPickup> PickupClass;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UStaticMesh* StaticMesh;
+	mutable UStaticMesh* StaticMesh;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	USkeletalMesh* SkeletalMesh;
@@ -498,23 +735,185 @@ struct FItemBase: public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bHasNameBeenGenerated;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Attachment")
+	FName AttachmentSocket;
+    
+	// Add contextual sockets for different states
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Attachment")
+	TMap<FName, FName> ContextualSockets;  // e.g., "Combat" -> "WeaponSocket"
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Attachment")
+	FItemAttachmentRules AttachmentRules;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Weight")
+	float BaseWeight; 
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Weight")
+	bool bScaleWeightWithQuantity;
+
 	FItemBase()
-		: BaseGradeValue(0), StaticMesh(nullptr), SkeletalMesh(nullptr), OwnerID(""),
-		  ItemTag(""), ItemImage(nullptr), ItemImageRotated(nullptr), ItemType(EItemType::IT_None),
-		  ItemSubType(EItemSubType::IST_None),
-		  ItemRarity(EItemRarity::IR_None), Value(0), ValueModifier(0.0f), IsTradeable(false),
-		  Dimensions(FIntPoint::ZeroValue), EquipmentSlot(EEquipmentSlot::ES_None),
-		  Stackable(false), Quantity(0), MaxStackSize(0), Rotated(false), LastSavedSlot(ECurrentItemSlot::CIS_None),
-		  Transform(), GameplayEffectClass(nullptr), bHasNameBeenGenerated(false)
+		: BaseGradeValue(0.0f)
+		, StaticMesh(nullptr)
+		, SkeletalMesh(nullptr)
+		, OwnerID("")
+		, ItemID(NAME_None)
+		, ItemName(FText::GetEmpty())
+		, Description(FText::GetEmpty())
+		, ItemTag(NAME_None)
+		, ItemImage(nullptr)
+		, ItemImageRotated(nullptr)
+		, ItemType(EItemType::IT_None)
+		, ItemSubType(EItemSubType::IST_None)
+		, ItemRarity(EItemRarity::IR_None)
+		, Value(0)
+		, ValueModifier(0.0f)
+		, IsTradeable(false)
+		, Dimensions(FIntPoint::ZeroValue)
+		, EquipmentSlot(EEquipmentSlot::ES_None)
+		, ItemDescription(FText::GetEmpty())
+		, Stackable(false)
+		, Quantity(1)
+		, MaxStackSize(1)
+		, Rotated(false)
+		, LastSavedSlot(ECurrentItemSlot::CIS_None)
+		, Transform(FTransform::Identity)
+		, GameplayEffectClass(nullptr)
+		, bHasNameBeenGenerated(false)
+		, AttachmentSocket(NAME_None)
+		, BaseWeight(0.1f)
+		, bScaleWeightWithQuantity(true)
 	{
 	}
 
 	FORCEINLINE bool IsValid() const
 	{
-		return !ItemName.IsEmpty() && ItemType != EItemType::IT_None && StaticMesh != nullptr;
+		const bool bHasAnyMesh = (StaticMesh != nullptr) || (SkeletalMesh != nullptr);
+		return !ItemName.IsEmpty() && ItemType != EItemType::IT_None && bHasAnyMesh;
 	}
 
+	bool HasValidAttachment() const
+	{
+		return !AttachmentSocket.IsNone() || ContextualSockets.Num() > 0;
+	}
+
+	float GetTotalWeight() const
+	{
+		if (Stackable && bScaleWeightWithQuantity)
+		{
+			return BaseWeight * FMath::Max(1, Quantity);
+		}
+		return BaseWeight;
+	}
+    
+	float GetWeightPerUnit() const { return BaseWeight; }
+
+
+	float GetCalculatedValue() const
+	{
+		float BaseValue = static_cast<float>(Value);
+        
+		// Apply value modifier
+		BaseValue *= (1.0f + ValueModifier);
+		
+		float RarityMultiplier = 1.0f;
+		switch (ItemRarity)
+		{
+		case EItemRarity::IR_GradeS: RarityMultiplier = 10.0f; break;
+		case EItemRarity::IR_GradeA: RarityMultiplier = 5.0f; break;
+		case EItemRarity::IR_GradeB: RarityMultiplier = 4.5f; break;
+		case EItemRarity::IR_GradeC: RarityMultiplier = 3.5f; break;
+		case EItemRarity::IR_GradeD: RarityMultiplier = 2.0f; break;
+		case EItemRarity::IR_GradeF: RarityMultiplier = 1.0f; break;
+		default: ;
+		}
+		BaseValue *= RarityMultiplier;
+        
+		// Stack value for quantity
+		if (Stackable)
+		{
+			BaseValue *= FMath::Max(1, Quantity);
+		}
+        
+		return FMath::Max(0.0f, BaseValue);
+	}
+
+
+	
+	bool IsValidForInventory() const
+	{
+		if (!IsValid()) return false;
+    
+		// Check dimensions are reasonable
+		if (Dimensions.X <= 0 || Dimensions.Y <= 0 || 
+			Dimensions.X > 10 || Dimensions.Y > 10)
+		{
+			return false;
+		}
+    
+		// Check quantity logic
+		if (Stackable && MaxStackSize <= 0)
+		{
+			return false;
+		}
+    
+		if (!Stackable && Quantity > 1)
+		{
+			return false;
+		}
+    
+		// Check weight is reasonable
+		if (BaseWeight < 0.0f || BaseWeight > 10000.0f)
+		{
+			return false;
+		}
+    
+		return true;
+	}
+
+	static int32 GetRarityScore(EItemRarity R)
+	{
+		switch (R) {
+		case EItemRarity::IR_GradeS: return 6;
+		case EItemRarity::IR_GradeA: return 5;
+		case EItemRarity::IR_GradeB: return 4;
+		case EItemRarity::IR_GradeC: return 3;
+		case EItemRarity::IR_GradeD: return 2;
+		case EItemRarity::IR_GradeF: return 1;
+		default: return 0; // Unknown/Corrupted handled elsewhere
+		}
+	}
+
+	EItemComparisonResult CompareTo(const FItemBase& Other) const
+	{
+		// Can't compare different item types
+		if (ItemType != Other.ItemType)
+		{
+			return EItemComparisonResult::Incomparable;
+		}
+    
+		// Compare by rarity first
+		if (GetRarityScore != Other.GetRarityScore)
+		{
+			return GetRarityScore > Other.GetRarityScore ? 
+				   EItemComparisonResult::Better : 
+				   EItemComparisonResult::Worse;
+		}
+    
+		// Compare by value
+		float ThisValue = GetCalculatedValue();
+		float OtherValue = Other.GetCalculatedValue();
+    
+		if (FMath::IsNearlyEqual(ThisValue, OtherValue))
+		{
+			return EItemComparisonResult::Equal;
+		}
+    
+		return ThisValue > OtherValue ? 
+			   EItemComparisonResult::Better : 
+			   EItemComparisonResult::Worse;
+	}
 };
+
 
 
 USTRUCT(BlueprintType)
@@ -523,6 +922,7 @@ struct FDropTable : public FTableRowBase
 
 	GENERATED_BODY()
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName RowName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
@@ -573,25 +973,65 @@ struct FPassiveEffectHandleList
 	TArray<FActiveGameplayEffectHandle> Handles;
 };
 
+// PHItemStructLibrary.h (replace the old version)
 USTRUCT(BlueprintType)
-struct FItemInformation: public FTableRowBase
+struct FItemInformation
 {
 	GENERATED_BODY()
 
-	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	FItemBase ItemInfo;
+	FItemBase ItemInfo;                  
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	FEquippableItemData ItemData;
-
-	// Set in BP will be all stats that the item can generate
-	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")
-	UDataTable* StatsDataTable;
+	FEquippableItemData ItemData;        
 
 	FORCEINLINE bool IsValid() const
 	{
-		return ItemInfo.IsValid() || ItemData.IsValid();
+		return ItemInfo.IsValid() || ItemData.IsValid();  
 	}
+};
 
+
+
+USTRUCT(BlueprintType)
+struct FItemInstance
+{
+	GENERATED_BODY()
+
+	// Runtime roll data
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 ItemLevel = 1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) EItemRarity Rarity = EItemRarity::IR_GradeF;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bIdentified = true;
+
+	// Rolled affixes (same type you already use for affix rows)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FPHAttributeData> Prefixes;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FPHAttributeData> Suffixes;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FPHAttributeData> Crafted;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FPHAttributeData> Implicits;
+
+	// Durability per instance
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FItemDurability Durability;
+
+	// Cosmetic / runtime only
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FText DisplayName;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 Seed = 0; // for deterministic rerolls
+};
+
+
+USTRUCT(BlueprintType)
+struct FSpawnableItemRow_DA : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	// The base item asset (archetype)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSoftObjectPtr<UItemDefinitionAsset> BaseDef;
+
+	// (Optional) override pickup class; if unset we'll use Def->Base.PickupClass
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<class AItemPickup> OverridePickupClass = nullptr;
+
+	// (Optional) per-entry notes
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString Notes;
 };

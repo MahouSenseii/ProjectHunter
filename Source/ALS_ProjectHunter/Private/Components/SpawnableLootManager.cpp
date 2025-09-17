@@ -2,6 +2,7 @@
 #include "AbilitySystem/PHAttributeSet.h"
 #include "Components/BoxComponent.h"
 #include "Interactables/Pickups/ItemPickup.h"
+#include "Item/Data/UItemDefinitionAsset.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Library/PHItemStructLibrary.h"
@@ -132,11 +133,11 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
         return;
     }
 
-    // Use a different name to avoid confusion with the pickup's ItemInfo
-    const FItemInformation* Row = DataTable->FindRow<FItemInformation>(ItemName, TEXT("LookupItemInfo"));
-    if (!Row)
+    // NEW: lookup the Data-Asset row instead of FItemInformation
+    const FSpawnableItemRow_DA* Row = DataTable->FindRow<FSpawnableItemRow_DA>(ItemName, TEXT("LookupItemDef"));
+    if (!Row || !Row->BaseDef.IsValid())
     {
-        UE_LOG(LogLoot, Warning, TEXT("Item %s not found in DataTable"), *ItemName.ToString());
+        UE_LOG(LogLoot, Warning, TEXT("Item %s not found or BaseDef missing."), *ItemName.ToString());
         return;
     }
 
@@ -146,8 +147,18 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
         return;
     }
 
-    // Pull the pickup class from the row
-    TSubclassOf<AItemPickup> ClassToSpawn = Row->ItemInfo.PickupClass; // keep your same path: Row->ItemInfo.StaticMesh etc.
+    // Resolve the asset
+    UItemDefinitionAsset* Def = Row->BaseDef.LoadSynchronous();
+    if (!Def || !Def->IsValidDefinition())
+    {
+        UE_LOG(LogLoot, Warning, TEXT("Invalid ItemDefinitionAsset for %s"), *ItemName.ToString());
+        return;
+    }
+
+    // Choose pickup class: row override > asset default
+    TSubclassOf<AItemPickup> ClassToSpawn = Row->OverridePickupClass
+        ? Row->OverridePickupClass
+        : Def->Base.PickupClass; // uses your existing FItemBase.PickupClass
     if (!*ClassToSpawn)
     {
         UE_LOG(LogLoot, Warning, TEXT("Pickup class is null for item: %s"), *ItemName.ToString());
@@ -159,7 +170,7 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
     Params.Instigator = Cast<APawn>(GetOwner());
     Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-    // Deferred spawn so we can set data BEFORE construction script runs
+    // Keep your deferred spawn pattern
     AItemPickup* Item = GetWorld()->SpawnActorDeferred<AItemPickup>(ClassToSpawn, SpawnTransform, Params.Owner, Params.Instigator, Params.SpawnCollisionHandlingOverride);
     if (!Item)
     {
@@ -167,18 +178,37 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
         return;
     }
 
-    // Assign properties BEFORE FinishSpawningActor (so Construction Script sees them)
-    Item->ItemInfo = *Row;
-    if (Row->ItemInfo.StaticMesh)
+    // --- HYDRATE PICKUP FROM THE ASSET ---
+    // If your AItemPickup holds a UBaseItem (recommended):
+    //   Item->ItemObject->BaseDef = Def;
+    //   Roll affixes from Def->AffixTable into Item->ItemObject->Instance;
+    //   Item->ItemObject->RebuildItemInfoView();  // builds the same FItemInformation view as before
+
+    // Back-compat fallback (no AItemPickup changes): build a temp FItemInformation and assign it,
+    // so your existing Construction Script and mesh code still work.
     {
-        Item->SetNewMesh(Row->ItemInfo.StaticMesh);
+        FItemInformation TempView;
+        TempView.ItemInfo = Def->Base;    // static/base data (meshes, value, sockets, rules)
+        TempView.ItemData = Def->Equip;   // equip class/slot/base stats/passives
+
+        // Optional: put fixed implicits here (and rolled affixes if you roll at spawn time)
+        TempView.ItemData.Affixes.Implicits = Def->Implicits;
+        TempView.ItemData.Affixes.bAffixesGenerated = TempView.ItemData.Affixes.GetTotalAffixCount() > 0;
+
+        Item->ItemInfo = MoveTemp(TempView); // same place you previously assigned the row
     }
 
-    UGameplayStatics::FinishSpawningActor(Item, SpawnTransform);
+    // Mesh assignment stays the same; Construction Script will see the data (deferred spawn)
+    if (Item->ItemInfo.ItemInfo.StaticMesh)
+    {
+        Item->SetNewMesh(Item->ItemInfo.ItemInfo.StaticMesh);
+    }
+
+    UGameplayStatics::FinishSpawningActor(Item, SpawnTransform); // unchanged
 
     UE_LOG(LogLoot, Log, TEXT("Spawned %s | Mesh=%s | Class=%s"),
         *ItemName.ToString(),
-        Row->ItemInfo.StaticMesh ? *Row->ItemInfo.StaticMesh->GetName() : TEXT("None"),
+        Item->ItemInfo.ItemInfo.StaticMesh ? *Item->ItemInfo.ItemInfo.StaticMesh->GetName() : TEXT("None"),
         *ClassToSpawn->GetName());
 }
 

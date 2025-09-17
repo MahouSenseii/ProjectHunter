@@ -123,97 +123,87 @@ void UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh, EEquipmentSlot
 {
 	if (!IsValid(Item)) return;
 
-	(HasMesh) ? HandleHasMesh(Item, Slot) : HandleNoMesh(Item, Slot);
+	HasMesh ? HandleHasMesh(Item, Slot) : HandleNoMesh(Item, Slot);
 
-	// === Apply Stat Bonuses ===
+	// Apply stats (unchanged)
 	if (UEquippableItem* EquipItem = Cast<UEquippableItem>(Item))
 	{
 		if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(GetOwner()))
 		{
-			// Apply all affix and passive bonuses
 			ApplyWeaponBaseDamage(EquipItem, Character);
 			ApplyItemStatBonuses(EquipItem, Character);
 		}
 	}
+
 	OnEquipmentChanged.Broadcast();
 }
+
 
 
 void UEquipmentManager::HandleHasMesh(UBaseItem* Item, EEquipmentSlot Slot)
 {
 	if (!CheckSlot(Item)) return;
 
-	// Retrieve the currently equipped item in the slot
-	UBaseItem** EquippedItemPtr = EquipmentData.Find(Slot);
-
-	if (UBaseItem* EquippedItem = (EquippedItemPtr) ? *EquippedItemPtr : nullptr; IsValid(EquippedItem))
+	// If slot occupied, return to inventory or drop, then remove from slot
+	if (UBaseItem** EquippedItemPtr = EquipmentData.Find(Slot))
 	{
-		// Try adding old equipment back to inventory; if it fails, drop it
-		if (!GetInventoryManager()->TryToAddItemToInventory(EquippedItem, true))
+		if (!GetInventoryManager()->TryToAddItemToInventory(*EquippedItemPtr, true))
 		{
-			GetInventoryManager()->DropItemFromInventory(EquippedItem);
+			GetInventoryManager()->DropItemFromInventory(*EquippedItemPtr);
 		}
-
-		// Remove the currently equipped item from the slot
-		RemoveEquippedItem(EquippedItem, Slot);
+		RemoveEquippedItem(*EquippedItemPtr, Slot);
 	}
 
-	// Attach the new item
-	if (Item)
+	if (!Item)
 	{
-		Item->SetRotated(false);
-		AttachItem(Item->GetItemInfo().ItemData.EquipClass, Item, Slot);
+		UE_LOG(LogEquipmentManager, Warning, TEXT("Equip Item was null in HandleHasMesh"));
+		return;
 	}
-	else
-	{
-		UE_LOG(LogEquipmentManager, Warning, TEXT("Equip Item came back null (Check EquipmentManager 107)"));
-	}
+
+	Item->SetRotated(false);
+	AttachItem(Item->GetItemInfo().ItemData.EquipClass, Item, Slot);
 }
+
 
 void UEquipmentManager::HandleNoMesh(UBaseItem* Item, EEquipmentSlot Slot)
 {
 	if (!CheckSlot(Item) || !IsValid(Item)) return;
 
-	// Try to find the currently equipped item in the given slot.
 	if (UBaseItem** EquippedItem = EquipmentData.Find(Slot))
 	{
-		// If an item is equipped, attempt to return it to inventory.
 		if (!GetInventoryManager()->TryToAddItemToInventory(*EquippedItem, true))
 		{
-			// If adding to inventory fails, drop the item.
 			GetInventoryManager()->DropItemFromInventory(*EquippedItem);
 		}
-		
-		// Remove the equipped item from the slot.
 		EquipmentData.Remove(Slot);
 	}
 
-	// Equip the new item.
 	EquipmentData.Add(Slot, Item);
 }
+
 
 void UEquipmentManager::RemoveEquippedItem(UBaseItem* Item, EEquipmentSlot Slot)
 {
 	if (!IsValid(Item)) return;
 
-	RemoveItemInSlot(Slot); // Handles detaching from the equipment slot
+	RemoveItemInSlot(Slot);
 
 	if (OwnerCharacter)
 	{
+		// Back to default overlay when item leaves the slot
 		OwnerCharacter->SetOverlayState(EALSOverlayState::Default);
 
-		// Safely cast to equippable and remove flat stats
 		if (UEquippableItem* Equip = Cast<UEquippableItem>(Item))
 		{
 			if (APHBaseCharacter* PHCharacter = Cast<APHBaseCharacter>(OwnerCharacter))
 			{
-				// Optional: remove passive effects
 				RemoveItemStatBonuses(Equip, PHCharacter);
 				RemoveWeaponBaseDamage(Equip, PHCharacter);
 			}
 		}
 	}
 }
+
 
 void UEquipmentManager::RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHBaseCharacter* Character)
 {
@@ -299,12 +289,12 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 
 	if (UWorld* World = GetWorld())
 	{
-		// Spawn parameters
+		// Spawn the equipped actor
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-		// Spawn the actor
-		AEquippedObject* SpawnedActor = World->SpawnActor<AEquippedObject>(Class, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+		AEquippedObject* SpawnedActor =
+			World->SpawnActor<AEquippedObject>(Class, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 
 		if (!IsValid(SpawnedActor))
 		{
@@ -312,37 +302,81 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 			return;
 		}
 
-		// Set item info
-		SpawnedActor->SetItemInfo(Item->GetItemInfo());
+		// Feed the item's current view into the equipped actor
+		const FItemInformation& Info = Item->GetItemInfo();
+		const FItemBase&       Base = Info.ItemInfo;
+		const FEquippableItemData& Equip = Info.ItemData;
 
-		// Find the correct socket name and attach the actor
-		const FName SlotToAttachTo = UPHItemFunctionLibrary::GetSocketNameForSlot(Slot);
-		if (!OwnerCharacter->GetMesh()->DoesSocketExist(SlotToAttachTo))
+		SpawnedActor->SetItemInfo(Info);
+
+		// Resolve the desired socket:
+		// 1) Use explicit per-item socket if provided
+		// 2) (Optional) Use the first ContextualSockets entry if any were authored
+		// 3) Fallback to your library's mapping by slot
+		FName SocketToAttach = Base.AttachmentSocket;
+
+		if (SocketToAttach.IsNone())
 		{
-			UE_LOG(LogEquipmentManager, Warning, TEXT("Socket %s does not exist on character"), *SlotToAttachTo.ToString());
+			if (Base.ContextualSockets.Num() > 0)
+			{
+				// pull first authored contextual socket as a generic default
+				for (const TPair<FName, FName>& Kvp : Base.ContextualSockets)
+				{
+					if (!Kvp.Value.IsNone())
+					{
+						SocketToAttach = Kvp.Value;
+						break;
+					}
+				}
+			}
+		}
+
+		if (SocketToAttach.IsNone())
+		{
+			SocketToAttach = UPHItemFunctionLibrary::GetSocketNameForSlot(Slot);
+		}
+
+		if (!OwnerCharacter->GetMesh()->DoesSocketExist(SocketToAttach))
+		{
+			UE_LOG(LogEquipmentManager, Warning, TEXT("Socket %s does not exist on character"), *SocketToAttach.ToString());
+			SpawnedActor->Destroy();
 			return;
 		}
 
-		// Set the mesh and validate it
-		if (UStaticMesh* Mesh = Item->GetItemInfo().ItemInfo.StaticMesh)
+		// Mesh assignment (kept as StaticMesh for now)
+		if (UStaticMesh* Mesh = Base.StaticMesh)
 		{
 			SpawnedActor->SetMesh(Mesh);
 		}
 		else
 		{
 			UE_LOG(LogEquipmentManager, Error, TEXT("Mesh for item is null!"));
+			SpawnedActor->Destroy();
 			return;
 		}
 
-		// Attach the object and update equipment data
-		SpawnedActor->AttachToComponent(OwnerCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SlotToAttachTo);
-		SpawnedActor->SetOwningCharacter(OwnerCharacter);
+		// Use authorable attachment rules & offset if present, else snap like before
+		const FAttachmentTransformRules AttachRules =
+			Base.AttachmentRules.ToAttachmentRules(); // KeepRelative|SnapToTarget based on your struct
+		SpawnedActor->AttachToComponent(OwnerCharacter->GetMesh(), AttachRules, SocketToAttach);
 
-		// Update equipment mappings
+		// If using KeepRelative, apply per-item offset
+		SpawnedActor->SetActorRelativeTransform(Base.AttachmentRules.AttachmentOffset);
+
+		// Hand back references
+		SpawnedActor->SetOwningCharacter(OwnerCharacter);
 		EquipmentData.Add(Slot, Item);
 		EquipmentItem.Add(Slot, SpawnedActor);
+
+		// Drive overlay from the item's equip data (DA-backed)
+		if (Equip.OverlayState != EALSOverlayState::Default)
+		{
+			OwnerCharacter->SetOverlayState(Equip.OverlayState);
+		}
+		
 	}
 }
+
 
 void UEquipmentManager::ApplyAllEquipmentStatsToAttributes(APHBaseCharacter* Character)
 {

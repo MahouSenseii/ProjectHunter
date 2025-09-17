@@ -20,25 +20,16 @@ void UConsumableItem::UseItem(AActor* Target)
 {
 	if (ConsumableData.Quantity > 0 && ConsumableData.GameplayEffectClass)
 	{
-		// Apply the gameplay effect to the target actor
 		ApplyEffectToTarget(Target, ConsumableData.GameplayEffectClass);
-
-		// Decrease the quantity of the item
 		ConsumableData.Quantity--;
-	}
-	else
-	{
-		// Attempt to cast the Target to APHPlayerCharacter
-
-		if (APHBaseCharacter* Player = Cast<APHBaseCharacter>(Target))
+        
+		// Remove item when fully consumed
+		if (ConsumableData.Quantity == 0)
 		{
-			Player->GetInventoryManager()->RemoveItemFromInventory(this);
-		}
-		else
-		{
-			// Handle the case where the cast fails, if necessary
-			UE_LOG(LogTemp, Warning, TEXT("UseItem: Target is not a valid APHPlayerCharacter."));
+			if (APHBaseCharacter* Player = Cast<APHBaseCharacter>(Target))
+			{
+				Player->GetInventoryManager()->RemoveItemFromInventory(this);
+			}
 		}
 	}
 }
-

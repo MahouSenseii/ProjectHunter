@@ -41,7 +41,7 @@ bool UEquippableItem::CanEquipItem(const APHBaseCharacter* Character) const
     return true;
 }
 
-FItemStatRequirement UEquippableItem::GetStatRequirements() const
+const FItemStatRequirement& UEquippableItem::GetStatRequirements() const
 {
 	return ItemInfos.ItemData.StatRequirements;
 }

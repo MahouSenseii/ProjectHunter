@@ -1,4 +1,4 @@
-// Fill out your copyright  otice in the Description page of Project Settings.
+// Fill out your copyright  notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -7,7 +7,8 @@
 #include "ConsumableItem.generated.h"
 
 /**
- * 
+ * Represents a consumable item derived from the base item class.
+ * Allows interaction and manipulation of consumable-specific data and functionality.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UConsumableItem : public UBaseItem

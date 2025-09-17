@@ -1,89 +1,177 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/CombatManager.h"
 #include "GameFramework/Actor.h"
+#include "Interfaces/IEquippable.h" 
 #include "Library/PHItemStructLibrary.h"
 #include "EquippedObject.generated.h"
 
+// Forward declarations
 class AALSBaseCharacter;
+class UCombatManager;
 class USceneComponent;
 class USplineComponent;
 class UTimelineComponent;
+class UStaticMeshComponent;
+class USkeletalMeshComponent;
+class UDataTable;
+
+// === Delegate Declarations ===
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEquipped, AEquippedObject*, EquippedObject, AActor*, Owner);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUnequipped, AEquippedObject*, EquippedObject);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemInfoChanged, const FItemInformation&, OldInfo, const FItemInformation&, NewInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDurabilityChanged, float, NewDurability);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemBroken, AEquippedObject*, BrokenItem);
 
 UCLASS()
-class ALS_PROJECTHUNTER_API AEquippedObject : public AActor
+class ALS_PROJECTHUNTER_API AEquippedObject : public AActor, public IEquippable
 {
-	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
-	AEquippedObject();
-	virtual void Destroyed() override;
+    GENERATED_BODY()
+    
+public:    
+    AEquippedObject();
+    
+    // === IEquippable Interface Implementation ===
+    virtual void OnEquipped_Implementation(AActor* NewOwner) override;
+    virtual void OnUnequipped_Implementation() override;
+    virtual bool CanBeEquippedBy_Implementation(AActor* Actor) const override;
+    virtual FName GetAttachmentSocket_Implementation() const override;
+    virtual FItemInformation GetEquippableItemInfo_Implementation() const override;
+    virtual void ApplyStatsToOwner_Implementation(AActor* Owner) override;
+    virtual void RemoveStatsFromOwner_Implementation(AActor* Owner) override;
+    virtual EEquipmentSlot GetEquipmentSlot_Implementation() const override;
+    
+    // === Getters with Validation ===
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
+    const FItemInformation& GetItemInfo() const { return ItemInfo; }
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
+    const FPHItemStats& GetItemStats() const { return ItemStats; }
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
+    bool IsEquipped() const { return bIsEquipped; }
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
+    bool IsBroken() const { return CurrentDurability <= 0.0f; }
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
+    float GetDurability() const { return CurrentDurability; }
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
+    float GetMaxDurability() const { return MaxDurability; }
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Character")
+    AALSBaseCharacter* GetOwningCharacter() const { return OwningCharacter; }
+    
+    // === Setters with Validation ===
+    UFUNCTION(BlueprintCallable, Category = "Item", CallInEditor)
+    bool SetItemInfo(const FItemInformation& Info);
+    void SetItemInfoRotated(bool bRotated);
+    void SetMesh(UStaticMesh* Mesh) const;
 
-	UFUNCTION(BlueprintCallable, BlueprintSetter)
-	void SetItemInfo(FItemInformation Info);
-	void SetOwningCharacter(AALSBaseCharacter* InOwner) { OwningCharacter = InOwner; }
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Converter")
+    static UCombatManager* ConvertActorToCombatManager(const AActor* InActor);
 
-	UFUNCTION(BlueprintCallable)
-	FItemInformation GetItemInfo() { return  ItemInfo;}
-
-	UFUNCTION(BlueprintCallable)
-	void SetItemInfoRotated(bool InBool);
-
+    UFUNCTION(BlueprintCallable, Category = "Character")
+    bool SetOwningCharacter(AALSBaseCharacter* InOwner);
+    
+    UFUNCTION(BlueprintCallable, Category = "Item")
+    void SetDurability(float NewDurability);
+    
+    UFUNCTION(BlueprintCallable, Category = "Item")
+    void ModifyDurability(float DeltaDurability);
+    
+    UFUNCTION(BlueprintCallable, Category = "Mesh")
+    bool SetMesh(UStaticMesh* Mesh);
+    
+    // === Validation Functions ===
+    UFUNCTION(BlueprintCallable, Category = "Validation")
+    bool ValidateItemInfo(const FItemInformation& Info, FString& OutError) const;
+    
+    UFUNCTION(BlueprintCallable, Category = "Validation")
+    bool IsValidForEquipping() const;
+    
+    // === Pooling Support ===
+    UFUNCTION(BlueprintCallable, Category = "Pooling")
+    void ResetForPool();
+    
+    UFUNCTION(BlueprintCallable, Category = "Pooling")
+    void InitializeFromPool(const FItemInformation& Info);
+    
+    // === Events/Delegates ===
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnEquipped OnEquipped;
+    
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnUnequipped OnUnequipped;
+    
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnItemInfoChanged OnItemInfoChanged;
+    
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnDurabilityChanged OnDurabilityChanged;
+    
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnItemBroken OnItemBroken;
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Converter")
-	static UCombatManager* ConvertActorToCombatManager(AActor* InActor);
+    virtual void BeginPlay() override;
+    virtual void PostInitializeComponents() override;
+    
+#if WITH_EDITOR
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 
 public:
+    // === Public Properties ===
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<USceneComponent> DefaultScene;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<UStaticMeshComponent> StaticMesh;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<USkeletalMeshComponent> SkeletalMesh;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collision")
+    TObjectPtr<USplineComponent> DamageSpline;
+    
+    // Runtime collision tracking
+    UPROPERTY(BlueprintReadWrite, Category = "Collision|Runtime")
+    TArray<FVector> PrevTracePoints;
+    
+    UPROPERTY(BlueprintReadWrite, Category = "Collision|Runtime")
+    TArray<AActor*> CurrentActorHit;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	FTransform Transform;
-
-
-	UPROPERTY(BlueprintReadOnly, Category = "Components")
-	TObjectPtr<USceneComponent> DefaultScene;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Collison")
-	TObjectPtr<USplineComponent> DamageSpline;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Collison")
-	TObjectPtr<UTimelineComponent> DamageTraceTl;
-
-	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Collison")
-	TArray<FVector> PrevTracePoints;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Collison")
-	TArray<AActor*> CurrentActorHit;
-	
-	// Function to set the mesh
-	void SetMesh(UStaticMesh* Mesh) const;
-	
 protected:
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Stats")
-	FItemInformation ItemInfo;
-
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
-	TObjectPtr<AALSBaseCharacter> OwningCharacter;
-
-	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Components")
-	TObjectPtr<UStaticMeshComponent> StaticMesh;
-
-	UPROPERTY(BlueprintReadWrite,  EditAnywhere, Category = "Components")
-	TObjectPtr<USkeletalMeshComponent> SkeletalMesh;
-
-	// Set in BP will be all stats that the item can generate
-	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")
-	UDataTable* StatsDataTable;
-	
-	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")
-	FPHItemStats ItemStats;
+    // === Protected Properties ===
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Stats")
+    TObjectPtr<UDataTable> StatsDataTable;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Info")
+    FItemInformation ItemInfo;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Stats")
+    FPHItemStats ItemStats;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Durability")
+    float MaxDurability = 100.0f;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Durability")
+    float CurrentDurability = 100.0f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Sockets")
+    FName DefaultAttachmentSocket = "WeaponSocket";
+    
+private:
+    // === Private Properties ===
+    UPROPERTY()
+    TObjectPtr<AALSBaseCharacter> OwningCharacter;
+    
+    UPROPERTY()
+    bool bIsEquipped = false;
+    
+    // For pooling
+    UPROPERTY()
+    bool bIsFromPool = false;
 };

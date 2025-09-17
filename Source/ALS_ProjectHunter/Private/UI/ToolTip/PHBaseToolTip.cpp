@@ -15,7 +15,7 @@ void UPHBaseToolTip::NativePreConstruct()
 	RarityColors.Add(EItemRarity::IR_GradeA, FLinearColor(0.11f, 0.49f, 1.0f, 1.0f));
 	RarityColors.Add(EItemRarity::IR_GradeS, FLinearColor(1.0f, 0.0f, 0.0f, 1.0f));
 	RarityColors.Add(EItemRarity::IR_Corrupted, FLinearColor::Black);
-	RarityColors.Add(EItemRarity::IR_Unkown, FLinearColor(0.0251f, 0.462f, 0.982f, 1.0f));
+	RarityColors.Add(EItemRarity::IR_Unknown, FLinearColor(0.0251f, 0.462f, 0.982f, 1.0f));
 	RarityColors.Add(EItemRarity::IR_None, FLinearColor(0.f, 0.f, 0.f, 1.0f));
 }
 
@@ -61,7 +61,7 @@ FString UPHBaseToolTip::GetRarityText(const EItemRarity Rarity)
 		return TEXT("Unknown");
 	case EItemRarity::IR_Corrupted:
 		return TEXT("!@#$%@%");
-	case EItemRarity::IR_Unkown:
+	case EItemRarity::IR_Unknown:
 		return TEXT("########");
 	default: ;
 	}
