@@ -1,19 +1,16 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/DataAsset.h"
 #include "Library/PHItemStructLibrary.h"
 #include "UItemDefinitionAsset.generated.h"
 
+
+struct FPHAttributeData;
+struct FItemBase;
+struct FEquippableItemData;
 /**
  * @class UItemDefinitionAsset
  * @brief Represents an item definition asset with static/author-time data, generation attributes, and asset management functionality.
- *
- * The UUItemDefinitionAsset class is derived from the UPrimaryDataAsset and is used to define item properties and data
- * essential for gameplay systems, including base item attributes, equippable data, affix properties, and implicit
- * attributes. It also provides functionality for validation and asset management support.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UItemDefinitionAsset : public UPrimaryDataAsset
@@ -28,7 +25,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
 	FEquippableItemData Equip;             
 
-	// Affix pools (PoE-style) – you already use a UDataTable*
+	// Affix pools (PoE-style)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Generation")
 	UDataTable* AffixTable = nullptr;    
 
@@ -38,6 +35,26 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	bool IsValidDefinition() const;
+	
+	/** Get the combined base item information (what ItemInstance expects) */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item Definition")
+	FItemInformation GetBaseItemInfo() const;
+
+	/** Get just the base item data */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item Definition")
+	const FItemBase& GetBase() const { return Base; }
+
+	/** Get just the equippable data */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item Definition")
+	const FEquippableItemData& GetEquip() const { return Equip; }
+
+	/** Get the affix table for generation */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item Definition")
+	UDataTable* GetAffixTable() const { return AffixTable; }
+
+	/** Get the fixed implicits */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item Definition")
+	const TArray<FPHAttributeData>& GetImplicits() const { return Implicits; }
 
 	// Optional: Primary Asset Type (for Asset Manager)
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override

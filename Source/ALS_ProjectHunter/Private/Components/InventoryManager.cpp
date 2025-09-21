@@ -7,6 +7,7 @@
 #include "Interactables/Pickups/ItemPickup.h"
 #include "Interactables/Pickups/WeaponPickup.h"
 #include "Item/ConsumableItem.h"
+#include "Item/ItemInstance.h"
 #include "Kismet/KismetMathLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogInventoryManager);
@@ -144,26 +145,17 @@ UBaseItem* UInventoryManager::GetItemAt(int32 Index) const
 bool UInventoryManager::ContainsItem(const UBaseItem* Item) const
 {
 	if (!Item) return false;
-	// We need to iterate since we can't use const key in TMap with UPROPERTY
-	for (const auto& Pair : ItemToTopLeftMap)
-	{
-		if (Pair.Key == Item)
-		{
-			return true;
-		}
-	}
-	return false;
+	return ItemToTopLeftMap.Contains(const_cast<UBaseItem*>(Item));
 }
 
 FTile UInventoryManager::GetItemTopLeft(const UBaseItem* Item) const
 {
-	// We need to iterate since we can't use const key in TMap with UPROPERTY
-	for (const auto& Pair : ItemToTopLeftMap)
+	if (!Item) return FTile(-1, -1);
+    
+	// Cast away const for the lookup (safe since we're not modifying)
+	if (const FTile* Found = ItemToTopLeftMap.Find(const_cast<UBaseItem*>(Item)))
 	{
-		if (Pair.Key == Item)
-		{
-			return Pair.Value;
-		}
+		return *Found;
 	}
 	return FTile(-1, -1);
 }
@@ -350,8 +342,8 @@ bool UInventoryManager::DropItemFromInventory(UBaseItem* Item)
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-	// Spawn appropriate pickup type
-	AItemPickup* CreatedPickup = nullptr;
+
+	AItemPickup* CreatedPickup;
 	const EItemType ItemType = Item->GetItemInfo().ItemInfo.ItemType;
 
 	switch (ItemType)
@@ -411,50 +403,44 @@ bool UInventoryManager::DropItemFromInventory(UBaseItem* Item)
 /* ===    Space Checking     === */
 /* ============================= */
 
-bool UInventoryManager::IsRoomAvailable(UBaseItem* Item, int32 TopLeftIndex) const
+bool UInventoryManager::IsRoomAvailable(const UBaseItem* Item, int32 TopLeftIndex) const
 {
 	if (!IsValid(Item)) return false;
 	const FTile TopLeftTile = IndexToTile(TopLeftIndex);
 	return IsRoomAvailableAtTile(Item, TopLeftTile);
 }
 
-bool UInventoryManager::IsRoomAvailableAtTile(UBaseItem* Item, const FTile& TopLeftTile) const
+bool UInventoryManager::IsRoomAvailableAtTile(const UBaseItem* Item, const FTile& TopLeftTile) const
 {
-	if (!IsValid(Item)) return false;
-
 	const FIntPoint Dimensions = Item->GetDimensions();
-	
-	// Bounds check first
-	if (TopLeftTile.X + Dimensions.X > Columns || TopLeftTile.Y + Dimensions.Y > Rows)
-	{
-		return false;
-	}
-	
-	if (TopLeftTile.X < 0 || TopLeftTile.Y < 0)
+    
+	// Single bounds check
+	if (TopLeftTile.X < 0 || TopLeftTile.Y < 0 || 
+		TopLeftTile.X + Dimensions.X > Columns || 
+		TopLeftTile.Y + Dimensions.Y > Rows)
 	{
 		return false;
 	}
 
-	// Check each tile for occupancy
-	bool bHasRoom = true;
-	ForEachTile(Item, TopLeftTile, [&](const FTile& Tile) -> bool
+	// Direct array access instead of ForEachTile
+	for (int32 x = 0; x < Dimensions.X; ++x)
 	{
-		const int32 Index = TileToIndex(Tile);
-		if (InventoryList.IsValidIndex(Index) && InventoryList[Index] != nullptr)
+		for (int32 y = 0; y < Dimensions.Y; ++y)
 		{
-			bHasRoom = false;
-			return true; // Stop iteration
+			if (const int32 Index = (TopLeftTile.Y + y) * Columns + (TopLeftTile.X + x); InventoryList[Index] != nullptr)
+			{
+				return false;
+			}
 		}
-		return false; // Continue
-	});
-
-	return bHasRoom;
+	}
+	return true;
 }
 
 bool UInventoryManager::IsTileValid(const FTile& Tile) const
 {
 	return Tile.X >= 0 && Tile.Y >= 0 && Tile.X < Columns && Tile.Y < Rows;
 }
+
 
 /* ============================= */
 /* ===    Helper Functions   === */
@@ -503,6 +489,45 @@ TArray<FTile> UInventoryManager::GetOccupiedTilesForItem(const UBaseItem* Item) 
 	}
 
 	return OccupiedTiles;
+}
+
+bool UInventoryManager::CanStackItemInstances(class UItemInstanceObject* A, class UItemInstanceObject* B) const
+{
+	if (!IsValid(A) || !IsValid(B)) return false;
+
+	const UBaseItem* BA = Cast<UBaseItem>(A);
+	const UBaseItem* BB = Cast<UBaseItem>(B);
+	if (!BA || !BB) return false;
+
+	
+	return CanStackItems(BA, BB);
+}
+
+bool UInventoryManager::TryStackItemInstance(class UItemInstanceObject* ItemInstance)
+{
+	if (!IsValid(ItemInstance)) return false;
+
+	UBaseItem* AsBase = Cast<UBaseItem>(ItemInstance);
+	if (!AsBase) return false;
+	
+	const FName ItemID = AsBase->GetItemInfo().ItemInfo.ItemID;
+
+	for (const auto& Pair : TopLeftItemMap)
+	{
+		UBaseItem* ExistingItem = Pair.Value;
+		if (IsValid(ExistingItem) && ExistingItem->GetItemInfo().ItemInfo.ItemID == ItemID)
+		{
+			if (CanStackItems(ExistingItem, AsBase))
+			{
+				ExistingItem->AddQuantity(AsBase->GetQuantity());
+				AsBase->ConditionalBeginDestroy();
+				OnInventoryChanged.Broadcast();
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 /* ============================= */
@@ -576,8 +601,7 @@ void UInventoryManager::RegisterItemInLookups(UBaseItem* Item, const FTile& TopL
 void UInventoryManager::UnregisterItemFromLookups(UBaseItem* Item)
 {
 	if (!IsValid(Item)) return;
-
-	// Remove from position maps
+	
 	if (const FTile* TopLeft = ItemToTopLeftMap.Find(Item))
 	{
 		TopLeftItemMap.Remove(*TopLeft);
@@ -590,8 +614,8 @@ void UInventoryManager::InvalidateCaches() const
 	bAllItemsCacheDirty = true;
 }
 
-bool UInventoryManager::ForEachTile(const UBaseItem* Item, const FTile& StartTile, 
-	TFunctionRef<bool(const FTile&)> Func)
+bool UInventoryManager::ForEachTile(const UBaseItem* Item, const FTile& StartTile,
+	const TFunctionRef<bool(const FTile&)>& Func)
 {
 	if (!Item) return false;
 
@@ -601,8 +625,7 @@ bool UInventoryManager::ForEachTile(const UBaseItem* Item, const FTile& StartTil
 	{
 		for (int32 Y = 0; Y < Dimensions.Y; ++Y)
 		{
-			const FTile Tile(StartTile.X + X, StartTile.Y + Y);
-			if (Func(Tile))
+			if (const FTile Tile(StartTile.X + X, StartTile.Y + Y); Func(Tile))
 			{
 				return true; // Early exit requested
 			}

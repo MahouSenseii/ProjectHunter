@@ -19,12 +19,12 @@ void UDamagePopup::SetDamageData(int32 InAmount, EDamageTypes InType, bool bIsCr
 
 		if (bIsCritical)
 		{
-			FontInfo.OutlineSettings.OutlineSize = 2; // Thickness of outline
-			FontInfo.OutlineSettings.OutlineColor = FLinearColor::Yellow; // Or any color
+			FontInfo.OutlineSettings.OutlineSize = 2; 
+			FontInfo.OutlineSettings.OutlineColor = FLinearColor::Yellow; 
 		}
 		else
 		{
-			FontInfo.OutlineSettings.OutlineSize = 0; // No outline for normal hits
+			FontInfo.OutlineSettings.OutlineSize = 0; 
 		}
 
 		DamageText->SetFont(FontInfo);

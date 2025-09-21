@@ -33,7 +33,7 @@ void UBaseItem::GenerateUniqueID()
 	UniqueID = FGuid::NewGuid().ToString();
 }
 
-FString UBaseItem::GetUniqueID() const
+FString UBaseItem::GetItemInstanceID() const
 {
 	return UniqueID;
 }
@@ -317,6 +317,21 @@ void UBaseItem::OnRotationChanged(bool bWasRotated)
 void UBaseItem::InternalSetItemInfo(const FItemInformation& NewItemInfo)
 {
 	ItemInfos = NewItemInfo;
+}
+
+bool UBaseItem::GetIsInitialized() const
+{
+	return bIsInitialized;
+}
+
+bool UBaseItem::SetIsInitialized(bool bNewIsInitialized)
+{
+	if (bIsInitialized != bNewIsInitialized)
+	{
+		bIsInitialized = bNewIsInitialized;
+		return true;
+	}
+	return false;
 }
 
 #if WITH_EDITOR

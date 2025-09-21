@@ -237,7 +237,7 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 	if (!ToolTipWidget) return;
 
 	// Create the item instance using the widget as the Outer to avoid GC issues
-	UBaseItem* ItemObject = PickupItem->CreateItemObject(ToolTipWidget);
+	UBaseItem* ItemObject = PickupItem->CreateItemObject(GetTransientPackage());
 	if (!ItemObject) return;
 
 	ItemObject->SetItemInfo(PickupItem->ItemInfo);

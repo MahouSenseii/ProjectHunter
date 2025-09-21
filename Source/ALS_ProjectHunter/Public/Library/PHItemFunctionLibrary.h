@@ -16,7 +16,12 @@ class UPHAttributeSet;
 
 
 /**
- * 
+ * @brief A function library providing utilities for item interactions and complex calculations
+ *        in the ALS Project Hunter game.
+ *
+ * This class offers helper methods for handling items, calculating damage,
+ * generating item statistics, and identifying attributes. It is designed to extend
+ * Unreal Engine's `UBlueprintFunctionLibrary` for use in C++ and Blueprints.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UPHItemFunctionLibrary : public UBlueprintFunctionLibrary

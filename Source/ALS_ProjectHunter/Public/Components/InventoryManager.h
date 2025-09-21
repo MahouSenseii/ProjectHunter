@@ -104,18 +104,25 @@ public:
 
 	// Space Checking
 	UFUNCTION(BlueprintCallable, Category = "Checker")
-	bool IsRoomAvailable(UBaseItem* Item, int32 TopLeftIndex) const;
+	bool IsRoomAvailable(const UBaseItem* Item, int32 TopLeftIndex) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Checker")
-	bool IsRoomAvailableAtTile(UBaseItem* Item, const FTile& TopLeftTile) const;
+	bool IsRoomAvailableAtTile(const UBaseItem* Item, const FTile& TopLeftTile) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	bool IsTileValid(const FTile& Tile) const;
+	
 
 	// Helper Functions
 	static bool AreItemsStackable(const UBaseItem* A, const UBaseItem* B);
 	static bool CanStackItems(const UBaseItem* ExistingItem, const UBaseItem* NewItem);
 	TArray<FTile> GetOccupiedTilesForItem(const UBaseItem* Item) const;
+
+	UFUNCTION(BlueprintCallable, Category="Stacking")
+	bool CanStackItemInstances(class UItemInstanceObject* A, class UItemInstanceObject* B) const;
+
+	UFUNCTION(BlueprintCallable, Category="Stacking")
+	bool TryStackItemInstance(class UItemInstanceObject* ItemInstance);
 	
 	// Validation (Editor only)
 #if WITH_EDITOR
@@ -137,7 +144,7 @@ private:
 	bool InternalAddItemAt(UBaseItem* Item, const FTile& TopLeftTile);
 	void SetItemInTiles(UBaseItem* Item, const FTile& TopLeft);
 	void ClearItemFromTiles(const UBaseItem* Item, const FTile& TopLeft);
-	static bool ForEachTile(const UBaseItem* Item, const FTile& StartTile, TFunctionRef<bool(const FTile&)> Func);
+	static bool ForEachTile(const UBaseItem* Item, const FTile& StartTile, const TFunctionRef<bool(const FTile&)>& Func);
 	
 	// Fast Lookup Management
 	void RegisterItemInLookups(UBaseItem* Item, const FTile& TopLeft);
@@ -229,7 +236,7 @@ private:
 	mutable bool bStackableCacheDirty = true;
 
 	UPROPERTY(Transient)
-	TMap<const UBaseItem*, FTile> ItemToTopLeftMap;  // Reverse lookup for O(1) position finding
+	TMap<TObjectPtr<UBaseItem>, FTile> ItemToTopLeftMap;
 
 	// Cached Data
 	UPROPERTY(Transient)

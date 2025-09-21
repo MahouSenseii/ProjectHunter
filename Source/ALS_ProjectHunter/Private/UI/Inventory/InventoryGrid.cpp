@@ -1,675 +1,830 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// InventoryGrid.cpp
 #include "UI/Inventory/InventoryGrid.h"
-
-#include "Blueprint/SlateBlueprintLibrary.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
-#include "Blueprint/WidgetLayoutLibrary.h"
-#include "Character/PHBaseCharacter.h"
-#include "Components/CanvasPanelSlot.h"
-#include "Components/InventoryManager.h"
-#include "Slate/SlateBrushAsset.h"
-#include "UI/Item/ItemWidget.h"
-#include "Engine/World.h"
-#include "TimerManager.h"
+#include "Blueprint/DragDropOperation.h"
+#include "Layout/Geometry.h"
+#include "Layout/PaintGeometry.h"
+#include "Layout/SlateRect.h"
+#include "Rendering/DrawElements.h"
+#include "Engine/Engine.h"
 
-/* ============================= */
-/* === Initialization Header === */
-/* ============================= */
+DEFINE_LOG_CATEGORY_STATIC(LogInventoryGrid, Log, All);
+
+UInventoryGrid::UInventoryGrid(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer), GridCanvas(nullptr), GridBorder(nullptr)
+{
+    TileSize = 64.0f;
+    DrawDropLocation = false;
+    DraggedItemTopLeft = FIntPoint(0, 0);
+    CurrentPreviewColor = FLinearColor::White;
+    GridLineColor = FLinearColor(0.1f, 0.1f, 0.1f, 0.8f);
+    GridLineThickness = 1.0f;
+    ValidDropColor = FLinearColor::Green;
+    InvalidDropColor = FLinearColor::Red;
+    bShowRarityColors = true;
+    bShowDragTooltips = true;
+    MinLevelForTooltips = 5;
+}
 
 void UInventoryGrid::NativeConstruct()
 {
-	Super::NativeConstruct();
-
-	if (!CanvasPanel || !GridBorder || !GridCanvas)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("CanvasPanel, GridBorder, or GridCanvas is null."));
-		return;
-	}
-
-	CanvasPanel->AddChild(GridBorder);
-	GridBorder->AddChild(GridCanvas);
-
-	if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(GridCanvas->Slot))
-	{
-		CanvasSlot->SetZOrder(-1);
-	}
+    Super::NativeConstruct();
+    
+    // Initialize any additional setup here
+    if (GridCanvas)
+    {
+        UE_LOG(LogInventoryGrid, Log, TEXT("InventoryGrid initialized successfully"));
+    }
+    else
+    {
+        UE_LOG(LogInventoryGrid, Warning, TEXT("GridCanvas not found - check widget bindings"));
+    }
 }
 
 void UInventoryGrid::NativeDestruct()
 {
-	CleanupDelegateBindings();
-	
-	// Clear any cached references
-	if (GridCanvas)
-	{
-		GridCanvas->ClearChildren();
-	}
-	
-	Lines.Empty();
-	Super::NativeDestruct();
-}
-
-/* ============================= */
-/* === Painting and Drawing === */
-/* ============================= */
-
-int32 UInventoryGrid::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
-	const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements,
-	int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
-{
-	// 1. Always call Super and get the next available layer
-	const int32 NewLayer = Super::NativePaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle, bParentEnabled);
-
-	// 2. Build drawing context
-	const FPaintContext Context(AllottedGeometry, MyCullingRect, OutDrawElements, NewLayer, InWidgetStyle, bParentEnabled);
-
-	// 3. Draw grid lines
-	DrawGridLines(AllottedGeometry.ToPaintGeometry(), OutDrawElements, NewLayer);
-
-	// 4. Optionally draw drop highlight box
-	if (DrawDropLocation && UWidgetBlueprintLibrary::IsDragDropping())
-	{
-		DrawDragDropBox(Context, AllottedGeometry.ToPaintGeometry(), OutDrawElements, NewLayer);
-	}
-
-	// 5. Return layer to continue stacking above this widget
-	return NewLayer + 1;
-}
-
-void UInventoryGrid::DrawGridLines(const FPaintGeometry& PaintGeometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
-{
-	if (!GridBorder || Lines.Num() == 0)
-	{
-		return;
-	}
-
-	// Cache the local top left to avoid repeated calls
-	static FVector2D CachedLocalTopLeft = FVector2D::ZeroVector;
-	static const UBorder* LastGridBorder = nullptr;
+    // Clean up any bound events or references
+    if (DragTooltipWidget)
+    {
+        DragTooltipWidget->RemoveFromParent();
+        DragTooltipWidget = nullptr;
+    }
     
-	if (LastGridBorder != GridBorder)
-	{
-		CachedLocalTopLeft = USlateBlueprintLibrary::GetLocalTopLeft(GridBorder->GetCachedGeometry());
-		LastGridBorder = GridBorder;
-	}
-
-	// Draw each line individually
-	for (const FLine& Line : Lines)
-	{
-		TArray<FVector2D> LinePoints;
-		LinePoints.Add(Line.Start + CachedLocalTopLeft);
-		LinePoints.Add(Line.End + CachedLocalTopLeft);
-        
-		FSlateDrawElement::MakeLines(
-			OutDrawElements, 
-			LayerId + 1, 
-			PaintGeometry, 
-			LinePoints, 
-			ESlateDrawEffect::None, 
-			FLinearColor::White, 
-			true, 
-			1.0f
-		);
-	}
+    CurrentDraggedItem = nullptr;
+    CurrentDraggedInstance = nullptr;
+    
+    Super::NativeDestruct();
 }
 
-void UInventoryGrid::DrawDragDropBox(FPaintContext Context, const FPaintGeometry& PaintGeometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
+/* ============================= */
+/* === INITIALIZATION === */
+/* ============================= */
+
+void UInventoryGrid::InitializeGrid(UInventoryManager* Owner, UInventoryManager* Other)
 {
-	// 1. Get the dragged item payload
-	UBaseItem* Payload = const_cast<UInventoryGrid*>(this)->GetPayload(UWidgetBlueprintLibrary::GetDragDroppingContent());
-	if (!Payload)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("DrawDragDropBox: Payload is null."));
-		return;
-	}
+    OwnerInventory = Owner;
+    OtherInventory = Other;
+    
+    if (OwnerInventory)
+    {
+        UE_LOG(LogInventoryGrid, Log, TEXT("Grid initialized with owner inventory"));
+    }
+    else
+    {
+        UE_LOG(LogInventoryGrid, Warning, TEXT("Grid initialized without owner inventory"));
+    }
+}
 
-	// 2. Validate TileSize
-	if (TileSize <= 0.0f)
-	{
-		UE_LOG(LogTemp, Error, TEXT("DrawDragDropBox: TileSize is 0 or invalid!"));
-		return;
-	}
 
-	// 3. Determine if room is available
-	const bool bIsRoomAvailable = IsRoomAvailableforPayload(Payload);
-	const FLinearColor BoxColor = bIsRoomAvailable
-		? FLinearColor(0.0f, 1.0f, 0.0f, 0.35f)   // Green
-		: FLinearColor(1.0f, 0.0f, 0.0f, 0.35f);  // Red
 
-	// 4. Get position and size
-	const FVector2D Position = FVector2D(DraggedItemTopLeft) * TileSize;
-	const FVector2D Size = FVector2D(Payload->GetDimensions()) * TileSize;
-
-	UE_LOG(LogTemp, Log, TEXT("DrawDragDropBox: TopLeft=(%d,%d) | Pos=(%.1f,%.1f) | Size=(%.1f,%.1f) | Available=%s"),
-		DraggedItemTopLeft.X, DraggedItemTopLeft.Y,
-		Position.X, Position.Y,
-		Size.X, Size.Y,
-		bIsRoomAvailable ? TEXT("Yes") : TEXT("No"));
-
-	// 5. Check if brush is valid
-	if (!Brush || !Brush->Brush.GetResourceObject())
-	{
-		UE_LOG(LogTemp, Error, TEXT("DrawDragDropBox: Brush or its resource is missing!"));
-		return;
-	}
-
-	// 6. Draw the translucent drop area box
-	UWidgetBlueprintLibrary::DrawBox(Context, Position, Size, Brush, BoxColor);
+void UInventoryGrid::SetTileSize(float NewTileSize)
+{
+    if (NewTileSize > 0.0f)
+    {
+        TileSize = NewTileSize;
+        // Force a redraw
+        Invalidate(EInvalidateWidgetReason::Paint);
+    }
 }
 
 /* ============================= */
-/* === Drag and Drop Events === */
+/* === DRAG AND DROP EVENTS === */
 /* ============================= */
+
+bool UInventoryGrid::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+    DrawDropLocation = false;
+    CurrentDraggedItem = nullptr;
+    CurrentDraggedInstance = nullptr;
+    
+    if (!InOperation || !OwnerInventory)
+    {
+        return false;
+    }
+
+    // Try to get ItemInstance first, then fall back to BaseItem
+    UItemInstanceObject* PayloadInstance = Cast<UItemInstanceObject>(InOperation->Payload);
+    UBaseItem* PayloadItem = PayloadInstance ? PayloadInstance : Cast<UBaseItem>(InOperation->Payload);
+    
+    if (!PayloadItem)
+    {
+        UE_LOG(LogInventoryGrid, Warning, TEXT("Drop operation payload is not a valid item"));
+        return false;
+    }
+
+    // Calculate drop position
+    const FVector2D LocalPosition = InGeometry.AbsoluteToLocal(InDragDropEvent.GetScreenSpacePosition());
+    const FTile DropTile = ScreenPositionToTile(LocalPosition);
+    const int32 Index = OwnerInventory->TileToIndex(DropTile);
+
+    bool bDropSuccess;
+    
+    // Handle ItemInstance drops
+    if (PayloadInstance)
+    {
+        bDropSuccess = HandleItemInstanceDrop(PayloadInstance, Index);
+    }
+    // Handle legacy BaseItem drops
+    else
+    {
+        bDropSuccess = HandleItemDrop(PayloadItem, Index);
+    }
+
+    if (bDropSuccess)
+    {
+        OnItemDropped.Broadcast();
+        UE_LOG(LogInventoryGrid, Log, TEXT("Item successfully dropped at index %d"), Index);
+    }
+    else
+    {
+        UE_LOG(LogInventoryGrid, Log, TEXT("Failed to drop item at index %d"), Index);
+    }
+
+    OnDragEnded.Broadcast();
+    return bDropSuccess;
+}
 
 void UInventoryGrid::NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
-	Super::NativeOnDragEnter(InGeometry, InDragDropEvent, InOperation);
-	DrawDropLocation = true;
+    DrawDropLocation = true;
+    OnDragStarted.Broadcast();
+    
+    if (InOperation)
+    {
+        // Set the current dragged item for visual feedback
+        CurrentDraggedInstance = Cast<UItemInstanceObject>(InOperation->Payload);
+        CurrentDraggedItem = CurrentDraggedInstance ? CurrentDraggedInstance : Cast<UBaseItem>(InOperation->Payload);
+        
+        if (CurrentDraggedItem)
+        {
+            const FVector2D LocalPosition = InGeometry.AbsoluteToLocal(InDragDropEvent.GetScreenSpacePosition());
+            
+            if (CurrentDraggedInstance)
+            {
+                UpdateDragPreviewForInstance(CurrentDraggedInstance, LocalPosition);
+            }
+            else
+            {
+                UpdateDragPreview(CurrentDraggedItem, LocalPosition);
+            }
+        }
+    }
 }
 
 void UInventoryGrid::NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
-	Super::NativeOnDragLeave(InDragDropEvent, InOperation);
-	DrawDropLocation = false;
+    DrawDropLocation = false;
+    CurrentDraggedItem = nullptr;
+    CurrentDraggedInstance = nullptr;
+    HideDragTooltip();
 }
 
-FReply UInventoryGrid::NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+bool UInventoryGrid::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
-	if (InKeyEvent.GetKey() == EKeys::R)
-	{
-		if (UDragDropOperation* CurrentOperation = UWidgetBlueprintLibrary::GetDragDroppingContent())
-		{
-			if (UBaseItem* OutPayload = GetPayload(CurrentOperation))
-			{
-				OutPayload->ToggleRotation();
-				if (UItemWidget* DragVisual = Cast<UItemWidget>(CurrentOperation->DefaultDragVisual))
-				{
-					CurrentOperation->Offset = FVector2D (0.5f,0.5f);
-					DragVisual->Refresh();
-					CurrentOperation->Offset = FVector2D (-0.25f,-0.25f);
-				}
-			}
-		}
-	}
-	return Super::NativeOnPreviewKeyDown(InGeometry, InKeyEvent);
+    if (!InOperation || !OwnerInventory)
+    {
+        return false;
+    }
+
+    const FVector2D LocalPosition = InGeometry.AbsoluteToLocal(InDragDropEvent.GetScreenSpacePosition());
+    
+    // Update visual feedback based on item type
+    if (CurrentDraggedInstance)
+    {
+        UpdateDragPreviewForInstance(CurrentDraggedInstance, LocalPosition);
+    }
+    else if (CurrentDraggedItem)
+    {
+        UpdateDragPreview(CurrentDraggedItem, LocalPosition);
+    }
+
+    return true;
 }
 
-bool UInventoryGrid::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+/* ============================= */
+/* === ITEM DROP HANDLING === */
+/* ============================= */
+
+bool UInventoryGrid::HandleItemDrop(UBaseItem* Payload, const int32 Index)
 {
-	UBaseItem* Payload = GetPayload(InOperation);
-	if (!Payload) 
-		return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
+    if (!Payload || !OwnerInventory)
+    {
+        return false;
+    }
 
-	const FTile InTile{ DraggedItemTopLeft.X, DraggedItemTopLeft.Y };
-	const int32 Index = OwnerInventory->TileToIndex(InTile);
-
-	const bool bHandled = Payload->GetItemInfo().ItemInfo.OwnerID == OwnerInventory->GetOwnerCharacter()->GetInventoryManager()->GetID()
-		? HandleOwnedItemDrop(Payload, Index)
-		: HandleUnownedItemDrop(Payload, Index);
-
-	return bHandled;
+    // Check if this item belongs to our inventory or another
+    const bool bIsOwnedItem = OwnerInventory->ContainsItem(Payload);
+    
+    return bIsOwnedItem 
+        ? HandleOwnedItemDrop(Payload, Index)
+        : HandleUnownedItemDrop(Payload, Index);
 }
 
 bool UInventoryGrid::HandleOwnedItemDrop(UBaseItem* Payload, const int32 Index) const
 {
-	if (!Payload || !OwnerInventory) 
-		return false;
+    if (!Payload || !OwnerInventory) 
+        return false;
 
-	UBaseItem* ExistingItem = OwnerInventory->GetItemAt(Index);
+    UBaseItem* ExistingItem = OwnerInventory->GetItemAt(Index);
 
-	// Step 1: Handle stacking with safer memory management
-	if (Payload->IsStackable() && OwnerInventory->AreItemsStackable(ExistingItem, Payload))
-	{
-		const int32 MaxStack = ExistingItem->GetItemInfo().ItemInfo.MaxStackSize;
-		const int32 CurrentQty = ExistingItem->GetItemInfo().ItemInfo.Quantity;
-		const int32 NewQty = Payload->GetItemInfo().ItemInfo.Quantity;
+    // Step 1: Handle stacking with safer memory management
+    if (ExistingItem && Payload->IsStackable() && OwnerInventory->AreItemsStackable(ExistingItem, Payload))
+    {
+        const int32 MaxStack = ExistingItem->GetItemInfo().ItemInfo.MaxStackSize;
+        const int32 CurrentQty = ExistingItem->GetItemInfo().ItemInfo.Quantity;
+        const int32 NewQty = Payload->GetItemInfo().ItemInfo.Quantity;
 
-		if (MaxStack == 0 || (CurrentQty + NewQty) <= MaxStack)
-		{
-			ExistingItem->AddQuantity(NewQty);
-			
-			// Remove the dragged item from inventory since we're merging it
-			OwnerInventory->RemoveItemFromInventory(Payload);
-			
-			// Use a timer to delay destruction to avoid immediate reference issues
-			FTimerHandle DestroyHandle;
-			if (GetWorld())
-			{
-				GetWorld()->GetTimerManager().SetTimer(DestroyHandle, 
-					[Payload]()
-					{
-						if (IsValid(Payload))
-						{
-							Payload->ConditionalBeginDestroy();
-						}
-					}, 
-					0.1f, false);
-			}
-			
-			OwnerInventory->OnInventoryChanged.Broadcast();
-			return true;
-		}
-	}
+        if (MaxStack == 0 || (CurrentQty + NewQty) <= MaxStack)
+        {
+            // Full stack - item is completely consumed
+            ExistingItem->AddQuantity(NewQty);
+            OwnerInventory->RemoveItemFromInventory(Payload);
+            OwnerInventory->OnInventoryChanged.Broadcast();
+            return true; // ✅ SUCCESS - item fully stacked
+        }
+        else if (CurrentQty < MaxStack)
+        {
+            // Partial stack - item has remaining quantity
+            const int32 CanAdd = MaxStack - CurrentQty;
+            ExistingItem->AddQuantity(CanAdd);
+            Payload->SetQuantity(NewQty - CanAdd);
+            OwnerInventory->OnInventoryChanged.Broadcast();
+            
+            // Continue with remaining quantity - don't return here
+        }
+    }
 
-	// Step 2: Try to place item directly at specified location
-	if (OwnerInventory->IsRoomAvailable(Payload, Index))
-	{
-		return OwnerInventory->TryToAddItemAt(Payload, Index);
-	}
+    // Step 2: Try to place item directly at specified location
+    if (OwnerInventory->IsRoomAvailable(Payload, Index))
+    {
+        return OwnerInventory->TryToAddItemAt(Payload, Index);
+    }
 
-	// Step 3: Try to auto-place somewhere else in inventory
-	if (OwnerInventory->TryToAddItemToInventory(Payload, true))
-	{
-		return true;
-	}
+    // Step 3: Try to auto-place somewhere else in inventory
+    if (OwnerInventory->TryToAddItemToInventory(Payload, true))
+    {
+        return true;
+    }
 
-	// Step 4: No valid space - drop to world
-	return OwnerInventory->DropItemFromInventory(Payload);
+    // Step 4: No valid space - drop to world
+    return OwnerInventory->DropItemFromInventory(Payload);
 }
 
 bool UInventoryGrid::HandleUnownedItemDrop(UBaseItem* Payload, const int32 Index) const
 {
-	if (!Payload || !OwnerInventory)
-	{
-		return false;
-	}
-	
-	// Check if we have another inventory to trade with
-	if (!OtherInventory)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("OtherInventory is null - cannot handle unowned item drop"));
-		return false;
-	}
-	
-	bool WasAdded = false;
-	
-	// Try to process the buy/sell transaction
-	const_cast<UInventoryGrid*>(this)->BuySellLogic(Payload, WasAdded);
-	
-	if (WasAdded)
-	{
-		// If purchase was successful, try to place at specific location
-		if (OwnerInventory->IsRoomAvailable(Payload, Index))
-		{
-			return OwnerInventory->TryToAddItemAt(Payload, Index);
-		}
-		else
-		{
-			// Try to add anywhere in inventory
-			return OwnerInventory->TryToAddItemToInventory(Payload, true);
-		}
-	}
-	
-	return false;
-}
+    if (!Payload || !OwnerInventory)
+    {
+        return false;
+    }
 
-void UInventoryGrid::BuySellLogic(UBaseItem* Item, bool& WasAdded)
-{
-	// TODO: Implement buy/sell logic here
-	// For now, just set WasAdded to false
-	WasAdded = false;
-}
+    // Try to add the item to our inventory
+    if (OwnerInventory->IsRoomAvailable(Payload, Index))
+    {
+        return OwnerInventory->TryToAddItemAt(Payload, Index);
+    }
 
-void UInventoryGrid::ProcessTransaction(UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer)
-{
-	// TODO: Implement transaction processing
-}
-
-void UInventoryGrid::HandleFailedTransaction(UBaseItem* Item, UInventoryManager* Seller, UInventoryManager* Buyer)
-{
-	// TODO: Implement failed transaction handling
-}
-
-bool UInventoryGrid::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
-                                      UDragDropOperation* InOperation)
-{
-	// Validate payload first
-	UBaseItem* DraggedItem = Cast<UBaseItem>(InOperation->Payload);
-	if (!DraggedItem)
-	{
-		return false;
-	}
-
-	// Convert mouse position to local coordinates
-	const FVector2D MousePositionLocal = InGeometry.AbsoluteToLocal(InDragDropEvent.GetScreenSpacePosition());
-	
-	// Validate TileSize
-	if (TileSize <= 0.0f)
-	{
-		UE_LOG(LogTemp, Error, TEXT("TileSize is invalid: %f"), TileSize);
-		return false;
-	}
-
-	// Get item dimensions
-	const FIntPoint Dimensions = DraggedItem->GetDimensions();
-	
-	// Calculate top-left position for centering the item under mouse
-	DraggedItemTopLeft.X = FMath::FloorToInt(MousePositionLocal.X / TileSize) - (Dimensions.X / 2);
-	DraggedItemTopLeft.Y = FMath::FloorToInt(MousePositionLocal.Y / TileSize) - (Dimensions.Y / 2);
-	
-	// Clamp to valid grid bounds
-	const int32 MaxX = OwnerInventory->Columns - Dimensions.X;
-	const int32 MaxY = OwnerInventory->Rows - Dimensions.Y;
-	
-	DraggedItemTopLeft.X = FMath::Clamp(DraggedItemTopLeft.X, 0, FMath::Max(0, MaxX));
-	DraggedItemTopLeft.Y = FMath::Clamp(DraggedItemTopLeft.Y, 0, FMath::Max(0, MaxY));
-
-	return true;
+    // Try to auto-place if direct placement failed
+    return OwnerInventory->TryToAddItemToInventory(Payload, true);
 }
 
 /* ============================= */
-/* === Grid Management === */
+/* === ITEMINSTANCE DROP HANDLING === */
 /* ============================= */
 
-void UInventoryGrid::GridInitialize(UInventoryManager* PlayerInventory, float InTileSize)
+bool UInventoryGrid::HandleItemInstanceDrop(UItemInstanceObject* Payload, const int32 Index)
 {
-	// Check and assign the inventory owner
-	if (!IsValid(PlayerInventory))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("PlayerInventory is null. Initialization aborted."));
-		return;
-	}
-	OwnerInventory = PlayerInventory;
-	TileSize = InTileSize;
+    if (!Payload || !OwnerInventory)
+    {
+        return false;
+    }
 
-	// Set up the canvas panel for the grid border
-	if (UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(GridBorder))
-	{
-		// Calculate and set grid size based on the number of rows and columns
-		const float InSizeX = OwnerInventory->Columns * TileSize;
-		const float InSizeY = OwnerInventory->Rows * TileSize;
-
-		CanvasSlot->SetSize(FVector2D(InSizeX, InSizeY));
-
-		// Clear lines before creating new ones
-		Lines.Empty();
-		CreateLineSegments();
-		Refresh();
-
-		// Safely manage delegate binding - remove old bindings first
-		CleanupDelegateBindings();
-		
-		// Bind new delegates
-		OwnerInventory->OnInventoryChanged.AddDynamic(this, &UInventoryGrid::Refresh);
-		if (OwnerCharacter && OwnerCharacter->GetEquipmentManager())
-		{
-			OwnerCharacter->GetEquipmentManager()->OnEquipmentChanged.AddDynamic(this, &UInventoryGrid::Refresh);
-		}
-	}
-	else
-	{
-		// Log a warning if the cast to UCanvasPanelSlot failed
-		UE_LOG(LogTemp, Warning, TEXT("GridBorder is not inside a UCanvasPanel."));
-	}
-}
-
-void UInventoryGrid::CleanupDelegateBindings()
-{
-	if (IsValid(OwnerInventory) && OwnerInventory->OnInventoryChanged.IsBound())
-	{
-		OwnerInventory->OnInventoryChanged.RemoveDynamic(this, &UInventoryGrid::Refresh);
-	}
-	
-	if (IsValid(OwnerCharacter) && OwnerCharacter->GetEquipmentManager() 
-		&& OwnerCharacter->GetEquipmentManager()->OnEquipmentChanged.IsBound())
-	{
-		OwnerCharacter->GetEquipmentManager()->OnEquipmentChanged.RemoveDynamic(this, &UInventoryGrid::Refresh);
-	}
-}
-
-void UInventoryGrid::CreateLineSegments()
-{
-	CreateVerticalLines();
-	CreateHorizontalLines();
-}
-
-void UInventoryGrid::CreateVerticalLines()
-{
-	for (int32 x = 0; x <= OwnerInventory->Columns; x++)
-	{
-		const float XLocal = x * TileSize;
-
-		// Initialize the FVector2D objects for Start and End
-		const FVector2D Start(XLocal, 0.0f);
-		const float EndY = OwnerInventory->Rows * TileSize;
-		const FVector2D End(XLocal, EndY);
-
-		// Initialize the FLine struct
-		FLine NewLine;
-		NewLine.Start = Start;
-		NewLine.End = End;
-
-		// Add the new line to the Lines array
-		Lines.Add(NewLine);
-	}
-}
-
-void UInventoryGrid::CreateHorizontalLines()
-{
-	for (int32 y = 0; y <= OwnerInventory->Rows; y++)
-	{
-		const float YLocal = y * TileSize;
-
-		// Initialize the FVector2D objects for Start and End
-		const FVector2D Start(0.0f, YLocal);
-		const float EndX = OwnerInventory->Columns * TileSize;
-		const FVector2D End(EndX, YLocal);
-
-		// Initialize the FLine struct
-		FLine NewLine;
-		NewLine.Start = Start;
-		NewLine.End = End;
-
-		// Add the new line to the Lines array
-		Lines.Add(NewLine);
-	}
-}
-
-UBaseItem* UInventoryGrid::GetPayload(UDragDropOperation* DragDropOperation) 
-{
-	// Early return if DragDropOperation is null
-	if (!DragDropOperation)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("GetPayload: DragDropOperation is null."));
-		return nullptr;
-	}
-
-	// Attempt to cast the Payload to a UBaseItem pointer
-	if (UBaseItem* ItemPayload = Cast<UBaseItem>(DragDropOperation->Payload))
-	{
-		return ItemPayload;
-	}
-
-	// Log if the cast fails
-	UE_LOG(LogTemp, Warning, TEXT("GetPayload: Payload cast to UBaseItem failed."));
-	return nullptr;
-}
-
-void UInventoryGrid::Refresh()
-{
-	if (!IsValid(GridCanvas) || !IsValid(OwnerInventory))
-	{
-		LogInvalidPointers();
-		return;
-	}
-
-	// Get current items from inventory
-	const TMap<UBaseItem*, FTile>& CurrentItems = OwnerInventory->GetAllItems();
+    // Check if this item belongs to our inventory or another
+    const bool bIsOwnedItem = OwnerInventory->ContainsItem(Payload);
     
-	// Track which widgets to keep/remove
-	TArray<UWidget*> WidgetsToRemove;
-	TSet<UBaseItem*> ItemsToAdd;
+    return bIsOwnedItem 
+        ? HandleOwnedItemInstanceDrop(Payload, Index)
+        : HandleUnownedItemInstanceDrop(Payload, Index);
+}
+
+bool UInventoryGrid::HandleOwnedItemInstanceDrop(UItemInstanceObject* Payload, const int32 Index) const
+{
+    if (!Payload || !OwnerInventory) 
+        return false;
+
+    UBaseItem* ExistingItem = OwnerInventory->GetItemAt(Index);
+    UItemInstanceObject* ExistingInstance = Cast<UItemInstanceObject>(ExistingItem);
+
+    // Step 1: Handle ItemInstance stacking
+    if (ExistingInstance && 
+        Payload->GetItemInfo().ItemInfo.Stackable &&
+        TryStackItemInstances(ExistingInstance, Payload))
+    {
+        return true;
+    }
+
+    // Step 2: Try to place item directly at specified location
+    // Cast UItemInstanceObject to UBaseItem for compatibility
+    UBaseItem* PayloadAsBaseItem = Cast<UBaseItem>(Payload);
+    if (PayloadAsBaseItem && OwnerInventory->IsRoomAvailable(PayloadAsBaseItem, Index))
+    {
+        return OwnerInventory->TryToAddItemAt(PayloadAsBaseItem, Index);
+    }
+
+    // Step 3: Try to auto-place somewhere else in inventory
+    if (PayloadAsBaseItem && OwnerInventory->TryToAddItemToInventory(PayloadAsBaseItem, true))
+    {
+        return true;
+    }
+
+    // Step 4: No valid space - drop to world
+    if (PayloadAsBaseItem)
+    {
+        return OwnerInventory->DropItemFromInventory(PayloadAsBaseItem);
+    }
+
+    return false;
+}
+
+bool UInventoryGrid::HandleUnownedItemInstanceDrop(UItemInstanceObject* Payload, const int32 Index) const
+{
+    if (!Payload || !OwnerInventory)
+    {
+        return false;
+    }
+
+    // Cast to UBaseItem for compatibility with InventoryManager methods
+    UBaseItem* PayloadAsBaseItem = Cast<UBaseItem>(Payload);
+    if (!PayloadAsBaseItem)
+    {
+        return false;
+    }
+
+    // Try to add the item instance to our inventory
+    if (OwnerInventory->IsRoomAvailable(PayloadAsBaseItem, Index))
+    {
+        return OwnerInventory->TryToAddItemAt(PayloadAsBaseItem, Index);
+    }
+
+    // Try to auto-place if direct placement failed
+    return OwnerInventory->TryToAddItemToInventory(PayloadAsBaseItem, true);
+}
+
+/* ============================= */
+/* === STACKING HELPERS === */
+/* ============================= */
+
+bool UInventoryGrid::TryStackBaseItems(UBaseItem* ExistingItem, UBaseItem* NewItem) const
+{
+    if (!ExistingItem || !NewItem || !OwnerInventory)
+    {
+        return false;
+    }
+
+    if (!OwnerInventory->AreItemsStackable(ExistingItem, NewItem))
+    {
+        return false;
+    }
+
+    const int32 MaxStack = ExistingItem->GetItemInfo().ItemInfo.MaxStackSize;
+    const int32 CurrentQty = ExistingItem->GetItemInfo().ItemInfo.Quantity;
+    const int32 NewQty = NewItem->GetItemInfo().ItemInfo.Quantity;
+
+    if (MaxStack == 0 || (CurrentQty + NewQty) <= MaxStack)
+    {
+        // Full stack
+        ExistingItem->AddQuantity(NewQty);
+        OwnerInventory->RemoveItemFromInventory(NewItem);
+        OwnerInventory->OnInventoryChanged.Broadcast();
+        return true;
+    }
+    else if (CurrentQty < MaxStack)
+    {
+        // Partial stack
+        const int32 CanAdd = MaxStack - CurrentQty;
+        ExistingItem->AddQuantity(CanAdd);
+        NewItem->SetQuantity(NewQty - CanAdd);
+        OwnerInventory->OnInventoryChanged.Broadcast();
+        return false; // Item still has quantity left
+    }
+
+    return false;
+}
+
+bool UInventoryGrid::TryStackItemInstances(UItemInstanceObject* ExistingInstance, UItemInstanceObject* NewInstance) const
+{
+    if (!ExistingInstance || !NewInstance || !OwnerInventory)
+    {
+        return false;
+    }
+
+    // Check if instances can be stacked (now using the actual method)
+    if (!OwnerInventory->CanStackItemInstances(ExistingInstance, NewInstance))
+    {
+        return false;
+    }
+
+    const int32 MaxStack = ExistingInstance->GetItemInfo().ItemInfo.MaxStackSize;
+    const int32 CurrentQty = ExistingInstance->GetItemInfo().ItemInfo.Quantity;
+    const int32 NewQty = NewInstance->GetItemInfo().ItemInfo.Quantity;
+
+    if (MaxStack == 0 || (CurrentQty + NewQty) <= MaxStack)
+    {
+        // Full stack - this is tricky because we can't access ItemInfoView directly
+        // We need to add proper quantity management methods to ItemInstanceObject
+        // For now, let the InventoryManager handle the stacking
+        return OwnerInventory->TryStackItemInstance(NewInstance);
+    }
+    else if (CurrentQty < MaxStack)
+    {
+        // Partial stack - similarly needs proper ItemInstance quantity management
+        UE_LOG(LogInventoryGrid, Warning, TEXT("Partial stacking of ItemInstances not fully implemented"));
+        return false;
+    }
+
+    return false;
+}
+
+bool UInventoryGrid::CanStackMixedItems(UBaseItem* ExistingItem, UBaseItem* NewItem) const
+{
+    if (!ExistingItem || !NewItem)
+    {
+        return false;
+    }
+
+    // Try ItemInstance stacking first
+    UItemInstanceObject* ExistingInstance = Cast<UItemInstanceObject>(ExistingItem);
+    UItemInstanceObject* NewInstance = Cast<UItemInstanceObject>(NewItem);
     
-	// Collect current items that need widgets
-	for (const auto& ItemPair : CurrentItems)
-	{
-		ItemsToAdd.Add(ItemPair.Key);
-	}
+    if (ExistingInstance && NewInstance)
+    {
+        return OwnerInventory ? OwnerInventory->CanStackItemInstances(ExistingInstance, NewInstance) : false;
+    }
     
-	// Check existing widgets
-	for (UWidget* Child : GridCanvas->GetAllChildren())
-	{
-		if (UItemWidget* ItemWidget = Cast<UItemWidget>(Child))
-		{
-			if (ItemWidget->ItemObject && ItemsToAdd.Contains(ItemWidget->ItemObject))
-			{ 
-				// Update position if needed
-				if (const FTile* TilePtr = CurrentItems.Find(ItemWidget->ItemObject))
-				{
-					UpdateItemWidgetPosition(ItemWidget, *TilePtr);
-					ItemsToAdd.Remove(ItemWidget->ItemObject);
-				}
-			}
-			else
-			{
-				// Item no longer exists, mark for removal
-				WidgetsToRemove.Add(Child);
-			}
-		}
-	}
+    // Fall back to BaseItem stacking
+    return OwnerInventory ? OwnerInventory->AreItemsStackable(ExistingItem, NewItem) : false;
+}
+
+/* ============================= */
+/* === VALIDATION METHODS === */
+/* ============================= */
+
+bool UInventoryGrid::CanDropItemAt(UBaseItem* Item, const FVector2D& Position) const
+{
+    if (!Item || !OwnerInventory)
+    {
+        return false;
+    }
+
+    const FTile DropTile = ScreenPositionToTile(Position);
+    const int32 Index = OwnerInventory->TileToIndex(DropTile);
+
+    // Check if we can stack with existing item at this position
+    if (UBaseItem* ExistingItem = OwnerInventory->GetItemAt(Index))
+    {
+        return CanStackMixedItems(ExistingItem, Item);
+    }
+
+    // Check if there's room for the item
+    return OwnerInventory->IsRoomAvailable(Item, Index);
+}
+
+bool UInventoryGrid::CanDropItemInstanceAt(UItemInstanceObject* Item, const FVector2D& Position) const
+{
+    if (!Item || !OwnerInventory)
+    {
+        return false;
+    }
+
+    const FTile DropTile = ScreenPositionToTile(Position);
+    const int32 Index = OwnerInventory->TileToIndex(DropTile);
+
+    // Check if we can stack with existing item at this position
+    if (UBaseItem* ExistingItem = OwnerInventory->GetItemAt(Index))
+    {
+        if (UItemInstanceObject* ExistingInstance = Cast<UItemInstanceObject>(ExistingItem))
+        {
+            return OwnerInventory->CanStackItemInstances(ExistingInstance, Item);
+        }
+    }
+
+    // Check if there's room for the item - cast to UBaseItem for compatibility
+    UBaseItem* ItemAsBaseItem = Cast<UBaseItem>(Item);
+    if (ItemAsBaseItem)
+    {
+        return OwnerInventory->IsRoomAvailable(ItemAsBaseItem, Index);
+    }
+
+    return false;
+}
+
+/* ============================= */
+/* === VISUAL FEEDBACK === */
+/* ============================= */
+
+void UInventoryGrid::UpdateDragPreview(UBaseItem* DraggedItem, const FVector2D& MousePosition)
+{
+    if (!DraggedItem)
+    {
+        return;
+    }
+
+    // Determine preview color based on drop validity
+    FLinearColor PreviewColor = CanDropItemAt(DraggedItem, MousePosition) ? ValidDropColor : InvalidDropColor;
     
-	// Remove outdated widgets
-	for (UWidget* Widget : WidgetsToRemove)
-	{
-		GridCanvas->RemoveChild(Widget);
-	}
+    // Apply rarity color if enabled
+    if (bShowRarityColors)
+    {
+        const EItemRarity Rarity = DraggedItem->GetItemInfo().ItemInfo.ItemRarity;
+        FLinearColor RarityColor = GetRarityColor(Rarity);
+        PreviewColor = FLinearColor::LerpUsingHSV(PreviewColor, RarityColor, 0.3f);
+    }
     
-	// Add new items
-	for (UBaseItem* Item : ItemsToAdd)
-	{
-		if (const FTile* TilePtr = CurrentItems.Find(Item))
-		{
-			AddItemToGrid(Item, *TilePtr);
-		}
-	}
+    UpdateDragPreviewColor(PreviewColor);
 }
 
-void UInventoryGrid::UpdateItemWidgetPosition(const UItemWidget* ItemWidget, const FTile& TopLeftTile) const
+void UInventoryGrid::UpdateDragPreviewForInstance(UItemInstanceObject* DraggedInstance, const FVector2D& MousePosition)
 {
-	if (UCanvasPanelSlot* PHSlot = Cast<UCanvasPanelSlot>(ItemWidget->Slot))
-	{
-		FVector2D NewPosition;
-		NewPosition.X = TopLeftTile.X * TileSize;
-		NewPosition.Y = TopLeftTile.Y * TileSize;
-		PHSlot->SetPosition(NewPosition);
-	}
+    if (!DraggedInstance)
+    {
+        return;
+    }
+
+    // Determine preview color based on drop validity
+    FLinearColor PreviewColor = CanDropItemInstanceAt(DraggedInstance, MousePosition) ? ValidDropColor : InvalidDropColor;
+    
+    // Apply rarity color if enabled (use instance rarity)
+    if (bShowRarityColors)
+    {
+        const EItemRarity Rarity = DraggedInstance->Instance.Rarity;
+        FLinearColor RarityColor = GetRarityColor(Rarity);
+        PreviewColor = FLinearColor::LerpUsingHSV(PreviewColor, RarityColor, 0.4f);
+    }
+    
+    // Make preview more transparent for invalid placement
+    if (!CanDropItemInstanceAt(DraggedInstance, MousePosition))
+    {
+        PreviewColor.A = 0.5f;
+    }
+    
+    UpdateDragPreviewColor(PreviewColor);
+    
+    // Show tooltip for high-level items
+    if (bShowDragTooltips && DraggedInstance->Instance.ItemLevel >= MinLevelForTooltips)
+    {
+        ShowDragTooltip(DraggedInstance);
+    }
+    else
+    {
+        HideDragTooltip();
+    }
 }
 
-void UInventoryGrid::LogInvalidPointers() const
+FLinearColor UInventoryGrid::GetRarityColor(EItemRarity Rarity) const
 {
-	if (!IsValid(GridCanvas))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("GridCanvas is null in UInventoryGrid::Refresh."));
-	}
-
-	if (!IsValid(OwnerInventory))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("OwnerInventory is null in UInventoryGrid::Refresh."));
-	}
+    switch (Rarity)
+    {
+        case EItemRarity::IR_GradeS: return FLinearColor::Yellow;           // Legendary
+        case EItemRarity::IR_GradeA: return FLinearColor(1.0f, 0.5f, 0.0f); // Orange - Epic
+        case EItemRarity::IR_GradeB: return FLinearColor::Blue;             // Rare
+        case EItemRarity::IR_GradeC: return FLinearColor::Green;            // Uncommon
+        case EItemRarity::IR_GradeD: return FLinearColor::White;            // Common
+        case EItemRarity::IR_GradeF: return FLinearColor::Gray;             // Poor
+        default: return FLinearColor::White;
+    }
 }
 
-void UInventoryGrid::AddItemToGrid(UBaseItem* Item, const FTile TopLeftTile)
+void UInventoryGrid::ShowDragTooltip(UItemInstanceObject* Item)
 {
-	if (!Item)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AddItemToGrid: Item is null."));
-		return;
-	}
+    if (!Item || !bShowDragTooltips)
+    {
+        return;
+    }
 
-	if (!GridCanvas)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AddItemToGrid: GridCanvas is null."));
-		return;
-	}
-	
-	FItemInformation TempItemInfo = Item->GetItemInfo();
-	TempItemInfo.ItemInfo.LastSavedSlot = ECurrentItemSlot::CIS_Inventory;
-	Item->SetItemInfo(TempItemInfo);
-	
-	APlayerController* Owner = GetOwningPlayer();
-	if (!Owner)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AddItemToGrid: OwnerPlayerController is null."));
-		return;
-	}
+    // Create tooltip text
+    FString TooltipText = Item->GetItemInfo().ItemInfo.ItemName.ToString();
+    TooltipText += FString::Printf(TEXT("\nLevel: %d"), Item->Instance.ItemLevel);
+    
+    // Add rarity
+    FString RarityString = UEnum::GetValueAsString(Item->Instance.Rarity);
+    RarityString = RarityString.Replace(TEXT("EItemRarity::IR_"), TEXT(""));
+    TooltipText += FString::Printf(TEXT("\nRarity: %s"), *RarityString);
+    
+    // Add affix counts
+    if (Item->Instance.Prefixes.Num() > 0)
+    {
+        TooltipText += FString::Printf(TEXT("\n%d Prefix(es)"), Item->Instance.Prefixes.Num());
+    }
+    
+    if (Item->Instance.Suffixes.Num() > 0)
+    {
+        TooltipText += FString::Printf(TEXT("\n%d Suffix(es)"), Item->Instance.Suffixes.Num());
+    }
 
-	// Create the item widget
-	UItemWidget* CreatedWidget = CreateWidget<UItemWidget>(Owner, ItemClass);
-	if (!CreatedWidget)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AddItemToGrid: Could not create UItemWidget."));
-		return;
-	}
-
-	// Configure the widget properties
-	CreatedWidget->TileSize = TileSize;
-	CreatedWidget->OwnerInventory = OwnerInventory;
-	CreatedWidget->ItemObject = Item;
-	CreatedWidget->OnRemoved.AddDynamic(this, &UInventoryGrid::OnItemRemoved);
-
-	// Add the widget to the grid canvas
-	UPanelSlot* ReturnValue = GridCanvas->AddChild(CreatedWidget);
-	if (UCanvasPanelSlot* RefSlot = Cast<UCanvasPanelSlot>(ReturnValue))
-	{
-		RefSlot->SetZOrder(100);
-		RefSlot->SetAutoSize(true);
-
-		FVector2D Position;
-		Position.X = TopLeftTile.X * TileSize;
-		Position.Y = TopLeftTile.Y * TileSize;
-		RefSlot->SetPosition(Position);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AddItemToGrid: Failed to cast slot to UCanvasPanelSlot."));
-	}
+    // Add durability if applicable
+    const float DurabilityPercent = Item->Instance.Durability.GetDurabilityPercent();
+    if (DurabilityPercent < 1.0f)
+    {
+        TooltipText += FString::Printf(TEXT("\nDurability: %.0f%%"), DurabilityPercent * 100.0f);
+    }
+    
+    // Create or update tooltip widget (implementation depends on your UI system)
+    // This is a placeholder - you'll need to implement based on your tooltip system
+    UE_LOG(LogInventoryGrid, VeryVerbose, TEXT("Drag Tooltip: %s"), *TooltipText);
 }
 
-void UInventoryGrid::OnItemRemoved(UBaseItem* InItemInfo)
+void UInventoryGrid::HideDragTooltip()
 {
-	if (OwnerInventory)
-	{
-		OwnerInventory->RemoveItemFromInventory(InItemInfo);
-	}
+    if (DragTooltipWidget)
+    {
+        DragTooltipWidget->SetVisibility(ESlateVisibility::Hidden);
+    }
 }
 
-bool UInventoryGrid::IsRoomAvailableforPayload(UBaseItem* Payload) const 
+void UInventoryGrid::UpdateDragPreviewColor(const FLinearColor& Color)
 {
-	// Check if Payload and OwnerInventory are valid
-	if (!IsValid(Payload) || !OwnerInventory)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("IsRoomAvailableForItem: Invalid Payload or OwnerInventory is null."));
-		return false;
-	}
+    CurrentPreviewColor = Color;
+    
+    // Force a repaint to show the updated color
+    Invalidate(EInvalidateWidgetReason::Paint);
+}
 
-	// Initialize InTile with the dragged item's top-left position
-	const FTile InTile{ DraggedItemTopLeft.X, DraggedItemTopLeft.Y };
+/* ============================= */
+/* === GRID CALCULATIONS === */
+/* ============================= */
 
-	// Convert tile to index and check room availability in the inventory
-	const int32 Index = OwnerInventory->TileToIndex(InTile);
-	return OwnerInventory->IsRoomAvailable(Payload, Index);
+FTile UInventoryGrid::ScreenPositionToTile(const FVector2D& ScreenPosition) const
+{
+    const int32 TileX = FMath::FloorToInt(ScreenPosition.X / TileSize);
+    const int32 TileY = FMath::FloorToInt(ScreenPosition.Y / TileSize);
+    return FTile(FMath::Max(0, TileX), FMath::Max(0, TileY));
+}
+
+FVector2D UInventoryGrid::TileToScreenPosition(const FTile& Tile) const
+{
+    return FVector2D(Tile.X * TileSize, Tile.Y * TileSize);
 }
 
 void UInventoryGrid::MousePositioninTile(const FVector2D MousePosition, bool& Right, bool& Down) const
 {
-	// Calculate the position of the mouse relative to a tile and
-	// determine whether it's on the right half or bottom half of a tile.
-	// Use constant to avoid duplicate calculations
-	const float HalfTileSize = TileSize / 2.0f;
+    // Calculate the position of the mouse relative to a tile and
+    // determine whether it's on the right half or bottom half of a tile.
+    const float HalfTileSize = TileSize / 2.0f;
 
-	Right = fmod(MousePosition.X, TileSize) > HalfTileSize;
-	Down = fmod(MousePosition.Y, TileSize) > HalfTileSize;
+    Right = fmod(MousePosition.X, TileSize) > HalfTileSize;
+    Down = fmod(MousePosition.Y, TileSize) > HalfTileSize;
 }
 
 void UInventoryGrid::ForEachItem(TMap<UBaseItem*, FTile> ItemTileMap, const std::function<void(UBaseItem*, FTile)>& Callback)
 {
-	for (const auto& Elem : ItemTileMap)
-	{
-		UBaseItem* Item = Elem.Key;
-		const FTile& TopLeftTile = Elem.Value;
+    for (const auto& Elem : ItemTileMap)
+    {
+        UBaseItem* Item = Elem.Key;
+        const FTile& TopLeftTile = Elem.Value;
 
-		// Call the callback function with the item and tile
-		Callback(Item, TopLeftTile);
-	}
+        // Call the callback function with the item and tile
+        Callback(Item, TopLeftTile);
+    }
 }
+
+void UInventoryGrid::ForEachItemInstance(TMap<UItemInstanceObject*, FTile> ItemTileMap, const std::function<void(UItemInstanceObject*, FTile)>& Callback)
+{
+    for (const auto& Elem : ItemTileMap)
+    {
+        UItemInstanceObject* Item = Elem.Key;
+        const FTile& TopLeftTile = Elem.Value;
+
+        // Call the callback function with the item instance and tile
+        Callback(Item, TopLeftTile);
+    }
+}
+
+/* ============================= */
+/* === RENDERING === */
+/* ============================= */
+
+int32 UInventoryGrid::NativePaint(
+    const FPaintArgs& Args,
+    const FGeometry& AllottedGeometry,
+    const FSlateRect& MyCullingRect,
+    FSlateWindowElementList& OutDrawElements,
+    int32 LayerId,
+    const FWidgetStyle& InWidgetStyle,
+    bool bParentEnabled) const
+{
+    // Let parent paint first; keep the top layer it used.
+    const int32 MaxLayerId = Super::NativePaint(
+        Args, AllottedGeometry, MyCullingRect,
+        OutDrawElements, LayerId, InWidgetStyle, bParentEnabled);
+
+    // Draw the grid lines at the next layer.
+    DrawGridLines(AllottedGeometry.ToPaintGeometry(), OutDrawElements, MaxLayerId + 1);
+
+    // Drag preview (use the geometry itself; Do NOT convert it to FPaintGeometry here)
+    if (DrawDropLocation)
+    {
+        FPaintContext Context(AllottedGeometry, MyCullingRect, OutDrawElements, MaxLayerId + 2, InWidgetStyle, bParentEnabled);
+
+        // IMPORTANT: pass FGeometry, not FPaintGeometry
+        DrawDragDropBox(Context, AllottedGeometry, OutDrawElements, MaxLayerId + 2);
+    }
+
+    // Reserve one more layer beyond everything we drew
+    return MaxLayerId + 3;
+}
+
+
+void UInventoryGrid::DrawGridLines(const FPaintGeometry& PaintGeometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
+{
+    if (!OwnerInventory || TileSize <= 0.0f)
+    {
+        return;
+    }
+
+    const FVector2D LocalSize = PaintGeometry.GetLocalSize();
+    const int32 Columns = OwnerInventory->Columns;  // Use the actual property
+    const int32 Rows = OwnerInventory->Rows;        // Use the actual property
+
+    // Draw vertical lines
+    for (int32 Col = 0; Col <= Columns; ++Col)
+    {
+        const float X = Col * TileSize;
+        if (X <= LocalSize.X)
+        {
+            FSlateDrawElement::MakeLines(
+                OutDrawElements,
+                LayerId,
+                PaintGeometry,
+                TArray<FVector2D>{ FVector2D(X, 0.0f), FVector2D(X, Rows * TileSize) },
+                ESlateDrawEffect::None,
+                GridLineColor,
+                false,
+                GridLineThickness
+            );
+        }
+    }
+
+    // Draw horizontal lines
+    for (int32 Row = 0; Row <= Rows; ++Row)
+    {
+        const float Y = Row * TileSize;
+        if (Y <= LocalSize.Y)
+        {
+            FSlateDrawElement::MakeLines(
+                OutDrawElements,
+                LayerId,
+                PaintGeometry,
+                TArray<FVector2D>{ FVector2D(0.0f, Y), FVector2D(Columns * TileSize, Y) },
+                ESlateDrawEffect::None,
+                GridLineColor,
+                false,
+                GridLineThickness
+            );
+        }
+    }
+}
+
+void UInventoryGrid::DrawDragDropBox(
+    FPaintContext Context,
+    const FGeometry& AllottedGeometry,
+    FSlateWindowElementList& OutDrawElements,
+    int32 LayerId) const
+{
+    // Allow either a BaseItem or an ItemInstance to drive the preview
+    const bool bHasDraggedThing = (CurrentDraggedItem != nullptr) || (CurrentDraggedInstance != nullptr);
+    if (!bHasDraggedThing || !OwnerInventory)
+    {
+        return;
+    }
+
+    // Get item dimensions (prefer instance if present)
+    FIntPoint ItemDimensions;
+    if (CurrentDraggedInstance)
+    {
+        ItemDimensions = CurrentDraggedInstance->GetItemInfo().ItemInfo.Dimensions;
+    }
+    else
+    {
+        ItemDimensions = CurrentDraggedItem->GetItemInfo().ItemInfo.Dimensions;
+    }
+
+    // Compute size and position in local space (tile units → pixels)
+    const FVector2D BoxSize(ItemDimensions.X * TileSize, ItemDimensions.Y * TileSize);
+    const FVector2D BoxPosition(DraggedItemTopLeft.X * TileSize, DraggedItemTopLeft.Y * TileSize);
+
+    // Build a paint geometry using the widget's allotted geometry
+    const FPaintGeometry BoxGeometry = AllottedGeometry.ToPaintGeometry(
+        BoxSize,
+        FSlateLayoutTransform(BoxPosition)
+    );
+
+    // Draw the drag preview rectangle
+    FSlateDrawElement::MakeBox(
+        OutDrawElements,
+        LayerId,
+        BoxGeometry,
+        FCoreStyle::Get().GetBrush("WhiteBrush"),
+        ESlateDrawEffect::None,
+        CurrentPreviewColor
+    );
+}
+

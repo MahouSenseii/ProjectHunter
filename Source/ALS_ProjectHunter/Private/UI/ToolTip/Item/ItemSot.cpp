@@ -12,8 +12,6 @@
 #include "Item/EquippedObject.h"
 #include "Library/PHItemFunctionLibrary.h"
 #include "UI/Item/ItemWidget.h"
-#include "UI/Widgets/PHInventoryWidget.h"
-#include "Util/ColorConstants.h"
 
 void UItemSot::NativeConstruct()
 {

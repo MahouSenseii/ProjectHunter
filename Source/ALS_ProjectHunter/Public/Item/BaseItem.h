@@ -35,23 +35,23 @@ public:
 
 	/** Get the unique identifier for this specific item instance */
 	UFUNCTION(BlueprintCallable, Category = "Item")
-	FString GetUniqueID() const;
+	virtual FString GetItemInstanceID() const;
 
 	/** Returns the dimensions of the item, considering rotation */
 	UFUNCTION(BlueprintCallable, Category = "Item")
-	FIntPoint GetDimensions() const;
+	virtual FIntPoint GetDimensions() const;
 	
 	/** Check if the item is rotated */
 	UFUNCTION(BlueprintCallable, Category = "Item")
-	bool IsRotated() const { return ItemInfos.ItemInfo.Rotated; }
+	virtual bool IsRotated() const { return ItemInfos.ItemInfo.Rotated; }
 	
 	/** Set the rotation state of the item */
 	UFUNCTION(BlueprintCallable, Category = "Item")
-	void SetRotated(bool bNewRotated);
+	virtual void SetRotated(bool bNewRotated);
 
 	/** Toggles the rotation state of the item */
 	UFUNCTION(BlueprintCallable, Category = "Item")
-	void ToggleRotation();
+	virtual void ToggleRotation();
 
 	/** Returns the icon of the item, considering rotation */
 	UFUNCTION(BlueprintCallable, Category = "Item")
@@ -67,23 +67,23 @@ public:
 
 	/** Add to the item's quantity (respects max stack size) */
 	UFUNCTION(BlueprintCallable, Category = "Item|Stacking")
-	bool AddQuantity(int32 InQty);
+	virtual bool AddQuantity(int32 InQty);
 
 	/** Remove from the item's quantity */
 	UFUNCTION(BlueprintCallable, Category = "Item|Stacking")
-	bool RemoveQuantity(int32 InQty);
+	virtual bool RemoveQuantity(int32 InQty);
 
 	/** Set the item's quantity directly */
 	UFUNCTION(BlueprintCallable, Category = "Item|Stacking")
-	void SetQuantity(int32 NewQty);
+	virtual void SetQuantity(int32 NewQty);
 
 	/** Check if this item can be stacked */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")
-	bool IsStackable() const { return ItemInfos.ItemInfo.Stackable; }
+	virtual bool IsStackable() const { return ItemInfos.ItemInfo.Stackable; }
 
 	/** Get the maximum stack size (0 = unlimited) */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")
-	int32 GetMaxStackSize() const { return ItemInfos.ItemInfo.MaxStackSize; }
+	virtual int32 GetMaxStackSize() const { return ItemInfos.ItemInfo.MaxStackSize; }
 
 	/** Check if this item can accept more quantity */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")
@@ -95,7 +95,7 @@ public:
 
 	/** Get read-only access to item information */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	const FItemInformation& GetItemInfo() const { return ItemInfos; }
+	virtual const FItemInformation& GetItemInfo() const { return ItemInfos; }
 
 	/** Get the item's display name */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
@@ -174,6 +174,9 @@ protected:
 
 	/** Internal method to set item info without validation */
 	void InternalSetItemInfo(const FItemInformation& NewItemInfo);
+
+	bool GetIsInitialized() const;
+	bool SetIsInitialized(bool bNewIsInitialized);
 
 protected:
 	/** Information related to the item */
