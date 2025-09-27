@@ -1,125 +1,316 @@
-// Copyright@2024 Quentin Davis 
+// CombatManager.h
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Character/PHBaseCharacter.h"
 #include "Library/PHCombatStructLibrary.h"
+#include "Library/PHItemEnumLibrary.h"
+#include "Library/PHCharacterEnumLibrary.h"
 #include "CombatManager.generated.h"
 
-class UUserWidget;
-class UAbilitySystemComponent;
-struct FGameplayAttribute;
+class APHBaseCharacter;
+class UPHAttributeSet;
+class UDamagePopup;
+class UWidgetComponent;
+class UAnimMontage;
 
-/** Broadcast after damage is applied (server-side listeners only) */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDamageApplied, float, TotalDamage, EDamageTypes, HighestDamageType, bool, IsCrit);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDamageApplied, float, DamageAmount, 
+    EDamageTypes, DamageType, bool, bIsCriticalHit);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCombatStatusChanged, ECombatStatus, OldStatus, 
+    ECombatStatus, NewStatus);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCombatEntered);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCombatExited);
+
+/**
+ * Combat Manager Component - Path of Exile 2 Style Combat System
+ * 
+ * Damage Calculation Order (following PoE2):
+ * 1. Base Damage from weapon/spell
+ * 2. Damage Conversions (Physical -> Elemental -> Chaos)
+ * 3. Added Damage (flat bonuses)
+ * 4. Increased/More Damage multipliers
+ * 5. Critical Strike multipliers
+ * 6. Enemy Defenses (Armor, Resistances, Block)
+ * 7. Damage Taken modifiers on enemy
+ * 
+ * Features:
+ * - Complete damage conversion system
+ * - Life/Mana leech
+ * - Damage reflection and thorns
+ * - Status effect application
+ * - Resistance penetration
+ * - Blocking and poise system
+ * - Combat status tracking and management
+ * - Out-of-combat regeneration
+ */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UCombatManager : public UActorComponent
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	/* =========================== */
-	/* === Constructor & Setup === */
-	/* =========================== */
+    UCombatManager();
+    
+    virtual void TickComponent(float DeltaTime, ELevelTick TickType, 
+                              FActorComponentTickFunction* ThisTickFunction) override;
 
-	/** Sets default values for this component's properties */
-	UCombatManager();
 
-	/** Called after damage application to check death state, ragdoll, etc. */
-	UFUNCTION(BlueprintCallable, Category="Combat")
-	void CheckAliveStatus();
-
-	/** Returns true if the owner is currently blocking */
-	UFUNCTION(BlueprintCallable, Category="Combat")
-	bool IsBlocking() const { return bIsBlocking; }
-
-	/** Set the blocking state */
-	UFUNCTION(BlueprintCallable, Category="Combat")
-	void SetBlocking(bool bNewBlocking) { bIsBlocking = bNewBlocking; }
-
+    UFUNCTION(BlueprintCallable, Category = "Combat|Setup")
+    APHBaseCharacter* GetOwnerCharacter() const {return OwnerCharacter; }
+    
 protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
 
-	/** Chance roll for applying a status effect by damage type */
-	UFUNCTION()
-	static bool RollForStatusEffect(const APHBaseCharacter* Attacker, EDamageTypes DamageType);
+    /* ================================ */
+    /* === DAMAGE CALCULATION ========= */
+    /* ================================ */
+    
+    /**
+     * Main damage calculation function following PoE2 mechanics
+     * @param Attacker - Character dealing damage
+     * @param Defender - Character receiving damage
+     * @return Complete damage breakdown by type with crit and status info
+     */
+    UFUNCTION(BlueprintCallable, Category = "Combat|Calculation")
+    FDamageHitResultByType CalculateDamage(const APHBaseCharacter* Attacker, 
+                                          const APHBaseCharacter* Defender) const;
+    
+    /**
+     * Get base damage ranges from attacker's attributes
+     */
+    static FDamageByType GetBaseDamage(const UPHAttributeSet* AttAtt);
+    
+    /**
+     * Apply damage conversion mechanics (Physical -> Elemental -> Chaos)
+     * Conversions are capped at 100% per damage type
+     */
+    static FDamageByType ApplyDamageConversions(const FDamageByType& InDamage, 
+                                                const UPHAttributeSet* AttAtt);
+    
+    /**
+     * Roll random values within damage ranges
+     */
+    static TMap<EDamageTypes, float> RollDamageValues(const FDamageByType& DamageRanges);
+    
+    /**
+     * Apply damage increases, more multipliers, and conditional bonuses
+     */
+    static TMap<EDamageTypes, float> ApplyDamageModifiers(const TMap<EDamageTypes, float>& RolledDamage,
+                                                          const UPHAttributeSet* AttAtt);
+    
+    /**
+     * Apply defender's resistances, armor, and other defenses
+     * Includes penetration mechanics
+     */
+    static TMap<EDamageTypes, float> ApplyDefenses(const TMap<EDamageTypes, float>& IncomingDamage,
+                                                   const UPHAttributeSet* AttAtt,
+                                                   const UPHAttributeSet* DefAtt);
+    
+    /**
+     * Roll for critical strike
+     */
+    static bool RollCriticalStrike(const UPHAttributeSet* AttAtt);
+    
+    /**
+     * Roll for status effect application per damage type
+     */
+    static TMap<EDamageTypes, bool> RollStatusEffects(const UPHAttributeSet* AttAtt,
+                                                      const TMap<EDamageTypes, float>& FinalDamage);
 
-	/** Calculate the final damage values after bonuses and resistances */
-	UFUNCTION(BlueprintCallable, Category="Combat")
-	FDamageHitResultByType CalculateDamage(const APHBaseCharacter* Attacker, const APHBaseCharacter* Defender) const;
+    /* ================================ */
+    /* === DAMAGE APPLICATION ========= */
+    /* ================================ */
+    
+    /**
+     * Apply calculated damage to defender
+     * Handles blocking, leech, reflection, and status effects
+     */
+    UFUNCTION(BlueprintCallable, Category = "Combat|Application")
+    void ApplyDamage(const APHBaseCharacter* Attacker, APHBaseCharacter* Defender);
+    
+    /**
+     * Apply life and mana leech to attacker
+     */
+    static void ApplyLeech(const APHBaseCharacter* Attacker, float DamageDealt);
+    
+    /**
+     * Process damage reflection and thorn damage
+     */
+    static void ProcessReflectionAndThorns(const APHBaseCharacter* Attacker,
+                                           const APHBaseCharacter* Defender,
+                                           const FDamageHitResultByType& IncomingHit);
+    
+    /**
+     * Apply status effects based on damage types
+     */
+    static void ApplyStatusEffects(const APHBaseCharacter* Target, 
+                                   const FDamageHitResultByType& HitResult);
 
-	/** Apply calculated damage, handle blocking/poise/stagger, broadcast, popups, alignment */
-	UFUNCTION(BlueprintCallable, Category="Combat")
-	void ApplyDamage(const APHBaseCharacter* Attacker, APHBaseCharacter* Defender);
+    /* ================================ */
+    /* === UTILITY FUNCTIONS ========== */
+    /* ================================ */
+    
+    /**
+     * Check if the character should die and trigger a ragdoll
+     */
+    void CheckAliveStatus() const;
+    
+    /**
+     * Get the damage type that dealt the most damage
+     */
+    static EDamageTypes GetHighestDamageType(const FDamageHitResultByType& HitResult);
+    
+    /**
+     * Initialize damage popup widget
+     */
+    UFUNCTION()
+    void InitPopup(float DamageAmount, EDamageTypes DamageType, bool bIsCrit);
 
-	/** (Legacy helper) Spawn a damage popup at the owner location (used by server listeners or local testing) */
-	UFUNCTION(BlueprintCallable, Category="Combat|UI")
-	void InitPopup(float DamageAmount, EDamageTypes DamageType, bool bIsCrit);
+    /* ================================ */
+    /* === COMBO SYSTEM =============== */
+    /* ================================ */
+    
+    UFUNCTION(BlueprintCallable, Category = "Combat|Combo")
+    void IncreaseComboCounter(float Amount);
+    
+    void ResetComboCounter() const;
 
-	/** Returns the damage type with the highest value in a hit result */
-	UFUNCTION(BlueprintPure, Category="Combat")
-	static EDamageTypes GetHighestDamageType(const FDamageHitResultByType& HitResult);
-
-	/** Tracks hits on the DEFENDER and flips alignment after a threshold */
-	UFUNCTION()
-	void HandleAlignmentShift(APHBaseCharacter* Defender);
+    /* ================================ */
+    /* === BLOCKING =================== */
+    /* ================================ */
+    
+    UFUNCTION(BlueprintPure, Category = "Combat|Defense")
+    bool IsBlocking() const { return bIsBlocking; }
+    
+    UFUNCTION(BlueprintCallable, Category = "Combat|Defense")
+    void SetBlocking(bool bNewBlocking) { bIsBlocking = bNewBlocking; }
+    
+    /* ================================ */
+    /* === COMBAT STATUS ============== */
+    /* ================================ */
+    
+    UFUNCTION(BlueprintPure, Category = "Combat|Status")
+    ECombatStatus GetCombatStatus() const { return CurrentCombatStatus; }
+    
+    UFUNCTION(BlueprintPure, Category = "Combat|Status")
+    bool IsInCombat() const { return CurrentCombatStatus == ECombatStatus::InCombat; }
+    
+    UFUNCTION(BlueprintCallable, Category = "Combat|Status")
+    void SetCombatStatus(ECombatStatus NewStatus);
+    
+    UFUNCTION(BlueprintCallable, Category = "Combat|Status")
+    void EnterCombat(APHBaseCharacter* Enemy);
+    
+    UFUNCTION(BlueprintCallable, Category = "Combat|Status")
+    void ExitCombat();
+    
+    UFUNCTION(BlueprintCallable, Category = "Combat|Status")
+    void ForceCombatExit();
+    
+    UFUNCTION(BlueprintPure, Category = "Combat|Status")
+    bool IsInCombatWith(const APHBaseCharacter* Target) const;
+    
+    UFUNCTION(BlueprintPure, Category = "Combat|Status")
+    TArray<APHBaseCharacter*> GetActiveCombatTargets() const;
+    
+    UFUNCTION(BlueprintPure, Category = "Combat|Status")
+    float GetTimeSinceLastCombatActivity() const 
+    { 
+        return GetWorld() ? GetWorld()->GetTimeSeconds() - LastCombatActivityTime : 0.f; 
+    }
+    
+protected:
+    void RefreshCombatTimer();
+    void CheckCombatTimeout();
+    void OnEnterCombat();
+    void OnExitCombat();
+    void HandleOutOfCombatRegeneration(float DeltaTime) const;
 
 public:
-	/* ================== */
-	/* === Anim / UI  === */
-	/* ================== */
-
-	/** Stagger montages played when poise breaks or block fails */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Anim", meta=(AllowPrivateAccess="true"))
-	UAnimMontage* StaggerMontage = nullptr;
-
-	/** Damage popup widget class */
-	UPROPERTY(EditDefaultsOnly, Category="UI")
-	TSubclassOf<UUserWidget> DamagePopupClass;
-
-	
-	/** Event fired after damage has been applied (server-side) */
-	UPROPERTY(BlueprintAssignable, Category="Combat")
-	FOnDamageApplied OnDamageApplied;
-
-	/** Cached owner */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Owner", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<APHBaseCharacter> OwnerCharacter = nullptr;
-
-	/** Increase combo counter and schedule a reset */
-	UFUNCTION(BlueprintCallable, Category="Combat")
-	void IncreaseComboCounter(float Amount = 1.0f);
-
+    /* ================================ */
+    /* === EVENTS ===================== */
+    /* ================================ */
+    
+    UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+    FOnDamageApplied OnDamageApplied;
+    
+    UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+    FOnCombatStatusChanged OnCombatStatusChanged;
+    
+    UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+    FOnCombatEntered OnCombatEntered;
+    
+    UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+    FOnCombatExited OnCombatExited;
 
 protected:
-	/* ==================== */
-	/* === State / Meta === */
-	/* ==================== */
-
-	/** How many times this character has been hit while still not marked as an enemy */
-	UPROPERTY(BlueprintReadOnly, Category="Combat")
-	int32 TimesHitBeforeEnemy = 0;
-
-private:
-	/** True when the character is actively blocking with a shield */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Combat", meta=(AllowPrivateAccess="true"))
-	bool bIsBlocking = false;
-
-	/** Reset the combo counter to 0 */
-	UFUNCTION()
-	void ResetComboCounter() const;
-
-	/** Time in seconds before the combo counter resets */
-	UPROPERTY(EditAnywhere, Category="Combat", meta=(AllowPrivateAccess="true"))
-	float ComboResetTime = 5.0f;
-
-	/** Cached combo counter */
-	UPROPERTY(BlueprintReadOnly, Category="Combat", meta=(AllowPrivateAccess="true"))
-	int32 ComboCount = 0;
-	
-	UPROPERTY()
-	FTimerHandle ComboResetTimerHandle;
+    /* ================================ */
+    /* === PROPERTIES ================= */
+    /* ================================ */
+    
+    UPROPERTY()
+    APHBaseCharacter* OwnerCharacter;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|UI")
+    TSubclassOf<UDamagePopup> DamagePopupClass;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|Animation")
+    UAnimMontage* StaggerMontage;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|Combo")
+    float ComboResetTime = 2.0f;
+    
+    /* === Combat Status Properties === */
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|Status")
+    ECombatStatus CurrentCombatStatus = ECombatStatus::OutOfCombat;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|Status")
+    float CombatTimeout = 5.0f; // Time before exiting combat after the last activity
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|Status")
+    float MaxCombatDistance = 3000.0f; // Max distance to maintain combat with a target
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|Status")
+    bool bUseTransitions = false; // Whether to use entering/leaving combat transitions
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|Status", meta = (EditCondition = "bUseTransitions"))
+    float CombatEnterTransitionTime = 0.5f;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|Status", meta = (EditCondition = "bUseTransitions"))
+    float CombatExitTransitionTime = 1.0f;
+    
+    /* === Out of Combat Regeneration === */
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|Regeneration")
+    float OutOfCombatRegenDelay = 3.0f; // Delay before regen starts after combat
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|Regeneration")
+    float OutOfCombatHealthRegen = 10.0f; // Health per second
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|Regeneration")
+    float OutOfCombatManaRegen = 5.0f; // Mana per second
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Combat|Regeneration")
+    float OutOfCombatStaminaRegen = 15.0f; // Stamina per second
+    
+    /* === Runtime Properties === */
+    
+    UPROPERTY()
+    TArray<APHBaseCharacter*> CombatTargets;
+    
+    float LastCombatActivityTime = 0.f;
+    bool bCanRegenerate = true;
+    
+    FTimerHandle ComboResetTimerHandle;
+    FTimerHandle CombatExitTimer;
+    FTimerHandle CombatTransitionTimer;
+    FTimerHandle RegenerationDelayTimer;
+    
+    bool bIsBlocking = false;
+    
+    // Track hits for NPC hostility (optional feature from original code)
+    int32 TimesHitBeforeEnemy = 0;
 };

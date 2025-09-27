@@ -24,7 +24,7 @@ void UPHAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	/* === Indicators ============== */
 	/* ============================= */
 	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CombatAlignment, COND_None, REPNOTIFY_Always);
-
+	DOREPLIFETIME_CONDITION_NOTIFY(UPHAttributeSet, CombatStatus, COND_None, REPNOTIFY_Always);
 	/* ============================= */
 	/* === Primary Attributes ====== */
 	/* ============================= */
@@ -310,6 +310,22 @@ float UPHAttributeSet::GetAttributeValue(const FGameplayAttribute& Attribute) co
 		return ASC->GetNumericAttribute(Attribute);
 	}
 	return 0.0f;
+}
+
+ECombatStatus UPHAttributeSet::GetCombatStatusBP() const
+{
+	return static_cast<ECombatStatus>(CombatStatus.GetCurrentValue());
+}
+
+void UPHAttributeSet::SetCombatStatusBP(ECombatStatus NewStatus)
+{
+	SetCombatStatus(static_cast<float>(NewStatus));
+}
+
+void UPHAttributeSet::OnRep_CombatStatus(const FGameplayAttributeData& OldValue)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPHAttributeSet, CombatStatus, OldValue);
+	OnCombatStatusChange.Broadcast(CombatStatus.GetCurrentValue());
 }
 
 // for use in BP will show enum not float values 
@@ -899,6 +915,8 @@ void UPHAttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData& 
 		Props.TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Props.TargetAvatarActor);
 	}
 }
+
+
 
 //
 void UPHAttributeSet::OnRep_CombatAlignment(const FGameplayAttributeData& OldCombatAlignment) const

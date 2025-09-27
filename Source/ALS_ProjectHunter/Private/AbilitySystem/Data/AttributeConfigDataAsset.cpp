@@ -169,6 +169,8 @@ void UAttributeConfigDataAsset::AutoPopulateFromGameplayTags()
         {PHTags.Attributes_Secondary_Vital_ManaRegenAmount, 1.0f, 0.0f, 9999.0f, TEXT("Mana Regen Amount"), TEXT("Mana regenerated per tick")},
         {PHTags.Attributes_Secondary_Vital_StaminaRegenRate, 1.0f, 0.1f, 9999.0f, TEXT("Stamina Regen Rate"), TEXT("Seconds between stamina regeneration")},
         {PHTags.Attributes_Secondary_Vital_StaminaRegenAmount, 1.0f, 0.0f, 9999.0f, TEXT("Stamina Regen Amount"), TEXT("Stamina regenerated per tick")},
+        {PHTags.Attributes_Secondary_Vital_StaminaDegenAmount, 1.0f, 0.0f, 9999.0f, TEXT("Stamina Degen Amount"), TEXT("Stamina lost per tick")},
+        {PHTags.Attributes_Secondary_Vital_StaminaDegenRate, 1.0f, 0.0f, 9999.0f, TEXT("Stamina Degen Rate"), TEXT("Seconds between stamina degeneration")},
 
         // === GENERAL DEFENSES ===
         {PHTags.Attributes_Secondary_Resistances_GlobalDefenses, 0.0f, 0.0f, 9999.0f, TEXT("Global Defenses"), TEXT("General damage reduction against all damage types")},

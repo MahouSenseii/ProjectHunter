@@ -43,13 +43,23 @@ public:
 
         float GetAttributeValue(const FGameplayAttribute& Attribute) const;
 
-	UFUNCTION(BlueprintCallable, Category = "Combat Alignment")
+	/* === Combat Status Functions === */
+	UFUNCTION(BlueprintCallable, Category = "Combat Status")
+	ECombatStatus GetCombatStatusBP() const;
+    
+	UFUNCTION(BlueprintCallable, Category = "Combat Status")
+	void SetCombatStatusBP(ECombatStatus NewStatus);
+    
+	UPROPERTY(BlueprintAssignable, Category = "Combat Status")
+	FOnAttributeChangeSignature OnCombatStatusChange;
+
+	UFUNCTION(BlueprintCallable, Category = "Combat Status")
 	ECombatAlignment GetCombatAlignmentBP() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Combat Alignment")
+	UFUNCTION(BlueprintCallable, Category = "Combat Status")
 	void SetCombatAlignmentBP(ECombatAlignment NewAlignment);
 
-	UPROPERTY(BlueprintAssignable, Category = "Combat Alignment")
+	UPROPERTY(BlueprintAssignable, Category = "Combat Status")
 	FOnAttributeChangeSignature OnCombatAlignmentChange;
 	
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
@@ -82,6 +92,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Combat Alignment", ReplicatedUsing = OnRep_CombatAlignment)
 	FGameplayAttributeData CombatAlignment;
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, CombatAlignment)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat Status", ReplicatedUsing = OnRep_CombatStatus)
+	FGameplayAttributeData CombatStatus;
+	ATTRIBUTE_ACCESSORS(UPHAttributeSet, CombatStatus)
  
 	/* ============================= */
 	/* === Primary Attributes === */
@@ -1038,7 +1052,7 @@ public:
 	ATTRIBUTE_ACCESSORS(UPHAttributeSet, PercentageReservedArcaneShield);
 
 
-public:
+protected:
 	
 	/* ============================= */
 	/* === Combat Indicators === */
@@ -1047,6 +1061,10 @@ public:
 	/** Called when combat alignment changes. */
 	UFUNCTION()
 	void OnRep_CombatAlignment(const FGameplayAttributeData& OldCombatAlignment) const;
+
+	
+	UFUNCTION()
+	virtual void OnRep_CombatStatus(const FGameplayAttributeData& OldValue);
 
 	/* ============================= */
 	/* === Health Replication Functions === */
@@ -1678,8 +1696,5 @@ private:
 
 	/** Utility function for setting effect properties */
 	static void SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props);
-	
-	/** Utility function for setting attribute values */
-	void SetAttributeValue(const FGameplayAttribute& Attribute, float NewValue);
 
 };

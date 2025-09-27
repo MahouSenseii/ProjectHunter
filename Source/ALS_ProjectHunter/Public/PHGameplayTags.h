@@ -310,7 +310,8 @@ public:
 	static FGameplayTag Condition_Self_CannotHealMana50Percent;
 	static FGameplayTag Condition_Self_LowArcaneShield;
 	static FGameplayTag Condition_Self_ZeroArcaneShield;
-
+	static FGameplayTag Condition_Self_IsBlocking;
+	
 	/* === Ailment & Status Effects (Target) === */
 	static FGameplayTag Condition_Target_Bleeding;
 	static FGameplayTag Condition_Target_Stunned;
@@ -320,7 +321,8 @@ public:
 	static FGameplayTag Condition_Target_Corrupted;
 	static FGameplayTag Condition_Target_Purified;
 	static FGameplayTag Condition_Target_Petrified;
-
+	static FGameplayTag Condition_Target_IsBlocking;
+	
 	/* === Immunity / Restrictions === */
 
 	static FGameplayTag Condition_ImmuneToCC;
@@ -347,7 +349,8 @@ public:
 	static FGameplayTag Condition_HasBowEquipped;
 	static FGameplayTag Condition_HasShieldEquipped;
 	static FGameplayTag Condition_HasStaffEquipped;
-
+	static FGameplayTag Condition_InCombat;
+	static FGameplayTag Condition_OutOfCombat;
 	
 	/* === Effects  === */
 	static FGameplayTag Effect_Stamina_RegenActive;

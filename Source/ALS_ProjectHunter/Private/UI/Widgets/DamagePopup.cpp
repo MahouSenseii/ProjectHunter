@@ -29,12 +29,10 @@ void UDamagePopup::SetDamageData(int32 InAmount, EDamageTypes InType, bool bIsCr
 
 		DamageText->SetFont(FontInfo);
 	}
-
 	if (CritImage)
 	{
 		CritImage->SetVisibility(bIsCritical ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	}
-
 	if (PopupAnimation)
 	{
 		PlayAnimation(PopupAnimation);

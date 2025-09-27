@@ -20,7 +20,9 @@ TMap<FString, FGameplayAttribute> FPHGameplayTags::AllAttributesMap;
 FPHGameplayTags FPHGameplayTags::GameplayTags;
 
 #define DEFINE_GAMEPLAY_TAG(TagName) FGameplayTag FPHGameplayTags::TagName;
+
 // === Static FGameplayTag Definitions ===
+
 // === Primary Attributes ===
 DEFINE_GAMEPLAY_TAG(Attributes_Primary_Strength)
 DEFINE_GAMEPLAY_TAG(Attributes_Primary_Intelligence)
@@ -89,6 +91,7 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MinIceDamage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MinLightDamage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MinLightningDamage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MinCorruptionDamage)
+
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MaxPhysicalDamage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MaxFireDamage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MaxIceDamage)
@@ -229,6 +232,16 @@ DEFINE_GAMEPLAY_TAG(Condition_TargetIsBoss)
 DEFINE_GAMEPLAY_TAG(Condition_TargetIsMinion)
 DEFINE_GAMEPLAY_TAG(Condition_TargetHasShield)
 DEFINE_GAMEPLAY_TAG(Condition_TargetIsCasting)
+DEFINE_GAMEPLAY_TAG(Condition_Target_IsBlocking)
+DEFINE_GAMEPLAY_TAG(Condition_Target_Stunned)
+DEFINE_GAMEPLAY_TAG(Condition_Target_Frozen)
+DEFINE_GAMEPLAY_TAG(Condition_Target_Shocked)
+DEFINE_GAMEPLAY_TAG(Condition_Target_Burned)
+DEFINE_GAMEPLAY_TAG(Condition_Target_Corrupted)
+DEFINE_GAMEPLAY_TAG(Condition_Target_Petrified)
+DEFINE_GAMEPLAY_TAG(Condition_Target_Purified)
+DEFINE_GAMEPLAY_TAG(Condition_Target_Bleeding)
+
 
 // === Position / Environment ===
 DEFINE_GAMEPLAY_TAG(Condition_NearAllies)
@@ -253,17 +266,9 @@ DEFINE_GAMEPLAY_TAG(Condition_Self_CannotRegenMana)
 DEFINE_GAMEPLAY_TAG(Condition_Self_CannotHealHPAbove50Percent)
 DEFINE_GAMEPLAY_TAG(Condition_Self_CannotHealStamina50Percent)
 DEFINE_GAMEPLAY_TAG(Condition_Self_CannotHealMana50Percent)
+DEFINE_GAMEPLAY_TAG(Condition_Self_LowArcaneShield)    
 DEFINE_GAMEPLAY_TAG(Condition_Self_ZeroArcaneShield)
-
-// === Target Status Effects ===
-DEFINE_GAMEPLAY_TAG(Condition_Target_Bleeding)
-DEFINE_GAMEPLAY_TAG(Condition_Target_Stunned)
-DEFINE_GAMEPLAY_TAG(Condition_Target_Frozen)
-DEFINE_GAMEPLAY_TAG(Condition_Target_Shocked)
-DEFINE_GAMEPLAY_TAG(Condition_Target_Burned)
-DEFINE_GAMEPLAY_TAG(Condition_Target_Corrupted)
-DEFINE_GAMEPLAY_TAG(Condition_Target_Purified)
-DEFINE_GAMEPLAY_TAG(Condition_Target_Petrified)
+DEFINE_GAMEPLAY_TAG(Condition_Self_IsBlocking)        
 
 // === Immunities & Restrictions ===
 DEFINE_GAMEPLAY_TAG(Condition_ImmuneToCC)
@@ -289,8 +294,10 @@ DEFINE_GAMEPLAY_TAG(Condition_HasMeleeWeaponEquipped)
 DEFINE_GAMEPLAY_TAG(Condition_HasBowEquipped)
 DEFINE_GAMEPLAY_TAG(Condition_HasShieldEquipped)
 DEFINE_GAMEPLAY_TAG(Condition_HasStaffEquipped)
+DEFINE_GAMEPLAY_TAG(Condition_InCombat)             
+DEFINE_GAMEPLAY_TAG(Condition_OutOfCombat)             
 
-// === Effects ====
+// === Effects ===
 DEFINE_GAMEPLAY_TAG(Effect_Stamina_RegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Stamina_DegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Health_RegenActive)
@@ -298,8 +305,8 @@ DEFINE_GAMEPLAY_TAG(Effect_Mana_RegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Health_DegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Mana_DegenActive)
 
-
 #undef DEFINE_GAMEPLAY_TAG
+
 
 /* ============================= */
 /* === Initialize Gameplay Tags === */
@@ -909,69 +916,112 @@ void FPHGameplayTags::RegisterStatusEffectDurations()
 
 void FPHGameplayTags::RegisterConditions()
 {
-		UGameplayTagsManager& TagsManager = UGameplayTagsManager::Get();
+	UGameplayTagsManager& TagsManager = UGameplayTagsManager::Get();
 
-	Condition_Alive = TagsManager.AddNativeGameplayTag(FName("Condition.State.Alive"), TEXT("The entity is currently alive."));
-	Condition_Dead = TagsManager.AddNativeGameplayTag(FName("Condition.State.Dead"), TEXT("The entity is dead and cannot act."));
-	Condition_NearDeathExperience = TagsManager.AddNativeGameplayTag(FName("Condition.State.NearDeathExperience"), TEXT("Health is critically low."));
-	Condition_DeathPrevented = TagsManager.AddNativeGameplayTag(FName("Condition.State.DeathPrevented"), TEXT("A death-preventing effect has occurred."));
+	// === Basic Life/Death States ===
+	Condition_Alive                 = TagsManager.AddNativeGameplayTag(FName("Condition.State.Alive"),                 TEXT("The entity is currently alive."));
+	Condition_Dead                  = TagsManager.AddNativeGameplayTag(FName("Condition.State.Dead"),                  TEXT("The entity is dead and cannot act."));
+	Condition_NearDeathExperience   = TagsManager.AddNativeGameplayTag(FName("Condition.State.NearDeathExperience"),   TEXT("Health is critically low."));
+	Condition_DeathPrevented        = TagsManager.AddNativeGameplayTag(FName("Condition.State.DeathPrevented"),        TEXT("A death-preventing effect has occurred."));
 
-	Condition_OnFullHealth = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnFullHealth"), TEXT("Health is at maximum."));
-	Condition_OnLowHealth = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnLowHealth"), TEXT("Health is low."));
-	Condition_OnFullMana = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnFullMana"), TEXT("Mana is at maximum."));
-	Condition_OnLowMana = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnLowMana"), TEXT("Mana is low."));
-	Condition_OnFullStamina = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnFullStamina"), TEXT("Stamina is at maximum."));
-	Condition_OnLowStamina = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnLowStamina"), TEXT("Stamina is low."));
-	Condition_OnFullArcaneShield = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnFullArcaneShield"), TEXT("Arcane shield is full."));
-	Condition_OnLowArcaneShield = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnLowArcaneShield"), TEXT("Arcane shield is low."));
+	// === Health/Mana/Stamina/Shield Thresholds ===
+	Condition_OnFullHealth          = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnFullHealth"),      TEXT("Health is at maximum."));
+	Condition_OnLowHealth           = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnLowHealth"),       TEXT("Health is low."));
+	Condition_OnFullMana            = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnFullMana"),        TEXT("Mana is at maximum."));
+	Condition_OnLowMana             = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnLowMana"),         TEXT("Mana is low."));
+	Condition_OnFullStamina         = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnFullStamina"),     TEXT("Stamina is at maximum."));
+	Condition_OnLowStamina          = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnLowStamina"),      TEXT("Stamina is low."));
+	Condition_OnFullArcaneShield    = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnFullArcaneShield"),TEXT("Arcane shield is full."));
+	Condition_OnLowArcaneShield     = TagsManager.AddNativeGameplayTag(FName("Condition.Threshold.OnLowArcaneShield"), TEXT("Arcane shield is low."));
 
-	Condition_OnKill = TagsManager.AddNativeGameplayTag(FName("Condition.Trigger.OnKill"), TEXT("Triggered after killing an enemy."));
-	Condition_OnCrit = TagsManager.AddNativeGameplayTag(FName("Condition.Trigger.OnCrit"), TEXT("Triggered after landing a critical hit."));
-	Condition_RecentlyHit = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.ReceivedHit"), TEXT("Was hit recently."));
-	Condition_RecentlyCrit = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.ReceivedCrit"), TEXT("Was critically hit recently."));
-	Condition_RecentlyBlocked = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.Blocked"), TEXT("Blocked damage recently."));
-	Condition_TakingDamage = TagsManager.AddNativeGameplayTag(FName("Condition.State.TakingDamage"), TEXT("Currently receiving damage."));
-	Condition_DealingDamage = TagsManager.AddNativeGameplayTag(FName("Condition.State.DealingDamage"), TEXT("Currently dealing damage."));
-	Condition_RecentlyUsedSkill = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.UsedSkill"), TEXT("Used a skill recently."));
-	Condition_RecentlyAppliedBuff = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.AppliedBuff"), TEXT("Applied a buff recently."));
-	Condition_RecentlyDispelled = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.Dispelled"), TEXT("Dispelled a buff or debuff recently."));
-	Condition_BuffDurationBelow50 = TagsManager.AddNativeGameplayTag(FName("Condition.Buff.DurationBelow50"), TEXT("Buff has less than 50% duration remaining."));
-	Condition_EffectDurationExpired = TagsManager.AddNativeGameplayTag(FName("Condition.Effect.Expired"), TEXT("Effect duration has ended."));
-	Condition_HasBuff = TagsManager.AddNativeGameplayTag(FName("Condition.Has.Buff"), TEXT("Has at least one buff active."));
-	Condition_HasDebuff = TagsManager.AddNativeGameplayTag(FName("Condition.Has.Debuff"), TEXT("Has at least one debuff active."));
-	Condition_ImmuneToCC = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.CC"), TEXT("Immune to crowd control."));
-	Condition_CannotBeFrozen = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.Frozen"), TEXT("Cannot be frozen."));
-	Condition_CannotBeCorrupted = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.Corrupted"), TEXT("Cannot be corrupted."));
-	Condition_CannotBeBurned = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.Burned"), TEXT("Cannot be burned."));
-	Condition_CannotBeSlowed = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.Slowed"), TEXT("Cannot be slowed."));
-	Condition_CannotBeInterrupted = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.Interrupted"), TEXT("Cannot be interrupted."));
-	Condition_CannotBeKnockedBack = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.KnockBack"), TEXT("Cannot be knocked back."));
-	Condition_Self_Bleeding = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Bleeding"), TEXT("Self is affected by Bleed."));
-	Condition_Self_Stunned = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Stunned"), TEXT("Self is stunned."));
-	Condition_Self_Frozen = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Frozen"), TEXT("Self is frozen."));
-	Condition_Self_Shocked = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Shocked"), TEXT("Self is shocked."));
-	Condition_Self_Burned = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Burned"), TEXT("Self is burned."));
-	Condition_Self_Corrupted = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Corrupted"), TEXT("Self is corrupted."));
-	Condition_Self_Purified = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Purified"), TEXT("Self is purified."));
-	Condition_Self_Petrified = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Petrified"), TEXT("Self is petrified."));
-	Condition_Self_CannotRegenHP = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotRegenHP"), TEXT("Self cannot regenerate health."));
-	Condition_Self_CannotRegenStamina = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotRegenStamina"), TEXT("Self cannot regenerate stamina."));
-	Condition_Self_CannotRegenMana = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotRegenMana"), TEXT("Self cannot regenerate mana."));
-	Condition_Self_CannotHealHPAbove50Percent = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotHealHPAbove50Percent"), TEXT("Self cannot heal above 50% health."));
-	Condition_Self_CannotHealStamina50Percent = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotHealStamina50Percent"), TEXT("Self cannot heal above 50% stamina."));
-	Condition_Self_CannotHealMana50Percent = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotHealMana50Percent"), TEXT("Self cannot heal above 50% mana."));
-	Condition_Self_ZeroArcaneShield = TagsManager.AddNativeGameplayTag(FName("Condition.Self.ZeroArcaneShield"), TEXT("Self has no arcane shield remaining."));
+	// === Combat Interaction States ===
+	Condition_OnKill                = TagsManager.AddNativeGameplayTag(FName("Condition.Trigger.OnKill"),              TEXT("Triggered after killing an enemy."));
+	Condition_OnCrit                = TagsManager.AddNativeGameplayTag(FName("Condition.Trigger.OnCrit"),              TEXT("Triggered after landing a critical hit."));
+	Condition_RecentlyHit           = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.ReceivedHit"),        TEXT("Was hit recently."));
+	Condition_RecentlyCrit          = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.ReceivedCrit"),       TEXT("Was critically hit recently."));
+	Condition_RecentlyBlocked       = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.Blocked"),            TEXT("Blocked damage recently."));
+	Condition_RecentlyReflected     = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.Reflected"),          TEXT("Reflected damage recently."));
+	Condition_TakingDamage          = TagsManager.AddNativeGameplayTag(FName("Condition.State.TakingDamage"),          TEXT("Currently receiving damage."));
+	Condition_DealingDamage         = TagsManager.AddNativeGameplayTag(FName("Condition.State.DealingDamage"),         TEXT("Currently dealing damage."));
+	Condition_RecentlyUsedSkill     = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.UsedSkill"),          TEXT("Used a skill recently."));
+	Condition_RecentlyAppliedBuff   = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.AppliedBuff"),        TEXT("Applied a buff recently."));
+	Condition_RecentlyDispelled     = TagsManager.AddNativeGameplayTag(FName("Condition.Recently.Dispelled"),          TEXT("Dispelled a buff or debuff recently."));
+	Condition_InCombat              = TagsManager.AddNativeGameplayTag(FName("Condition.State.InCombat"),              TEXT("Currently in combat."));
+	Condition_OutOfCombat			= TagsManager.AddNativeGameplayTag(FName("Condition.State.OutOfCombat"),		   TEXT("Currently out of combat."));
+
+	// === Action States ===
+	Condition_UsingSkill            = TagsManager.AddNativeGameplayTag(FName("Condition.State.UsingSkill"),            TEXT("Currently using any skill."));
+	Condition_UsingMelee            = TagsManager.AddNativeGameplayTag(FName("Condition.State.UsingMelee"),            TEXT("Currently using a melee attack."));
+	Condition_UsingRanged           = TagsManager.AddNativeGameplayTag(FName("Condition.State.UsingRanged"),           TEXT("Currently using a ranged attack."));
+	Condition_UsingSpell            = TagsManager.AddNativeGameplayTag(FName("Condition.State.UsingSpell"),            TEXT("Currently casting a spell."));
+	Condition_UsingAura             = TagsManager.AddNativeGameplayTag(FName("Condition.State.UsingAura"),             TEXT("Maintaining or activating an aura."));
+	Condition_UsingMovementSkill    = TagsManager.AddNativeGameplayTag(FName("Condition.State.UsingMovementSkill"),    TEXT("Currently using a movement skill."));
+	Condition_WhileChanneling       = TagsManager.AddNativeGameplayTag(FName("Condition.State.WhileChanneling"),       TEXT("While channeling."));
+	Condition_WhileMoving           = TagsManager.AddNativeGameplayTag(FName("Condition.State.WhileMoving"),           TEXT("While moving."));
+	Condition_WhileStationary       = TagsManager.AddNativeGameplayTag(FName("Condition.State.WhileStationary"),       TEXT("While stationary."));
+	Condition_Sprinting             = TagsManager.AddNativeGameplayTag(FName("Condition.State.Sprinting"),             TEXT("Sprinting."));
+
+	// === Buff/Debuff & Effect States ===
+	Condition_BuffDurationBelow50   = TagsManager.AddNativeGameplayTag(FName("Condition.Buff.DurationBelow50"),        TEXT("Buff has less than 50% duration remaining."));
+	Condition_EffectDurationExpired = TagsManager.AddNativeGameplayTag(FName("Condition.Effect.Expired"),              TEXT("Effect duration has ended."));
+	Condition_HasBuff               = TagsManager.AddNativeGameplayTag(FName("Condition.Has.Buff"),                    TEXT("Has at least one buff active."));
+	Condition_HasDebuff             = TagsManager.AddNativeGameplayTag(FName("Condition.Has.Debuff"),                  TEXT("Has at least one debuff active."));
+
+	// === Enemy Target States ===
+	Condition_TargetIsBoss          = TagsManager.AddNativeGameplayTag(FName("Condition.Target.IsBoss"),               TEXT("Current target is a boss."));
+	Condition_TargetIsMinion        = TagsManager.AddNativeGameplayTag(FName("Condition.Target.IsMinion"),             TEXT("Current target is a minion."));
+	Condition_TargetHasShield       = TagsManager.AddNativeGameplayTag(FName("Condition.Target.HasShield"),            TEXT("Current target has a shield or barrier."));
+	Condition_TargetIsCasting       = TagsManager.AddNativeGameplayTag(FName("Condition.Target.IsCasting"),            TEXT("Current target is casting or channeling."));
+	Condition_Target_IsBlocking     = TagsManager.AddNativeGameplayTag(FName("Condition.Target.IsBlocking"),           TEXT("Current target is blocking."));
+
+	// === Positional / Environmental ===
+	Condition_NearAllies            = TagsManager.AddNativeGameplayTag(FName("Condition.Proximity.NearAllies"),        TEXT("Has allies nearby."));
+	Condition_NearEnemies           = TagsManager.AddNativeGameplayTag(FName("Condition.Proximity.NearEnemies"),       TEXT("Has enemies nearby."));
+	Condition_Alone                 = TagsManager.AddNativeGameplayTag(FName("Condition.Proximity.Alone"),             TEXT("No allies nearby."));
+	Condition_InLight               = TagsManager.AddNativeGameplayTag(FName("Condition.Environment.InLight"),         TEXT("In a lit area."));
+	Condition_InDark                = TagsManager.AddNativeGameplayTag(FName("Condition.Environment.InDark"),          TEXT("In a dark area."));
+	Condition_InDangerZone          = TagsManager.AddNativeGameplayTag(FName("Condition.Environment.InDangerZone"),    TEXT("Inside a hazard or danger zone."));
+
+	// === Ailment & Status Effects (Self) ===
+	Condition_Self_Bleeding                      = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Bleeding"),                      TEXT("Self is affected by Bleed."));
+	Condition_Self_Stunned                       = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Stunned"),                       TEXT("Self is stunned."));
+	Condition_Self_Frozen                        = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Frozen"),                        TEXT("Self is frozen."));
+	Condition_Self_Shocked                       = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Shocked"),                       TEXT("Self is shocked."));
+	Condition_Self_Burned                        = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Burned"),                        TEXT("Self is burned."));
+	Condition_Self_Corrupted                     = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Corrupted"),                     TEXT("Self is corrupted."));
+	Condition_Self_Purified                      = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Purified"),                      TEXT("Self is purified."));
+	Condition_Self_Petrified                     = TagsManager.AddNativeGameplayTag(FName("Condition.Self.Petrified"),                     TEXT("Self is petrified."));
+	Condition_Self_CannotRegenHP                 = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotRegenHP"),                TEXT("Self cannot regenerate health."));
+	Condition_Self_CannotRegenStamina            = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotRegenStamina"),           TEXT("Self cannot regenerate stamina."));
+	Condition_Self_CannotRegenMana               = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotRegenMana"),              TEXT("Self cannot regenerate mana."));
+	Condition_Self_CannotHealHPAbove50Percent    = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotHealHPAbove50Percent"),   TEXT("Self cannot heal above 50% health."));
+	Condition_Self_CannotHealStamina50Percent    = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotHealStamina50Percent"),   TEXT("Self cannot heal above 50% stamina."));
+	Condition_Self_CannotHealMana50Percent       = TagsManager.AddNativeGameplayTag(FName("Condition.Self.CannotHealMana50Percent"),      TEXT("Self cannot heal above 50% mana."));
+	Condition_Self_LowArcaneShield               = TagsManager.AddNativeGameplayTag(FName("Condition.Self.LowArcaneShield"),              TEXT("Self has low arcane shield remaining."));
+	Condition_Self_ZeroArcaneShield              = TagsManager.AddNativeGameplayTag(FName("Condition.Self.ZeroArcaneShield"),             TEXT("Self has no arcane shield remaining."));
+	Condition_Self_IsBlocking                    = TagsManager.AddNativeGameplayTag(FName("Condition.Self.IsBlocking"),                   TEXT("Self is blocking."));
 
 	// === Ailment & Status Effects (Target) ===
-	Condition_Target_Bleeding = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Bleeding"), TEXT("Target is bleeding."));
-	Condition_Target_Stunned = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Stunned"), TEXT("Target is stunned."));
-	Condition_Target_Frozen = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Frozen"), TEXT("Target is frozen."));
-	Condition_Target_Shocked = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Shocked"), TEXT("Target is shocked."));
-	Condition_Target_Burned = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Burned"), TEXT("Target is burned."));
-	Condition_Target_Corrupted = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Corrupted"), TEXT("Target is corrupted."));
-	Condition_Target_Purified = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Purified"), TEXT("Target is purified."));
-	Condition_Target_Petrified = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Petrified"), TEXT("Target is petrified."));
+	Condition_Target_Bleeding        = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Bleeding"),        TEXT("Target is bleeding."));
+	Condition_Target_Stunned         = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Stunned"),         TEXT("Target is stunned."));
+	Condition_Target_Frozen          = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Frozen"),          TEXT("Target is frozen."));
+	Condition_Target_Shocked         = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Shocked"),         TEXT("Target is shocked."));
+	Condition_Target_Burned          = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Burned"),          TEXT("Target is burned."));
+	Condition_Target_Corrupted       = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Corrupted"),       TEXT("Target is corrupted."));
+	Condition_Target_Purified        = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Purified"),        TEXT("Target is purified."));
+	Condition_Target_Petrified       = TagsManager.AddNativeGameplayTag(FName("Condition.Target.Petrified"),       TEXT("Target is petrified."));
+
+
+	// === Immunity / Restrictions ===
+	Condition_ImmuneToCC             = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.CC"),             TEXT("Immune to crowd control."));
+	Condition_CannotBeFrozen         = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.Frozen"),         TEXT("Cannot be frozen."));
+	Condition_CannotBeCorrupted      = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.Corrupted"),      TEXT("Cannot be corrupted."));
+	Condition_CannotBeBurned         = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.Burned"),         TEXT("Cannot be burned."));
+	Condition_CannotBeSlowed         = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.Slowed"),         TEXT("Cannot be slowed."));
+	Condition_CannotBeInterrupted    = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.Interrupted"),    TEXT("Cannot be interrupted."));
+	Condition_CannotBeKnockedBack    = TagsManager.AddNativeGameplayTag(FName("Condition.Immune.KnockBack"),      TEXT("Cannot be knocked back."));
 }
+
 
 void FPHGameplayTags::RegisterConditionTriggers()
 {

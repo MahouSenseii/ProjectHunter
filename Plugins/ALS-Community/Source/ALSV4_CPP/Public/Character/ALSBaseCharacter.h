@@ -96,7 +96,7 @@ public:
 	int32 GetOverlayOverrideState() const { return OverlayOverrideState; }
 
 	UFUNCTION(BlueprintCallable, Category = "ALS|Character States")
-	void SetGait(EALSGait NewGait, bool bForce = false);
+	virtual void SetGait(EALSGait NewGait, bool bForce = false);
 
 	UFUNCTION(BlueprintGetter, Category = "ALS|Character States")
 	EALSGait GetGait() const { return Gait; }

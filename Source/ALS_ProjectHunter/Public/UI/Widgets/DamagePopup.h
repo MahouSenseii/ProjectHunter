@@ -17,8 +17,7 @@
  * damage values for visual feedback in the game. It allows customization of the
  * damage amount and supports integration with animations to enhance the user experience.
  *
- * @note Ensure that the damage amount and animations are handled properly in the blueprint
- *       for seamless functionality.
+ * @note  animations are handled in the blueprint
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UDamagePopup : public UPHUserWidget

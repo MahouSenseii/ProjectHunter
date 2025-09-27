@@ -15,40 +15,26 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/PopUps/WBP_DamagePopup.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Library/PHGameplayTagLibrary.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHGameplayTagLibrary.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/NewFolder/WBP_BasicInfo.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/NewFolder/WBP_Content.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/NewFolder/WBP_Equipment.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/NewFolder/WBP_EquipmentInfo.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/PopUps/WBP_DamagePopup.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/ProgressBar/WBP_HealthBar.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/ProgressBar/WBP_ManaBar.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/Stats/WBP_AttributeMenu.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/Stats/WBP_FramedValue.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/Stats/WBP_TextValueButtonRow.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/Stats/WBP_TextValueRow.uasset" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" beforeDir="false" afterPath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/GAS/DataTable/Asset/Init/DA_AttributeConfigDataAssetPrimary.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/GAS/DataTable/Asset/Init/DA_AttributeConfigDataAssetPrimary.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/Weapons/Weapon_Base.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/Weapons/Weapon_Base.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Data/AttributeConfigDataAsset.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Data/AttributeConfigDataAsset.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/PHAttributeSet.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/PHAttributeSet.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/InventoryManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/InventoryManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/BaseItem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/BaseItem.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Data/UItemDefinitionAsset.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Data/UItemDefinitionAsset.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemInstance.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemInstance.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Inventory/InventoryGrid.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Inventory/InventoryGrid.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/Item/ItemSot.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/Item/ItemSot.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/PHInventoryWidget.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/WidgetBasicInfo.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/WidgetContent.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/WidgetParent.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/InventoryManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/InventoryManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/BaseItem.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/BaseItem.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Data/UItemDefinitionAsset.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Data/UItemDefinitionAsset.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemInstance.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemInstance.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHItemFunctionLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHItemFunctionLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/Inventory/InventoryGrid.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/Inventory/InventoryGrid.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/Widgets/PHInventoryWidget.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/Widgets/WidgetBasicInfo.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/Widgets/WidgetContent.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/Widgets/WidgetParent.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/CombatManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/CombatManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/DamagePopup.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/DamagePopup.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/PHAttributeSet.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/PHAttributeSet.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/CombatManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/CombatManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHCharacterEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHCharacterEnumLibrary.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/PHGameplayTags.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/PHGameplayTags.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/Widgets/DamagePopup.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/Widgets/DamagePopup.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,7 +62,64 @@
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="cidr-memory-view://31" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="cidr-memory-view://56" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.36.32532/include/atomic" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.36.32532/include/cmath" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/include/atomic" root0="SKIP_HIGHLIGHTING" />
@@ -90,11 +133,11 @@
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveHealth.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveHealth.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveHealth.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="SKIP_HIGHLIGHTING" />
@@ -137,6 +180,7 @@
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interfaces/IEquippable.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Data/UItemDefinitionAsset.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemInstance.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Library/PHGameplayTagLibrary.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameMode.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" root0="SKIP_HIGHLIGHTING" />
@@ -160,10 +204,10 @@
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagCalc/MMC_MaxEffectiveStamina.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagCalc/MMC_ReservedMana.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Public/AbilitySystem/PHAttributeSet.h" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/PHAttributeSet.h" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Public/AbilitySystem/PHAttributeSet.h" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Public/AbilitySystem/PHAttributeSet.h" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Public/AbilitySystem/PHAttributeSet.h" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/PHAttributeSet.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Player/PHPlayerCharacter.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/StatsManager.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interfaces/IEquippable.h" root0="FORCE_HIGHLIGHTING" />
@@ -178,7 +222,9 @@
     <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Public/Item/EquippedObject.h" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemInstance.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHDamageTypeUtils.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHGameplayTagLibrary.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/PHGameMode.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Public/PHGameplayTags.h" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/ToolTip/EquippableStatsBox.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/ToolTip/PHBaseToolTip.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/Widgets/DamagePopup.h" root0="FORCE_HIGHLIGHTING" />
@@ -1107,7 +1153,7 @@
       <workItem from="1757835939592" duration="4864000" />
       <workItem from="1757862903444" duration="48000" />
       <workItem from="1757862969265" duration="14289000" />
-      <workItem from="1757945141827" duration="61381000" />
+      <workItem from="1757945141827" duration="94495000" />
     </task>
     <servers />
   </component>
@@ -1147,11 +1193,6 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHCharacterEnumLibrary.h</url>
-          <line>14</line>
-          <option name="timeStamp" value="16" />
-        </line-breakpoint>
-        <line-breakpoint type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Chest/BaseChest.cpp</url>
           <line>91</line>
           <option name="timeStamp" value="38" />
@@ -1160,11 +1201,6 @@
           <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/ToolTip/PHBaseToolTip.h</url>
           <line>45</line>
           <option name="timeStamp" value="40" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/DamagePopup.cpp</url>
-          <line>7</line>
-          <option name="timeStamp" value="123" />
         </line-breakpoint>
         <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
           <properties exception="System.OperationCanceledException" breakIfHandledByOtherCode="false" displayValue="System.OperationCanceledException" />

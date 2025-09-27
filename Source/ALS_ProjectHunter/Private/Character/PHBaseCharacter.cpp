@@ -10,9 +10,7 @@
 #include "Character/Player/State/PHPlayerState.h"
 #include "Components/EquipmentManager.h"
 #include "Components/InventoryManager.h"
-#include "Components/SceneCaptureComponent2D.h"
 #include "Components/CombatManager.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "Interactables/Pickups/ConsumablePickup.h"
 #include "Interactables/Pickups/EquipmentPickup.h"
 #include "UI/ToolTip/ConsumableToolTip.h"
@@ -71,6 +69,109 @@ UAbilitySystemComponent* APHBaseCharacter::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+void APHBaseCharacter::StartSprintStaminaDrain()
+{
+	if (!GetAbilitySystemComponent() || !SprintStaminaDrainEffectClass)
+	{
+		return;
+	}
+    
+	// Remove any existing sprint drain effect
+	if (ActiveSprintDrainHandle.IsValid())
+	{
+		GetAbilitySystemComponent()->RemoveActiveGameplayEffect(ActiveSprintDrainHandle);
+	}
+    
+	// Apply a new sprint drain effect
+	FGameplayEffectContextHandle Context = GetAbilitySystemComponent()->MakeEffectContext();
+	Context.AddSourceObject(this);
+    
+	FGameplayEffectSpecHandle Spec = GetAbilitySystemComponent()->MakeOutgoingSpec(
+		SprintStaminaDrainEffectClass, 1.0f, Context);
+    
+	if (Spec.IsValid())
+	{
+		ActiveSprintDrainHandle = GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+        
+		// Add tags
+		GetAbilitySystemComponent()->AddLooseGameplayTag(
+			FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Sprinting")));
+		GetAbilitySystemComponent()->AddLooseGameplayTag(
+			FGameplayTag::RequestGameplayTag(TEXT("Effect.Stamina.DegenActive")));
+        
+		// Start checking stamina periodically
+		if (bStopSprintingWhenStaminaDepleted)
+		{
+			GetWorldTimerManager().SetTimer(StaminaCheckTimer, this, 
+				&APHBaseCharacter::CheckStaminaForSprint, 0.1f, true);
+		}
+        
+		UE_LOG(LogTemp, Log, TEXT("Started sprint stamina drain"));
+	}
+
+	if (UPHAttributeSet* Attributes = Cast<UPHAttributeSet>(GetAttributeSet()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Stamina before drain: %f"), Attributes->GetStamina());
+	}
+}
+
+void APHBaseCharacter::StopSprintStaminaDrain()
+{
+	if (!GetAbilitySystemComponent())
+	{
+		return;
+	}
+    
+	// Remove sprint drain effect
+	if (ActiveSprintDrainHandle.IsValid())
+	{
+		GetAbilitySystemComponent()->RemoveActiveGameplayEffect(ActiveSprintDrainHandle);
+		ActiveSprintDrainHandle.Invalidate();
+	}
+    
+	// Remove tags
+	GetAbilitySystemComponent()->RemoveLooseGameplayTag(
+		FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Sprinting")));
+	GetAbilitySystemComponent()->RemoveLooseGameplayTag(
+		FGameplayTag::RequestGameplayTag(TEXT("Effect.Stamina.DegenActive")));
+    
+	// Clear stamina check timer
+	GetWorldTimerManager().ClearTimer(StaminaCheckTimer);
+    
+	UE_LOG(LogTemp, Log, TEXT("Stopped sprint stamina drain"));
+}
+
+bool APHBaseCharacter::CanStartSprinting() const
+{
+	if (UPHAttributeSet* Attributes = Cast<UPHAttributeSet>(GetAttributeSet()))
+	{
+		return Attributes->GetStamina() >= MinimumStaminaToStartSprint;
+	}
+    
+	return false;
+}
+
+void APHBaseCharacter::CheckStaminaForSprint()
+{
+	if (!bStopSprintingWhenStaminaDepleted)
+	{
+		return;
+	}
+    
+	if (UPHAttributeSet* Attributes = Cast<UPHAttributeSet>(GetAttributeSet()))
+	{
+		if (Attributes->GetStamina() <= 0.1f) // Near zero
+		{
+			// Force stop sprinting
+			SetDesiredGait(EALSGait::Running);
+			
+			OnStaminaDepleted();
+            
+			UE_LOG(LogTemp, Warning, TEXT("Stamina depleted - stopping sprint"));
+		}
+	}
+}
+
 void APHBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -118,7 +219,9 @@ bool APHBaseCharacter::CanSprint() const
 
 void APHBaseCharacter::OnGaitChanged(EALSGait PreviousGait)
 {
+	
 	Super::OnGaitChanged(PreviousGait);
+	
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
 	if (!ASC) return;
 
@@ -131,6 +234,15 @@ void APHBaseCharacter::OnGaitChanged(EALSGait PreviousGait)
 	else
 	{
 		ASC->RemoveLooseGameplayTag(StaminaDegenTag);
+	}
+
+	if (Gait == EALSGait::Sprinting && PreviousGait != EALSGait::Sprinting)
+	{
+		StartSprintStaminaDrain();
+	}
+	else if (Gait != EALSGait::Sprinting && PreviousGait == EALSGait::Sprinting)
+	{
+		StopSprintStaminaDrain();
 	}
 }
 
@@ -174,6 +286,14 @@ void APHBaseCharacter::InitAbilityActorInfo()
 				LocalPHHUD->InitOverlay(PHPlayerController, GetPlayerState<APHPlayerState>(), AbilitySystemComponent, AttributeSet);
 			}
 		}
+	}
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->RegisterGameplayTagEvent(
+			FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Dead")),
+			EGameplayTagEventType::NewOrRemoved
+		).AddUObject(this, &APHBaseCharacter::OnGameplayTagChanged);
 	}
 }
 
@@ -259,7 +379,6 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 			ToolTip->AddToViewport();
 			CurrentToolTip = ToolTip;
 		}
-
 	}
 }
 
@@ -271,3 +390,94 @@ void APHBaseCharacter::CloseToolTip(UInteractableManager* InteractableManager)
 	}
 }
 
+void APHBaseCharacter::OnGameplayTagChanged(FGameplayTag Tag, int NewCount)
+{
+	// Check if the dead tag was added (NewCount > 0 means the tag was added)
+	if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Dead"))) && NewCount > 0)
+	{
+		if (!bHasHandledDeath)
+		{
+			HandleDeathState();
+		}
+	}
+}
+void APHBaseCharacter::HandleDeathState()
+{
+	if (bHasHandledDeath)
+	{
+		return;
+	}
+
+	bHasHandledDeath = true;
+
+	UE_LOG(LogTemp, Warning, TEXT("%s: Handling death state - destroying all components"), *GetName());
+
+	// Call the component destruction
+	DestroyAllComponents();
+
+	// Add any additional death handling logic here,
+	// For example, play death animation, disable collision, etc.
+}
+
+void APHBaseCharacter::DestroyAllComponents()
+{
+
+	// Check for and destroy the InteractableManager component
+	if (UInteractableManager* InteractableManager = GetComponentByClass<UInteractableManager>())
+	{
+		InteractableManager->ToggleInteractionWidget(false);
+		InteractableManager->DestroyComponent();
+		UE_LOG(LogTemp, Log, TEXT("InteractableManager destroyed"));
+	}
+	
+	// Destroy Equipment Manager
+	if (IsValid(EquipmentManager))
+	{
+		EquipmentManager->DestroyComponent();
+		EquipmentManager = nullptr;
+		UE_LOG(LogTemp, Log, TEXT("EquipmentManager destroyed"));
+	}
+
+	// Destroy Inventory Manager
+	if (IsValid(InventoryManager))
+	{
+		InventoryManager->DestroyComponent();
+		InventoryManager = nullptr;
+		UE_LOG(LogTemp, Log, TEXT("InventoryManager destroyed"));
+	}
+
+	// Destroy Combat Manager
+	if (IsValid(CombatManager))
+	{
+		CombatManager->DestroyComponent();
+		CombatManager = nullptr;
+		UE_LOG(LogTemp, Log, TEXT("CombatManager destroyed"));
+	}
+
+	// Destroy Stats Manager
+	if (IsValid(StatsManager))
+	{
+		StatsManager->DestroyComponent();
+		StatsManager = nullptr;
+		UE_LOG(LogTemp, Log, TEXT("StatsManager destroyed"));
+	}
+
+	// Close any open tooltips
+	if (IsValid(CurrentToolTip))
+	{
+		CurrentToolTip->RemoveFromParent();
+		CurrentToolTip = nullptr;
+	}
+
+	// Clear any active timers
+	GetWorldTimerManager().ClearTimer(StaminaCheckTimer);
+
+	// Remove any active gameplay effects
+	if (ActiveSprintDrainHandle.IsValid() && AbilitySystemComponent)
+	{
+		AbilitySystemComponent->RemoveActiveGameplayEffect(ActiveSprintDrainHandle);
+		ActiveSprintDrainHandle.Invalidate();
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("%s: All components destroyed due to death"), *GetName());
+}

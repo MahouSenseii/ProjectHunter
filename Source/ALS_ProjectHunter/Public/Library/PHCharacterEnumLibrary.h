@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "PHCharacterEnumLibrary.generated.h"
 
-
 UENUM(BlueprintType)
 enum class ECombatAlignment : uint8
 {
@@ -13,6 +12,18 @@ enum class ECombatAlignment : uint8
 };
 
 
+/**
+ * Combat status for tracking whether a character is engaged in combat
+ */
+UENUM(BlueprintType)
+enum class ECombatStatus : uint8
+{
+	OutOfCombat UMETA(DisplayName = "Out of Combat"),
+	InCombat UMETA(DisplayName = "In Combat"),
+	EnteringCombat UMETA(DisplayName = "Entering Combat"),  // Transition state
+	LeavingCombat UMETA(DisplayName = "Leaving Combat")     // Transition state
+};
+
 UENUM(BlueprintType)
 enum class EAttackType : uint8
 {
@@ -21,7 +32,6 @@ enum class EAttackType : uint8
 	AT_Ranged     UMETA(DisplayName = "Ranged"),
 	AT_Spell      UMETA(DisplayName = "Spell")
 };
-
 
 UENUM(BlueprintType)
 enum class EVitalType: uint8

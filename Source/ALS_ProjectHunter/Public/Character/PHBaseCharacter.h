@@ -51,6 +51,28 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
+	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
+	TSubclassOf<UGameplayEffect> SprintStaminaDrainEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
+	float MinimumStaminaToStartSprint = 10.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
+	bool bStopSprintingWhenStaminaDepleted = true;
+
+	FActiveGameplayEffectHandle ActiveSprintDrainHandle;
+	FTimerHandle StaminaCheckTimer;
+
+
+		// Sprint stamina management
+	void StartSprintStaminaDrain();
+	void StopSprintStaminaDrain();
+	bool CanStartSprinting() const;
+	void CheckStaminaForSprint();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Stamina|Sprint")
+	void OnStaminaDepleted();
+
 	/** Equipment & Inventory */
 	UFUNCTION(BlueprintCallable, Category = "Manager")
 	UEquipmentManager* GetEquipmentManager() const { return EquipmentManager; }
@@ -80,7 +102,10 @@ public:
 
 	UFUNCTION()
 	void CloseToolTip(UInteractableManager* InteractableManager);
-	
+
+	UFUNCTION()
+	void OnGameplayTagChanged(FGameplayTag Tag, int NewCount);
+
 
 	/** Regeneration & Tick */
 	virtual void Tick(float DeltaSeconds) override;
@@ -100,6 +125,15 @@ protected:
 
 	/** Ability System Initialization */
 	virtual void InitAbilityActorInfo();
+
+	/** Death Handling */
+	UFUNCTION(BlueprintCallable, Category = "Death")
+	void HandleDeathState();
+
+	UFUNCTION(BlueprintCallable, Category = "Death")
+	void DestroyAllComponents();
+
+
 
 protected:
 	
@@ -148,7 +182,8 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Defaults", meta = (AllowPrivateAccess = "true"))
 	int32 Level = 1;
 	
-       bool bIsInRecovery = false;
+	bool bIsInRecovery = false;
+	bool bHasHandledDeath = false;
 
 
-	};
+};
