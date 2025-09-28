@@ -683,3 +683,131 @@ void UStatsManager::ReapplyAllStartupRegenEffects()
 		}
 	}
 }
+
+
+
+void UStatsManager::StartSprintStaminaDrain()
+{
+	if (!ASC || !SprintStaminaDrainEffectClass)
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("Cannot start sprint drain - missing ASC or effect class"));
+		return;
+	}
+    
+	// Remove any existing sprint drain effect
+	if (ActiveSprintDrainHandle.IsValid())
+	{
+		ASC->RemoveActiveGameplayEffect(ActiveSprintDrainHandle);
+		ActiveSprintDrainHandle.Invalidate();
+	}
+    
+	// Apply a new sprint drain effect
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	Context.AddSourceObject(Owner);
+    
+	FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(
+		SprintStaminaDrainEffectClass, 1.0f, Context);
+    
+	if (Spec.IsValid())
+	{
+		ActiveSprintDrainHandle = ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+        
+		// Add sprint tags
+		ASC->AddLooseGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Sprinting")));
+		ASC->AddLooseGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("Effect.Stamina.DegenActive")));
+        
+		// Start checking stamina periodically
+		if (bStopSprintingWhenStaminaDepleted && Owner)
+		{
+			Owner->GetWorldTimerManager().SetTimer(StaminaCheckTimer, this, 
+				&UStatsManager::CheckStaminaForSprint, 0.1f, true);
+		}
+        
+		UE_LOG(LogStatsManager, Log, TEXT("Started sprint stamina drain for %s"), 
+			Owner ? *Owner->GetName() : TEXT("Unknown"));
+	}
+	else
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Failed to create sprint drain effect spec"));
+	}
+}
+
+void UStatsManager::StopSprintStaminaDrain()
+{
+	if (!ASC)
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("Cannot stop sprint drain - missing ASC"));
+		return;
+	}
+    
+	// Remove sprint drain effect
+	if (ActiveSprintDrainHandle.IsValid())
+	{
+		ASC->RemoveActiveGameplayEffect(ActiveSprintDrainHandle);
+		ActiveSprintDrainHandle.Invalidate();
+	}
+    
+	// Remove sprint tags
+	ASC->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Sprinting")));
+	ASC->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("Effect.Stamina.DegenActive")));
+    
+	// Clear stamina check timer
+	if (Owner)
+	{
+		Owner->GetWorldTimerManager().ClearTimer(StaminaCheckTimer);
+	}
+    
+	UE_LOG(LogStatsManager, Log, TEXT("Stopped sprint stamina drain"));
+}
+
+bool UStatsManager::CanStartSprinting() const
+{
+	if (!ASC)
+	{
+		return false;
+	}
+
+	// Get stamina value directly from ASC
+	const FGameplayAttribute StaminaAttribute = FGameplayAttribute(); // You'll need to replace this with your actual stamina attribute
+	// Example: UPHAttributeSet::GetStaminaAttribute();
+	
+	if (StaminaAttribute.IsValid())
+	{
+		float CurrentStamina = ASC->GetNumericAttribute(StaminaAttribute);
+		return CurrentStamina >= MinimumStaminaToStartSprint;
+	}
+    
+	return false;
+}
+
+void UStatsManager::CheckStaminaForSprint()
+{
+	if (!bStopSprintingWhenStaminaDepleted || !ASC || !Owner)
+	{
+		return;
+	}
+    
+	// Get stamina value directly from ASC
+	const FGameplayAttribute StaminaAttribute = FGameplayAttribute(); // You'll need to replace this with your actual stamina attribute
+	// Example: UPHAttributeSet::GetStaminaAttribute();
+	
+	if (StaminaAttribute.IsValid())
+	{
+		float CurrentStamina = ASC->GetNumericAttribute(StaminaAttribute);
+		
+		if (CurrentStamina <= 0.1f) // Near zero
+		{
+			// Stop sprinting by stopping the drain
+			StopSprintStaminaDrain();
+
+			Owner->SetDesiredGait(EALSGait::Running);
+			
+			// Optional: Broadcast an event or call a delegate
+			// OnStaminaDepleted.Broadcast();
+            
+			UE_LOG(LogStatsManager, Warning, TEXT("Stamina depleted - stopping sprint for %s"), 
+				*Owner->GetName());
+		}
+	}
+}
+

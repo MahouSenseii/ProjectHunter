@@ -51,27 +51,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
-	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
-	TSubclassOf<UGameplayEffect> SprintStaminaDrainEffectClass;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
-	float MinimumStaminaToStartSprint = 10.0f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
-	bool bStopSprintingWhenStaminaDepleted = true;
-
-	FActiveGameplayEffectHandle ActiveSprintDrainHandle;
-	FTimerHandle StaminaCheckTimer;
-
-
-		// Sprint stamina management
-	void StartSprintStaminaDrain();
-	void StopSprintStaminaDrain();
-	bool CanStartSprinting() const;
-	void CheckStaminaForSprint();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Stamina|Sprint")
-	void OnStaminaDepleted();
 
 	/** Equipment & Inventory */
 	UFUNCTION(BlueprintCallable, Category = "Manager")

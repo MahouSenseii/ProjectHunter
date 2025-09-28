@@ -98,6 +98,10 @@ public:
 	void RemovePeriodicEffectByTag(FGameplayTag EffectTag);
 
 	void ReapplyAllStartupRegenEffects();
+	void StartSprintStaminaDrain();
+	void StopSprintStaminaDrain();
+	bool CanStartSprinting()const;
+	void CheckStaminaForSprint();
 
 	/* =========================== */
 	/* ===   Event Callbacks   === */
@@ -182,6 +186,18 @@ public:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "GAS|Attributes", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UGameplayEffect> DefaultVitalAttributes;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
+	TSubclassOf<UGameplayEffect> SprintStaminaDrainEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
+	float MinimumStaminaToStartSprint = 10.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
+	bool bStopSprintingWhenStaminaDepleted = true;
+
+	FActiveGameplayEffectHandle ActiveSprintDrainHandle;
+	FTimerHandle StaminaCheckTimer;
+	
 private:
 	/* =========================== */
 	/* ===   Private Data      === */

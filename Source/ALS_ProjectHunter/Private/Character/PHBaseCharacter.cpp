@@ -69,109 +69,6 @@ UAbilitySystemComponent* APHBaseCharacter::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
-void APHBaseCharacter::StartSprintStaminaDrain()
-{
-	if (!GetAbilitySystemComponent() || !SprintStaminaDrainEffectClass)
-	{
-		return;
-	}
-    
-	// Remove any existing sprint drain effect
-	if (ActiveSprintDrainHandle.IsValid())
-	{
-		GetAbilitySystemComponent()->RemoveActiveGameplayEffect(ActiveSprintDrainHandle);
-	}
-    
-	// Apply a new sprint drain effect
-	FGameplayEffectContextHandle Context = GetAbilitySystemComponent()->MakeEffectContext();
-	Context.AddSourceObject(this);
-    
-	FGameplayEffectSpecHandle Spec = GetAbilitySystemComponent()->MakeOutgoingSpec(
-		SprintStaminaDrainEffectClass, 1.0f, Context);
-    
-	if (Spec.IsValid())
-	{
-		ActiveSprintDrainHandle = GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-        
-		// Add tags
-		GetAbilitySystemComponent()->AddLooseGameplayTag(
-			FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Sprinting")));
-		GetAbilitySystemComponent()->AddLooseGameplayTag(
-			FGameplayTag::RequestGameplayTag(TEXT("Effect.Stamina.DegenActive")));
-        
-		// Start checking stamina periodically
-		if (bStopSprintingWhenStaminaDepleted)
-		{
-			GetWorldTimerManager().SetTimer(StaminaCheckTimer, this, 
-				&APHBaseCharacter::CheckStaminaForSprint, 0.1f, true);
-		}
-        
-		UE_LOG(LogTemp, Log, TEXT("Started sprint stamina drain"));
-	}
-
-	if (UPHAttributeSet* Attributes = Cast<UPHAttributeSet>(GetAttributeSet()))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Stamina before drain: %f"), Attributes->GetStamina());
-	}
-}
-
-void APHBaseCharacter::StopSprintStaminaDrain()
-{
-	if (!GetAbilitySystemComponent())
-	{
-		return;
-	}
-    
-	// Remove sprint drain effect
-	if (ActiveSprintDrainHandle.IsValid())
-	{
-		GetAbilitySystemComponent()->RemoveActiveGameplayEffect(ActiveSprintDrainHandle);
-		ActiveSprintDrainHandle.Invalidate();
-	}
-    
-	// Remove tags
-	GetAbilitySystemComponent()->RemoveLooseGameplayTag(
-		FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Sprinting")));
-	GetAbilitySystemComponent()->RemoveLooseGameplayTag(
-		FGameplayTag::RequestGameplayTag(TEXT("Effect.Stamina.DegenActive")));
-    
-	// Clear stamina check timer
-	GetWorldTimerManager().ClearTimer(StaminaCheckTimer);
-    
-	UE_LOG(LogTemp, Log, TEXT("Stopped sprint stamina drain"));
-}
-
-bool APHBaseCharacter::CanStartSprinting() const
-{
-	if (UPHAttributeSet* Attributes = Cast<UPHAttributeSet>(GetAttributeSet()))
-	{
-		return Attributes->GetStamina() >= MinimumStaminaToStartSprint;
-	}
-    
-	return false;
-}
-
-void APHBaseCharacter::CheckStaminaForSprint()
-{
-	if (!bStopSprintingWhenStaminaDepleted)
-	{
-		return;
-	}
-    
-	if (UPHAttributeSet* Attributes = Cast<UPHAttributeSet>(GetAttributeSet()))
-	{
-		if (Attributes->GetStamina() <= 0.1f) // Near zero
-		{
-			// Force stop sprinting
-			SetDesiredGait(EALSGait::Running);
-			
-			OnStaminaDepleted();
-            
-			UE_LOG(LogTemp, Warning, TEXT("Stamina depleted - stopping sprint"));
-		}
-	}
-}
-
 void APHBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -238,11 +135,11 @@ void APHBaseCharacter::OnGaitChanged(EALSGait PreviousGait)
 
 	if (Gait == EALSGait::Sprinting && PreviousGait != EALSGait::Sprinting)
 	{
-		StartSprintStaminaDrain();
+		StatsManager->StartSprintStaminaDrain();
 	}
 	else if (Gait != EALSGait::Sprinting && PreviousGait == EALSGait::Sprinting)
 	{
-		StopSprintStaminaDrain();
+		StatsManager->StopSprintStaminaDrain();
 	}
 }
 
@@ -470,13 +367,13 @@ void APHBaseCharacter::DestroyAllComponents()
 	}
 
 	// Clear any active timers
-	GetWorldTimerManager().ClearTimer(StaminaCheckTimer);
+	GetWorldTimerManager().ClearTimer(	StatsManager->StaminaCheckTimer);
 
 	// Remove any active gameplay effects
-	if (ActiveSprintDrainHandle.IsValid() && AbilitySystemComponent)
+	if (StatsManager->ActiveSprintDrainHandle.IsValid() && AbilitySystemComponent)
 	{
-		AbilitySystemComponent->RemoveActiveGameplayEffect(ActiveSprintDrainHandle);
-		ActiveSprintDrainHandle.Invalidate();
+		AbilitySystemComponent->RemoveActiveGameplayEffect(StatsManager->ActiveSprintDrainHandle);
+		StatsManager->ActiveSprintDrainHandle.Invalidate();
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("%s: All components destroyed due to death"), *GetName());
