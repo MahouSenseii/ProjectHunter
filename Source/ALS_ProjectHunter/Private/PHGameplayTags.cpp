@@ -333,31 +333,31 @@ void FPHGameplayTags::RegisterPrimaryAttributes()
 	UGameplayTagsManager& TagsManager = UGameplayTagsManager::Get();
 
 	Attributes_Primary_Strength = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Primary.Strength"),
+		FName("Attributes.Primary.Strength"),
 		TEXT("Increases physical damage and slightly increases health."));
 
 	Attributes_Primary_Intelligence = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Primary.Intelligence"),
+		FName("Attributes.Primary.Intelligence"),
 		TEXT("Increases mana and slightly increases elemental damage."));
 
 	Attributes_Primary_Dexterity = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Primary.Dexterity"),
+		FName("Attributes.Primary.Dexterity"),
 		TEXT("Increases critical multiplier and slightly increases attack and cast speed."));
 
 	Attributes_Primary_Endurance = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Primary.Endurance"),
+		FName("Attributes.Primary.Endurance"),
 		TEXT("Increases stamina and slightly increases resistances."));
 
 	Attributes_Primary_Affliction = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Primary.Affliction"),
+		FName("Attributes.Primary.Affliction"),
 		TEXT("Increases damage over time and slightly increases effect duration."));
 
 	Attributes_Primary_Luck = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Primary.Luck"),
+		FName("Attributes.Primary.Luck"),
 		TEXT("Increases chance to apply status effects and improves item drop rates."));
 
 	Attributes_Primary_Covenant = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Primary.Covenant"),
+		FName("Attributes.Primary.Covenant"),
 		TEXT("Improves the strength and durability of your summoned allies or minions."));
 }
 
@@ -367,173 +367,173 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 
 	/* === Health & Regen === */
 	Attributes_Secondary_Vital_MaxHealth = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxHealth"),
+		FName("Attributes.Secondary.Vital.MaxHealth"),
 		TEXT("Maximum amount of health."));
 
 	Attributes_Secondary_Vital_HealthRegenRate = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.HealthRegenRate"),
+		FName("Attributes.Secondary.Vital.HealthRegenRate"),
 		TEXT("Rate at which health regenerates."));
 
 	Attributes_Secondary_Vital_HealthRegenAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.HealthRegenAmount"),
+		FName("Attributes.Secondary.Vital.HealthRegenAmount"),
 		TEXT("Amount of health restored per regeneration tick."));
 
 	Attributes_Secondary_Vital_MaxHealthRegenAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxHealthRegenAmount"),
+		FName("Attributes.Secondary.Vital.MaxHealthRegenAmount"),
 		TEXT("Maximum health restored per tick."));
 
 	Attributes_Secondary_Vital_MaxHealthRegenRate = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxHealthRegenRate"),
+		FName("Attributes.Secondary.Vital.MaxHealthRegenRate"),
 		TEXT("Maximum health regeneration rate."));
 
 	Attributes_Secondary_Vital_HealthReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.HealthReservedAmount"),
+		FName("Attributes.Secondary.Vital.HealthReservedAmount"),
 		TEXT("Total health reserved (not usable)."));
 
 	Attributes_Secondary_Vital_MaxHealthReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxHealthReservedAmount"),
+		FName("Attributes.Secondary.Vital.MaxHealthReservedAmount"),
 		TEXT("Maximum health that can be reserved."));
 
 	Attributes_Secondary_Vital_HealthFlatReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.HealthFlatReservedAmount"),
+		FName("Attributes.Secondary.Vital.HealthFlatReservedAmount"),
 		TEXT("Flat amount of health reserved."));
 
 	Attributes_Secondary_Vital_HealthPercentageReserved = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.HealthPercentageReserved"),
+		FName("Attributes.Secondary.Vital.HealthPercentageReserved"),
 		TEXT("Percentage of health reserved."));
 
 	Attributes_Secondary_Vital_MaxEffectiveHealth = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxEffectiveHealth"),
+		FName("Attributes.Secondary.Vital.MaxEffectiveHealth"),
 		TEXT("Effective maximum health after reservations."));
 
 	/* === Mana & Regen === */
 	Attributes_Secondary_Vital_MaxMana = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxMana"),
+		FName("Attributes.Secondary.Vital.MaxMana"),
 		TEXT("Maximum amount of mana."));
 
 	Attributes_Secondary_Vital_ManaRegenRate = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.ManaRegenRate"),
+		FName("Attributes.Secondary.Vital.ManaRegenRate"),
 		TEXT("Rate at which mana regenerates."));
 
 	Attributes_Secondary_Vital_ManaRegenAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.ManaRegenAmount"),
+		FName("Attributes.Secondary.Vital.ManaRegenAmount"),
 		TEXT("Amount of mana restored per tick."));
 
 	Attributes_Secondary_Vital_MaxManaRegenRate = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxManaRegenRate"),
+		FName("Attributes.Secondary.Vital.MaxManaRegenRate"),
 		TEXT("Maximum rate at which mana regenerates."));
 
 	Attributes_Secondary_Vital_MaxManaRegenAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxManaRegenAmount"),
+		FName("Attributes.Secondary.Vital.MaxManaRegenAmount"),
 		TEXT("Maximum mana restored per tick."));
 
 	Attributes_Secondary_Vital_ManaReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.ManaReservedAmount"),
+		FName("Attributes.Secondary.Vital.ManaReservedAmount"),
 		TEXT("Total mana reserved (not usable)."));
 
 
 	Attributes_Secondary_Vital_MaxManaReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxManaReservedAmount"),
+		FName("Attributes.Secondary.Vital.MaxManaReservedAmount"),
 		TEXT("Maximum mana that can be reserved."));
 
 	Attributes_Secondary_Vital_ManaFlatReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.ManaFlatReservedAmount"),
+		FName("Attributes.Secondary.Vital.ManaFlatReservedAmount"),
 		TEXT("Flat mana reserved."));
 
 	Attributes_Secondary_Vital_ManaPercentageReserved = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.ManaPercentageReserved"),
+		FName("Attributes.Secondary.Vital.ManaPercentageReserved"),
 		TEXT("Percentage of mana reserved."));
 
 	Attributes_Secondary_Vital_MaxEffectiveMana = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxEffectiveMana"),
+		FName("Attributes.Secondary.Vital.MaxEffectiveMana"),
 		TEXT("Effective max mana after reservation."));
 
 	/* === Stamina & Regen === */
 	Attributes_Secondary_Vital_MaxStamina = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxStamina"),
+		FName("Attributes.Secondary.Vital.MaxStamina"),
 		TEXT("Maximum stamina capacity."));
 
 	Attributes_Secondary_Vital_MaxEffectiveStamina = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxEffectiveStamina"),
+		FName("Attributes.Secondary.Vital.MaxEffectiveStamina"),
 		TEXT("Effective maximum stamina."));
 
 	Attributes_Secondary_Vital_StaminaRegenRate = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.StaminaRegenRate"),
+		FName("Attributes.Secondary.Vital.StaminaRegenRate"),
 		TEXT("Stamina regeneration rate."));
 
 	Attributes_Secondary_Vital_StaminaRegenAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.StaminaRegenAmount"),
+		FName("Attributes.Secondary.Vital.StaminaRegenAmount"),
 		TEXT("Amount of stamina regenerated per tick."));
 
 	Attributes_Secondary_Vital_MaxStaminaRegenRate = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxStaminaRegenRate"),
+		FName("Attributes.Secondary.Vital.MaxStaminaRegenRate"),
 		TEXT("Maximum stamina regen rate."));
 
 	Attributes_Secondary_Vital_StaminaFlatReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.StaminaFlatReservedAmount"),
+		FName("Attributes.Secondary.Vital.StaminaFlatReservedAmount"),
 		TEXT("Flat stamina reserved."));
 
 	Attributes_Secondary_Vital_StaminaPercentageReserved = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.StaminaPercentageReserved"),
+		FName("Attributes.Secondary.Vital.StaminaPercentageReserved"),
 		TEXT("Percentage of stamina reserved."));
 
 	Attributes_Secondary_Vital_MaxStaminaRegenAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxStaminaRegenAmount"),
+		FName("Attributes.Secondary.Vital.MaxStaminaRegenAmount"),
 		TEXT("Max stamina restored per tick."));
 
 	Attributes_Secondary_Vital_StaminaReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.StaminaReservedAmount"),
+		FName("Attributes.Secondary.Vital.StaminaReservedAmount"),
 		TEXT("Stamina reserved (not usable)."));
 
 	Attributes_Secondary_Vital_MaxStaminaReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxStaminaReservedAmount"),
+		FName("Attributes.Secondary.Vital.MaxStaminaReservedAmount"),
 		TEXT("Maximum stamina that can be reserved."));
 
 	Attributes_Secondary_Vital_StaminaDegenAmount = TagsManager.AddNativeGameplayTag(
-	FName("Attribute.Secondary.Vital.StaminaDegenAmount"),
+	FName("Attributes.Secondary.Vital.StaminaDegenAmount"),
 	TEXT("Stamina Degen Amount."));
 
 	
 	Attributes_Secondary_Vital_StaminaDegenRate = TagsManager.AddNativeGameplayTag(
-	FName("Attribute.Secondary.Vital.StaminaDegenRate"),
+	FName("Attributes.Secondary.Vital.StaminaDegenRate"),
 	TEXT("Stamina Degen Rate."));
 
 
 	/* === Arcane Shield === */
 	Attributes_Secondary_Vital_ArcaneShield = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.ArcaneShield"),
+		FName("Attributes.Secondary.Vital.ArcaneShield"),
 		TEXT("Current arcane shield value."));
 
 	Attributes_Secondary_Vital_ArcaneShieldRegenRate = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.ArcaneShieldRegenRate"),
+		FName("Attributes.Secondary.Vital.ArcaneShieldRegenRate"),
 		TEXT("Rate of arcane shield regeneration."));
 
 	Attributes_Secondary_Vital_MaxArcaneShieldRegenRate = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxArcaneShieldRegenRate"),
+		FName("Attributes.Secondary.Vital.MaxArcaneShieldRegenRate"),
 		TEXT("Maximum arcane shield regen rate."));
 
 	Attributes_Secondary_Vital_MaxArcaneShieldRegenAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxArcaneShieldRegenAmount"),
+		FName("Attributes.Secondary.Vital.MaxArcaneShieldRegenAmount"),
 		TEXT("Maximum arcane shield restored per tick."));
 
 	Attributes_Secondary_Vital_MaxArcaneShieldReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.MaxArcaneShieldReservedAmount"),
+		FName("Attributes.Secondary.Vital.MaxArcaneShieldReservedAmount"),
 		TEXT("Max arcane shield that can be reserved."));
 
 	Attributes_Secondary_Vital_ArcaneShieldReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.ArcaneShieldReservedAmount"),
+		FName("Attributes.Secondary.Vital.ArcaneShieldReservedAmount"),
 		TEXT("Total arcane shield reserved."));
 
 	Attributes_Secondary_Vital_ArcaneShieldRegenAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.ArcaneShieldRegenAmount"),
+		FName("Attributes.Secondary.Vital.ArcaneShieldRegenAmount"),
 		TEXT("Arcane shield restored per tick."));
 
 	Attributes_Secondary_Vital_ArcaneShieldFlatReservedAmount = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.ArcaneShieldFlatReservedAmount"),
+		FName("Attributes.Secondary.Vital.ArcaneShieldFlatReservedAmount"),
 		TEXT("Flat arcane shield reserved."));
 
 	Attributes_Secondary_Vital_ArcaneShieldPercentageReserved = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Vital.ArcaneShieldPercentageReserved"),
+		FName("Attributes.Secondary.Vital.ArcaneShieldPercentageReserved"),
 		TEXT("Percentage of arcane shield reserved."));
 
 	Effect_Stamina_RegenActive = TagsManager.AddNativeGameplayTag(
@@ -568,107 +568,107 @@ void FPHGameplayTags::RegisterDamageTags()
 
 	// === Min Damage ===
 	Attributes_Secondary_Damages_MinPhysicalDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Min.Physical"),
+		FName("Attributes.Secondary.Damage.Min.Physical"),
 		TEXT("Minimum base physical damage."));
 
 	Attributes_Secondary_Damages_MinFireDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Min.Fire"),
+		FName("Attributes.Secondary.Damage.Min.Fire"),
 		TEXT("Minimum base fire damage."));
 
 	Attributes_Secondary_Damages_MinIceDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Min.Ice"),
+		FName("Attributes.Secondary.Damage.Min.Ice"),
 		TEXT("Minimum base ice damage."));
 
 	Attributes_Secondary_Damages_MinLightDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Min.Light"),
+		FName("Attributes.Secondary.Damage.Min.Light"),
 		TEXT("Minimum base light (holy) damage."));
 
 	Attributes_Secondary_Damages_MinLightningDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Min.Lightning"),
+		FName("Attributes.Secondary.Damage.Min.Lightning"),
 		TEXT("Minimum base lightning damage."));
 
 	Attributes_Secondary_Damages_MinCorruptionDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Min.Corruption"),
+		FName("Attributes.Secondary.Damage.Min.Corruption"),
 		TEXT("Minimum base corruption (dark) damage."));
 
 	// === Max Damage ===
 	Attributes_Secondary_Damages_MaxPhysicalDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Max.Physical"),
+		FName("Attributes.Secondary.Damage.Max.Physical"),
 		TEXT("Maximum base physical damage."));
 
 	Attributes_Secondary_Damages_MaxFireDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Max.Fire"),
+		FName("Attributes.Secondary.Damage.Max.Fire"),
 		TEXT("Maximum base fire damage."));
 
 	Attributes_Secondary_Damages_MaxIceDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Max.Ice"),
+		FName("Attributes.Secondary.Damage.Max.Ice"),
 		TEXT("Maximum base ice damage."));
 
 	Attributes_Secondary_Damages_MaxLightDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Max.Light"),
+		FName("Attributes.Secondary.Damage.Max.Light"),
 		TEXT("Maximum base light (holy) damage."));
 
 	Attributes_Secondary_Damages_MaxLightningDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Max.Lightning"),
+		FName("Attributes.Secondary.Damage.Max.Lightning"),
 		TEXT("Maximum base lightning damage."));
 
 	Attributes_Secondary_Damages_MaxCorruptionDamage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Max.Corruption"),
+		FName("Attributes.Secondary.Damage.Max.Corruption"),
 		TEXT("Maximum base corruption (dark) damage."));
 
 	// === Global Damage Bonus ===
 	Attributes_Secondary_BonusDamage_GlobalDamages = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.GlobalBonus"),
+		FName("Attributes.Secondary.Damage.GlobalBonus"),
 		TEXT("Increases all types of damage."));
 
 	// === Flat Damage Bonuses ===
 	Attributes_Secondary_BonusDamage_PhysicalFlatBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Flat.Physical"),
+		FName("Attributes.Secondary.Damage.Flat.Physical"),
 		TEXT("Flat physical damage bonus."));
 
 	Attributes_Secondary_BonusDamage_FireFlatBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Flat.Fire"),
+		FName("Attributes.Secondary.Damage.Flat.Fire"),
 		TEXT("Flat fire damage bonus."));
 
 	Attributes_Secondary_BonusDamage_IceFlatBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Flat.Ice"),
+		FName("Attributes.Secondary.Damage.Flat.Ice"),
 		TEXT("Flat ice damage bonus."));
 
 	Attributes_Secondary_BonusDamage_LightFlatBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Flat.Light"),
+		FName("Attributes.Secondary.Damage.Flat.Light"),
 		TEXT("Flat light damage bonus."));
 
 	Attributes_Secondary_BonusDamage_LightningFlatBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Flat.Lightning"),
+		FName("Attributes.Secondary.Damage.Flat.Lightning"),
 		TEXT("Flat lightning damage bonus."));
 
 	Attributes_Secondary_BonusDamage_CorruptionFlatBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Flat.Corruption"),
+		FName("Attributes.Secondary.Damage.Flat.Corruption"),
 		TEXT("Flat corruption damage bonus."));
 
 	// === Percent Damage Bonuses ===
 	Attributes_Secondary_BonusDamage_PhysicalPercentBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Percent.Physical"),
+		FName("Attributes.Secondary.Damage.Percent.Physical"),
 		TEXT("Percent bonus to physical damage."));
 
 	Attributes_Secondary_BonusDamage_FirePercentBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Percent.Fire"),
+		FName("Attributes.Secondary.Damage.Percent.Fire"),
 		TEXT("Percent bonus to fire damage."));
 
 	Attributes_Secondary_BonusDamage_IcePercentBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Percent.Ice"),
+		FName("Attributes.Secondary.Damage.Percent.Ice"),
 		TEXT("Percent bonus to ice damage."));
 
 	Attributes_Secondary_BonusDamage_LightPercentBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Percent.Light"),
+		FName("Attributes.Secondary.Damage.Percent.Light"),
 		TEXT("Percent bonus to light damage."));
 
 	Attributes_Secondary_BonusDamage_LightningPercentBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Percent.Lightning"),
+		FName("Attributes.Secondary.Damage.Percent.Lightning"),
 		TEXT("Percent bonus to lightning damage."));
 
 	Attributes_Secondary_BonusDamage_CorruptionPercentBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Damage.Percent.Corruption"),
+		FName("Attributes.Secondary.Damage.Percent.Corruption"),
 		TEXT("Percent bonus to corruption damage."));
 }
 
@@ -679,89 +679,89 @@ void FPHGameplayTags::RegisterResistanceTags()
 
 	// === General Defenses ===
 	Attributes_Secondary_Resistances_GlobalDefenses = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.GlobalDefenses"),
+		FName("Attributes.Secondary.Resistance.GlobalDefenses"),
 		TEXT("Increases general defense against all types of damage."));
 
 	Attributes_Secondary_Resistances_Armour = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Armour"),
+		FName("Attributes.Secondary.Resistance.Armour"),
 		TEXT("Reduces incoming physical damage."));
 
 	Attributes_Secondary_Resistances_BlockStrength = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.BlockStrength"),
+		FName("Attributes.Secondary.Resistance.BlockStrength"),
 		TEXT("Reduces damage taken when blocking."));
 
 	// === Armour Bonuses ===
 	Attributes_Secondary_Resistances_ArmourFlatBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Armour.Flat"),
+		FName("Attributes.Secondary.Resistance.Armour.Flat"),
 		TEXT("Flat increase to armour."));
 
 	Attributes_Secondary_Resistances_ArmourPercentBonus = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Armour.Percent"),
+		FName("Attributes.Secondary.Resistance.Armour.Percent"),
 		TEXT("Percentage increase to armour."));
 
 	// === Fire Resistance ===
 	Attributes_Secondary_Resistances_FireResistanceFlat = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Fire.Flat"),
+		FName("Attributes.Secondary.Resistance.Fire.Flat"),
 		TEXT("Flat fire resistance bonus."));
 
 	Attributes_Secondary_Resistances_FireResistancePercentage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Fire.Percent"),
+		FName("Attributes.Secondary.Resistance.Fire.Percent"),
 		TEXT("Percentage fire resistance bonus."));
 
 	Attributes_Secondary_Resistances_MaxFireResistance = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Fire.Max"),
+		FName("Attributes.Secondary.Resistance.Fire.Max"),
 		TEXT("Maximum fire resistance cap."));
 
 	// === Ice Resistance ===
 	Attributes_Secondary_Resistances_IceResistanceFlat = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Ice.Flat"),
+		FName("Attributes.Secondary.Resistance.Ice.Flat"),
 		TEXT("Flat ice resistance bonus."));
 
 	Attributes_Secondary_Resistances_IceResistancePercentage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Ice.Percent"),
+		FName("Attributes.Secondary.Resistance.Ice.Percent"),
 		TEXT("Percentage ice resistance bonus."));
 
 	Attributes_Secondary_Resistances_MaxIceResistance = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Ice.Max"),
+		FName("Attributes.Secondary.Resistance.Ice.Max"),
 		TEXT("Maximum ice resistance cap."));
 
 	// === Light Resistance ===
 	Attributes_Secondary_Resistances_LightResistanceFlat = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Light.Flat"),
+		FName("Attributes.Secondary.Resistance.Light.Flat"),
 		TEXT("Flat light resistance bonus."));
 
 	Attributes_Secondary_Resistances_LightResistancePercentage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Light.Percent"),
+		FName("Attributes.Secondary.Resistance.Light.Percent"),
 		TEXT("Percentage light resistance bonus."));
 
 	Attributes_Secondary_Resistances_MaxLightResistance = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Light.Max"),
+		FName("Attributes.Secondary.Resistance.Light.Max"),
 		TEXT("Maximum light resistance cap."));
 
 	// === Lightning Resistance ===
 	Attributes_Secondary_Resistances_LightningResistanceFlat = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Lightning.Flat"),
+		FName("Attributes.Secondary.Resistance.Lightning.Flat"),
 		TEXT("Flat lightning resistance bonus."));
 
 	Attributes_Secondary_Resistances_LightningResistancePercentage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Lightning.Percent"),
+		FName("Attributes.Secondary.Resistance.Lightning.Percent"),
 		TEXT("Percentage lightning resistance bonus."));
 
 	Attributes_Secondary_Resistances_MaxLightningResistance = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Lightning.Max"),
+		FName("Attributes.Secondary.Resistance.Lightning.Max"),
 		TEXT("Maximum lightning resistance cap."));
 
 	// === Corruption Resistance ===
 	Attributes_Secondary_Resistances_CorruptionResistanceFlat = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Corruption.Flat"),
+		FName("Attributes.Secondary.Resistance.Corruption.Flat"),
 		TEXT("Flat corruption resistance bonus."));
 
 	Attributes_Secondary_Resistances_CorruptionResistancePercentage = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Corruption.Percent"),
+		FName("Attributes.Secondary.Resistance.Corruption.Percent"),
 		TEXT("Percentage corruption resistance bonus."));
 
 	Attributes_Secondary_Resistances_MaxCorruptionResistance = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Resistance.Corruption.Max"),
+		FName("Attributes.Secondary.Resistance.Corruption.Max"),
 		TEXT("Maximum corruption resistance cap."));
 }
 
@@ -771,55 +771,55 @@ void FPHGameplayTags::RegisterMiscAttributes()
 		UGameplayTagsManager& TagsManager = UGameplayTagsManager::Get();
 
 	Attributes_Secondary_Misc_Poise = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.Poise"),
+		FName("Attributes.Secondary.Misc.Poise"),
 		TEXT("Prevents staggering until depleted."));
 
 	Attributes_Secondary_Misc_StunRecovery = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.StunRecovery"),
+		FName("Attributes.Secondary.Misc.StunRecovery"),
 		TEXT("Reduces stun duration."));
 
 	Attributes_Secondary_Misc_CoolDown = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.CoolDown"),
+		FName("Attributes.Secondary.Misc.CoolDown"),
 		TEXT("Cooldown reduction for abilities."));
 
 	Attributes_Secondary_Misc_ManaCostChanges = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.ManaCostChanges"),
+		FName("Attributes.Secondary.Misc.ManaCostChanges"),
 		TEXT("Changes in mana cost for spells or skills."));
 
 	Attributes_Secondary_Misc_LifeLeech = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.LifeLeech"),
+		FName("Attributes.Secondary.Misc.LifeLeech"),
 		TEXT("Percent of damage returned as health."));
 
 	Attributes_Secondary_Misc_ManaLeech = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.ManaLeech"),
+		FName("Attributes.Secondary.Misc.ManaLeech"),
 		TEXT("Percent of damage returned as mana."));
 
 	Attributes_Secondary_Misc_MovementSpeed = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.MovementSpeed"),
+		FName("Attributes.Secondary.Misc.MovementSpeed"),
 		TEXT("Speed at which the character moves."));
 
 	Attributes_Secondary_Misc_LifeOnHit = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.LifeOnHit"),
+		FName("Attributes.Secondary.Misc.LifeOnHit"),
 		TEXT("Health gained on hitting an enemy."));
 
 	Attributes_Secondary_Misc_ManaOnHit = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.ManaOnHit"),
+		FName("Attributes.Secondary.Misc.ManaOnHit"),
 		TEXT("Mana gained on hitting an enemy."));
 
 	Attributes_Secondary_Misc_StaminaOnHit = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.StaminaOnHit"),
+		FName("Attributes.Secondary.Misc.StaminaOnHit"),
 		TEXT("Stamina gained on hitting an enemy."));
 
 	Attributes_Secondary_Misc_StaminaCostChanges = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.StaminaCostChanges"),
+		FName("Attributes.Secondary.Misc.StaminaCostChanges"),
 		TEXT("Changes in stamina cost for actions."));
 
 	Attributes_Secondary_Money_Gems = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Money.Gems"),
+		FName("Attributes.Secondary.Money.Gems"),
 		TEXT("Currency used in trade or upgrades."));
 
 	Attributes_Secondary_Misc_CombatAlignment = TagsManager.AddNativeGameplayTag(
-		FName("Attribute.Secondary.Misc.CombatAlignment"),
+		FName("Attributes.Secondary.Misc.CombatAlignment"),
 		TEXT("Allegiance or team designation for combat logic."));
 }
 
@@ -828,15 +828,15 @@ void FPHGameplayTags::RegisterVitals()
 		UGameplayTagsManager& TagsManager = UGameplayTagsManager::Get();
 
 		Attributes_Vital_Health = TagsManager.AddNativeGameplayTag(
-			FName("Attribute.Vital.Health"),
+			FName("Attributes.Vital.Health"),
 			TEXT("Current health value of the character."));
 
 		Attributes_Vital_Stamina = TagsManager.AddNativeGameplayTag(
-			FName("Attribute.Vital.Stamina"),
+			FName("Attributes.Vital.Stamina"),
 			TEXT("Current stamina value used for movement and physical actions."));
 
 		Attributes_Vital_Mana = TagsManager.AddNativeGameplayTag(
-			FName("Attribute.Vital.Mana"),
+			FName("Attributes.Vital.Mana"),
 			TEXT("Current mana value used for spells and skills."));
 }
 

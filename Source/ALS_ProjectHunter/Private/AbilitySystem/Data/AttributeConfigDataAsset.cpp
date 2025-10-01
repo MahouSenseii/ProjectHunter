@@ -156,9 +156,9 @@ void UAttributeConfigDataAsset::AutoPopulateFromGameplayTags()
     
     // Auto-populate vital attributes
     VitalAttributes = {
-        {PHTags.Attributes_Vital_Health, 100.0f, 0.0f, 9999.0f, TEXT("Health"), TEXT("Current health points")},
-        {PHTags.Attributes_Vital_Mana, 100.0f, 0.0f, 9999.0f, TEXT("Mana"), TEXT("Current mana points")},
-        {PHTags.Attributes_Vital_Stamina, 100.0f, 0.0f, 9999.0f, TEXT("Stamina"), TEXT("Current stamina points")}
+        {PHTags.Attributes_Vital_Health, 50.0f, 0.0f, 9999.0f, TEXT("Health"), TEXT("Current health points")},
+        {PHTags.Attributes_Vital_Mana, 50.0f, 0.0f, 9999.0f, TEXT("Mana"), TEXT("Current mana points")},
+        {PHTags.Attributes_Vital_Stamina, 50.0f, 0.0f, 9999.0f, TEXT("Stamina"), TEXT("Current stamina points")}
     };
     
     // Autopopulate some key secondary attributes (you can expand this list)
@@ -195,11 +195,11 @@ void UAttributeConfigDataAsset::AutoPopulateFromGameplayTags()
         {PHTags.Attributes_Secondary_Resistances_CorruptionResistancePercentage, 0.0f, -100.0f, 95.0f, TEXT("Corruption Resistance (%)"), TEXT("Percentage corruption damage reduction")},
 
         // === MAXIMUM RESISTANCE CAPS ===
-        {PHTags.Attributes_Secondary_Resistances_MaxFireResistance, 75.0f, 0.0f, 95.0f, TEXT("Max Fire Resistance"), TEXT("Maximum fire resistance percentage cap")},
-        {PHTags.Attributes_Secondary_Resistances_MaxIceResistance, 75.0f, 0.0f, 95.0f, TEXT("Max Ice Resistance"), TEXT("Maximum ice resistance percentage cap")},
-        {PHTags.Attributes_Secondary_Resistances_MaxLightResistance, 75.0f, 0.0f, 95.0f, TEXT("Max Light Resistance"), TEXT("Maximum light resistance percentage cap")},
-        {PHTags.Attributes_Secondary_Resistances_MaxLightningResistance, 75.0f, 0.0f, 95.0f, TEXT("Max Lightning Resistance"), TEXT("Maximum lightning resistance percentage cap")},
-        {PHTags.Attributes_Secondary_Resistances_MaxCorruptionResistance, 75.0f, 0.0f, 95.0f, TEXT("Max Corruption Resistance"), TEXT("Maximum corruption resistance percentage cap")},
+        {PHTags.Attributes_Secondary_Resistances_MaxFireResistance, 0.0f, 0.0f, 95.0f, TEXT("Max Fire Resistance"), TEXT("Maximum fire resistance percentage cap")},
+        {PHTags.Attributes_Secondary_Resistances_MaxIceResistance, 0.0f, 0.0f, 95.0f, TEXT("Max Ice Resistance"), TEXT("Maximum ice resistance percentage cap")},
+        {PHTags.Attributes_Secondary_Resistances_MaxLightResistance, 0.0, 0.0f, 95.0f, TEXT("Max Light Resistance"), TEXT("Maximum light resistance percentage cap")},
+        {PHTags.Attributes_Secondary_Resistances_MaxLightningResistance, 0.0f, 0.0f, 95.0f, TEXT("Max Lightning Resistance"), TEXT("Maximum lightning resistance percentage cap")},
+        {PHTags.Attributes_Secondary_Resistances_MaxCorruptionResistance, 0.0f, 0.0f, 95.0f, TEXT("Max Corruption Resistance"), TEXT("Maximum corruption resistance percentage cap")},
     };
     
     UE_LOG(LogTemp, Log, TEXT("Auto-populated AttributeConfig: %d Primary, %d Secondary, %d Vital"), 

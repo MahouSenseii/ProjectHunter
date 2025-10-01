@@ -39,6 +39,24 @@ void UStatsManager::DebugPrintStartupEffects() const
 }
 #endif
 
+void UStatsManager::DebugPrintAllAttributes() const
+{
+	if (!ASC)
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Cannot print attributes - ASC is null"));
+		return;
+	}
+
+	UE_LOG(LogStatsManager, Warning, TEXT("=== ATTRIBUTE VALUES ==="));
+	
+	// You'll need to add your actual attribute getter functions here
+	// Example format:
+	UE_LOG(LogStatsManager, Warning, TEXT("Health: %.2f"), GetStatBase(FGameplayAttribute(/* Your Health Attribute */)));
+	UE_LOG(LogStatsManager, Warning, TEXT("MaxHealth: %.2f"), GetStatBase(FGameplayAttribute(/* Your MaxHealth Attribute */)));
+	
+	// Add more attributes as needed
+}
+
 // Sets default values for this component's properties
 UStatsManager::UStatsManager()
 {
@@ -63,6 +81,11 @@ void UStatsManager::BeginPlay()
 	if (Owner && Owner->GetAbilitySystemComponent())
 	{
 		InitStatsManager(Cast<UPHAbilitySystemComponent>(Owner->GetAbilitySystemComponent()));
+	}
+	else
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("ASC not ready during BeginPlay for %s - manual init required"), 
+			Owner ? *Owner->GetName() : TEXT("NULL"));
 	}
 }
 
@@ -155,10 +178,21 @@ void UStatsManager::InitStatsManager(UPHAbilitySystemComponent* InASC)
         !DefaultSecondaryMaxAttributes || !DefaultVitalAttributes)
     {
         UE_LOG(LogStatsManager, Error, TEXT("StatsManager missing required default effect classes!"));
+        UE_LOG(LogStatsManager, Error, TEXT("  Primary: %s"), DefaultPrimaryAttributes ? TEXT("OK") : TEXT("MISSING"));
+        UE_LOG(LogStatsManager, Error, TEXT("  SecondaryMax: %s"), DefaultSecondaryMaxAttributes ? TEXT("OK") : TEXT("MISSING"));
+        UE_LOG(LogStatsManager, Error, TEXT("  SecondaryCurrent: %s"), DefaultSecondaryCurrentAttributes ? TEXT("OK") : TEXT("MISSING"));
+        UE_LOG(LogStatsManager, Error, TEXT("  Vital: %s"), DefaultVitalAttributes ? TEXT("OK") : TEXT("MISSING"));
         return;
     }
 
-    // THIRD: Validate StartupEffects
+    // THIRD: Validate AttributeConfig
+    if (!AttributeConfig)
+    {
+        UE_LOG(LogStatsManager, Error, TEXT("AttributeConfig data asset is NULL! Cannot initialize attributes."));
+        return;
+    }
+
+    // FOURTH: Validate StartupEffects configuration
 	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
 	{
 		if (!EffectInfo.EffectClass)
@@ -170,50 +204,56 @@ void UStatsManager::InitStatsManager(UPHAbilitySystemComponent* InASC)
         
 		if (!EffectInfo.SetByCallerTag.IsValid())
 		{
-			UE_LOG(LogStatsManager, Warning, TEXT("StartupEffect '%s' missing SetByCallerTag!"), 
+			UE_LOG(LogStatsManager, Warning, TEXT("StartupEffect '%s' missing SetByCallerTag - this effect will use default values!"), 
 				*EffectInfo.DisplayName);
 		}
         
-		if (EffectInfo.RateAttribute.IsValid())
-		{
-			bool bFound = false;
-			ASC->GetGameplayAttributeValue(EffectInfo.RateAttribute, bFound);
-			if (!bFound)
-			{
-				UE_LOG(LogStatsManager, Warning, TEXT("StartupEffect '%s' references invalid RateAttribute"), 
-					*EffectInfo.DisplayName);
-			}
-		}
-        
-		if (EffectInfo.AmountAttribute.IsValid())
-		{
-			bool bFound = false;
-			ASC->GetGameplayAttributeValue(EffectInfo.AmountAttribute, bFound);
-			if (!bFound)
-			{
-				UE_LOG(LogStatsManager, Warning, TEXT("StartupEffect '%s' references invalid AmountAttribute"), 
-					*EffectInfo.DisplayName);
-			}
-		}
+		// Only validate attributes that should exist AFTER initialization
+		// We can't check them now since attributes don't exist yet
 	}
 
     // Temporarily disable callbacks during initialization to prevent recursion
     bIsInitializingAttributes = true;
 
-    // Bind delegates for startup effects
+    // Initialize attributes FIRST (they need to exist before effects can use them)
+    InitializeDefaultAttributes();
+
+    // FIFTH: Now bind delegates for startup effects (AFTER attributes exist)
     for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
     {
         // Bind rate/amount change listeners
         if (EffectInfo.RateAttribute.IsValid())
         {
-            ASC->GetGameplayAttributeValueChangeDelegate(EffectInfo.RateAttribute)
-                .AddUObject(this, &UStatsManager::OnAnyVitalPeriodicStatChanged);
+            bool bAttributeExists = false;
+            ASC->GetGameplayAttributeValue(EffectInfo.RateAttribute, bAttributeExists);
+            
+            if (bAttributeExists)
+            {
+                ASC->GetGameplayAttributeValueChangeDelegate(EffectInfo.RateAttribute)
+                    .AddUObject(this, &UStatsManager::OnAnyVitalPeriodicStatChanged);
+            }
+            else
+            {
+                UE_LOG(LogStatsManager, Warning, TEXT("StartupEffect '%s' references non-existent RateAttribute: %s"), 
+                    *EffectInfo.DisplayName, *EffectInfo.RateAttribute.GetName());
+            }
         }
 
         if (EffectInfo.AmountAttribute.IsValid())
         {
-            ASC->GetGameplayAttributeValueChangeDelegate(EffectInfo.AmountAttribute)
-                .AddUObject(this, &UStatsManager::OnAnyVitalPeriodicStatChanged);
+            bool bAttributeExists = false;
+            ASC->GetGameplayAttributeValue(EffectInfo.AmountAttribute, bAttributeExists);
+            
+            if (bAttributeExists)
+            {
+                ASC->GetGameplayAttributeValueChangeDelegate(EffectInfo.AmountAttribute)
+                    .AddUObject(this, &UStatsManager::OnAnyVitalPeriodicStatChanged);
+            }
+            else
+            {
+                UE_LOG(LogStatsManager, Warning, TEXT("StartupEffect '%s' references non-existent AmountAttribute: %s"), 
+                    *EffectInfo.DisplayName, *EffectInfo.AmountAttribute.GetName());
+            }
         }
 
         // Bind trigger tag change listener
@@ -224,9 +264,6 @@ void UStatsManager::InitStatsManager(UPHAbilitySystemComponent* InASC)
         }
     }
 
-    // Initialize attributes FIRST (they need to exist before effects can use them)
-    InitializeDefaultAttributes();
-
     // Apply periodic effects AFTER attributes are initialized
     for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
     {
@@ -236,6 +273,9 @@ void UStatsManager::InitStatsManager(UPHAbilitySystemComponent* InASC)
 #if WITH_EDITOR
 	DebugPrintStartupEffects();
 #endif
+
+    // Verify initialization worked
+    VerifyAttributeInitialization();
 
     bIsInitializingAttributes = false;
     bIsInitialized = true;
@@ -252,6 +292,9 @@ void UStatsManager::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffec
 		UE_LOG(LogStatsManager, Warning, TEXT("Cannot apply effect - invalid ASC, Owner, or Effect class"));
 		return;
 	}
+
+
+	
 	
 	FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
 	ContextHandle.AddSourceObject(SafeOwner);
@@ -260,6 +303,10 @@ void UStatsManager::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffec
 	if (SpecHandle.IsValid())
 	{
 		ASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), ASC);
+	}
+	else
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Failed to create spec for effect %s"), *GameplayEffectClass->GetName());
 	}
 }
 
@@ -284,6 +331,7 @@ void UStatsManager::ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& 
 	{
 		return;
 	}
+	
 
 	// Remove the existing effect if it exists
 	if (EffectInfo.SetByCallerTag.IsValid())
@@ -314,6 +362,18 @@ void UStatsManager::ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& 
 	if (EffectInfo.SetByCallerTag.IsValid())
 	{
 		SpecHandle.Data->SetSetByCallerMagnitude(EffectInfo.SetByCallerTag, RawAmount);
+		
+		// VERIFY IT WAS SET
+		float VerifyValue = SpecHandle.Data->GetSetByCallerMagnitude(EffectInfo.SetByCallerTag, false);
+		if (FMath::Abs(VerifyValue - RawAmount) > 0.01f)
+		{
+			UE_LOG(LogStatsManager, Error, TEXT("[%s] SetByCaller MISMATCH! Tag='%s', Set=%.2f, Read=%.2f"), 
+				*EffectInfo.DisplayName,
+				*EffectInfo.SetByCallerTag.ToString(), 
+				RawAmount, 
+				VerifyValue);
+			UE_LOG(LogStatsManager, Error, TEXT("  -> Check your GE asset - the SetByCaller tag must match EXACTLY!"));
+		}
 	}
 	else
 	{
@@ -332,7 +392,7 @@ void UStatsManager::ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& 
             ActivePeriodicEffects.Add(EffectInfo.SetByCallerTag, Handle);
         }
         
-        UE_LOG(LogStatsManager, Verbose, TEXT("Applied '%s': Amount=%.2f, Period=%.2f"), 
+        UE_LOG(LogStatsManager, Log, TEXT("Applied '%s': Amount=%.2f, Period=%.2f"), 
             *EffectInfo.DisplayName, RawAmount, ClampedRate);
     }
     else
@@ -340,11 +400,6 @@ void UStatsManager::ApplyPeriodicEffectToSelf(const FInitialGameplayEffectInfo& 
         UE_LOG(LogStatsManager, Error, TEXT("Failed to apply periodic effect '%s'"), 
             *EffectInfo.DisplayName);
     }
-
-#if WITH_EDITOR
-	UE_LOG(LogStatsManager, Log, TEXT("[GAS] Applied %s with Amount %.2f, Period %.2f"),
-		*EffectInfo.EffectClass->GetName(), RawAmount, ClampedRate);
-#endif
 }
 
 void UStatsManager::ClearAllPeriodicEffects()
@@ -500,12 +555,16 @@ void UStatsManager::InitializeAttributesFromConfig(const TSubclassOf<UGameplayEf
 {
 	if (!EffectClass || !ASC || AttributeConfigs.IsEmpty()) 
 	{
-		UE_LOG(LogStatsManager, Warning, TEXT("Cannot initialize %s attributes - invalid parameters"), *CategoryName);
+		UE_LOG(LogStatsManager, Error, TEXT("Cannot initialize %s attributes - EffectClass=%s, ASC=%s, Configs=%d"), 
+			*CategoryName,
+			EffectClass ? TEXT("Valid") : TEXT("NULL"),
+			ASC ? TEXT("Valid") : TEXT("NULL"),
+			AttributeConfigs.Num());
 		return;
 	}
 
 	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	Context.AddSourceObject(Owner);
+Context.AddSourceObject(Owner);
 	
 	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, Context);
 	if (!SpecHandle.IsValid()) 
@@ -522,6 +581,7 @@ void UStatsManager::InitializeAttributesFromConfig(const TSubclassOf<UGameplayEf
 		// Skip disabled attributes
 		if (!Config.bEnabled)
 		{
+			UE_LOG(LogStatsManager, Verbose, TEXT("Skipping disabled attribute: %s"), *Config.DisplayName);
 			SkippedCount++;
 			continue;
 		}
@@ -542,20 +602,29 @@ void UStatsManager::InitializeAttributesFromConfig(const TSubclassOf<UGameplayEf
 		SpecHandle.Data->SetSetByCallerMagnitude(Config.AttributeTag, ClampedValue);
 		SetCount++;
 		
-		UE_LOG(LogStatsManager, Verbose, TEXT("Set %s.%s = %.2f (range: %.1f-%.1f)"), 
-			   *CategoryName, *Config.DisplayName, ClampedValue, Config.MinValue, Config.MaxValue);
+		UE_LOG(LogStatsManager, Log, TEXT("Set %s.%s = %.2f (range: %.1f-%.1f, tag: %s)"), 
+			   *CategoryName, *Config.DisplayName, ClampedValue, Config.MinValue, Config.MaxValue,
+			   *Config.AttributeTag.ToString());
 	}
 
 	// Apply the effect if we set any values
 	if (SetCount > 0)
 	{
-		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
-		UE_LOG(LogStatsManager, Log, TEXT("Applied %s attributes: %d set, %d skipped"), 
-			   *CategoryName, SetCount, SkippedCount);
+		FActiveGameplayEffectHandle AppliedHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+		
+		if (AppliedHandle.IsValid())
+		{
+			UE_LOG(LogStatsManager, Log, TEXT("Successfully applied %s attributes: %d set, %d skipped"), 
+				   *CategoryName, SetCount, SkippedCount);
+		}
+		else
+		{
+			UE_LOG(LogStatsManager, Error, TEXT("Failed to apply %s attributes effect!"), *CategoryName);
+		}
 	}
 	else
 	{
-		UE_LOG(LogStatsManager, Warning, TEXT("No valid %s attributes to apply"), *CategoryName);
+		UE_LOG(LogStatsManager, Warning, TEXT("No valid %s attributes to apply (all disabled or invalid)"), *CategoryName);
 	}
 }
 
@@ -584,37 +653,73 @@ void UStatsManager::ApplyLevelScalingToConfig() const
 	}
 }
 
+void UStatsManager::VerifyAttributeInitialization() const
+{
+	if (!ASC)
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Cannot verify - ASC is null"));
+		return;
+	}
+
+	UE_LOG(LogStatsManager, Warning, TEXT("=== POST-INITIALIZATION VERIFICATION ==="));
+	
+	UE_LOG(LogStatsManager, Warning, TEXT("Configured %d Primary, %d Secondary, %d Vital attributes"),
+		AttributeConfig ? AttributeConfig->PrimaryAttributes.Num() : 0,
+		AttributeConfig ? AttributeConfig->SecondaryAttributes.Num() : 0,
+		AttributeConfig ? AttributeConfig->VitalAttributes.Num() : 0);
+	
+	// If you have specific attributes you want to check:
+	// Example (you'll need to adjust based on your actual AttributeSet):
+	/*
+	const UPHAttributeSet* AttrSet = ASC->GetSet<UPHAttributeSet>();
+	if (AttrSet)
+	{
+		float Health = AttrSet->GetHealth();
+		float MaxHealth = AttrSet->GetMaxHealth();
+		UE_LOG(LogStatsManager, Warning, TEXT("  Health: %.2f / %.2f"), Health, MaxHealth);
+	}
+	*/
+	
+	UE_LOG(LogStatsManager, Warning, TEXT("=== END VERIFICATION ==="));
+}
+
 void UStatsManager::InitializeDefaultAttributes()
 {
 	check(Owner);
-	if (!IsValid(ASC)) return;
+	if (!IsValid(ASC))
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Cannot initialize - ASC is invalid"));
+		return;
+	}
+	
+	if (!AttributeConfig)
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Cannot initialize - AttributeConfig is NULL for %s!"), *Owner->GetName());
+		return;
+	}
 	
 	bIsInitializingAttributes = true;
 
-	if (AttributeConfig)
+	// Apply level scaling to mob configs if needed
+	if (MobLevel > 1)
 	{
-		// Apply level scaling to mob configs if needed
-		if (MobLevel > 1)
-		{
-			ApplyLevelScalingToConfig();
-		}
+		ApplyLevelScalingToConfig();
+	}
 
-		// Use the data asset configuration
-		InitializeAttributesFromConfig(DefaultPrimaryAttributes, AttributeConfig->PrimaryAttributes, TEXT("Primary"));
-		
-		// Apply max attributes first (they set the caps)
-		ApplyEffectToSelf(DefaultSecondaryMaxAttributes, 1.0f);
-		
-		// Then apply current secondary attributes
-		InitializeAttributesFromConfig(DefaultSecondaryCurrentAttributes, AttributeConfig->SecondaryAttributes, TEXT("Secondary"));
-		
-		// Finally, apply vital attributes
-		InitializeAttributesFromConfig(DefaultVitalAttributes, AttributeConfig->VitalAttributes, TEXT("Vital"));
-	}
-	else
-	{
-		UE_LOG(LogStatsManager, Warning, TEXT("No AttributeConfig asset assigned for %s!"), *Owner->GetName());
-	}
+	UE_LOG(LogStatsManager, Log, TEXT("=== INITIALIZING ATTRIBUTES FOR %s ==="), *Owner->GetName());
+	
+	// Initialize Primary Attributes first
+	InitializeAttributesFromConfig(DefaultPrimaryAttributes, AttributeConfig->PrimaryAttributes, TEXT("Primary"));
+	
+	// Apply max attributes (these set the caps for current values)
+	UE_LOG(LogStatsManager, Log, TEXT("Applying Secondary Max Attributes..."));
+	ApplyEffectToSelf(DefaultSecondaryMaxAttributes, 1.0f);
+	
+	// Then apply current secondary attributes
+	InitializeAttributesFromConfig(DefaultSecondaryCurrentAttributes, AttributeConfig->SecondaryAttributes, TEXT("Secondary"));
+	
+	// Finally, apply vital attributes
+	InitializeAttributesFromConfig(DefaultVitalAttributes, AttributeConfig->VitalAttributes, TEXT("Vital"));
 
 	bIsInitializingAttributes = false;
 	UE_LOG(LogStatsManager, Log, TEXT("Attributes initialized for %s (Level: %d)"), *Owner->GetName(), MobLevel);
@@ -626,7 +731,7 @@ void UStatsManager::InitializeMobAttributesAtLevel(int32 Level)
 
 	// Calculate scaling factors
 	float LevelMultiplier = 1.0f + (0.15f * (Level - 1)); // 15% per level
-	float EliteMultiplier = bIsElite ? 1.5f : 1.0f; // 50% more of elite
+	float EliteMultiplier = bIsElite ? 1.5f : 1.0f; // 50% more if elite
 	float FinalMultiplier = LevelMultiplier * DifficultyMultiplier * EliteMultiplier;
 
 	if (AttributeConfig)
@@ -675,139 +780,12 @@ void UStatsManager::ReapplyAllStartupRegenEffects()
 {
 	for (const FInitialGameplayEffectInfo& EffectInfo : StartupEffects)
 	{
-		if (EffectInfo.SetByCallerTag.MatchesTag(FGameplayTag::RequestGameplayTag("Attribute.Secondary.Vital.ManaRegenAmount")) ||
-			EffectInfo.SetByCallerTag.MatchesTag(FGameplayTag::RequestGameplayTag("Attribute.Secondary.Vital.StaminaRegenAmount")) ||
-			EffectInfo.SetByCallerTag.MatchesTag(FGameplayTag::RequestGameplayTag("Attribute.Secondary.Vital.HealthRegenAmount")))
+		// Match using plural "Attributes" to match your config
+		if (EffectInfo.SetByCallerTag.MatchesTag(FGameplayTag::RequestGameplayTag("Attributes.Secondary.Vital.ManaRegenAmount")) ||
+			EffectInfo.SetByCallerTag.MatchesTag(FGameplayTag::RequestGameplayTag("Attributes.Secondary.Vital.StaminaRegenAmount")) ||
+			EffectInfo.SetByCallerTag.MatchesTag(FGameplayTag::RequestGameplayTag("Attributes.Secondary.Vital.HealthRegenAmount")))
 		{
 			ApplyPeriodicEffectToSelf(EffectInfo);
 		}
 	}
 }
-
-
-
-void UStatsManager::StartSprintStaminaDrain()
-{
-	if (!ASC || !SprintStaminaDrainEffectClass)
-	{
-		UE_LOG(LogStatsManager, Warning, TEXT("Cannot start sprint drain - missing ASC or effect class"));
-		return;
-	}
-    
-	// Remove any existing sprint drain effect
-	if (ActiveSprintDrainHandle.IsValid())
-	{
-		ASC->RemoveActiveGameplayEffect(ActiveSprintDrainHandle);
-		ActiveSprintDrainHandle.Invalidate();
-	}
-    
-	// Apply a new sprint drain effect
-	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	Context.AddSourceObject(Owner);
-    
-	FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(
-		SprintStaminaDrainEffectClass, 1.0f, Context);
-    
-	if (Spec.IsValid())
-	{
-		ActiveSprintDrainHandle = ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-        
-		// Add sprint tags
-		ASC->AddLooseGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Sprinting")));
-		ASC->AddLooseGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("Effect.Stamina.DegenActive")));
-        
-		// Start checking stamina periodically
-		if (bStopSprintingWhenStaminaDepleted && Owner)
-		{
-			Owner->GetWorldTimerManager().SetTimer(StaminaCheckTimer, this, 
-				&UStatsManager::CheckStaminaForSprint, 0.1f, true);
-		}
-        
-		UE_LOG(LogStatsManager, Log, TEXT("Started sprint stamina drain for %s"), 
-			Owner ? *Owner->GetName() : TEXT("Unknown"));
-	}
-	else
-	{
-		UE_LOG(LogStatsManager, Error, TEXT("Failed to create sprint drain effect spec"));
-	}
-}
-
-void UStatsManager::StopSprintStaminaDrain()
-{
-	if (!ASC)
-	{
-		UE_LOG(LogStatsManager, Warning, TEXT("Cannot stop sprint drain - missing ASC"));
-		return;
-	}
-    
-	// Remove sprint drain effect
-	if (ActiveSprintDrainHandle.IsValid())
-	{
-		ASC->RemoveActiveGameplayEffect(ActiveSprintDrainHandle);
-		ActiveSprintDrainHandle.Invalidate();
-	}
-    
-	// Remove sprint tags
-	ASC->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Sprinting")));
-	ASC->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("Effect.Stamina.DegenActive")));
-    
-	// Clear stamina check timer
-	if (Owner)
-	{
-		Owner->GetWorldTimerManager().ClearTimer(StaminaCheckTimer);
-	}
-    
-	UE_LOG(LogStatsManager, Log, TEXT("Stopped sprint stamina drain"));
-}
-
-bool UStatsManager::CanStartSprinting() const
-{
-	if (!ASC)
-	{
-		return false;
-	}
-
-	// Get stamina value directly from ASC
-	const FGameplayAttribute StaminaAttribute = FGameplayAttribute(); // You'll need to replace this with your actual stamina attribute
-	// Example: UPHAttributeSet::GetStaminaAttribute();
-	
-	if (StaminaAttribute.IsValid())
-	{
-		float CurrentStamina = ASC->GetNumericAttribute(StaminaAttribute);
-		return CurrentStamina >= MinimumStaminaToStartSprint;
-	}
-    
-	return false;
-}
-
-void UStatsManager::CheckStaminaForSprint()
-{
-	if (!bStopSprintingWhenStaminaDepleted || !ASC || !Owner)
-	{
-		return;
-	}
-    
-	// Get stamina value directly from ASC
-	const FGameplayAttribute StaminaAttribute = FGameplayAttribute(); // You'll need to replace this with your actual stamina attribute
-	// Example: UPHAttributeSet::GetStaminaAttribute();
-	
-	if (StaminaAttribute.IsValid())
-	{
-		float CurrentStamina = ASC->GetNumericAttribute(StaminaAttribute);
-		
-		if (CurrentStamina <= 0.1f) // Near zero
-		{
-			// Stop sprinting by stopping the drain
-			StopSprintStaminaDrain();
-
-			Owner->SetDesiredGait(EALSGait::Running);
-			
-			// Optional: Broadcast an event or call a delegate
-			// OnStaminaDepleted.Broadcast();
-            
-			UE_LOG(LogStatsManager, Warning, TEXT("Stamina depleted - stopping sprint for %s"), 
-				*Owner->GetName());
-		}
-	}
-}
-

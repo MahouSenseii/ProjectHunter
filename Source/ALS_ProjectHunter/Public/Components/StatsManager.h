@@ -1,4 +1,4 @@
-// Copyright@2024 Quentin Davis 
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -25,6 +25,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "GAS|Attributes")
 	void DebugPrintStartupEffects() const;
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS|Debug")
+	void DebugPrintAllAttributes() const;
 	
 	/* =========================== */
 	/* ===   Core Functions    === */
@@ -98,10 +101,6 @@ public:
 	void RemovePeriodicEffectByTag(FGameplayTag EffectTag);
 
 	void ReapplyAllStartupRegenEffects();
-	void StartSprintStaminaDrain();
-	void StopSprintStaminaDrain();
-	bool CanStartSprinting()const;
-	void CheckStaminaForSprint();
 
 	/* =========================== */
 	/* ===   Event Callbacks   === */
@@ -131,6 +130,9 @@ protected:
 
 	// Simple level scaling for regular data assets
 	void ApplyLevelScalingToConfig() const;
+
+	// Verify that attributes were actually set
+	void VerifyAttributeInitialization() const;
 
 public:
 	/* =========================== */
@@ -186,18 +188,6 @@ public:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "GAS|Attributes", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UGameplayEffect> DefaultVitalAttributes;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
-	TSubclassOf<UGameplayEffect> SprintStaminaDrainEffectClass;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
-	float MinimumStaminaToStartSprint = 10.0f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Sprint")
-	bool bStopSprintingWhenStaminaDepleted = true;
-
-	FActiveGameplayEffectHandle ActiveSprintDrainHandle;
-	FTimerHandle StaminaCheckTimer;
-	
 private:
 	/* =========================== */
 	/* ===   Private Data      === */

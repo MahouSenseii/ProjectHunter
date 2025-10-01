@@ -135,11 +135,11 @@ void APHBaseCharacter::OnGaitChanged(EALSGait PreviousGait)
 
 	if (Gait == EALSGait::Sprinting && PreviousGait != EALSGait::Sprinting)
 	{
-		StatsManager->StartSprintStaminaDrain();
+		//StatsManager->StartSprintStaminaDrain();
 	}
 	else if (Gait != EALSGait::Sprinting && PreviousGait == EALSGait::Sprinting)
 	{
-		StatsManager->StopSprintStaminaDrain();
+		//StatsManager->StopSprintStaminaDrain();
 	}
 }
 
@@ -366,7 +366,7 @@ void APHBaseCharacter::DestroyAllComponents()
 		CurrentToolTip = nullptr;
 	}
 
-	// Clear any active timers
+	/*// Clear any active timers
 	GetWorldTimerManager().ClearTimer(	StatsManager->StaminaCheckTimer);
 
 	// Remove any active gameplay effects
@@ -376,5 +376,5 @@ void APHBaseCharacter::DestroyAllComponents()
 		StatsManager->ActiveSprintDrainHandle.Invalidate();
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("%s: All components destroyed due to death"), *GetName());
+	UE_LOG(LogTemp, Warning, TEXT("%s: All components destroyed due to death"), *GetName());*/
 }

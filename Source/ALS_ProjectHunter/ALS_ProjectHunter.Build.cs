@@ -28,8 +28,23 @@ public class ALS_ProjectHunter : ModuleRules
 			"Slate", 
 			"SlateCore", 
 			"GameplayTags",
-			"GameplayTasks"
+			"GameplayTasks",
+			"EditorFramework"
 		});
+		
+		
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[]
+			{
+				"UnrealEd",
+				"EditorSubsystem",
+				"EditorWidgets",
+				"ToolMenus",
+				"EditorStyle", // For UE4
+				"EditorFramework" // For UE5
+			});
+		}
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

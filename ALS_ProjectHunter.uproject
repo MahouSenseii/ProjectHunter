@@ -14,7 +14,8 @@
 				"GameplayAbilities",
 				"UMG",
 				"CoreUObject",
-				"EnhancedInput"
+				"EnhancedInput",
+				"Blutility"
 			]
 		}
 	],
