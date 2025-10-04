@@ -242,7 +242,7 @@ void UEquipmentManager::RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHB
 
 		if (const FGameplayAttribute* MinAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MinKey))
 		{
-			StatsManager->ApplyFlatStatModifier(*MinAttr, -Pair.Value.Min);
+			StatsManager->ApplyFlatModifier(*MinAttr, -Pair.Value.Min);
 			UE_LOG(LogEquipmentManager, Log, TEXT("Removed weapon base damage MIN: %s = %.2f"), *MinAttr->GetName(), -Pair.Value.Min);
 		}
 		else
@@ -252,7 +252,7 @@ void UEquipmentManager::RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHB
 
 		if (const FGameplayAttribute* MaxAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MaxKey))
 		{
-			StatsManager->ApplyFlatStatModifier(*MaxAttr, -Pair.Value.Max);
+			StatsManager->ApplyFlatModifier(*MaxAttr, -Pair.Value.Max);
 			UE_LOG(LogEquipmentManager, Log, TEXT("Removed weapon base damage MAX: %s = %.2f"), *MaxAttr->GetName(), -Pair.Value.Max);
 		}
 		else
@@ -408,7 +408,7 @@ void UEquipmentManager::ApplyAllEquipmentStatsToAttributes(APHBaseCharacter* Cha
 	// Apply all accumulated modifiers
 	for (const auto& Pair : ModifiedAttributes)
 	{
-		Character->GetStatsManager()->ApplyFlatStatModifier(Pair.Key, Pair.Value);
+		Character->GetStatsManager()->ApplyFlatModifier(Pair.Key, Pair.Value);
 	}
 }
 
@@ -450,14 +450,14 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
 
                 if (const FGameplayAttribute* MinAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MinKey))
                 {
-                        Character->GetStatsManager()->ApplyFlatStatModifier(*MinAttr, Pair.Value.Min);
+                        Character->GetStatsManager()->ApplyFlatModifier(*MinAttr, Pair.Value.Min);
                         AppliedStats.BaseDamageAttributes.Add(*MinAttr);
                         AppliedStats.BaseDamageValues.Add(Pair.Value.Min);
                 }
 
                 if (const FGameplayAttribute* MaxAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MaxKey))
                 {
-                        Character->GetStatsManager()->ApplyFlatStatModifier(*MaxAttr, Pair.Value.Max);
+                        Character->GetStatsManager()->ApplyFlatModifier(*MaxAttr, Pair.Value.Max);
                         AppliedStats.BaseDamageAttributes.Add(*MaxAttr);
                         AppliedStats.BaseDamageValues.Add(Pair.Value.Max);
                 }
@@ -533,7 +533,7 @@ void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, APHBa
 
 		if (const FGameplayAttribute* MinAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MinKey))
 		{
-			StatsManager->ApplyFlatStatModifier(*MinAttr, Pair.Value.Min);
+			StatsManager->ApplyFlatModifier(*MinAttr, Pair.Value.Min);
 			UE_LOG(LogEquipmentManager, Log, TEXT("Applied weapon base damage MIN: %s = %.2f"), *MinAttr->GetName(), Pair.Value.Min);
 		}
 		else
@@ -543,7 +543,7 @@ void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, APHBa
 
 		if (const FGameplayAttribute* MaxAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MaxKey))
 		{
-			StatsManager->ApplyFlatStatModifier(*MaxAttr, Pair.Value.Max);
+			StatsManager->ApplyFlatModifier(*MaxAttr, Pair.Value.Max);
 			UE_LOG(LogEquipmentManager, Log, TEXT("Applied weapon base damage MAX: %s = %.2f"), *MaxAttr->GetName(), Pair.Value.Max);
 		}
 		else
@@ -571,7 +571,7 @@ void UEquipmentManager::RemoveItemStatBonuses(UEquippableItem* Item, APHBaseChar
                         if (!Attr.ModifiedAttribute.IsValid()) continue;
 
                         const float Rolled = Stats.RolledValues.IsValidIndex(i) ? Stats.RolledValues[i] : 0.0f;
-                        Character->GetStatsManager()->ApplyFlatStatModifier(Attr.ModifiedAttribute, -Rolled);
+                        Character->GetStatsManager()->ApplyFlatModifier(Attr.ModifiedAttribute, -Rolled);
                         UE_LOG(LogEquipmentManager, Log, TEXT("Removing %.2f from %s"), Rolled, *Attr.ModifiedAttribute.GetName());
                 }
 
@@ -581,7 +581,7 @@ void UEquipmentManager::RemoveItemStatBonuses(UEquippableItem* Item, APHBaseChar
                         const float Value = Stats.BaseDamageValues.IsValidIndex(i) ? Stats.BaseDamageValues[i] : 0.0f;
                         if (!Attr.IsValid()) continue;
 
-                        Character->GetStatsManager()->ApplyFlatStatModifier(Attr, -Value);
+                        Character->GetStatsManager()->ApplyFlatModifier(Attr, -Value);
                 }
 
                 AppliedItemStats.Remove(Item);

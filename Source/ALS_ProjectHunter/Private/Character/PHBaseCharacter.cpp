@@ -53,7 +53,7 @@ void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 void APHBaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-	StatsManager->Owner = this; 
+	StatsManager->SetOwnerCharacter(this); 
 	InitAbilityActorInfo();
 	
 	CurrentController = Cast<APHPlayerController>(NewController);
@@ -72,7 +72,6 @@ UAbilitySystemComponent* APHBaseCharacter::GetAbilitySystemComponent() const
 void APHBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 void APHBaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -154,9 +153,9 @@ void APHBaseCharacter::InitAbilityActorInfo()
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 		Cast<UPHAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
-		
-		StatsManager->ASC = Cast<UPHAbilitySystemComponent>(AbilitySystemComponent);
-		StatsManager->InitializeDefaultAttributes(); 
+		UPHAbilitySystemComponent* ASC =  Cast<UPHAbilitySystemComponent>(AbilitySystemComponent);
+		StatsManager->SetASC(Cast<UPHAbilitySystemComponent>(AbilitySystemComponent));
+		StatsManager->Initialize(); 
 	}
 	else
 	{
@@ -170,9 +169,9 @@ void APHBaseCharacter::InitAbilityActorInfo()
 		UPHAbilitySystemComponent* ASC =  Cast<UPHAbilitySystemComponent>(AbilitySystemComponent);
 		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
 		Context.AddSourceObject(this);
-		StatsManager->ASC = ASC;
+		StatsManager->SetASC(ASC);
 		
-		StatsManager->InitializeDefaultAttributes();
+		StatsManager->Initialize();
 		
 		AttributeSet = LocalPlayerState->GetAttributeSet();
 

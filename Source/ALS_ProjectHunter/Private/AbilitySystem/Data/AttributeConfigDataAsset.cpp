@@ -163,6 +163,7 @@ void UAttributeConfigDataAsset::AutoPopulateFromGameplayTags()
     
     // Autopopulate some key secondary attributes (you can expand this list)
     SecondaryAttributes = {
+        
         {PHTags.Attributes_Secondary_Vital_HealthRegenRate,1.0f, 0.1f, 9999.0f, TEXT("Health Regen Rate"), TEXT("Seconds between health regeneration")},
         {PHTags.Attributes_Secondary_Vital_HealthRegenAmount, 1.0f, 0.0f, 9999.0f, TEXT("Health Regen Amount"), TEXT("Health regenerated per tick")},
         {PHTags.Attributes_Secondary_Vital_ManaRegenRate, 1.0f, 0.1f, 99999.0f, TEXT("Mana Regen Rate"), TEXT("Seconds between mana regeneration")},
