@@ -3,12 +3,16 @@
 
 #include "Interactables/Pickups/WeaponPickup.h"
 
-bool AWeaponPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*  PassedItemInfo,
+
+
+bool AWeaponPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*& ItemData,
 	FConsumableItemData ConsumableItemData) const
 {
-	Super::InteractionHandle(Actor, WasHeld);
+	Super::HandleInteraction(Actor, WasHeld, ItemData, ConsumableItemData);
 
-	 UItemDefinitionAsset*  PassedItemInformation = ItemInfo;
+	
+	UItemDefinitionAsset*  PassedItemInformation = ItemData;
 
 	return AItemPickup::HandleInteraction(Actor, WasHeld, PassedItemInformation,  FConsumableItemData());
 }
+

@@ -11,6 +11,11 @@
 void UEquippableStatsBox::NativeConstruct()
 {
 	Super::NativeConstruct();
+	if (!ItemData)
+	{
+		// Create a new instance or get it from somewhere
+		ItemData = NewObject<UItemDefinitionAsset>(this);
+	}
 
 	if(ItemData->Base.IsValid())
 	{
@@ -18,6 +23,8 @@ void UEquippableStatsBox::NativeConstruct()
 	}
 
 	MinMaxBoxClass = UMinMaxBox::StaticClass();
+
+	
 }
 
 void UEquippableStatsBox::SetEquippableItem(const FEquippableItemData Item)

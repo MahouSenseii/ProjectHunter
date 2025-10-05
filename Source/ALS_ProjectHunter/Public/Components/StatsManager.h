@@ -39,19 +39,16 @@ public:
 	/* ============================= */
 
 	/**
-	 * Initialize all default attributes from configured gameplay effects.
-	 * Call this after ASC is ready and assigned.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Stats|Initialization")
-	void InitializeAttributes();
-
-	/**
 	 * Initialize attributes from a data asset configuration.
 	 * More flexible than using default effects directly.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Initialization")
 	void InitializeAttributesFromConfig(UAttributeConfigDataAsset* Config);
-	
+
+	UFUNCTION(BlueprintCallable, Category = "Stats|Helper")
+	FGameplayAttribute FindAttributeByTag(const FGameplayTag& Tag) const;
+
+
 	UFUNCTION(BlueprintCallable, Category = "Stats|Initialization")
 	void InitializeCurrentVitalsToMax();
 
@@ -68,29 +65,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Setup")
 	void SetOwnerCharacter(APHBaseCharacter* InOwner) {Owner = InOwner;}
 	
-	/* ============================= */
-	/* ===   Default Effects     === */
-	/* ============================= */
-	
-	/** Gameplay effect for initializing primary attributes (Strength, Intelligence, etc.) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Initialization")
-	TSubclassOf<UGameplayEffect> DefaultPrimaryAttributes;
-
-	/** Gameplay effect for initializing current secondary attributes (regen rates, resistances) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Initialization")
-	TSubclassOf<UGameplayEffect> DefaultSecondaryCurrentAttributes;
-
-	/** Gameplay effect for initializing max secondary attributes (MaxHealth, MaxMana) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Initialization")
-	TSubclassOf<UGameplayEffect> DefaultSecondaryMaxAttributes;
-
-	/** Gameplay effect for initializing vital attributes (Health, Mana, Stamina) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Initialization")
-	TSubclassOf<UGameplayEffect> DefaultVitalAttributes;
-
 	/** Optional: Data asset for more complex initialization */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Initialization")
 	TObjectPtr<UAttributeConfigDataAsset> AttributeConfig;
+
+	
 
 	
 	/* ============================= */
@@ -237,7 +216,7 @@ protected:
 	 */
 	bool ApplyInitializationEffect(
 		const TSubclassOf<UGameplayEffect>& EffectClass,
-		const TMap<FGameplayTag, float>& AttributeValues) const;
+		const TMap<FGameplayTag, float>& AttributeValues) ;
 
 	/**
 	 * Simple initialization - just applies the effect without SetByCaller.
@@ -258,6 +237,8 @@ protected:
 	/* ===   Internal Helpers    === */
 	/* ============================= */
 
+	
+
 	/** Create a dynamic instant gameplay effect for modifying attributes */
 	static UGameplayEffect* CreateModifierEffect(
 		const FGameplayAttribute& Attribute,
@@ -266,6 +247,8 @@ protected:
 
 	/** Validate that ASC is ready */
 	bool IsInitialized() const { return ASC != nullptr; }
+
+	
 
 	/**
 	 * Maintains a reference to the character that owns this stats manager.

@@ -1,6 +1,7 @@
 #include "Components/StatsManager.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
+#include "PHGameplayTags.h"
 #include "AbilitySystem/Data/AttributeConfigDataAsset.h"
 #include "Character/PHBaseCharacter.h"
 
@@ -55,69 +56,6 @@ void UStatsManager::Initialize()
 	UE_LOG(LogStatsManager, Log, TEXT("StatsManager initialized for %s"), *GetOwner()->GetName());
 }
 
-void UStatsManager::InitializeAttributes()
-{
-	if (!IsInitialized())
-	{
-		UE_LOG(LogStatsManager, Error, TEXT("Cannot initialize attributes - ASC not initialized"));
-		return;
-	}
-
-	UE_LOG(LogStatsManager, Log, TEXT("=== Initializing Attributes ==="));
-
-	// Apply in specific order: Primary -> Secondary Max -> Secondary Current -> Vitals
-	// This ensures dependencies are met (e.g., MaxHealth calculated before setting Health)
-
-	if (DefaultPrimaryAttributes)
-	{
-		if (ApplySimpleInitEffect(DefaultPrimaryAttributes))
-		{
-			UE_LOG(LogStatsManager, Log, TEXT("✓ Primary attributes initialized"));
-		}
-		else
-		{
-			UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to initialize primary attributes"));
-		}
-	}
-
-	if (DefaultSecondaryMaxAttributes)
-	{
-		if (ApplySimpleInitEffect(DefaultSecondaryMaxAttributes))
-		{
-			UE_LOG(LogStatsManager, Log, TEXT("✓ Secondary max attributes initialized"));
-		}
-		else
-		{
-			UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to initialize secondary max attributes"));
-		}
-	}
-
-	if (DefaultSecondaryCurrentAttributes)
-	{
-		if (ApplySimpleInitEffect(DefaultSecondaryCurrentAttributes))
-		{
-			UE_LOG(LogStatsManager, Log, TEXT("✓ Secondary current attributes initialized"));
-		}
-		else
-		{
-			UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to initialize secondary current attributes"));
-		}
-	}
-
-	if (DefaultVitalAttributes)
-	{
-		if (ApplySimpleInitEffect(DefaultVitalAttributes))
-		{
-			UE_LOG(LogStatsManager, Log, TEXT("✓ Vital attributes initialized"));
-		}
-		else
-		{
-			UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to initialize vital attributes"));
-		}
-	}
-
-	UE_LOG(LogStatsManager, Log, TEXT("=== Attribute Initialization Complete ==="));
-}
 
 
 void UStatsManager::InitializeAttributesFromConfig(UAttributeConfigDataAsset* Config)
@@ -128,119 +66,103 @@ void UStatsManager::InitializeAttributesFromConfig(UAttributeConfigDataAsset* Co
         return;
     }
 
-    UE_LOG(LogStatsManager, Log, TEXT("=== Initializing Attributes from Config ==="));
+    UE_LOG(LogStatsManager, Log, TEXT("=== Initializing Attributes ==="));
 
-    // Build value maps from config, filtered by category
-    TMap<FGameplayTag, float> PrimaryValues;
-    TMap<FGameplayTag, float> SecondaryMaxValues;
-    TMap<FGameplayTag, float> SecondaryCurrentValues;
-    TMap<FGameplayTag, float> VitalMaxValues;
-    TMap<FGameplayTag, float> VitalCurrentValues;
+    const UPHAttributeSet* AttributeSet = Cast<UPHAttributeSet>(
+        ASC->GetAttributeSet(UPHAttributeSet::StaticClass())
+    );
 
-    // Filter attributes by category
+    if (!AttributeSet)
+    {
+        UE_LOG(LogStatsManager, Error, TEXT("No AttributeSet found!"));
+        return;
+    }
+
+    UE_LOG(LogStatsManager, Warning, TEXT("Config has %d attributes"), Config->Attributes.Num());
+
+    int32 ProcessedCount = 0;
+    int32 SkippedCount = 0;
+    int32 SuccessCount = 0;
+    
     for (const FAttributeInitConfig& Attr : Config->Attributes)
     {
-        if (!Attr.bEnabled || !Attr.AttributeTag.IsValid())
+        ProcessedCount++;
+        
+        if (!Attr.bEnabled)
         {
+            UE_LOG(LogStatsManager, Warning, TEXT("Skipping disabled attribute: %s"), 
+                *Attr.AttributeTag.ToString());
+            SkippedCount++;
+            continue;
+        }
+        
+        if (!Attr.AttributeTag.IsValid())
+        {
+            UE_LOG(LogStatsManager, Warning, TEXT("Skipping attribute with invalid tag"));
+            SkippedCount++;
             continue;
         }
 
-        switch (Attr.Category)
+        FGameplayAttribute GameplayAttr = FindAttributeByTag(Attr.AttributeTag);
+        
+        if (GameplayAttr.IsValid())
         {
-            case EAttributeCategory::Primary:
-                PrimaryValues.Add(Attr.AttributeTag, Attr.DefaultValue);
-                break;
-
-            case EAttributeCategory::SecondaryMax:
-                SecondaryMaxValues.Add(Attr.AttributeTag, Attr.DefaultValue);
-                break;
-
-            case EAttributeCategory::SecondaryCurrent:
-                SecondaryCurrentValues.Add(Attr.AttributeTag, Attr.DefaultValue);
-                break;
-
-            case EAttributeCategory::VitalMax:
-                VitalMaxValues.Add(Attr.AttributeTag, Attr.DefaultValue);
-                break;
-
-            case EAttributeCategory::VitalCurrent:
-                VitalCurrentValues.Add(Attr.AttributeTag, Attr.DefaultValue);
-                break;
-
-            default:
-                UE_LOG(LogStatsManager, Warning, TEXT("Unknown category for attribute: %s"), 
-                    *Attr.AttributeTag.ToString());
-                break;
-        }
-    }
-
-    // === Apply Effects in Order ===
-
-    // 1. Primary Attributes (Strength, Intelligence, etc.)
-    if (DefaultPrimaryAttributes && PrimaryValues.Num() > 0)
-    {
-        if (ApplyInitializationEffect(DefaultPrimaryAttributes, PrimaryValues))
-        {
-            UE_LOG(LogStatsManager, Log, TEXT("✓ Primary attributes initialized (%d attributes)"), 
-                PrimaryValues.Num());
+            ASC->SetNumericAttributeBase(GameplayAttr, Attr.DefaultValue);
+            UE_LOG(LogStatsManager, Log, TEXT("✓ Set %s = %.2f"), 
+                *Attr.AttributeTag.ToString(), Attr.DefaultValue);
+            SuccessCount++;
         }
         else
         {
-            UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to apply %s"), 
-                *DefaultPrimaryAttributes->GetName());
+            UE_LOG(LogStatsManager, Warning, TEXT("No attribute found for tag: %s"), 
+                *Attr.AttributeTag.ToString());
         }
     }
 
-    // 2. Secondary Max Attributes (MaxHealth, MaxMana, etc.)
-    if (DefaultSecondaryMaxAttributes && SecondaryMaxValues.Num() > 0)
-    {
-        if (ApplyInitializationEffect(DefaultSecondaryMaxAttributes, SecondaryMaxValues))
-        {
-            UE_LOG(LogStatsManager, Log, TEXT("✓ Secondary max attributes initialized (%d attributes)"), 
-                SecondaryMaxValues.Num());
-        }
-        else
-        {
-            UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to apply %s"), 
-                *DefaultSecondaryMaxAttributes->GetName());
-        }
-    }
+    UE_LOG(LogStatsManager, Log, TEXT("Processed: %d, Skipped: %d, Success: %d"), 
+        ProcessedCount, SkippedCount, SuccessCount);
 
-    // 3. Secondary Current Attributes (regen rates, resistances, etc.)
-    if (DefaultSecondaryCurrentAttributes && SecondaryCurrentValues.Num() > 0)
-    {
-        if (ApplyInitializationEffect(DefaultSecondaryCurrentAttributes, SecondaryCurrentValues))
-        {
-            UE_LOG(LogStatsManager, Log, TEXT("✓ Secondary current attributes initialized (%d attributes)"), 
-                SecondaryCurrentValues.Num());
-        }
-        else
-        {
-            UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to apply %s"), 
-                *DefaultSecondaryCurrentAttributes->GetName());
-        }
-    }
 
-    // 4. Vital Max Attributes (sets the max values for Health/Mana/Stamina)
-    if (DefaultVitalAttributes && VitalMaxValues.Num() > 0)
+    UPHAttributeSet* MutableAttributeSet = const_cast<UPHAttributeSet*>(AttributeSet);
+    if (MutableAttributeSet)
     {
-        if (ApplyInitializationEffect(DefaultVitalAttributes, VitalMaxValues))
-        {
-            UE_LOG(LogStatsManager, Log, TEXT("✓ Vital max attributes initialized (%d attributes)"), 
-                VitalMaxValues.Num());
-            
-            // 5. Initialize current vitals to match max vitals
-            InitializeCurrentVitalsToMax();
-        }
-        else
-        {
-            UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to apply %s"), 
-                *DefaultVitalAttributes->GetName());
-        }
+        // Trigger reserve recalculations for all vitals
+        const float MaxHealth = AttributeSet->GetMaxHealth();
+        const float MaxMana = AttributeSet->GetMaxMana();
+        const float MaxStamina = AttributeSet->GetMaxStamina();
+        const float MaxShield = AttributeSet->GetMaxArcaneShield();
+        
+        // Set effective maxes (no reserves by default)
+        ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveHealthAttribute(), MaxHealth);
+        ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveManaAttribute(), MaxMana);
+        ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveStaminaAttribute(), MaxStamina);
+        ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveArcaneShieldAttribute(), MaxShield);
+    	
+        
+        UE_LOG(LogStatsManager, Log, TEXT("✓ Set effective maxes: Health=%d, Mana=%d, Stamina=%d, Shield=%d, HeathRegen=%d per%d"),
+            (int32)MaxHealth, (int32)MaxMana, (int32)MaxStamina, (int32)MaxShield,
+            (int32)AttributeSet->GetHealthRegenAmount(), (int32)AttributeSet->GetHealthRegenRate());
     }
 
     UE_LOG(LogStatsManager, Log, TEXT("=== Initialization Complete ==="));
 }
+
+
+
+FGameplayAttribute UStatsManager::FindAttributeByTag(const FGameplayTag& Tag) const
+{
+	// Use the pre-built map from PHGameplayTags
+	const FGameplayAttribute* Found = FPHGameplayTags::AllAttributesMap.Find(Tag.ToString());
+    
+	if (!Found)
+	{
+		UE_LOG(LogStatsManager, Verbose, TEXT("No attribute found for tag: %s"), *Tag.ToString());
+		return FGameplayAttribute();
+	}
+    
+	return *Found;
+}
+
 
 // New helper function to set current vitals to max
 void UStatsManager::InitializeCurrentVitalsToMax()
@@ -671,44 +593,73 @@ FActiveGameplayEffectHandle UStatsManager::ApplyGameplayEffectSpecToSelf(
 	return ASC->ApplyGameplayEffectSpecToSelf(Spec);
 }
 
-bool UStatsManager::ApplyInitializationEffect(const TSubclassOf<UGameplayEffect>& EffectClass,
-	const TMap<FGameplayTag, float>& AttributeValues) const
+bool UStatsManager::ApplyInitializationEffect(
+    const TSubclassOf<UGameplayEffect>& EffectClass,
+    const TMap<FGameplayTag, float>& AttributeValues)
 {
-	if (!IsInitialized() || !EffectClass)
-	{
-		return false;
-	}
+    if (!IsInitialized() || !EffectClass)
+    {
+        UE_LOG(LogStatsManager, Error, TEXT("Cannot apply init effect - ASC: %s, EffectClass: %s"),
+            ASC ? TEXT("Valid") : TEXT("NULL"),
+            EffectClass ? TEXT("Valid") : TEXT("NULL"));
+        return false;
+    }
 
-	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	Context.AddSourceObject(GetOwner());
+    FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+    Context.AddSourceObject(GetOwner());
 
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, Context);
-	
-	if (!SpecHandle.IsValid())
-	{
-		UE_LOG(LogStatsManager, Error, TEXT("Failed to create spec for %s"), 
-			*EffectClass->GetName());
-		return false;
-	}
+    FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, Context);
+    
+    if (!SpecHandle.IsValid())
+    {
+        UE_LOG(LogStatsManager, Error, TEXT("Failed to create spec for %s"), 
+            *EffectClass->GetName());
+        return false;
+    }
 
-	// Set all the SetByCaller magnitudes
-	for (const auto& Pair : AttributeValues)
-	{
-		SpecHandle.Data->SetSetByCallerMagnitude(Pair.Key, Pair.Value);
-		UE_LOG(LogStatsManager, Verbose, TEXT("  Set %s = %.2f"), 
-			*Pair.Key.ToString(), Pair.Value);
-	}
+    // Validate SpecHandle.Data before using it
+    if (!SpecHandle.Data.IsValid())
+    {
+        UE_LOG(LogStatsManager, Error, TEXT("SpecHandle.Data is invalid for %s"), 
+            *EffectClass->GetName());
+        return false;
+    }
 
-	FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
-	
-	if (!Handle.IsValid())
-	{
-		UE_LOG(LogStatsManager, Error, TEXT("Failed to apply effect %s"), 
-			*EffectClass->GetName());
-		return false;
-	}
+    // Set all the SetByCaller magnitudes
+    for (const auto& Pair : AttributeValues)
+    {
+        SpecHandle.Data->SetSetByCallerMagnitude(Pair.Key, Pair.Value);
+        UE_LOG(LogStatsManager, Verbose, TEXT("  Set %s = %.2f"), 
+            *Pair.Key.ToString(), Pair.Value);
+    }
 
-	return true;
+    // Final validation before applying
+    UE_LOG(LogStatsManager, Warning, TEXT("About to apply spec - ASC Valid: %s, SpecHandle Valid: %s"),
+        ASC ? TEXT("YES") : TEXT("NO"),
+        SpecHandle.IsValid() ? TEXT("YES") : TEXT("NO"));
+
+    // Store spec pointer to help compiler
+    FGameplayEffectSpec* Spec = SpecHandle.Data.Get();
+    if (!Spec)
+    {
+        UE_LOG(LogStatsManager, Error, TEXT("Spec pointer is null after Get()"));
+        return false;
+    }
+
+    // Apply the effect
+    FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(*Spec);
+    
+    if (!Handle.IsValid())
+    {
+        UE_LOG(LogStatsManager, Error, TEXT("Failed to apply effect %s"), 
+            *EffectClass->GetName());
+        return false;
+    }
+
+    UE_LOG(LogStatsManager, Log, TEXT("Successfully applied effect %s"), 
+        *EffectClass->GetName());
+
+    return true;
 }
 
 bool UStatsManager::ApplySimpleInitEffect(const TSubclassOf<UGameplayEffect>& EffectClass) const
