@@ -90,7 +90,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void ApplyItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character);
-	void ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, APHBaseCharacter* Character);
+	static void ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, APHBaseCharacter* Character);
 
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void RemoveItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character);

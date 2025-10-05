@@ -130,106 +130,148 @@ void UStatsManager::InitializeAttributesFromConfig(UAttributeConfigDataAsset* Co
 
     UE_LOG(LogStatsManager, Log, TEXT("=== Initializing Attributes from Config ==="));
 
-    // Build value maps from config
+    // Build value maps from config, filtered by category
     TMap<FGameplayTag, float> PrimaryValues;
     TMap<FGameplayTag, float> SecondaryMaxValues;
     TMap<FGameplayTag, float> SecondaryCurrentValues;
-    TMap<FGameplayTag, float> VitalValues;
+    TMap<FGameplayTag, float> VitalMaxValues;
+    TMap<FGameplayTag, float> VitalCurrentValues;
 
-    // Primary
-    for (const FAttributeInitConfig& Attr : Config->PrimaryAttributes)
+    // Filter attributes by category
+    for (const FAttributeInitConfig& Attr : Config->Attributes)
     {
-        if (Attr.bEnabled && Attr.AttributeTag.IsValid())
+        if (!Attr.bEnabled || !Attr.AttributeTag.IsValid())
         {
-            PrimaryValues.Add(Attr.AttributeTag, Attr.DefaultValue);
+            continue;
         }
-    }
 
-    // Secondary (split into Max vs Current if you have them separated in data;
-    // if your Config only has one Secondary array, you can branch by tag prefix or an enum in FAttributeInitConfig)
-    for (const FAttributeInitConfig& Attr : Config->SecondaryAttributes)
-    {
-        if (Attr.bEnabled && Attr.AttributeTag.IsValid())
+        switch (Attr.Category)
         {
-            // Example split by naming convention; adjust to your schema:
-            const FString TagStr = Attr.AttributeTag.ToString();
-            if (TagStr.Contains(TEXT(".Max")) || TagStr.EndsWith(TEXT("Max")))
-            {
+            case EAttributeCategory::Primary:
+                PrimaryValues.Add(Attr.AttributeTag, Attr.DefaultValue);
+                break;
+
+            case EAttributeCategory::SecondaryMax:
                 SecondaryMaxValues.Add(Attr.AttributeTag, Attr.DefaultValue);
-            }
-            else
-            {
+                break;
+
+            case EAttributeCategory::SecondaryCurrent:
                 SecondaryCurrentValues.Add(Attr.AttributeTag, Attr.DefaultValue);
-            }
+                break;
+
+            case EAttributeCategory::VitalMax:
+                VitalMaxValues.Add(Attr.AttributeTag, Attr.DefaultValue);
+                break;
+
+            case EAttributeCategory::VitalCurrent:
+                VitalCurrentValues.Add(Attr.AttributeTag, Attr.DefaultValue);
+                break;
+
+            default:
+                UE_LOG(LogStatsManager, Warning, TEXT("Unknown category for attribute: %s"), 
+                    *Attr.AttributeTag.ToString());
+                break;
         }
     }
 
-    // Vital (usually Max values live here)
-    for (const FAttributeInitConfig& Attr : Config->VitalAttributes)
-    {
-        if (Attr.bEnabled && Attr.AttributeTag.IsValid())
-        {
-            VitalValues.Add(Attr.AttributeTag, Attr.DefaultValue);
-        }
-    }
+    // === Apply Effects in Order ===
 
-    // --- Apply, using the correct path for each GE ---
-
-    // Primary (expects SetByCaller)
+    // 1. Primary Attributes (Strength, Intelligence, etc.)
     if (DefaultPrimaryAttributes && PrimaryValues.Num() > 0)
     {
-        if (!ApplyInitializationEffect(DefaultPrimaryAttributes, PrimaryValues))
+        if (ApplyInitializationEffect(DefaultPrimaryAttributes, PrimaryValues))
         {
-            UE_LOG(LogStatsManager, Error, TEXT("Failed to apply effect %s"), *DefaultPrimaryAttributes->GetName());
-        }
-    }
-
-    // Secondary Max (DO NOT use ApplySimpleInitEffect if this GE uses SetByCaller)
-    if (DefaultSecondaryMaxAttributes)
-    {
-        if (SecondaryMaxValues.Num() > 0)
-        {
-            if (!ApplyInitializationEffect(DefaultSecondaryMaxAttributes, SecondaryMaxValues))
-            {
-                UE_LOG(LogStatsManager, Error, TEXT("Failed to apply effect %s"), *DefaultSecondaryMaxAttributes->GetName());
-            }
+            UE_LOG(LogStatsManager, Log, TEXT("✓ Primary attributes initialized (%d attributes)"), 
+                PrimaryValues.Num());
         }
         else
         {
-            // Only safe to do this if the GE uses constants/curves (no SetByCaller)
-            if (!ApplySimpleInitEffect(DefaultSecondaryMaxAttributes))
-            {
-                UE_LOG(LogStatsManager, Error, TEXT("Failed to apply effect %s"), *DefaultSecondaryMaxAttributes->GetName());
-            }
+            UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to apply %s"), 
+                *DefaultPrimaryAttributes->GetName());
         }
     }
 
-    // Vital Max (expects SetByCaller)
-    if (DefaultVitalAttributes && VitalValues.Num() > 0)
+    // 2. Secondary Max Attributes (MaxHealth, MaxMana, etc.)
+    if (DefaultSecondaryMaxAttributes && SecondaryMaxValues.Num() > 0)
     {
-        if (!ApplyInitializationEffect(DefaultVitalAttributes, VitalValues))
+        if (ApplyInitializationEffect(DefaultSecondaryMaxAttributes, SecondaryMaxValues))
         {
-            UE_LOG(LogStatsManager, Error, TEXT("Failed to apply effect %s"), *DefaultVitalAttributes->GetName());
+            UE_LOG(LogStatsManager, Log, TEXT("✓ Secondary max attributes initialized (%d attributes)"), 
+                SecondaryMaxValues.Num());
         }
-
-        // (Optional) Snap current to max once on init — either via direct set or a tiny GE.
-        // If you prefer GE-based, build a map of Current tags = same values and apply another SetByCaller GE.
-        // Otherwise, do a one-time direct write in your AttributeSet/manager.
+        else
+        {
+            UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to apply %s"), 
+                *DefaultSecondaryMaxAttributes->GetName());
+        }
     }
 
-    // Secondary Current (expects SetByCaller)
+    // 3. Secondary Current Attributes (regen rates, resistances, etc.)
     if (DefaultSecondaryCurrentAttributes && SecondaryCurrentValues.Num() > 0)
     {
-        if (!ApplyInitializationEffect(DefaultSecondaryCurrentAttributes, SecondaryCurrentValues))
+        if (ApplyInitializationEffect(DefaultSecondaryCurrentAttributes, SecondaryCurrentValues))
         {
-            UE_LOG(LogStatsManager, Error, TEXT("Failed to apply effect %s"), *DefaultSecondaryCurrentAttributes->GetName());
+            UE_LOG(LogStatsManager, Log, TEXT("✓ Secondary current attributes initialized (%d attributes)"), 
+                SecondaryCurrentValues.Num());
+        }
+        else
+        {
+            UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to apply %s"), 
+                *DefaultSecondaryCurrentAttributes->GetName());
+        }
+    }
+
+    // 4. Vital Max Attributes (sets the max values for Health/Mana/Stamina)
+    if (DefaultVitalAttributes && VitalMaxValues.Num() > 0)
+    {
+        if (ApplyInitializationEffect(DefaultVitalAttributes, VitalMaxValues))
+        {
+            UE_LOG(LogStatsManager, Log, TEXT("✓ Vital max attributes initialized (%d attributes)"), 
+                VitalMaxValues.Num());
+            
+            // 5. Initialize current vitals to match max vitals
+            InitializeCurrentVitalsToMax();
+        }
+        else
+        {
+            UE_LOG(LogStatsManager, Error, TEXT("✗ Failed to apply %s"), 
+                *DefaultVitalAttributes->GetName());
         }
     }
 
     UE_LOG(LogStatsManager, Log, TEXT("=== Initialization Complete ==="));
 }
 
+// New helper function to set current vitals to max
+void UStatsManager::InitializeCurrentVitalsToMax()
+{
+    if (!IsInitialized() || !Owner)
+    {
+        return;
+    }
 
+    const UPHAttributeSet* AttributeSet = Cast<UPHAttributeSet>(
+	    ASC->GetAttributeSet(UPHAttributeSet::StaticClass())
+    );
+
+    if (!AttributeSet)
+    {
+        UE_LOG(LogStatsManager, Error, TEXT("Could not get AttributeSet to initialize vitals"));
+        return;
+    }
+
+    // Set current vitals to their max values
+    ASC->SetNumericAttributeBase(UPHAttributeSet::GetHealthAttribute(), 
+        AttributeSet->GetMaxHealth());
+    
+    ASC->SetNumericAttributeBase(UPHAttributeSet::GetManaAttribute(), 
+        AttributeSet->GetMaxMana());
+    
+    ASC->SetNumericAttributeBase(UPHAttributeSet::GetStaminaAttribute(), 
+        AttributeSet->GetMaxStamina());
+
+    UE_LOG(LogStatsManager, Log, TEXT("✓ Current vitals set to max values"));
+}
 /* ============================= */
 /* ===   Attribute Access    === */
 /* ============================= */

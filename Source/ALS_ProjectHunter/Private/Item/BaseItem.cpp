@@ -48,7 +48,7 @@ FIntPoint UBaseItem::GetDimensions() const
 	return ItemInfos.ItemInfo.Dimensions;
 }
 
-void UBaseItem::SetRotated(bool bNewRotated)
+void UBaseItem::SetRotated(const bool bNewRotated)
 {
 	if (ItemInfos.ItemInfo.Rotated != bNewRotated)
 	{
@@ -119,7 +119,7 @@ bool UBaseItem::AddQuantity(int32 InQty)
 	}
 }
 
-bool UBaseItem::RemoveQuantity(int32 InQty)
+bool UBaseItem::RemoveQuantity(const int32 InQty)
 {
 	if (InQty <= 0)
 	{
@@ -138,7 +138,7 @@ bool UBaseItem::RemoveQuantity(int32 InQty)
 	return true;
 }
 
-void UBaseItem::SetQuantity(int32 NewQty)
+void UBaseItem::SetQuantity(const int32 NewQty)
 {
 	if (NewQty < 0)
 	{

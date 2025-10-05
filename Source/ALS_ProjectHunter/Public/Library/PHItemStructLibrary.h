@@ -689,6 +689,9 @@ struct FItemBase: public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EItemSubType ItemSubType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FText BaseTypeName;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EItemRarity ItemRarity;

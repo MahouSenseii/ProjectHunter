@@ -412,7 +412,7 @@ EItemRarity UPHItemFunctionLibrary::DetermineWeaponRank(const int32 BaseRankPoin
 
 FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& ItemStats, const FItemInformation& ItemInfo)
 {
-	const FText UnknownAffixText = NSLOCTEXT("Item", "UnidentifiedAffix", "???");
+	const FText UnknownAffixText = NSLOCTEXT("Item", "Unidentified Affix", "???");
 	FItemInformation Result = ItemInfo;
 	const FPHAttributeData* HighestPrefix = nullptr;
 	const FPHAttributeData* HighestSuffix = nullptr;
@@ -462,7 +462,7 @@ FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& It
 	}
 
 	Result.ItemInfo.ItemName = FText::FromString(FullName);
-	return Result;
+	return ItemInfo;
 }
 
 

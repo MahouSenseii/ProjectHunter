@@ -51,6 +51,9 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Initialization")
 	void InitializeAttributesFromConfig(UAttributeConfigDataAsset* Config);
+	
+	UFUNCTION(BlueprintCallable, Category = "Stats|Initialization")
+	void InitializeCurrentVitalsToMax();
 
 	/** Set the ability system component */
 	UFUNCTION(BlueprintCallable, Category = "Stats")

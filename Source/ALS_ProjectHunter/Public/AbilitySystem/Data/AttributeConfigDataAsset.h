@@ -24,15 +24,9 @@ public:
 
     // All primary attributes (Strength, Intelligence, etc.)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Primary Attributes")
-    TArray<FAttributeInitConfig> PrimaryAttributes;
+    TArray<FAttributeInitConfig> Attributes;
     
-    // All secondary attributes (regen rates, resistances, etc.)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Secondary Attributes") 
-    TArray<FAttributeInitConfig> SecondaryAttributes;
-    
-    // All vital attributes (Health, Mana, Stamina)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vital Attributes")
-    TArray<FAttributeInitConfig> VitalAttributes;
+  
 
     // Helper function to find a specific attribute config
     UFUNCTION(BlueprintCallable, Category = "Attribute Config")

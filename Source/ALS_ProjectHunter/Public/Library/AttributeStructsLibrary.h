@@ -45,36 +45,42 @@ struct FPHAttributeInfo
 	float AttributeValue = 0.0f;
 };
 
+UENUM(BlueprintType)
+enum class EAttributeCategory : uint8
+{
+	Primary,
+	SecondaryMax,
+	SecondaryCurrent,
+	VitalMax,
+	VitalCurrent
+};
+
 USTRUCT(BlueprintType)
 struct FAttributeInitConfig
 {
 	GENERATED_BODY()
 
-	// The gameplay tag that identifies this attribute
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Classification")
+	EAttributeCategory Category = EAttributeCategory::Primary;
+    
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute")
 	FGameplayTag AttributeTag;
-	
-	// Default value for this attribute
+    
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute")
 	float DefaultValue = 0.0f;
-	
-	// Minimum allowed value (for clamping)
+    
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Validation")
 	float MinValue = -9999.0f;
-	
-	// Maximum allowed value (for clamping)
+    
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Validation")
 	float MaxValue = 9999.0f;
-	
-	// Display name for debugging/logging
+    
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FString DisplayName;
-	
-	// Optional description
+    
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FString Description;
 
-	// Whether this attribute should be validated/applied
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Validation")
 	bool bEnabled = true;
 };
