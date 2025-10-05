@@ -14,7 +14,7 @@ UItemInstanceObject::UItemInstanceObject()
 /* ===      Public API       === */
 /* ============================= */
 
-const FItemInformation& UItemInstanceObject::GetItemInfo() const
+ UItemDefinitionAsset*& UItemInstanceObject::GetItemInfo() 
 {
     if (!bCacheValid)
     {
@@ -23,12 +23,12 @@ const FItemInformation& UItemInstanceObject::GetItemInfo() const
     return ItemInfoView;
 }
 
-void UItemInstanceObject::SetItemInfo(const FItemInformation& NewItemInfo)
+void UItemInstanceObject::SetItemInfo( UItemDefinitionAsset*& NewItemInfo)
 {
     Super::SetItemInfo(NewItemInfo);
 }
 
-bool UItemInstanceObject::ValidateItemData() const
+bool UItemInstanceObject::ValidateItemData() 
 {
     return Super::ValidateItemData();
 }
@@ -48,16 +48,16 @@ void UItemInstanceObject::RebuildItemInfoView() const
         ItemInfoView = LoadedAsset->GetBaseItemInfo();
         
         // Apply instance-specific overrides to ItemData
-        ItemInfoView.ItemData.Durability.CurrentDurability = Instance.Durability.CurrentDurability;
-        ItemInfoView.ItemData.Durability.MaxDurability = Instance.Durability.MaxDurability;
+        ItemInfoView->Equip.Durability.CurrentDurability = Instance.Durability.CurrentDurability;
+        ItemInfoView->Equip.Durability.MaxDurability = Instance.Durability.MaxDurability;
         
         // Override ItemInfo rarity with instance rarity
-        ItemInfoView.ItemInfo.ItemRarity = Instance.Rarity;
+        ItemInfoView->Base.ItemRarity = Instance.Rarity;
         
         // Use instance display name if set, otherwise use base name
         if (!Instance.DisplayName.IsEmpty())
         {
-            ItemInfoView.ItemInfo.ItemName = Instance.DisplayName;
+            ItemInfoView->Base.ItemName = Instance.DisplayName;
         }
         
         // Note: Quantity and Rotated remain in ItemInfoView.ItemInfo and are maintained there
@@ -82,20 +82,20 @@ void UItemInstanceObject::InitializeFromDefinition(UItemDefinitionAsset* Definit
     BaseDef = Definition;
     
     // Initialize instance data from definition defaults
-    const FItemInformation& BaseInfo = Definition->GetBaseItemInfo();
+     UItemDefinitionAsset*& BaseInfo = Definition;
     
     // FItemInstance properties (rolled/runtime data)
     Instance.ItemLevel = 1;
-    Instance.Rarity = BaseInfo.ItemInfo.ItemRarity;
+    Instance.Rarity = BaseInfo->Base.ItemRarity;
     Instance.bIdentified = true;
-    Instance.DisplayName = BaseInfo.ItemInfo.ItemName;
+    Instance.DisplayName = BaseInfo->Base.ItemName;
     Instance.Seed = FMath::Rand();
     
     // Initialize durability if the item has durability
-    if (BaseInfo.ItemData.Durability.MaxDurability > 0.0f)
+    if (BaseInfo->Equip.Durability.MaxDurability > 0.0f)
     {
-        Instance.Durability.CurrentDurability = BaseInfo.ItemData.Durability.MaxDurability;
-        Instance.Durability.MaxDurability = BaseInfo.ItemData.Durability.MaxDurability;
+        Instance.Durability.CurrentDurability = BaseInfo->Equip.Durability.MaxDurability;
+        Instance.Durability.MaxDurability = BaseInfo->Equip.Durability.MaxDurability;
     }
     
     SetIsInitialized(true);
@@ -107,9 +107,9 @@ void UItemInstanceObject::InitializeFromDefinition(UItemDefinitionAsset* Definit
 /* ===    Quantity Control   === */
 /* ============================= */
 
-int32 UItemInstanceObject::GetQuantity() const
+int32 UItemInstanceObject::GetQuantity() 
 {
-    return GetItemInfo().ItemInfo.Quantity;
+    return GetItemInfo()->Base.Quantity;
 }
 
 void UItemInstanceObject::SetQuantity(int32 NewQuantity)
@@ -120,11 +120,11 @@ void UItemInstanceObject::SetQuantity(int32 NewQuantity)
     }
 
     // Get the current cached view
-    const FItemInformation& CurrentInfo = GetItemInfo();
-    if (CurrentInfo.ItemInfo.Quantity != NewQuantity)
+    const UItemDefinitionAsset* CurrentInfo = GetItemInfo();
+    if (CurrentInfo->Base.Quantity != NewQuantity)
     {
         // We need to modify the cache since quantity is in ItemInfoView, not Instance
-        const_cast<FItemBase&>(ItemInfoView.ItemInfo).Quantity = NewQuantity;
+        const_cast<FItemBase&>(ItemInfoView->Base).Quantity = NewQuantity;
         NotifyInstanceChanged(EItemChangeType::Quantity);
     }
     
@@ -219,11 +219,11 @@ bool UItemInstanceObject::RepairDurability(float RepairAmount)
 
 void UItemInstanceObject::SetRotated(bool bNewRotated)
 {
-    const FItemInformation& CurrentInfo = GetItemInfo();
-    if (CurrentInfo.ItemInfo.Rotated != bNewRotated)
+     UItemDefinitionAsset*& CurrentInfo = GetItemInfo();
+    if (CurrentInfo->Base.Rotated != bNewRotated)
     {
         // Modify the cached view since rotation is in ItemInfoView, not Instance
-        const_cast<FItemBase&>(ItemInfoView.ItemInfo).Rotated = bNewRotated;
+        const_cast<FItemBase&>(ItemInfoView->Base).Rotated = bNewRotated;
         NotifyInstanceChanged(EItemChangeType::Rotation);
     }
 }
@@ -298,7 +298,7 @@ bool UItemInstanceObject::ValidateQuantityChange(int32 NewQuantity) const
     // Check against max stack size if defined
     if (UItemDefinitionAsset* LoadedAsset = BaseDef.LoadSynchronous())
     {
-        const int32 MaxStack = LoadedAsset->GetBaseItemInfo().ItemInfo.MaxStackSize;
+        const int32 MaxStack = LoadedAsset->GetBaseItemInfo()->Base.MaxStackSize;
         if (MaxStack > 0 && NewQuantity > MaxStack)
         {
             UE_LOG(LogItemInstance, Warning, TEXT("Quantity %d exceeds max stack size %d"), NewQuantity, MaxStack);

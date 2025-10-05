@@ -55,7 +55,7 @@ void UItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPoint
         OnRemoved.Broadcast(ItemObject);     // Let grid know it's being moved
         RemoveFromParent();                  // Remove from canvas
 
-        UE_LOG(LogTemp, Log, TEXT("NativeOnDragDetected: Drag operation started for %s"), *ItemObject->GetItemInfo().ItemInfo.ItemName.ToString());
+        UE_LOG(LogTemp, Log, TEXT("NativeOnDragDetected: Drag operation started for %s"), *ItemObject->GetItemInfo()->Base.ItemName.ToString());
     }
     else
     {
@@ -170,11 +170,11 @@ void UItemWidget::Refresh()
     UMaterialInstance* MaterialInstance;
     if (ItemObject->IsRotated())
     {
-        MaterialInstance = ItemObject->GetItemInfo().ItemInfo.ItemImageRotated;
+        MaterialInstance = ItemObject->GetItemInfo()->Base.ItemImageRotated;
     }
     else
     {
-        MaterialInstance = ItemObject->GetItemInfo().ItemInfo.ItemImage;
+        MaterialInstance = ItemObject->GetItemInfo()->Base.ItemImage;
     }
 
     if (MaterialInstance)
@@ -232,8 +232,8 @@ void UItemWidget::CreateToolTip()
 
     TSubclassOf<UUserWidget> TooltipClassToUse = nullptr;
 
-    const auto& ItemInfo = ItemObject->GetItemInfo().ItemInfo;
-    switch (ItemInfo.ItemType)
+    UItemDefinitionAsset* ItemInfo = ItemObject->GetItemInfo();
+    switch (ItemInfo->Base.ItemType)
     {
         case EItemType::IT_Armor:
         case EItemType::IT_Weapon:
@@ -270,7 +270,7 @@ void UItemWidget::CreateToolTip()
         const float Width = GetTooltipWidth();
         const float Height = GetTooltipHeight();
         Cast<UEquippableToolTip>(CurrentToolTip)->StatsBox->GetRequirementsBox()->SetItemRequirements(
-            ItemObject->GetItemInfo().ItemData,OwnerCharacter);
+            ItemObject->GetItemInfo()->Equip,OwnerCharacter);
         SetToolTip(NewToolTip);
         NewToolTip->SetDesiredSizeInViewport(FVector2D(Width, Height));
         NewToolTip->SetPositionInViewport(DesiredPosition);

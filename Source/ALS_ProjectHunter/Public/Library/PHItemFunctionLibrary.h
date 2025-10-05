@@ -34,12 +34,12 @@ public:
 
 	
 	UFUNCTION(BlueprintCallable, Category = "Checker")
-	static bool AreItemSlotsEqual(FItemInformation FirstItem, FItemInformation SecondItem);
-	static UBaseItem* GetItemInformation(FItemInformation ItemInfo, FConsumableItemData ConsumableItemData);
+	static bool AreItemSlotsEqual(UItemDefinitionAsset* FirstItem, UItemDefinitionAsset* SecondItem);
+	static UBaseItem* GetItemInformation(UItemDefinitionAsset* ItemInfo, FConsumableItemData ConsumableItemData);
 
-	static UEquippableItem* CreateEquippableItem(const FItemInformation& ItemInfo);
+	static UEquippableItem* CreateEquippableItem(UItemDefinitionAsset*& ItemInfo);
 
-	static UConsumableItem* CreateConsumableItem(const FItemInformation& ItemInfo);
+	static UConsumableItem* CreateConsumableItem( UItemDefinitionAsset*& ItemInfo);
 
 	UFUNCTION(BlueprintCallable, Category = "Damage Calculation")
 	static TMap<FString, int> CalculateTotalDamage(int MinDamage, int MaxDamage, const APHBaseCharacter* Actor);
@@ -51,7 +51,7 @@ public:
 	static FPHItemStats GenerateStats(const UDataTable* StatsThatCanBeGenerated);
 	static int32 GetRankPointsValue(ERankPoints Rank);
 	static EItemRarity DetermineWeaponRank(int32 BaseRankPoints, const FPHItemStats& Stats);
-	static FItemInformation GenerateItemName(const FPHItemStats& ItemStats, const FItemInformation& ItemInfo);
+	static UItemDefinitionAsset* GenerateItemName(const FPHItemStats& ItemStats,  UItemDefinitionAsset*& ItemInfo);
 	static void RerollModifiers(UEquippableItem* Item, const UDataTable* ModPool, bool bRerollPrefixes, bool bRerollSuffixes,
 	                            const TArray<FGuid>& LockedModifiers);
 	static FPHAttributeData RollSingleMod(const UDataTable* ModPool, bool bIsPrefix);
@@ -66,5 +66,5 @@ public:
 
 
 	UFUNCTION(BlueprintPure, Category = "Item Information")
-	static bool IsItemInformationValid(const FItemInformation& ItemInformation);
+	static bool IsItemInformationValid(const UItemDefinitionAsset* ItemInformation);
 };

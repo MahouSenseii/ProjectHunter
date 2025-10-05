@@ -45,9 +45,9 @@ void AEquippedObject::PostInitializeComponents()
     CurrentDurability = MaxDurability;
     
     // Set static mesh if available
-    if (StaticMesh && ItemInfo.ItemInfo.StaticMesh)
+    if (StaticMesh && ItemInfo->Base.StaticMesh)
     {
-        StaticMesh->SetStaticMesh(ItemInfo.ItemInfo.StaticMesh);
+        StaticMesh->SetStaticMesh(ItemInfo->Base.StaticMesh);
     }
 }
 
@@ -142,13 +142,13 @@ bool AEquippedObject::CanBeEquippedBy_Implementation(AActor* Actor) const
 FName AEquippedObject::GetAttachmentSocket_Implementation() const
 {
     // Check if item has a specific socket defined
-    if (!ItemInfo.ItemInfo.AttachmentSocket.IsNone())
+    if (!ItemInfo->Base.AttachmentSocket.IsNone())
     {
-        return ItemInfo.ItemInfo.AttachmentSocket;
+        return ItemInfo->Base.AttachmentSocket;
     }
     
     // Return default socket based on item type
-    switch (ItemInfo.ItemInfo.ItemType)
+    switch (ItemInfo->Base.ItemType)
     {
         case EItemType::IT_Weapon:
             return DefaultAttachmentSocket;
@@ -161,7 +161,7 @@ FName AEquippedObject::GetAttachmentSocket_Implementation() const
     }
 }
 
-FItemInformation AEquippedObject::GetEquippableItemInfo_Implementation() const
+ UItemDefinitionAsset* AEquippedObject::GetEquippableItemInfo_Implementation() const
 {
     return ItemInfo;
 }
@@ -207,12 +207,12 @@ void AEquippedObject::RemoveStatsFromOwner_Implementation(AActor* RefOwner)
 
 EEquipmentSlot AEquippedObject::GetEquipmentSlot_Implementation() const
 {
-    return ItemInfo.ItemInfo.EquipmentSlot;
+    return ItemInfo->Base.EquipmentSlot;
 }
 
 // === Setters with Validation ===
 
-bool AEquippedObject::SetItemInfo(const FItemInformation& Info)
+bool AEquippedObject::SetItemInfo(UItemDefinitionAsset*& Info)
 {
     FString ErrorMsg;
     if (!ValidateItemInfo(Info, ErrorMsg))
@@ -221,13 +221,13 @@ bool AEquippedObject::SetItemInfo(const FItemInformation& Info)
         return false;
     }
     
-    FItemInformation OldInfo = ItemInfo;
+    UItemDefinitionAsset*& OldInfo = ItemInfo;
     ItemInfo = Info;
     
     // Update mesh if needed
-    if (StaticMesh && ItemInfo.ItemInfo.StaticMesh)
+    if (StaticMesh && ItemInfo->Base.StaticMesh)
     {
-        StaticMesh->SetStaticMesh(ItemInfo.ItemInfo.StaticMesh);
+        StaticMesh->SetStaticMesh(ItemInfo->Base.StaticMesh);
     }
     
     // Broadcast change event
@@ -238,12 +238,12 @@ bool AEquippedObject::SetItemInfo(const FItemInformation& Info)
 
 void AEquippedObject::SetItemInfoRotated(bool bRotated)
 {
-    ItemInfo.ItemInfo.Rotated = bRotated;
+    ItemInfo->Base.Rotated = bRotated;
 }
 
 void AEquippedObject::SetMesh(UStaticMesh* Mesh) const
 {
-    ItemInfo.ItemInfo.StaticMesh = Mesh;
+    ItemInfo->Base.StaticMesh = Mesh;
 }
 
 UCombatManager* AEquippedObject::ConvertActorToCombatManager(const AActor* InActor)
@@ -309,29 +309,29 @@ bool AEquippedObject::SetMesh(UStaticMesh* Mesh)
 
 // === Validation Functions ===
 
-bool AEquippedObject::ValidateItemInfo(const FItemInformation& Info, FString& OutError) const
+bool AEquippedObject::ValidateItemInfo( UItemDefinitionAsset*& Info, FString& OutError) const
 {
-    if (Info.ItemInfo.ItemName.IsEmpty())
+    if (Info->Base.ItemName.IsEmpty())
     {
         OutError = TEXT("Item name cannot be empty");
         return false;
     }
     
-    if (Info.ItemInfo.Dimensions.X <= 0 || Info.ItemInfo.Dimensions.Y <= 0)
+    if (Info->Base.Dimensions.X <= 0 || Info->Base.Dimensions.Y <= 0)
     {
         OutError = FString::Printf(TEXT("Invalid dimensions: %dx%d"), 
-                                   Info.ItemInfo.Dimensions.X, 
-                                   Info.ItemInfo.Dimensions.Y);
+                                   Info->Base.Dimensions.X, 
+                                   Info->Base.Dimensions.Y);
         return false;
     }
     
-    if (!Info.ItemInfo.ItemImage && !Info.ItemInfo.StaticMesh)
+    if (!Info->Base.ItemImage && !Info->Base.StaticMesh)
     {
         OutError = TEXT("Item must have either an icon or a mesh");
         return false;
     }
     
-    if (Info.ItemInfo.MaxStackSize < 0)
+    if (Info->Base.MaxStackSize < 0)
     {
         OutError = TEXT("Max stack size cannot be negative");
         return false;
@@ -343,7 +343,7 @@ bool AEquippedObject::ValidateItemInfo(const FItemInformation& Info, FString& Ou
 
 bool AEquippedObject::IsValidForEquipping() const
 {
-    return !IsBroken() && !ItemInfo.ItemInfo.ItemName.IsEmpty();
+    return !IsBroken() && !ItemInfo->Base.ItemName.IsEmpty();
 }
 
 // === Pooling Support ===
@@ -373,7 +373,7 @@ void AEquippedObject::ResetForPool()
     }
 }
 
-void AEquippedObject::InitializeFromPool(const FItemInformation& Info)
+void AEquippedObject::InitializeFromPool(UItemDefinitionAsset*& Info)
 {
     // Set new item info
     SetItemInfo(Info);

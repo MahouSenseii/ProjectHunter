@@ -1030,10 +1030,6 @@ struct FSpawnableItemRow_DA : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSoftObjectPtr<UItemDefinitionAsset> BaseDef;
 
-	// (Optional) override pickup class; if unset we'll use Def->Base.PickupClass
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TSubclassOf<class AItemPickup> OverridePickupClass = nullptr;
-
 	// (Optional) per-entry notes
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString Notes;

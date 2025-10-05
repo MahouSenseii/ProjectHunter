@@ -114,9 +114,9 @@ public:
 	
 
 	// Helper Functions
-	static bool AreItemsStackable(const UBaseItem* A, const UBaseItem* B);
-	static bool CanStackItems(const UBaseItem* ExistingItem, const UBaseItem* NewItem);
-	TArray<FTile> GetOccupiedTilesForItem(const UBaseItem* Item) const;
+	static bool AreItemsStackable( UBaseItem* A,  UBaseItem* B);
+	static bool CanStackItems( UBaseItem* ExistingItem,  UBaseItem* NewItem);
+	TArray<FTile> GetOccupiedTilesForItem( UBaseItem* Item) const;
 
 	UFUNCTION(BlueprintCallable, Category="Stacking")
 	bool CanStackItemInstances(class UItemInstanceObject* A, class UItemInstanceObject* B) const;

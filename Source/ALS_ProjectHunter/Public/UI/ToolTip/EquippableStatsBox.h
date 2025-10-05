@@ -6,6 +6,7 @@
 #include "MinMaxBox.h"
 #include "RequirementsBox.h"
 #include "Components/VerticalBox.h"
+#include "Item/Data/UItemDefinitionAsset.h"
 #include "Library/PHItemStructLibrary.h"
 #include "UI/Widgets/PHUserWidget.h"
 #include "EquippableStatsBox.generated.h"
@@ -30,11 +31,11 @@ public:
 
 	/** Sets the item this widget should display stats for */
 	UFUNCTION(BlueprintCallable)
-	void SetEquippableItem(const FEquippableItemData Item) { ItemData.ItemData = Item; }
+	void SetEquippableItem(const FEquippableItemData Item);
 
 	
 	UFUNCTION(BlueprintCallable)
-	FEquippableItemData GetEquippableItem() { return  ItemData.ItemData;}
+	FEquippableItemData GetEquippableItem() { return  ItemData->Equip;}
 
 	/** Generates elemental damage min-max boxes */
 	UFUNCTION(BlueprintCallable)
@@ -48,13 +49,13 @@ public:
 	URequirementsBox* GetRequirementsBox() const { return RequirementsBox;}
 
 	UFUNCTION(BlueprintCallable)
-	void SetItemData(const FItemInformation InData) { ItemData = InData;}
+	void SetItemData(UItemDefinitionAsset*& InData) { ItemData = InData;}
 
 protected:
 
 	/** The equippable item to display */
 	UPROPERTY(EditAnywhere, Category = "Item")
-	FItemInformation ItemData;
+	TObjectPtr<UItemDefinitionAsset> ItemData;
 
 	/** Widget class used for each elemental MinMaxBox */
 	UPROPERTY(EditAnywhere, Category = "Class")

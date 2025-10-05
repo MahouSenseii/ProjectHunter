@@ -12,20 +12,25 @@ void UEquippableStatsBox::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if(ItemData.ItemInfo.IsValid())
+	if(ItemData->Base.IsValid())
 	{
-		RequirementsBox->ItemData = ItemData.ItemData;
+		RequirementsBox->ItemData = ItemData->Equip;
 	}
 
 	MinMaxBoxClass = UMinMaxBox::StaticClass();
 }
 
+void UEquippableStatsBox::SetEquippableItem(const FEquippableItemData Item)
+{
+	ItemData->Equip = Item; 
+}
+
 void UEquippableStatsBox::CreateMinMaxBoxByDamageTypes()
 {
-	if (!ItemData.IsValid()) return;
+	if (!ItemData->Base.IsValid()) return;
 	check(MinMaxBoxClass);
 
-	const TMap<EDamageTypes, FDamageRange>& DamageMap = ItemData.ItemData.WeaponBaseStats.BaseDamage;
+	const TMap<EDamageTypes, FDamageRange>& DamageMap = ItemData->Equip.WeaponBaseStats.BaseDamage;
 	bool bHasElementalDamage = false;
 
 	// Handle Physical Damage
@@ -109,7 +114,7 @@ void UEquippableStatsBox::CreateMinMaxBoxByDamageTypes()
 
 void UEquippableStatsBox::SetMinMaxForOtherStats() const
 {
-	if (!ItemData.ItemInfo.PickupClass) return;
+	if (!ItemData->Base.PickupClass) return;
 
 	// Helper: Show/hide box based on value, with optional percent display
 	auto SetStatRow = [](UHorizontalBox* Box, UTextBlock* TextBlock, float Value, bool bAsPercent = false)
@@ -153,7 +158,7 @@ void UEquippableStatsBox::SetMinMaxForOtherStats() const
 			}
 		};
 
-		const FPHItemStats& Affixes = ItemData.ItemData.Affixes;
+		const FPHItemStats& Affixes = ItemData->Equip.Affixes;
 		Accumulate(Affixes.Prefixes);
 		Accumulate(Affixes.Suffixes);
 		Accumulate(Affixes.Implicits);
@@ -163,14 +168,14 @@ void UEquippableStatsBox::SetMinMaxForOtherStats() const
 	};
 
 	// Final values = Base + Modifiers
-	const float FinalArmor        = ItemData.ItemData.ArmorBaseStats.Armor + GetStatModifierFromAffixes(UPHAttributeSet::GetArmourAttribute());
-	const float FinalPoise        = ItemData.ItemData.ArmorBaseStats.Poise + GetStatModifierFromAffixes(UPHAttributeSet::GetPoiseAttribute());
-	const float FinalCritChance   = ItemData.ItemData.WeaponBaseStats.CritChance + GetStatModifierFromAffixes(UPHAttributeSet::GetCritChanceAttribute());
-	const float FinalAttackSpeed  = ItemData.ItemData.WeaponBaseStats.AttackSpeed + GetStatModifierFromAffixes(UPHAttributeSet::GetAttackSpeedAttribute());
+	const float FinalArmor        = ItemData->Equip.ArmorBaseStats.Armor + GetStatModifierFromAffixes(UPHAttributeSet::GetArmourAttribute());
+	const float FinalPoise        = ItemData->Equip.ArmorBaseStats.Poise + GetStatModifierFromAffixes(UPHAttributeSet::GetPoiseAttribute());
+	const float FinalCritChance   = ItemData->Equip.WeaponBaseStats.CritChance + GetStatModifierFromAffixes(UPHAttributeSet::GetCritChanceAttribute());
+	const float FinalAttackSpeed  = ItemData->Equip.WeaponBaseStats.AttackSpeed + GetStatModifierFromAffixes(UPHAttributeSet::GetAttackSpeedAttribute());
 	const float FinalCastTime     = GetStatModifierFromAffixes(UPHAttributeSet::GetCastSpeedAttribute());
 	const float FinalManaCost     = GetStatModifierFromAffixes(UPHAttributeSet::GetManaCostChangesAttribute());
 	const float FinalStaminaCost  = GetStatModifierFromAffixes(UPHAttributeSet::GetStaminaCostChangesAttribute());
-	const float FinalWeaponRange  = ItemData.ItemData.WeaponBaseStats.WeaponRange + GetStatModifierFromAffixes(UPHAttributeSet::GetAttackRangeAttribute());
+	const float FinalWeaponRange  = ItemData->Equip.WeaponBaseStats.WeaponRange + GetStatModifierFromAffixes(UPHAttributeSet::GetAttackRangeAttribute());
 
 	// Apply to UI
 	SetStatRow(ArmourBox,      ArmourValue,      FinalArmor,false);
@@ -194,7 +199,7 @@ void UEquippableStatsBox::CreateResistanceBoxes()
 
 	bool bHasAnyResistance = false;
 
-	for (const TPair<EDefenseTypes, float>& Pair : ItemData.ItemData.ArmorBaseStats.Resistances)
+	for (const TPair<EDefenseTypes, float>& Pair : ItemData->Equip.ArmorBaseStats.Resistances)
 	{
 		if (FMath::IsNearlyZero(Pair.Value)) continue;
 

@@ -51,7 +51,7 @@ private:
 	TObjectPtr<UBaseItem>ItemObj;
 
 	UPROPERTY()
-	FItemInformation SlotData;
+	UItemDefinitionAsset* SlotData;
 public:
 
 

@@ -182,7 +182,7 @@ bool UInventoryManager::TryStackItem(UBaseItem* Item)
 {
 	if (!Item->IsStackable()) return false;
 
-	const FName ItemID = Item->GetItemInfo().ItemInfo.ItemID;
+	const FName ItemID = Item->GetItemInfo()->Base.ItemID;
 	
 	// Find stackable items with matching ID
 	// Note: This iterates through all items, but for typical inventory sizes (100-200 items)
@@ -190,7 +190,7 @@ bool UInventoryManager::TryStackItem(UBaseItem* Item)
 	for (const auto& Pair : TopLeftItemMap)
 	{
 		UBaseItem* ExistingItem = Pair.Value;
-		if (IsValid(ExistingItem) && ExistingItem->GetItemInfo().ItemInfo.ItemID == ItemID)
+		if (IsValid(ExistingItem) && ExistingItem->GetItemInfo()->Base.ItemID == ItemID)
 		{
 			if (CanStackItems(ExistingItem, Item))
 			{
@@ -323,7 +323,7 @@ bool UInventoryManager::DropItemFromInventory(UBaseItem* Item)
 	}
 
 	// Validate pickup class
-	if (!Item->GetItemInfo().ItemInfo.PickupClass)
+	if (!Item->GetItemInfo()->Base.PickupClass)
 	{
 		UE_LOG(LogInventoryManager, Warning, TEXT("DropItemFromInventory: Item has no pickup class."));
 		return false;
@@ -344,29 +344,29 @@ bool UInventoryManager::DropItemFromInventory(UBaseItem* Item)
 
 
 	AItemPickup* CreatedPickup;
-	const EItemType ItemType = Item->GetItemInfo().ItemInfo.ItemType;
+	const EItemType ItemType = Item->GetItemInfo()->Base.ItemType;
 
 	switch (ItemType)
 	{
 	case EItemType::IT_Weapon:
 		CreatedPickup = World->SpawnActor<AWeaponPickup>(
-			Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+			Item->GetItemInfo()->Base.PickupClass, DropLocation, DropRotation, SpawnParams);
 		break;
 
 	case EItemType::IT_Armor:
 	case EItemType::IT_Shield:
 		CreatedPickup = World->SpawnActor<AEquipmentPickup>(
-			Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+			Item->GetItemInfo()->Base.PickupClass, DropLocation, DropRotation, SpawnParams);
 		break;
 
 	case EItemType::IT_Consumable:
 		CreatedPickup = World->SpawnActor<AConsumablePickup>(
-			Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+			Item->GetItemInfo()->Base.PickupClass, DropLocation, DropRotation, SpawnParams);
 		break;
 
 	default:
 		CreatedPickup = World->SpawnActor<AItemPickup>(
-			Item->GetItemInfo().ItemInfo.PickupClass, DropLocation, DropRotation, SpawnParams);
+			Item->GetItemInfo()->Base.PickupClass, DropLocation, DropRotation, SpawnParams);
 		break;
 	}
 
@@ -374,7 +374,7 @@ bool UInventoryManager::DropItemFromInventory(UBaseItem* Item)
 	{
 		// Configure the pickup
 		CreatedPickup->ItemInfo = Item->GetItemInfo();
-		CreatedPickup->SetNewMesh(Item->GetItemInfo().ItemInfo.StaticMesh);
+		CreatedPickup->SetNewMesh(Item->GetItemInfo()->Base.StaticMesh);
 		CreatedPickup->SetupMesh();
 
 		// Handle special cases
@@ -395,7 +395,7 @@ bool UInventoryManager::DropItemFromInventory(UBaseItem* Item)
 	}
 
 	UE_LOG(LogInventoryManager, Error, TEXT("Failed to spawn pickup for item %s"), 
-		*Item->GetItemInfo().ItemInfo.ItemName.ToString());
+		*Item->GetItemInfo()->Base.ItemName.ToString());
 	return false;
 }
 
@@ -446,20 +446,20 @@ bool UInventoryManager::IsTileValid(const FTile& Tile) const
 /* ===    Helper Functions   === */
 /* ============================= */
 
-bool UInventoryManager::AreItemsStackable(const UBaseItem* A, const UBaseItem* B)
+bool UInventoryManager::AreItemsStackable( UBaseItem* A,  UBaseItem* B)
 {
 	if (!A || !B) return false;
 	
 	return A->IsStackable() && 
 		   B->IsStackable() && 
-		   A->GetItemInfo().ItemInfo.ItemID == B->GetItemInfo().ItemInfo.ItemID;
+		   A->GetItemInfo()->Base.ItemID == B->GetItemInfo()->Base.ItemID;
 }
 
-bool UInventoryManager::CanStackItems(const UBaseItem* ExistingItem, const UBaseItem* NewItem)
+bool UInventoryManager::CanStackItems( UBaseItem* ExistingItem,  UBaseItem* NewItem)
 {
 	if (!AreItemsStackable(ExistingItem, NewItem)) return false;
 	
-	const int32 MaxStack = ExistingItem->GetItemInfo().ItemInfo.MaxStackSize;
+	const int32 MaxStack = ExistingItem->GetItemInfo()->Base.MaxStackSize;
 	if (MaxStack <= 0) return true; // No limit
 	
 	const int32 CurrentQty = ExistingItem->GetQuantity();
@@ -468,7 +468,7 @@ bool UInventoryManager::CanStackItems(const UBaseItem* ExistingItem, const UBase
 	return (CurrentQty + NewQty) <= MaxStack;
 }
 
-TArray<FTile> UInventoryManager::GetOccupiedTilesForItem(const UBaseItem* Item) const
+TArray<FTile> UInventoryManager::GetOccupiedTilesForItem( UBaseItem* Item) const
 {
 	TArray<FTile> OccupiedTiles;
 	if (!IsValid(Item)) return OccupiedTiles;
@@ -495,8 +495,8 @@ bool UInventoryManager::CanStackItemInstances(class UItemInstanceObject* A, clas
 {
 	if (!IsValid(A) || !IsValid(B)) return false;
 
-	const UBaseItem* BA = Cast<UBaseItem>(A);
-	const UBaseItem* BB = Cast<UBaseItem>(B);
+	 UBaseItem* BA = Cast<UBaseItem>(A);
+	 UBaseItem* BB = Cast<UBaseItem>(B);
 	if (!BA || !BB) return false;
 
 	
@@ -510,12 +510,12 @@ bool UInventoryManager::TryStackItemInstance(class UItemInstanceObject* ItemInst
 	UBaseItem* AsBase = Cast<UBaseItem>(ItemInstance);
 	if (!AsBase) return false;
 	
-	const FName ItemID = AsBase->GetItemInfo().ItemInfo.ItemID;
+	const FName ItemID = AsBase->GetItemInfo()->Base.ItemID;
 
 	for (const auto& Pair : TopLeftItemMap)
 	{
 		UBaseItem* ExistingItem = Pair.Value;
-		if (IsValid(ExistingItem) && ExistingItem->GetItemInfo().ItemInfo.ItemID == ItemID)
+		if (IsValid(ExistingItem) && ExistingItem->GetItemInfo()->Base.ItemID == ItemID)
 		{
 			if (CanStackItems(ExistingItem, AsBase))
 			{
@@ -694,13 +694,13 @@ void UInventoryManager::ValidateInventoryIntegrity() const
 				{
 					UE_LOG(LogInventoryManager, Error, 
 						TEXT("Item %s extends outside inventory bounds at tile (%d, %d)"),
-						*Item->GetItemInfo().ItemInfo.ItemName.ToString(), Tile.X, Tile.Y);
+						*Item->GetItemInfo()->Base.ItemName.ToString(), Tile.X, Tile.Y);
 				}
 				else if (InventoryList[Index] != Item)
 				{
 					UE_LOG(LogInventoryManager, Error,
 						TEXT("Tile (%d, %d) doesn't reference expected item %s"),
-						Tile.X, Tile.Y, *Item->GetItemInfo().ItemInfo.ItemName.ToString());
+						Tile.X, Tile.Y, *Item->GetItemInfo()->Base.ItemName.ToString());
 				}
 			}
 		}

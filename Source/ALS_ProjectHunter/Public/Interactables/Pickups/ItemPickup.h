@@ -39,18 +39,18 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Particles")
 	UParticleSystemComponent* ParticleSystemComponent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ItemInfomation")
-	FItemInformation ItemInfo;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ItemInfo")
+	UItemDefinitionAsset* ItemInfo;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ItemInfomation")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ItemInfo")
 	mutable UBaseItem* ObjItem;
 
 	virtual void BPIInteraction_Implementation(AActor* Interactor, bool WasHeld) override;
 	
 	UFUNCTION(BlueprintCallable)
-	virtual UBaseItem* GenerateItem() const;
+	virtual UBaseItem* GenerateItem() ;
 
-	virtual bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation ItemInfo,
+	virtual bool HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*& ItemInfo,
 		FConsumableItemData ConsumableItemData) const;
 
 	UFUNCTION(BlueprintCallable)

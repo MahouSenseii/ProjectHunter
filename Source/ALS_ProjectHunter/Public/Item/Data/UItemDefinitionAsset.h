@@ -38,7 +38,7 @@ public:
 	
 	/** Get the combined base item information (what ItemInstance expects) */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item Definition")
-	FItemInformation GetBaseItemInfo() const;
+	UItemDefinitionAsset* GetBaseItemInfo() const;
 
 	/** Get just the base item data */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item Definition")

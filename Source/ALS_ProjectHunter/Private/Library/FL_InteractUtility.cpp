@@ -181,7 +181,7 @@ bool UFL_InteractUtility::AreRequirementsMet(UBaseItem* InItem, AActor* OwnerPla
 	}
 
 	// Loop through each weapon requirement
-	for (const auto& Elem : InItem->GetItemInfo().ItemData.RequirementStats)
+	for (const auto& Elem : InItem->GetItemInfo()->Equip.RequirementStats)
 	{
 		const EItemRequiredStatsCategory RequirementCategory = Elem.Key;
 

@@ -257,7 +257,7 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 	if (!ItemObject) return;
 
 	ItemObject->SetItemInfo(PickupItem->ItemInfo);
-	ItemObject->SetRotated(PickupItem->ItemInfo.ItemInfo.Rotated);
+	ItemObject->SetRotated(PickupItem->ItemInfo->Base.Rotated);
 
 	// Cast and assign
 	if (UPHBaseToolTip* ToolTip = Cast<UPHBaseToolTip>(ToolTipWidget))

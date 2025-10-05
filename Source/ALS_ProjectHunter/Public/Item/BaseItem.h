@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/UItemDefinitionAsset.h"
 #include "Library/PHItemStructLibrary.h"
 #include "BaseItem.generated.h"
 
@@ -24,7 +25,7 @@ public:
 	/* ============================= */
 
 	/** Initialize the item with given information */
-	virtual void Initialize( FItemInformation& ItemInfo);
+	virtual void Initialize( UItemDefinitionAsset*& ItemInfo);
 
 	/** Generate a unique ID for this item instance */
 	void GenerateUniqueID();
@@ -43,7 +44,7 @@ public:
 	
 	/** Check if the item is rotated */
 	UFUNCTION(BlueprintCallable, Category = "Item")
-	virtual bool IsRotated() const { return ItemInfos.ItemInfo.Rotated; }
+	virtual bool IsRotated()  { return ItemInfos->Base.Rotated; }
 	
 	/** Set the rotation state of the item */
 	UFUNCTION(BlueprintCallable, Category = "Item")
@@ -55,7 +56,7 @@ public:
 
 	/** Returns the icon of the item, considering rotation */
 	UFUNCTION(BlueprintCallable, Category = "Item")
-	UMaterialInstance* GetIcon() const;
+	UMaterialInstance* GetIcon() ;
 
 	/* ============================= */
 	/* ===      Stacking         === */
@@ -63,7 +64,7 @@ public:
 
 	/** Get the current quantity/stack size */
 	UFUNCTION(BlueprintCallable, Category = "Item|Stacking")
-	virtual int32 GetQuantity() const;
+	virtual int32 GetQuantity() ;
 
 	/** Add to the item's quantity (respects max stack size) */
 	UFUNCTION(BlueprintCallable, Category = "Item|Stacking")
@@ -79,15 +80,15 @@ public:
 
 	/** Check if this item can be stacked */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")
-	virtual bool IsStackable() const { return ItemInfos.ItemInfo.Stackable; }
+	virtual bool IsStackable()  { return ItemInfos->Base.Stackable; }
 
 	/** Get the maximum stack size (0 = unlimited) */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")
-	virtual int32 GetMaxStackSize() const { return ItemInfos.ItemInfo.MaxStackSize; }
+	virtual int32 GetMaxStackSize()  { return ItemInfos->Base.MaxStackSize; }
 
 	/** Check if this item can accept more quantity */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")
-	bool CanAddQuantity(int32 Amount) const;
+	bool CanAddQuantity(int32 Amount) ;
 
 	/* ============================= */
 	/* ===    Item Information   === */
@@ -95,27 +96,27 @@ public:
 
 	/** Get read-only access to item information */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	virtual const FItemInformation& GetItemInfo() const { return ItemInfos; }
+	virtual UItemDefinitionAsset*& GetItemInfo()  { return ItemInfos; }
 
 	/** Get the item's display name */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	const FText& GetItemName() const { return ItemInfos.ItemInfo.ItemName; }
+	const FText& GetItemName()  { return ItemInfos->Base.ItemName; }
 
 	/** Get the item's description */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	const FText& GetItemDescription() const { return ItemInfos.ItemInfo.ItemDescription; }
+	const FText& GetItemDescription()  { return ItemInfos->Base.ItemDescription; }
 
 	/** Get the item's type */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	EItemType GetItemType() const { return ItemInfos.ItemInfo.ItemType; }
+	EItemType GetItemType() const { return ItemInfos->Base.ItemType; }
 
 	/** Get the item's rarity */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	EItemRarity GetItemRarity() const { return ItemInfos.ItemInfo.ItemRarity; }
+	EItemRarity GetItemRarity()  { return ItemInfos->Base.ItemRarity; }
 
 	/** Get the item's ID (type identifier, not unique instance ID) */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	FName GetItemID() const { return ItemInfos.ItemInfo.ItemID; }
+	FName GetItemID()  { return ItemInfos->Base.ItemID; }
 
 	/* ============================= */
 	/* ===      Modification     === */
@@ -123,15 +124,15 @@ public:
 
 	/** Update item information (use with caution) */
 	UFUNCTION(BlueprintCallable, Category = "Item|Modification")
-	virtual void SetItemInfo(const FItemInformation& NewItemInfo);
+	virtual void SetItemInfo( UItemDefinitionAsset*& NewItemInfo);
 
 	/** Set equipment data for this item */
 	UFUNCTION(BlueprintCallable, Category = "Item|Modification")
-	void SetEquipmentData(const FEquippableItemData& InData);
+	void SetEquipmentData( FEquippableItemData& InData);
 
 	/** Get equipment data for this item */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Equipment", meta = (DisplayName = "Get Equipment Data"))
-	const FEquippableItemData& GetEquipmentData() const { return ItemInfos.ItemData; }
+	const FEquippableItemData& GetEquipmentData() const { return ItemInfos->Equip; }
 
 	/* ============================= */
 	/* ===    Gameplay Effects   === */
@@ -147,11 +148,11 @@ public:
 
 	/** Validate that this item's data is correctly set up */
 	UFUNCTION(BlueprintCallable, Category = "Item|Debug")
-	virtual bool ValidateItemData() const;
+	virtual bool ValidateItemData() ;
 
 	/** Check if this item is valid for use */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Debug")
-	bool IsValidItem() const;
+	bool IsValidItem() ;
 
 	/* ============================= */
 	/* ===      Comparison       === */
@@ -159,7 +160,7 @@ public:
 
 	/** Check if this item can stack with another */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")
-	bool CanStackWith(const UBaseItem* Other) const;
+	bool CanStackWith( UBaseItem* Other) ;
 
 	/** Check if this is the same item type as another */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Comparison")
@@ -173,7 +174,7 @@ protected:
 	virtual void OnRotationChanged(bool bWasRotated);
 
 	/** Internal method to set item info without validation */
-	void InternalSetItemInfo(const FItemInformation& NewItemInfo);
+	void InternalSetItemInfo( UItemDefinitionAsset*& NewItemInfo);
 
 	bool GetIsInitialized() const;
 	bool SetIsInitialized(bool bNewIsInitialized);
@@ -181,7 +182,7 @@ protected:
 protected:
 	/** Information related to the item */
 	UPROPERTY(BlueprintReadOnly, Category = "Item")
-	FItemInformation ItemInfos;
+	UItemDefinitionAsset* ItemInfos;
 
 private:
 	/** Unique identifier for this specific item instance */
@@ -199,9 +200,9 @@ public:
 
 #if WITH_EDITOR
 	/** Debug string representation of this item */
-	FString GetDebugString() const;
+	FString GetDebugString() ;
 	
 	/** Log item information for debugging */
-	void LogItemInfo() const;
+	void LogItemInfo() ;
 #endif
 };

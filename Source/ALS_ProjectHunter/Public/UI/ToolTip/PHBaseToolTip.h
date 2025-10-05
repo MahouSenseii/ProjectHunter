@@ -26,13 +26,13 @@ public:
 	virtual void NativeConstruct() override;
 
 	UPROPERTY()
-	FItemInformation ItemInfo;
+	UItemDefinitionAsset* ItemInfo;
 	
 	UFUNCTION(BlueprintCallable) virtual void InitializeToolTip();
 	UFUNCTION(BlueprintCallable) static FString GetRarityText(const EItemRarity Rarity);
 	UFUNCTION(BlueprintCallable) virtual void ChangeColorByRarity();
 	UFUNCTION() FLinearColor GetColorBaseOnRarity();
-	UFUNCTION(BlueprintSetter, BlueprintCallable) virtual void SetItemInfo(const FItemInformation& Item);
+	UFUNCTION(BlueprintSetter, BlueprintCallable) virtual void SetItemInfo(UItemDefinitionAsset*& Item);
 
 
 	

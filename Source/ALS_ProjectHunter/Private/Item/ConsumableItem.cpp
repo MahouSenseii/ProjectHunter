@@ -5,11 +5,11 @@
 
 #include "Components/InventoryManager.h"
 
-void UConsumableItem::Initialize(FItemInformation& ItemInfo)
+void UConsumableItem::Initialize(UItemDefinitionAsset*& ItemInfo)
 {
 	Super::Initialize(ItemInfo);
 	// Initialize the consumable data from the item info
-	ConsumableData.GameplayEffectClass = ItemInfo.ItemInfo.GameplayEffectClass;
+	ConsumableData.GameplayEffectClass = ItemInfo->Base.GameplayEffectClass;
 
 	// Default quantity is 1 unless set otherwise
 	ConsumableData.Quantity = 1;

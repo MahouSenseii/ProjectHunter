@@ -46,20 +46,20 @@ public:
     /* ============================= */
 
     // Override BaseItem virtual methods to return instance-specific data
-    virtual int32 GetQuantity() const override;
+    virtual int32 GetQuantity()  override;
     virtual bool AddQuantity(int32 InQty) override;
     virtual bool RemoveQuantity(int32 InQty) override;
     virtual void SetQuantity(int32 NewQty) override;
     virtual void SetRotated(bool bNewRotated) override;
     virtual FIntPoint GetDimensions() const override;
-    virtual const FItemInformation& GetItemInfo() const override;
-    virtual void SetItemInfo(const FItemInformation& NewItemInfo) override;
-    virtual bool ValidateItemData() const override;
+    virtual UItemDefinitionAsset*& GetItemInfo()  override;
+    virtual void SetItemInfo( UItemDefinitionAsset*& NewItemInfo) override;
+    virtual bool ValidateItemData()  override;
 
     // Override inline methods from BaseItem
-    virtual bool IsRotated() const override { return GetItemInfo().ItemInfo.Rotated; }
-    virtual bool IsStackable() const override { return GetItemInfo().ItemInfo.Stackable; }
-    virtual int32 GetMaxStackSize() const override { return GetItemInfo().ItemInfo.MaxStackSize; }
+    virtual bool IsRotated()  override { return GetItemInfo()->Base.Rotated; }
+    virtual bool IsStackable()  override { return GetItemInfo()->Base.Stackable; }
+    virtual int32 GetMaxStackSize()  override { return GetItemInfo()->Base.MaxStackSize; }
 
     /* ============================= */
     /* ===      Core API         === */
@@ -160,7 +160,7 @@ private:
 
     // Back-compat cache: what the rest of your systems expect to read
     UPROPERTY(Transient)
-    mutable FItemInformation ItemInfoView;
+    mutable UItemDefinitionAsset* ItemInfoView;
 
     UPROPERTY(Transient)
     mutable bool bCacheValid = false;

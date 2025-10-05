@@ -36,7 +36,7 @@ public:
     
 	/** Get the item information */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Equippable")
-	FItemInformation GetEquippableItemInfo() const;
+	 UItemDefinitionAsset* GetEquippableItemInfo() const;
     
 	/** Apply item stats to owner */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Equippable")

@@ -58,7 +58,7 @@ public:
 
 	virtual void NativeConstruct() override;
 	virtual void InitializeToolTip() override;
-	virtual void SetItemInfo(const FItemInformation& Item) override;
+	virtual void SetItemInfo(UItemDefinitionAsset*& Item);
 
 	void CreateAffixBox(); 
 	

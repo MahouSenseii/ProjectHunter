@@ -28,18 +28,18 @@ void UPHBaseToolTip::NativeConstruct()
 
 void UPHBaseToolTip::InitializeToolTip()
 {
-	if (!ItemInfo.ItemData.ItemName.IsValid())
+	if (!ItemInfo->Base.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("InitializeToolTip: ItemObj is null."));
 		return;
 	}
 
-	ItemGrade =  ItemInfo.ItemInfo.ItemRarity;
+	ItemGrade =  ItemInfo->Base.ItemRarity;
 	ChangeColorByRarity();
 
 	if (ItemName)
 	{
-		ItemName->SetText( ItemInfo.ItemInfo.ItemName);
+		ItemName->SetText( ItemInfo->Base.ItemName);
 	}
 }
 
@@ -96,9 +96,9 @@ FLinearColor UPHBaseToolTip::GetColorBaseOnRarity()
 	return FLinearColor(0.f, 0.f, 0.f, 0.1f);
 }
 
-void UPHBaseToolTip::SetItemInfo(const FItemInformation& Item)
+void UPHBaseToolTip::SetItemInfo(UItemDefinitionAsset*& Item)
 {
 	 ItemInfo = Item;
-	ItemGrade =  ItemInfo.ItemInfo.ItemRarity;
+	ItemGrade =  ItemInfo->Base.ItemRarity;
 	ChangeColorByRarity();
 }

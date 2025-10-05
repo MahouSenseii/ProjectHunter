@@ -19,7 +19,7 @@ class UDataTable;
 // === Delegate Declarations ===
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEquipped, AEquippedObject*, EquippedObject, AActor*, Owner);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUnequipped, AEquippedObject*, EquippedObject);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemInfoChanged, const FItemInformation&, OldInfo, const FItemInformation&, NewInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemInfoChanged,  UItemDefinitionAsset*&, OldInfo,  UItemDefinitionAsset*&, NewInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDurabilityChanged, float, NewDurability);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemBroken, AEquippedObject*, BrokenItem);
 
@@ -36,14 +36,14 @@ public:
     virtual void OnUnequipped_Implementation() override;
     virtual bool CanBeEquippedBy_Implementation(AActor* Actor) const override;
     virtual FName GetAttachmentSocket_Implementation() const override;
-    virtual FItemInformation GetEquippableItemInfo_Implementation() const override;
+    virtual  UItemDefinitionAsset* GetEquippableItemInfo_Implementation() const override;
     virtual void ApplyStatsToOwner_Implementation(AActor* Owner) override;
     virtual void RemoveStatsFromOwner_Implementation(AActor* Owner) override;
     virtual EEquipmentSlot GetEquipmentSlot_Implementation() const override;
     
     // === Getters with Validation ===
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
-    const FItemInformation& GetItemInfo() const { return ItemInfo; }
+    UItemDefinitionAsset*& GetItemInfo()  { return ItemInfo; }
     
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
     const FPHItemStats& GetItemStats() const { return ItemStats; }
@@ -65,7 +65,7 @@ public:
     
     // === Setters with Validation ===
     UFUNCTION(BlueprintCallable, Category = "Item", CallInEditor)
-    bool SetItemInfo(const FItemInformation& Info);
+    bool SetItemInfo(UItemDefinitionAsset*& Info);
     void SetItemInfoRotated(bool bRotated);
     void SetMesh(UStaticMesh* Mesh) const;
 
@@ -86,7 +86,7 @@ public:
     
     // === Validation Functions ===
     UFUNCTION(BlueprintCallable, Category = "Validation")
-    bool ValidateItemInfo(const FItemInformation& Info, FString& OutError) const;
+    bool ValidateItemInfo( UItemDefinitionAsset*& Info, FString& OutError) const;
     
     UFUNCTION(BlueprintCallable, Category = "Validation")
     bool IsValidForEquipping() const;
@@ -96,7 +96,7 @@ public:
     void ResetForPool();
     
     UFUNCTION(BlueprintCallable, Category = "Pooling")
-    void InitializeFromPool(const FItemInformation& Info);
+    void InitializeFromPool(UItemDefinitionAsset*& Info);
     
     // === Events/Delegates ===
     UPROPERTY(BlueprintAssignable, Category = "Events")
@@ -149,7 +149,7 @@ protected:
     TObjectPtr<UDataTable> StatsDataTable;
     
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Info")
-    FItemInformation ItemInfo;
+    UItemDefinitionAsset* ItemInfo;
     
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Stats")
     FPHItemStats ItemStats;

@@ -25,7 +25,10 @@ AItemPickup::AItemPickup()
 	// Set rotation rate (can also be changed later during gameplay)
 	RotatingMovementComponent->RotationRate = FRotator(0.f, 180.f, 0.f); // Rotate 180 degrees per second around the yaw axis.
 
-	StaticMesh->SetStaticMesh(ItemInfo.ItemInfo.StaticMesh);
+	if (ItemInfo)
+	{
+		StaticMesh->SetStaticMesh(ItemInfo->Base.StaticMesh);
+	};
 }
 
 UBaseItem* AItemPickup::CreateItemObject(UObject* Outer)
@@ -36,7 +39,7 @@ UBaseItem* AItemPickup::CreateItemObject(UObject* Outer)
 		return nullptr;
 	}
 
-	// Create the item using the correct outer (usually the Tooltip Widget or Owning Actor)
+
 	UEquippableItem* Item = NewObject<UEquippableItem>(Outer);
 	if (!Item)
 	{
@@ -51,43 +54,45 @@ void AItemPickup::BeginPlay()
 {
 	Super::BeginPlay();
 
-	StaticMesh->SetStaticMesh(ItemInfo.ItemInfo.StaticMesh);
-	StaticMesh->CanCharacterStepUpOn = ECB_No;
-	StaticMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
-	if(InteractableManager)
+	if (ItemInfo)
 	{
-		InteractableManager->IsInteractableChangeable = true;
-		InteractableManager->DestroyAfterInteract = true;
-		InteractableManager->InputType = EInteractType::Single;
-		InteractableManager->InteractableResponse = EInteractableResponseType::OnlyOnce;
+		StaticMesh->SetStaticMesh(ItemInfo->Base.StaticMesh);
+		StaticMesh->CanCharacterStepUpOn = ECB_No;
+		StaticMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+		if(InteractableManager)
+		{
+			InteractableManager->IsInteractableChangeable = true;
+			InteractableManager->DestroyAfterInteract = true;
+			InteractableManager->InputType = EInteractType::Single;
+			InteractableManager->InteractableResponse = EInteractableResponseType::OnlyOnce;
+		}
 	}
-	
 }
 
 void AItemPickup::BPIInteraction_Implementation(AActor* Interactor, bool WasHeld)
 {
-	FItemInformation PassedItemInfo ;
+	UItemDefinitionAsset* PassedItemInfo = nullptr ;
 	FEquippableItemData EquippableItemData;
 	FConsumableItemData ConsumableItemData;
 	HandleInteraction(Interactor, WasHeld, PassedItemInfo, ConsumableItemData);
 }
 
-UBaseItem* AItemPickup::GenerateItem() const
+UBaseItem* AItemPickup::GenerateItem() 
 {
-	// Ensure we are operating within the correct world context
+	
 	if (GetWorld())
 	{
 		if (UBaseItem* NewItem = NewObject<UBaseItem>(GetTransientPackage(), UBaseItem::StaticClass()))
 		{
 			NewItem->SetItemInfo(ItemInfo);			
-			// Initialize your item's properties here, if necessary
+			// Initialize  item's properties here 
 			return NewItem;
 		}
 	}
 	return nullptr;
 }
 
-bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo, FConsumableItemData ConsumableItemData) const
+bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*& PassedItemInfo, FConsumableItemData ConsumableItemData) const
 {
 	if (!IsValid(Actor))
 	{
@@ -112,8 +117,8 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformatio
 	}
 
 	// Set the Owner ID for the item
-	FItemInformation ReturnItemInfo = ReturnItem->GetItemInfo();
-	ReturnItemInfo.ItemInfo.OwnerID = OwnerCharacter->GetInventoryManager()->GetID();
+	UItemDefinitionAsset* ReturnItemInfo = ReturnItem->GetItemInfo();
+	ReturnItemInfo->Base.OwnerID = OwnerCharacter->GetInventoryManager()->GetID();
 	ReturnItem->SetItemInfo(ReturnItemInfo);
 
 	// If the interaction was held, try to equip the item
@@ -121,11 +126,11 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, FItemInformatio
 	{
 		if (OwnerCharacter->GetEquipmentManager()->IsItemEquippable(ReturnItem))
 		{
-			OwnerCharacter->GetEquipmentManager()->TryToEquip(ReturnItem, true, ReturnItemInfo.ItemInfo.EquipmentSlot);
+			OwnerCharacter->GetEquipmentManager()->TryToEquip(ReturnItem, true, ReturnItemInfo->Base.EquipmentSlot);
 		}
 		else
 		{
-			OwnerCharacter->GetEquipmentManager()->TryToEquip(ReturnItem, false, ReturnItemInfo.ItemInfo.EquipmentSlot);
+			OwnerCharacter->GetEquipmentManager()->TryToEquip(ReturnItem, false, ReturnItemInfo->Base.EquipmentSlot);
 		}
 
 		if (InteractableManager)
@@ -167,12 +172,12 @@ void AItemPickup::SetWidgetRarity()
                 return;
         }
 
-        // Ensure the widget has been created and is visible before setting the rarity
+       
         if (InteractionWidget && InteractionWidget->GetWidget() && InteractionWidget->IsWidgetVisible())
         {
                 if (UInteractableWidget* InteractableWidget = InteractableManager->InteractionWidgetRef)
                 {
-                        InteractableWidget->SetGrade(ItemInfo.ItemInfo.ItemRarity);
+                        InteractableWidget->SetGrade(ItemInfo->Base.ItemRarity);
                 }
         }
 }

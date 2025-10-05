@@ -156,9 +156,7 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
     }
 
     // Choose pickup class: row override > asset default
-    TSubclassOf<AItemPickup> ClassToSpawn = Row->OverridePickupClass
-        ? Row->OverridePickupClass
-        : Def->Base.PickupClass; // uses your existing FItemBase.PickupClass
+    TSubclassOf<AItemPickup> ClassToSpawn = Def->Base.PickupClass; // uses your existing FItemBase.PickupClass
     if (!*ClassToSpawn)
     {
         UE_LOG(LogLoot, Warning, TEXT("Pickup class is null for item: %s"), *ItemName.ToString());
@@ -187,28 +185,28 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
     // Back-compat fallback (no AItemPickup changes): build a temp FItemInformation and assign it,
     // so your existing Construction Script and mesh code still work.
     {
-        FItemInformation TempView;
-        TempView.ItemInfo = Def->Base;    // static/base data (meshes, value, sockets, rules)
-        TempView.ItemData = Def->Equip;   // equip class/slot/base stats/passives
+    	UItemDefinitionAsset* TempView = nullptr;
+        TempView->Base= Def->Base;    // static/base data (meshes, value, sockets, rules)
+        TempView->Equip = Def->Equip;   // equip class/slot/base stats/passives
 
         // Optional: put fixed implicits here (and rolled affixes if you roll at spawn time)
-        TempView.ItemData.Affixes.Implicits = Def->Implicits;
-        TempView.ItemData.Affixes.bAffixesGenerated = TempView.ItemData.Affixes.GetTotalAffixCount() > 0;
+        TempView->Equip.Affixes.Implicits = Def->Implicits;
+        TempView->Equip.Affixes.bAffixesGenerated = TempView->Equip.Affixes.GetTotalAffixCount() > 0;
 
         Item->ItemInfo = MoveTemp(TempView); // same place you previously assigned the row
     }
 
     // Mesh assignment stays the same; Construction Script will see the data (deferred spawn)
-    if (Item->ItemInfo.ItemInfo.StaticMesh)
+    if (Item->ItemInfo->Base.StaticMesh)
     {
-        Item->SetNewMesh(Item->ItemInfo.ItemInfo.StaticMesh);
+        Item->SetNewMesh(Item->ItemInfo->Base.StaticMesh);
     }
 
     UGameplayStatics::FinishSpawningActor(Item, SpawnTransform); // unchanged
 
     UE_LOG(LogLoot, Log, TEXT("Spawned %s | Mesh=%s | Class=%s"),
         *ItemName.ToString(),
-        Item->ItemInfo.ItemInfo.StaticMesh ? *Item->ItemInfo.ItemInfo.StaticMesh->GetName() : TEXT("None"),
+        Item->ItemInfo->Base.StaticMesh ? *Item->ItemInfo->Base.StaticMesh->GetName() : TEXT("None"),
         *ClassToSpawn->GetName());
 }
 

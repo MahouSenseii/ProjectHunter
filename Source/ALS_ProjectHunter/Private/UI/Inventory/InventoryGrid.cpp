@@ -230,9 +230,9 @@ bool UInventoryGrid::HandleOwnedItemDrop(UBaseItem* Payload, const int32 Index) 
     // Step 1: Handle stacking with safer memory management
     if (ExistingItem && Payload->IsStackable() && OwnerInventory->AreItemsStackable(ExistingItem, Payload))
     {
-        const int32 MaxStack = ExistingItem->GetItemInfo().ItemInfo.MaxStackSize;
-        const int32 CurrentQty = ExistingItem->GetItemInfo().ItemInfo.Quantity;
-        const int32 NewQty = Payload->GetItemInfo().ItemInfo.Quantity;
+        const int32 MaxStack = ExistingItem->GetItemInfo()->Base.MaxStackSize;
+        const int32 CurrentQty = ExistingItem->GetItemInfo()->Base.Quantity;
+        const int32 NewQty = Payload->GetItemInfo()->Base.Quantity;
 
         if (MaxStack == 0 || (CurrentQty + NewQty) <= MaxStack)
         {
@@ -316,7 +316,7 @@ bool UInventoryGrid::HandleOwnedItemInstanceDrop(UItemInstanceObject* Payload, c
 
     // Step 1: Handle ItemInstance stacking
     if (ExistingInstance && 
-        Payload->GetItemInfo().ItemInfo.Stackable &&
+        Payload->GetItemInfo()->Base.Stackable &&
         TryStackItemInstances(ExistingInstance, Payload))
     {
         return true;
@@ -385,9 +385,9 @@ bool UInventoryGrid::TryStackBaseItems(UBaseItem* ExistingItem, UBaseItem* NewIt
         return false;
     }
 
-    const int32 MaxStack = ExistingItem->GetItemInfo().ItemInfo.MaxStackSize;
-    const int32 CurrentQty = ExistingItem->GetItemInfo().ItemInfo.Quantity;
-    const int32 NewQty = NewItem->GetItemInfo().ItemInfo.Quantity;
+    const int32 MaxStack = ExistingItem->GetItemInfo()->Base.MaxStackSize;
+    const int32 CurrentQty = ExistingItem->GetItemInfo()->Base.Quantity;
+    const int32 NewQty = NewItem->GetItemInfo()->Base.Quantity;
 
     if (MaxStack == 0 || (CurrentQty + NewQty) <= MaxStack)
     {
@@ -423,9 +423,9 @@ bool UInventoryGrid::TryStackItemInstances(UItemInstanceObject* ExistingInstance
         return false;
     }
 
-    const int32 MaxStack = ExistingInstance->GetItemInfo().ItemInfo.MaxStackSize;
-    const int32 CurrentQty = ExistingInstance->GetItemInfo().ItemInfo.Quantity;
-    const int32 NewQty = NewInstance->GetItemInfo().ItemInfo.Quantity;
+    const int32 MaxStack = ExistingInstance->GetItemInfo()->Base.MaxStackSize;
+    const int32 CurrentQty = ExistingInstance->GetItemInfo()->Base.Quantity;
+    const int32 NewQty = NewInstance->GetItemInfo()->Base.Quantity;
 
     if (MaxStack == 0 || (CurrentQty + NewQty) <= MaxStack)
     {
@@ -534,7 +534,7 @@ void UInventoryGrid::UpdateDragPreview(UBaseItem* DraggedItem, const FVector2D& 
     // Apply rarity color if enabled
     if (bShowRarityColors)
     {
-        const EItemRarity Rarity = DraggedItem->GetItemInfo().ItemInfo.ItemRarity;
+        const EItemRarity Rarity = DraggedItem->GetItemInfo()->Base.ItemRarity;
         FLinearColor RarityColor = GetRarityColor(Rarity);
         PreviewColor = FLinearColor::LerpUsingHSV(PreviewColor, RarityColor, 0.3f);
     }
@@ -601,7 +601,7 @@ void UInventoryGrid::ShowDragTooltip(UItemInstanceObject* Item)
     }
 
     // Create tooltip text
-    FString TooltipText = Item->GetItemInfo().ItemInfo.ItemName.ToString();
+    FString TooltipText = Item->GetItemInfo()->Base.ItemName.ToString();
     TooltipText += FString::Printf(TEXT("\nLevel: %d"), Item->Instance.ItemLevel);
     
     // Add rarity
@@ -800,11 +800,11 @@ void UInventoryGrid::DrawDragDropBox(
     FIntPoint ItemDimensions;
     if (CurrentDraggedInstance)
     {
-        ItemDimensions = CurrentDraggedInstance->GetItemInfo().ItemInfo.Dimensions;
+        ItemDimensions = CurrentDraggedInstance->GetItemInfo()->Base.Dimensions;
     }
     else
     {
-        ItemDimensions = CurrentDraggedItem->GetItemInfo().ItemInfo.Dimensions;
+        ItemDimensions = CurrentDraggedItem->GetItemInfo()->Base.Dimensions;
     }
 
     // Compute size and position in local space (tile units → pixels)

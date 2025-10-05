@@ -56,7 +56,7 @@ bool UEquipmentManager::CheckSlot(UBaseItem* Item)
 	UEquippableItem* EquippableItem = Cast<UEquippableItem>(Item);
 	if (!EquippableItem) return false;
 
-	const EEquipmentSlot Slot = EquippableItem->GetItemInfo().ItemData.EquipSlot;
+	const EEquipmentSlot Slot = EquippableItem->GetItemInfo()->Equip.EquipSlot;
 	return EquipmentData.Contains(Slot);
 }
 
@@ -92,7 +92,7 @@ bool UEquipmentManager::IsItemEquippable(UBaseItem* Item)
 		EItemType::IT_Armor, EItemType::IT_Weapon, EItemType::IT_Shield
 	};
 
-	return EquippableTypes.Contains(Item->GetItemInfo().ItemInfo.ItemType);
+	return EquippableTypes.Contains(Item->GetItemInfo()->Base.ItemType);
 }
 
 /* ============================= */
@@ -106,7 +106,7 @@ bool UEquipmentManager::AddItemInSlotToInventory(UBaseItem* Item)
 	UEquippableItem* EquippableItem = Cast<UEquippableItem>(Item);
 	if (!EquippableItem) return false;
 
-	const EEquipmentSlot Slot = EquippableItem->GetItemInfo().ItemData.EquipSlot;
+	const EEquipmentSlot Slot = EquippableItem->GetItemInfo()->Equip.EquipSlot;
 	if (UBaseItem** RetrievedItem = EquipmentData.Find(Slot))
 	{
 		return GetInventoryManager()->TryToAddItemToInventory(*RetrievedItem, true);
@@ -161,7 +161,7 @@ void UEquipmentManager::HandleHasMesh(UBaseItem* Item, EEquipmentSlot Slot)
 	}
 
 	Item->SetRotated(false);
-	AttachItem(Item->GetItemInfo().ItemData.EquipClass, Item, Slot);
+	AttachItem(Item->GetItemInfo()->Equip.EquipClass, Item, Slot);
 }
 
 
@@ -226,7 +226,7 @@ void UEquipmentManager::RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHB
 		return;
 	}
 
-	const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = WeaponItem->GetItemInfo().ItemData.WeaponBaseStats.BaseDamage;
+	const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = WeaponItem->GetItemInfo()->Equip.WeaponBaseStats.BaseDamage;
 	if (BaseDamageMap.Num() == 0)
 	{
 		UE_LOG(LogEquipmentManager, Warning, TEXT("Weapon has no base damage defined, nothing to remove."));
@@ -303,9 +303,9 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 		}
 
 		// Feed the item's current view into the equipped actor
-		const FItemInformation& Info = Item->GetItemInfo();
-		const FItemBase&       Base = Info.ItemInfo;
-		const FEquippableItemData& Equip = Info.ItemData;
+		UItemDefinitionAsset*& Info = Item->GetItemInfo();
+		FItemBase&       Base = Info->Base;
+		FEquippableItemData& Equip = Info->Equip;
 
 		SpawnedActor->SetItemInfo(Info);
 
@@ -422,7 +422,7 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
 	if (!ASC) return;
 
 	// === Apply Attribute Bonuses from FPHItemStats ===
-	const FPHItemStats& ItemStats = Item->GetItemInfo().ItemData.Affixes;
+	const FPHItemStats& ItemStats = Item->GetItemInfo()->Equip.Affixes;
 	const TArray<FPHAttributeData>& Stats = ItemStats.GetAllStats();
 
 	FAppliedStats AppliedStats;
@@ -440,7 +440,7 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
         }
 
         // === Apply Base Weapon Damage to Attributes ===
-        const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = Item->GetItemInfo().ItemData.WeaponBaseStats.BaseDamage;
+        const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = Item->GetItemInfo()->Equip.WeaponBaseStats.BaseDamage;
         for (const TPair<EDamageTypes, FDamageRange>& Pair : BaseDamageMap)
         {
                 const FString TypeName = DamageTypeToString(Pair.Key);
@@ -469,7 +469,7 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
         }
 
 	// === Apply Passive Effects ===
-	const TArray<FItemPassiveEffectInfo>& Passives = Item->GetItemInfo().ItemData.PassiveEffects;
+	const TArray<FItemPassiveEffectInfo>& Passives = Item->GetItemInfo()->Equip.PassiveEffects;
 	FPassiveEffectHandleList PassiveHandles;
 
 	for (const FItemPassiveEffectInfo& Passive : Passives)
@@ -515,7 +515,7 @@ void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, APHBa
 		return;
 	}
 
-	const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = WeaponItem->GetItemInfo().ItemData.WeaponBaseStats.BaseDamage;
+	const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = WeaponItem->GetItemInfo()->Equip.WeaponBaseStats.BaseDamage;
 	if (BaseDamageMap.Num() == 0)
 	{
 		UE_LOG(LogEquipmentManager, Warning, TEXT("Weapon has no base damage defined."));
@@ -632,7 +632,7 @@ bool UEquipmentManager::DropItem(UBaseItem* Item)
 	}
 
 	// Ensure the pickup class exists
-	const TSubclassOf<AItemPickup> Class = Item->GetItemInfo().ItemInfo.PickupClass;
+	const TSubclassOf<AItemPickup> Class = Item->GetItemInfo()->Base.PickupClass;
 	if (!Class)
 	{
 		UE_LOG(LogEquipmentManager, Warning, TEXT("DropItem failed: Pickup class is null"));
@@ -653,8 +653,8 @@ bool UEquipmentManager::DropItem(UBaseItem* Item)
 
 	// Set properties of the dropped item
 	DroppedItem->ItemInfo = Item->GetItemInfo();
-	DroppedItem->SetNewMesh(Item->GetItemInfo().ItemInfo.StaticMesh);
-	DroppedItem->SetSkeletalMesh(Item->GetItemInfo().ItemInfo.SkeletalMesh);
+	DroppedItem->SetNewMesh(Item->GetItemInfo()->Base.StaticMesh);
+	DroppedItem->SetSkeletalMesh(Item->GetItemInfo()->Base.SkeletalMesh);
 
 	return true;
 }

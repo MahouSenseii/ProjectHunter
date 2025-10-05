@@ -17,6 +17,6 @@ class ALS_PROJECTHUNTER_API AWeaponPickup : public AEquipmentPickup
 	GENERATED_BODY()
 
 public:
-	bool HandleInteraction(AActor* Actor, bool WasHeld, FItemInformation PassedItemInfo,
+	bool HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset* PassedItemInfo,
 		FConsumableItemData ConsumableItemData) const;
 };

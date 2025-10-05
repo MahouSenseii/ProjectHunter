@@ -32,7 +32,7 @@ void UItemSot::NativeConstruct()
 	}
 	if(EquipmentSlot!= EEquipmentSlot::ES_None)
 	{
-		SlotData.ItemInfo.EquipmentSlot = EquipmentSlot;
+		SlotData->Base.EquipmentSlot = EquipmentSlot;
 	}
 	else
 	{
@@ -73,8 +73,8 @@ bool UItemSot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& I
         }
 
         // Rotate the item for placement
-		FItemInformation TempItemInformation = CastedItem->GetItemInfo();
-    	TempItemInformation.ItemInfo.Rotated = false;
+		UItemDefinitionAsset * TempItemInformation = CastedItem->GetItemInfo();
+    	TempItemInformation->Base.Rotated = false;
     	CastedItem->SetItemInfo(TempItemInformation);
     	if(ItemWidgetClass)
     	{

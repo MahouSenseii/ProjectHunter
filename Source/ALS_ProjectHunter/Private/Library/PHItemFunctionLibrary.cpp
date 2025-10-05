@@ -7,14 +7,14 @@
 #include "Item/ConsumableItem.h"
 #include "AbilitySystemComponent.h"
 #include "PHGameplayTags.h"
-#include "Interactables/Pickups/WeaponPickup.h"
 #include "Item/EquippedObject.h"
 #include "Item/WeaponItem.h"
 
-bool UPHItemFunctionLibrary::AreItemSlotsEqual(FItemInformation FirstItem, FItemInformation SecondItem)
+bool UPHItemFunctionLibrary::AreItemSlotsEqual(UItemDefinitionAsset* FirstItem, UItemDefinitionAsset* SecondItem)
 {
-	if((FirstItem.ItemInfo.EquipmentSlot == SecondItem.ItemInfo.EquipmentSlot)|| (FirstItem.ItemInfo.EquipmentSlot == EEquipmentSlot::ES_MainHand && SecondItem.ItemInfo.EquipmentSlot == EEquipmentSlot::ES_OffHand)
-		|| (SecondItem.ItemInfo.EquipmentSlot == EEquipmentSlot::ES_MainHand && FirstItem.ItemInfo.EquipmentSlot == EEquipmentSlot::ES_OffHand))
+	if((FirstItem->Base.EquipmentSlot == SecondItem->Base.EquipmentSlot)|| 
+	(FirstItem->Base.EquipmentSlot == EEquipmentSlot::ES_MainHand && SecondItem->Base.EquipmentSlot == EEquipmentSlot::ES_OffHand)||
+	(SecondItem->Base.EquipmentSlot == EEquipmentSlot::ES_MainHand && FirstItem->Base.EquipmentSlot == EEquipmentSlot::ES_OffHand))
 	{
 
 		return  true;
@@ -25,9 +25,9 @@ bool UPHItemFunctionLibrary::AreItemSlotsEqual(FItemInformation FirstItem, FItem
 }
 
 
-UBaseItem* UPHItemFunctionLibrary::GetItemInformation(FItemInformation ItemInfo,FConsumableItemData ConsumableItemData)
+UBaseItem* UPHItemFunctionLibrary::GetItemInformation(UItemDefinitionAsset* ItemInfo,FConsumableItemData ConsumableItemData)
 {
-	switch (ItemInfo.ItemInfo.EquipmentSlot)
+	switch (ItemInfo->Base.EquipmentSlot)
 	{
 	case EEquipmentSlot::ES_Belt:
 	case EEquipmentSlot::ES_Boots:
@@ -47,15 +47,15 @@ UBaseItem* UPHItemFunctionLibrary::GetItemInformation(FItemInformation ItemInfo,
 
 	case EEquipmentSlot::ES_None:
 	default:
-		UE_LOG(LogTemp, Warning, TEXT("Unknown or None Equipment Slot: %d"), static_cast<int32>(ItemInfo.ItemInfo.EquipmentSlot));
+		UE_LOG(LogTemp, Warning, TEXT("Unknown or None Equipment Slot: %d"), static_cast<int32>(ItemInfo->Base.EquipmentSlot));
 		return nullptr;
 	}
 }
 
 
-UEquippableItem* UPHItemFunctionLibrary::CreateEquippableItem(const FItemInformation& ItemInfo)
+UEquippableItem* UPHItemFunctionLibrary::CreateEquippableItem( UItemDefinitionAsset*& ItemInfo)
 {
-	if (!ItemInfo.IsValid())
+	if (!ItemInfo->Base.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("EquipClass is not set on EquippableItemData!"));
 		return nullptr;
@@ -73,7 +73,7 @@ UEquippableItem* UPHItemFunctionLibrary::CreateEquippableItem(const FItemInforma
 }
 
 
-UConsumableItem* UPHItemFunctionLibrary::CreateConsumableItem(const FItemInformation& ItemInfo)
+UConsumableItem* UPHItemFunctionLibrary::CreateConsumableItem( UItemDefinitionAsset*& ItemInfo)
 {
     UConsumableItem* NewConsumableItem = NewObject<UConsumableItem>();
     NewConsumableItem->SetItemInfo(ItemInfo);
@@ -410,10 +410,10 @@ EItemRarity UPHItemFunctionLibrary::DetermineWeaponRank(const int32 BaseRankPoin
     return EItemRarity::IR_GradeF; // Default to F if below 55 points
 }
 
-FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& ItemStats, const FItemInformation& ItemInfo)
+UItemDefinitionAsset* UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& ItemStats,  UItemDefinitionAsset*& ItemInfo)
 {
 	const FText UnknownAffixText = NSLOCTEXT("Item", "Unidentified Affix", "???");
-	FItemInformation Result = ItemInfo;
+	UItemDefinitionAsset* Result = ItemInfo;
 	const FPHAttributeData* HighestPrefix = nullptr;
 	const FPHAttributeData* HighestSuffix = nullptr;
 
@@ -445,7 +445,7 @@ FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& It
 			: UnknownAffixText)
 		: FText::GetEmpty();
 	
-	const FText ItemSubTypeName = UEnum::GetDisplayValueAsText(ItemInfo.ItemInfo.ItemSubType);
+	const FText ItemSubTypeName = UEnum::GetDisplayValueAsText(ItemInfo->Base.ItemSubType);
 	
 	FString FullName;
 
@@ -461,7 +461,7 @@ FItemInformation UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& It
 		FullName += TEXT(" of The ") + SuffixName.ToString();
 	}
 
-	Result.ItemInfo.ItemName = FText::FromString(FullName);
+	Result->Base.ItemName = FText::FromString(FullName);
 	return ItemInfo;
 }
 
@@ -479,7 +479,7 @@ void UPHItemFunctionLibrary::RerollModifiers(
 {
 	if (!Item || !ModPool) return;
 
-	FEquippableItemData EquipData = Item->GetItemInfo().ItemData;
+	FEquippableItemData EquipData = Item->GetItemInfo()->Equip;
 	FPHItemStats& Affixes = EquipData.Affixes;
 
 	if (bRerollPrefixes)
@@ -584,9 +584,9 @@ FName UPHItemFunctionLibrary::GetSocketNameForSlot(EEquipmentSlot Slot)
 	return FoundSocket ? *FoundSocket : FName("None");
 }
 
-bool UPHItemFunctionLibrary::IsItemInformationValid(const FItemInformation& ItemInformation)
+bool UPHItemFunctionLibrary::IsItemInformationValid(const UItemDefinitionAsset* ItemInformation)
 {
-	return ItemInformation.IsValid();
+	return ItemInformation->Base.IsValid();
 }
 
 float UPHItemFunctionLibrary::GetStatValueByAttribute(const FEquippableItemData& Data, const FGameplayAttribute& Attribute)

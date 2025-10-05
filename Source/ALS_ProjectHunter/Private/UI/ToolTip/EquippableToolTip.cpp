@@ -13,25 +13,25 @@ void UEquippableToolTip::InitializeToolTip()
 {
 	Super::InitializeToolTip();
 
-	if(ItemInfo.IsValid())
+	if(ItemInfo->Base.IsValid())
 	{
 		StatsBox->SetItemData(ItemInfo);
 	}
 	StatsBox->CreateMinMaxBoxByDamageTypes();
 	StatsBox->SetMinMaxForOtherStats();
 	StatsBox->CreateResistanceBoxes();
-	StatsBox->GetRequirementsBox()->SetItemRequirements(ItemInfo.ItemData, OwnerCharacter);
+	StatsBox->GetRequirementsBox()->SetItemRequirements(ItemInfo->Equip, OwnerCharacter);
 	CreateAffixBox();
-	LoreText->SetText(ItemInfo.ItemInfo.ItemDescription);
+	LoreText->SetText(ItemInfo->Base.ItemDescription);
 }
 
-void UEquippableToolTip::SetItemInfo(const FItemInformation& Item)
+void UEquippableToolTip::SetItemInfo( UItemDefinitionAsset*& Item)
 {
 	Super::SetItemInfo(Item);
 
-	if (StatsBox)
+	if (StatsBox && ItemInfo->Base.IsValid())
 	{
-			StatsBox->SetEquippableItem(ItemInfo.ItemData);
+			StatsBox->SetEquippableItem(ItemInfo->Equip);
 	}
 }
 
@@ -41,7 +41,7 @@ void UEquippableToolTip::CreateAffixBox()
 
 	AffixBoxContainer->ClearChildren();
 
-	const FPHItemStats& Affixes = ItemInfo.ItemData.Affixes;
+	const FPHItemStats& Affixes = ItemInfo->Equip.Affixes;
 
 	// Helper to create a text block for each attribute
 	auto AddAffixList = [this](const TArray<FPHAttributeData>& AffixList)
