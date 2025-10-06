@@ -7,7 +7,6 @@
 #include "AbilitySystem/PHAttributeSet.h"
 #include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 #include "AbilitySystem/ModMagCalc/MMC_Regen.h"
-#include "Fonts/UnicodeBlockRange.h"
 
 URegenEffect::URegenEffect()
 {
@@ -62,17 +61,18 @@ void URegenEffect::SetupHealthRegen()
     
     // Add tags using the new API
     UTargetTagsGameplayEffectComponent& TargetTagsComponent = FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
-    FInheritedTagContainer GrantedTags = TargetTagsComponent.GetConfiguredTargetTagChanges();
-    GrantedTags.Added.AddTag(Tags.Effect_Health_RegenActive);
+    TargetTagsComponent.SetAndApplyTargetTagChanges(
+        FInheritedTagContainer(FGameplayTagContainer(Tags.Effect_Health_RegenActive))
+    );
 }
 
 void URegenEffect::SetupManaRegen()
 {
     const FPHGameplayTags& Tags = FPHGameplayTags::Get();
-    
+
     Period.SetValue(1.0f);
-    
-    int32 Idx = Modifiers.Num();
+
+    const int32 Idx = Modifiers.Num();
     Modifiers.SetNum(Idx + 1);
     
     FGameplayModifierInfo& ModifierInfo = Modifiers[Idx];
@@ -84,8 +84,9 @@ void URegenEffect::SetupManaRegen()
     ModifierInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(CustomCalc);
     
     UTargetTagsGameplayEffectComponent& TargetTagsComponent = FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
-    FInheritedTagContainer GrantedTags = TargetTagsComponent.GetConfiguredTargetTagChanges();
-    GrantedTags.Added.AddTag(Tags.Effect_Mana_RegenActive);
+    TargetTagsComponent.SetAndApplyTargetTagChanges(
+        FInheritedTagContainer(FGameplayTagContainer(Tags.Effect_Mana_RegenActive))
+    );
 }
 
 void URegenEffect::SetupStaminaRegen()
@@ -93,8 +94,8 @@ void URegenEffect::SetupStaminaRegen()
     const FPHGameplayTags& Tags = FPHGameplayTags::Get();
     
     Period.SetValue(1.0f);
-    
-    int32 Idx = Modifiers.Num();
+
+    const int32 Idx = Modifiers.Num();
     Modifiers.SetNum(Idx + 1);
     
     FGameplayModifierInfo& ModifierInfo = Modifiers[Idx];
@@ -106,8 +107,9 @@ void URegenEffect::SetupStaminaRegen()
     ModifierInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(CustomCalc);
     
     UTargetTagsGameplayEffectComponent& TargetTagsComponent = FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
-    FInheritedTagContainer GrantedTags = TargetTagsComponent.GetConfiguredTargetTagChanges();
-    GrantedTags.Added.AddTag(Tags.Effect_Stamina_RegenActive);
+    TargetTagsComponent.SetAndApplyTargetTagChanges(
+        FInheritedTagContainer(FGameplayTagContainer(Tags.Effect_Stamina_RegenActive))
+    );
 }
 
 void URegenEffect::SetupArcaneShieldRegen()
@@ -128,6 +130,7 @@ void URegenEffect::SetupArcaneShieldRegen()
     ModifierInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(CustomCalc);
 
     UTargetTagsGameplayEffectComponent& TargetTagsComponent = FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
-    FInheritedTagContainer GrantedTags = TargetTagsComponent.GetConfiguredTargetTagChanges();
-    GrantedTags.Added.AddTag(Tags.Effect_ArcaneShield_RegenActive);
+    TargetTagsComponent.SetAndApplyTargetTagChanges(
+        FInheritedTagContainer(FGameplayTagContainer(Tags.Effect_ArcaneShield_RegenActive))
+    );
 }

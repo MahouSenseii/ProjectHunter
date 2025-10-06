@@ -33,12 +33,14 @@ AEquippedObject::AEquippedObject()
 void AEquippedObject::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
+
+    
     
     // Generate stats after properties have been set from Blueprint/Editor
-    if (!ItemStats.bAffixesGenerated && StatsDataTable)
+    if (!ItemInfo->ItemStats.bAffixesGenerated &&  ItemInfo->GetStatsDataTable())
     {
-        ItemStats = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
-        ItemInfo = UPHItemFunctionLibrary::GenerateItemName(ItemStats, ItemInfo);
+        ItemInfo->ItemStats = UPHItemFunctionLibrary::GenerateStats(ItemInfo->GetStatsDataTable());
+        ItemInfo = UPHItemFunctionLibrary::GenerateItemName(ItemInfo->ItemStats, ItemInfo);
     }
     
     // Set initial durability
@@ -180,7 +182,7 @@ void AEquippedObject::ApplyStatsToOwner_Implementation(AActor* RefOnwer)
     }
     
     // Apply each stat as a gameplay effect
-    for (const FPHAttributeData& Stat : ItemStats.GetAllStats())
+    for (const FPHAttributeData& Stat : ItemInfo->ItemStats.GetAllStats())
     {
         // TODO: Apply stat modifiers to owner
         // This would require creating gameplay effects based on stats

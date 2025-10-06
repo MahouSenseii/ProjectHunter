@@ -7,7 +7,7 @@
 #include  "Library/PHItemFunctionLibrary.h"
 #include "Library/FL_InteractUtility.h"
 
-AEquipmentPickup::AEquipmentPickup(): StatsDataTable(nullptr)
+AEquipmentPickup::AEquipmentPickup()
 {
 	// Set Location (X, Y, Z)
 	MeshTransform.SetLocation(FVector(0.0f, 0.0f, 80.0f));
@@ -23,8 +23,8 @@ void AEquipmentPickup::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (StatsDataTable && ItemInfo) {
-		ItemInfo->Equip.Affixes = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
+	if (ItemInfo->GetStatsDataTable() && ItemInfo) {
+		ItemInfo->Equip.Affixes = UPHItemFunctionLibrary::GenerateStats(ItemInfo->GetStatsDataTable());
 		ItemInfo->Equip.Affixes.bAffixesGenerated = ItemInfo->Equip.Affixes.GetTotalAffixCount() > 0;
 		ItemInfo = UPHItemFunctionLibrary::GenerateItemName(ItemInfo->Equip.Affixes, ItemInfo);
 	}

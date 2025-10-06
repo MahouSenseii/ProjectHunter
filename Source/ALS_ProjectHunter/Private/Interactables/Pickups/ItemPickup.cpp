@@ -23,7 +23,8 @@ AItemPickup::AItemPickup()
 	ParticleSystemComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
 	// Set rotation rate (can also be changed later during gameplay)
-	RotatingMovementComponent->RotationRate = FRotator(0.f, 180.f, 0.f); // Rotate 180 degrees per second around the yaw axis.
+	RotatingMovementComponent->RotationRate = FRotator(0.f, 180.f, 0.f);
+	// Rotate 180 degrees per second around the yaw axis.
 
 	if (ItemInfo)
 	{
@@ -109,6 +110,11 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinition
 	}
 
 	// Get the item information
+	if (!ItemInfo)
+	{
+		return false;
+	}
+	PassedItemInfo = ItemInfo;
 	UBaseItem* ReturnItem = UPHItemFunctionLibrary::GetItemInformation( PassedItemInfo, ConsumableItemData);
 	if (!ReturnItem)
 	{

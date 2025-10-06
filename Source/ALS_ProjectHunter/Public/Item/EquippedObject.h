@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/UItemDefinitionAsset.h"
 #include "GameFramework/Actor.h"
 #include "Interfaces/IEquippable.h" 
 #include "Library/PHItemStructLibrary.h"
@@ -46,7 +47,7 @@ public:
     UItemDefinitionAsset*& GetItemInfo()  { return ItemInfo; }
     
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
-    const FPHItemStats& GetItemStats() const { return ItemStats; }
+    const FPHItemStats& GetItemStats() const { return ItemInfo->ItemStats; }
     
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
     bool IsEquipped() const { return bIsEquipped; }
@@ -144,16 +145,11 @@ public:
     TArray<AActor*> CurrentActorHit;
 
 protected:
-    // === Protected Properties ===
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Stats")
-    TObjectPtr<UDataTable> StatsDataTable;
+
     
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Info")
     UItemDefinitionAsset* ItemInfo;
-    
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Stats")
-    FPHItemStats ItemStats;
-    
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Durability")
     float MaxDurability = 100.0f;
     

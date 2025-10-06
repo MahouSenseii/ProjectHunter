@@ -18,7 +18,7 @@ bool AConsumablePickup::HandleInteraction(AActor* Actor, bool WasHeld,  UItemDef
 {
 	Super::InteractionHandle(Actor, WasHeld);
 
-	UItemDefinitionAsset*  PassedItemInformation = ItemInfo;
+	UItemDefinitionAsset* PassedItemInformation = ItemInfo;
 	const FConsumableItemData PassedConsumableItemData = ConsumableData;
 
 	return Super::HandleInteraction(Actor, WasHeld,  PassedItemInformation, PassedConsumableItemData);

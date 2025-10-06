@@ -252,6 +252,8 @@ enum class EPrefixSuffix : uint8
 	Corrupted 
 };
 
+
+
 UENUM(BlueprintType)
 enum class ERankPoints : uint8
 {

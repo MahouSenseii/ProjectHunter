@@ -389,6 +389,18 @@ struct FItemDurability
 };
 
 USTRUCT(BlueprintType)
+struct FPrefixSuffixEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Generation")
+	EPrefixSuffix Kind = EPrefixSuffix::Prefix;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Generation")
+	FPHAttributeData Data;
+};
+
+USTRUCT(BlueprintType)
 struct FEquippableItemData
 {
 	GENERATED_BODY()

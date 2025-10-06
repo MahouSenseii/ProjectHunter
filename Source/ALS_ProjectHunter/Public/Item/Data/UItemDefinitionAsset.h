@@ -27,12 +27,15 @@ public:
 
 	// Affix pools (PoE-style)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Generation")
-	UDataTable* AffixTable = nullptr;    
+	UDataTable* StatsDataTableTable = nullptr;    
 
 	// Optional: fixed implicits unique to this base
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Generation")
 	TArray<FPHAttributeData> Implicits;    
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Stats")
+	FPHItemStats ItemStats;
+	
 	UFUNCTION(BlueprintPure)
 	bool IsValidDefinition() const;
 	
@@ -50,7 +53,7 @@ public:
 
 	/** Get the affix table for generation */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item Definition")
-	UDataTable* GetAffixTable() const { return AffixTable; }
+	UDataTable* GetStatsDataTable() const { return StatsDataTableTable; }
 
 	/** Get the fixed implicits */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item Definition")
