@@ -349,6 +349,7 @@ DEFINE_GAMEPLAY_TAG(Condition_HitWithAoE)
 DEFINE_GAMEPLAY_TAG(Effect_Stamina_RegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Stamina_DegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Health_RegenActive)
+DEFINE_GAMEPLAY_TAG(Effect_ArcaneShield_RegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Mana_RegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Health_DegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Mana_DegenActive)
@@ -458,6 +459,7 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 	Effect_Health_RegenActive  = T.AddNativeGameplayTag("Effect.Health.RegenActive",  TEXT("Health is regenerating."));
 	Effect_Mana_RegenActive    = T.AddNativeGameplayTag("Effect.Mana.RegenActive",    TEXT("Mana is regenerating."));
 	Effect_Health_DegenActive  = T.AddNativeGameplayTag("Effect.Health.DegenActive",  TEXT("Health is degenerating."));
+	Effect_ArcaneShield_RegenActive = T.AddNativeGameplayTag("Effect.ArcaneShield.RegenActive", TEXT("Arcane shield is regenerating."));
 	Effect_Mana_DegenActive    = T.AddNativeGameplayTag("Effect.Mana.DegenActive",    TEXT("Mana is degenerating."));
 }
 

@@ -42,3 +42,12 @@ enum class EVitalType: uint8
 	VT_Mana    UMETA(DisplayName = "Mana"),
 	VT_XP    UMETA(DisplayName = "XP")
 };
+
+UENUM(BlueprintType)
+enum class EVitalRegenType : uint8
+{
+	Health      UMETA(DisplayName = "Health"),
+	Mana        UMETA(DisplayName = "Mana"),
+	Stamina     UMETA(DisplayName = "Stamina"),
+	ArcaneShield UMETA(DisplayName = "Arcane Shield")
+};

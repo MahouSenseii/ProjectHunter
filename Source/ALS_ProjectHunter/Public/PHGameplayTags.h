@@ -448,6 +448,7 @@ public:
 	/* ===================== */
 	static FGameplayTag Effect_Stamina_RegenActive;
 	static FGameplayTag Effect_Stamina_DegenActive;
+	static FGameplayTag Effect_ArcaneShield_RegenActive;
 	static FGameplayTag Effect_Health_RegenActive;
 	static FGameplayTag Effect_Mana_RegenActive;
 	static FGameplayTag Effect_Health_DegenActive;
