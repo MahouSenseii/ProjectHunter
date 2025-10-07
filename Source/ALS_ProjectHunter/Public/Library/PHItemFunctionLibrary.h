@@ -29,9 +29,6 @@ class ALS_PROJECTHUNTER_API UPHItemFunctionLibrary : public UBlueprintFunctionLi
 	GENERATED_BODY()
 
 public:
-
-
-
 	
 	UFUNCTION(BlueprintCallable, Category = "Checker")
 	static bool AreItemSlotsEqual(UItemDefinitionAsset* FirstItem, UItemDefinitionAsset* SecondItem);
@@ -49,15 +46,27 @@ public:
 	static void IdentifyStat(float ChanceToIdentify,FPHItemStats& StatsToCheck);
 
 	static FPHItemStats GenerateStats(const UDataTable* StatsThatCanBeGenerated);
+	// Convert enum to numeric value
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Rank")
 	static int32 GetRankPointsValue(ERankPoints Rank);
+
+	// Calculate total rank points for an item (replaces FPHItemStats member)
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Rank")
+	static int32 CalculateTotalRankPoints(int32 BaseRankPoints, const FPHItemStats& Stats);
+
+	// Determine item rarity based on rank points
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Rank")
 	static EItemRarity DetermineWeaponRank(int32 BaseRankPoints, const FPHItemStats& Stats);
-	static UItemDefinitionAsset* GenerateItemName(const FPHItemStats& ItemStats,  UItemDefinitionAsset*& ItemInfo);
+
+	// Generate item name from affixes
+	UFUNCTION(BlueprintCallable, Category = "Item|Name Generation")
+	static FText GenerateItemName(const FPHItemStats& ItemStats, const UItemDefinitionAsset* ItemInfo);
+	
 	static void RerollModifiers(UEquippableItem* Item, const UDataTable* ModPool, bool bRerollPrefixes, bool bRerollSuffixes,
 	                            const TArray<FGuid>& LockedModifiers);
 	static FPHAttributeData RollSingleMod(const UDataTable* ModPool, bool bIsPrefix);
 
 	
-
 	UFUNCTION()
 	static float GetStatValueByAttribute(const FEquippableItemData& Data, const FGameplayAttribute& Attribute);
 
@@ -67,4 +76,6 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Item Information")
 	static bool IsItemInformationValid(const UItemDefinitionAsset* ItemInformation);
+
+	
 };

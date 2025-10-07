@@ -69,6 +69,24 @@ UAbilitySystemComponent* APHBaseCharacter::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+FItemStatRequirement APHBaseCharacter::GetCurrentStats() const
+{
+	FItemStatRequirement Stats;
+    
+	if (const UPHAttributeSet* AttrSet = Cast<UPHAttributeSet>(GetAttributeSet()))
+	{
+		Stats.RequiredStrength = AttrSet->GetStrength();
+		Stats.RequiredDexterity = AttrSet->GetDexterity();
+		Stats.RequiredIntelligence = AttrSet->GetIntelligence();
+		Stats.RequiredEndurance = AttrSet->GetEndurance();
+		Stats.RequiredAffliction = AttrSet->GetAffliction();
+		Stats.RequiredLuck = AttrSet->GetLuck();
+		Stats.RequiredCovenant = 0.0f;  // Or get from somewhere
+	}
+    
+	return Stats;
+}
+
 void APHBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -227,23 +245,23 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 {
 	if (!InteractableManager) return;
 	check(EquippableToolTipClass);
-	
+    
 	AItemPickup* PickupItem = Cast<AItemPickup>(InteractableManager->GetOwner());
 	if (!PickupItem) return;
 
+	// Close existing tooltip
 	if (CurrentToolTip)
 	{
 		CurrentToolTip->RemoveFromParent();
 		CurrentToolTip = nullptr;
 	}
 
-	// Use the Tooltip Widget as the Outer to keep the item alive
+	
 	UUserWidget* ToolTipWidget = nullptr;
 
 	if (Cast<AEquipmentPickup>(PickupItem) && EquippableToolTipClass)
 	{
 		ToolTipWidget = CreateWidget<UEquippableToolTip>(GetWorld(), EquippableToolTipClass);
-		
 	}
 	else if (Cast<AConsumablePickup>(PickupItem) && ConsumableToolTipClass)
 	{
@@ -252,33 +270,36 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 
 	if (!ToolTipWidget) return;
 
-	// Create the item instance using the widget as the Outer to avoid GC issues
+	
 	UBaseItem* ItemObject = PickupItem->CreateItemObject(GetTransientPackage());
 	if (!ItemObject) return;
 
-	ItemObject->SetItemInfo(PickupItem->ItemInfo);
-	ItemObject->SetRotated(PickupItem->ItemInfo->Base.Rotated);
+	
+	ItemObject->ItemDefinition = PickupItem->ItemInfo;
+    
+	
+	if (AEquipmentPickup* EquipPickup = Cast<AEquipmentPickup>(PickupItem))
+	{
+		ItemObject->RuntimeData = EquipPickup->InstanceData;
+	}
 
-	// Cast and assign
+	
 	if (UPHBaseToolTip* ToolTip = Cast<UPHBaseToolTip>(ToolTipWidget))
 	{
-		if(UEquippableToolTip* EquipToolTip = Cast<UEquippableToolTip>(ToolTip))
+		// Pass the complete item object (definition + instance)
+		ToolTip->SetItem(ItemObject);
+        
+		if (UEquippableToolTip* EquipToolTip = Cast<UEquippableToolTip>(ToolTip))
 		{
-			EquipToolTip->SetItemInfo(ItemObject->GetItemInfo());
 			EquipToolTip->OwnerCharacter = this;
-			EquipToolTip->AddToViewport();
-			CurrentToolTip = EquipToolTip;
 		}
-		else
-		{
-			ToolTip->SetItemInfo(ItemObject->GetItemInfo());
-			ToolTip->AddToViewport();
-			CurrentToolTip = ToolTip;
-		}
+        
+		ToolTip->AddToViewport();
+		CurrentToolTip = ToolTip;
 	}
 }
 
-void APHBaseCharacter::CloseToolTip(UInteractableManager* InteractableManager)
+void APHBaseCharacter::CloseToolTip() 
 {
 	if (IsValid(CurrentToolTip))
 	{

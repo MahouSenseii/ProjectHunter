@@ -3,9 +3,10 @@
 #include "CoreMinimal.h"
 #include "PHItemEnumLibrary.generated.h"
 
-/* ================================
-   ITEM CLASSIFICATIONS
-================================ */
+
+/* ============================= */
+/* ===   ITEM CLASSIFICATION === */
+/* ============================= */
 
 UENUM(BlueprintType)
 enum class EItemType : uint8
@@ -16,11 +17,11 @@ enum class EItemType : uint8
 	IT_Weapon       UMETA(DisplayName = "Weapon"),
 	IT_Armor        UMETA(DisplayName = "Armor"),
 	IT_Shield       UMETA(DisplayName = "Shield"),
-	IT_Accessory    UMETA(DisplayName = "Accessory"), // Rings, Amulets, Belts
+	IT_Accessory    UMETA(DisplayName = "Accessory"),
 
 	/* Consumables */
-	IT_Consumable   UMETA(DisplayName = "Consumable"), // Potions, Food
-	IT_Flask        UMETA(DisplayName = "Flask"),      // Refillable effects
+	IT_Consumable   UMETA(DisplayName = "Consumable"),
+	IT_Flask        UMETA(DisplayName = "Flask"),
 
 	/* Progression */
 	IT_QuestItem    UMETA(DisplayName = "Quest Item"),
@@ -93,10 +94,23 @@ enum class EItemSubType : uint8
 	IST_Other        UMETA(DisplayName = "Other")
 };
 
+UENUM(BlueprintType)
+enum class EItemRarity : uint8
+{
+	IR_None      UMETA(DisplayName = "None"),
+	IR_GradeF    UMETA(DisplayName = "Grade F"),
+	IR_GradeD    UMETA(DisplayName = "Grade D"),
+	IR_GradeC    UMETA(DisplayName = "Grade C"),
+	IR_GradeB    UMETA(DisplayName = "Grade B"),
+	IR_GradeA    UMETA(DisplayName = "Grade A"),
+	IR_GradeS    UMETA(DisplayName = "Grade S"),
+	IR_Unknown   UMETA(DisplayName = "Unknown"),
+	IR_Corrupted UMETA(DisplayName = "Corrupted"),
+};
 
-/* ================================
-   EQUIPMENT / SLOTS
-================================ */
+/* ============================= */
+/* ===   EQUIPMENT / SLOTS   === */
+/* ============================= */
 
 UENUM(BlueprintType)
 enum class EEquipmentSlot : uint8
@@ -142,36 +156,16 @@ enum class ECurrentItemSlot : uint8
 	CIS_Belt        UMETA(DisplayName = "Belt"),
 	CIS_Cloak       UMETA(DisplayName = "Cloak"),
 
-	/* 🔁 Rings (dynamic, indexed externally) */
+	/* Rings (dynamic, indexed externally) */
 	CIS_Ring        UMETA(DisplayName = "Ring"),
 
 	/* Utility */
 	CIS_Flask       UMETA(DisplayName = "Flask"),
 };
 
-
-/* ================================
-   ITEM META
-================================ */
-
-UENUM(BlueprintType)
-enum class EItemRarity : uint8
-{
-	IR_None      UMETA(DisplayName = "None"),
-	IR_GradeF    UMETA(DisplayName = "Grade F"),
-	IR_GradeD    UMETA(DisplayName = "Grade D"),
-	IR_GradeC    UMETA(DisplayName = "Grade C"),
-	IR_GradeB    UMETA(DisplayName = "Grade B"),
-	IR_GradeA    UMETA(DisplayName = "Grade A"),
-	IR_GradeS    UMETA(DisplayName = "Grade S"),
-	IR_Unknown   UMETA(DisplayName = "Unknown"),
-	IR_Corrupted UMETA(DisplayName = "Corrupted"),
-};
-
-
-/* ================================
-   ITEM STATS
-================================ */
+/* ============================= */
+/* ===   ITEM META           === */
+/* ============================= */
 
 UENUM(BlueprintType)
 enum class EItemStats : uint8
@@ -196,17 +190,16 @@ enum class EItemRequiredStatsCategory : uint8
 	ISC_RequiredLevel     UMETA(DisplayName = "Required Level"),
 	ISC_RequiredStrength  UMETA(DisplayName = "Required Strength"),
 	ISC_RequiredDexterity UMETA(DisplayName = "Required Dexterity"),
-	ISC_RequiredIntelligence       UMETA(DisplayName = "Required Intelligence"),
+	ISC_RequiredIntelligence UMETA(DisplayName = "Required Intelligence"),
 	ISC_RequiredEndurance UMETA(DisplayName = "Required Endurance"),
-	ISC_RequiredAffliction   UMETA(DisplayName = "Required Affliction"),
+	ISC_RequiredAffliction UMETA(DisplayName = "Required Affliction"),
 	ISC_RequiredLuck      UMETA(DisplayName = "Required Luck"),
 	ISC_RequiredCovenant  UMETA(DisplayName = "Required Covenant"),
 };
 
-
-/* ================================
-   COMBAT MECHANICS
-================================ */
+/* ============================= */
+/* ===   COMBAT MECHANICS    === */
+/* ============================= */
 
 UENUM(BlueprintType)
 enum class EDefenseTypes : uint8
@@ -234,83 +227,116 @@ enum class EDamageTypes : uint8
 	DT_Light     UMETA(DisplayName = "Light"),
 	DT_Lightning UMETA(DisplayName = "Lightning"),
 	DT_Physical  UMETA(DisplayName = "Physical"),
-	DT_Corruption   UMETA(DisplayName = "Corruption"),
+	DT_Poison    UMETA(DisplayName = "Poison"),
+	DT_Corruption UMETA(DisplayName = "Corruption"),
 };
 
-
-/* ================================
-   AFFIXES / RANKING
-================================ */
+/* ============================= */
+/* ===   AFFIXES             === */
+/* ============================= */
 
 UENUM(BlueprintType)
-enum class EPrefixSuffix : uint8
+enum class EAffixes : uint8
 {
-	Prefix,
-	Suffix,
-	Implicit,
-	Enchant,
-	Corrupted 
+	Prefix UMETA(DisplayName = "Prefix"),
+	Suffix UMETA(DisplayName = "Suffix"),
+	Implicit UMETA(DisplayName = "Implicit"),
 };
 
-
+/* ============================= */
+/* ===   COMPARISON          === */
+/* ============================= */
 
 UENUM(BlueprintType)
-enum class ERankPoints : uint8
+enum class EItemComparisonResult : uint8
 {
-	RP_Neg30 UMETA(DisplayName = "-30"),
-	RP_Neg25 UMETA(DisplayName = "-25"),
-	RP_Neg20 UMETA(DisplayName = "-20"),
-	RP_Neg15 UMETA(DisplayName = "-15"),
-	RP_Neg10 UMETA(DisplayName = "-10"),
-	RP_Neg5  UMETA(DisplayName = "-5"),
-	RP_0     UMETA(DisplayName = "0"),
-	RP_5     UMETA(DisplayName = "5"),
-	RP_10    UMETA(DisplayName = "10"),
-	RP_15    UMETA(DisplayName = "15"),
-	RP_20    UMETA(DisplayName = "20"),
-	RP_25    UMETA(DisplayName = "25"),
-	RP_30    UMETA(DisplayName = "30"),
+	Better        UMETA(DisplayName = "Better"),
+	Worse         UMETA(DisplayName = "Worse"),
+	Equal         UMETA(DisplayName = "Equal"),
+	Incomparable  UMETA(DisplayName = "Incomparable"),
 };
+
+/* ============================= */
+/* ===   ATTACHMENT          === */
+/* ============================= */
 
 UENUM(BlueprintType)
-enum class EAffixOrigin : uint8
+enum class EPHAttachmentRule : uint8
 {
-	Generated,
-	Crafted,
-	Implicit,
-	Corrupted,
+	KeepRelative  UMETA(DisplayName="Keep Relative"),
+	KeepWorld     UMETA(DisplayName="Keep World"),
+	SnapToTarget  UMETA(DisplayName="Snap To Target"),
 };
 
+/* ============================= */
+/* ===   EFFECT TRACKING     === */
+/* ============================= */
 
-/* ================================
-   UI FORMATTING
-================================ */
+UENUM(BlueprintType)
+enum class EEffectSource : uint8
+{
+	None            UMETA(DisplayName = "None"),
+	ItemPassive     UMETA(DisplayName = "Item Passive"),
+	ItemRune        UMETA(DisplayName = "Item Rune"),
+	ItemEnchant     UMETA(DisplayName = "Item Enchantment"),
+	CharPassive     UMETA(DisplayName = "Character Passive"),
+	TempBuff        UMETA(DisplayName = "Temporary Buff"),
+	StatusEffect    UMETA(DisplayName = "Status Effect"),
+};
+
+/* ============================= */
+/* ===   HELPER FUNCTIONS    === */
+/* ============================= */
+
+FORCEINLINE EAttachmentRule ToEngineRule(EPHAttachmentRule R)
+{
+	switch (R)
+	{
+	case EPHAttachmentRule::KeepRelative: return EAttachmentRule::KeepRelative;
+	case EPHAttachmentRule::KeepWorld:     return EAttachmentRule::KeepWorld;
+	case EPHAttachmentRule::SnapToTarget:  return EAttachmentRule::SnapToTarget;
+	default: return EAttachmentRule::KeepRelative;
+	}
+}
+
+/* ============================= */
+/* ===   ATTRIBUTE DISPLAY   === */
+/* ============================= */
 
 UENUM(BlueprintType)
 enum class EAttributeDisplayFormat : uint8
 {
-	Additive     UMETA(DisplayName = "+{0} TO ATTRIBUTE"),  
-	FlatNegative UMETA(DisplayName = "-{0} {1}"),           
-	Percent      UMETA(DisplayName = "+{0}% TO ATTRIBUTE"), 
-	MinMax       UMETA(DisplayName = "ADD {0} TO {1} DAMAGE"),
-	Increase     UMETA(DisplayName = "{0}% increased {1}"),
-	More         UMETA(DisplayName = "{0}% more {1}"),
-	Less         UMETA(DisplayName = "{0}% less {1}"),
-	Chance       UMETA(DisplayName = "{0}% chance to {1}"),
-	Duration     UMETA(DisplayName = "{0}s duration to {1}"),
-	Cooldown     UMETA(DisplayName = "{0}s cooldown on {1}"),
-	CustomText   UMETA(DisplayName = "Custom Format"),
+	Additive       UMETA(DisplayName = "Additive (+X Stat)"),
+	FlatNegative   UMETA(DisplayName = "Flat Negative (-X Stat)"),
+	Percent        UMETA(DisplayName = "Percent (+X% Stat)"),
+	MinMax         UMETA(DisplayName = "Min-Max Range (Adds X-Y Stat)"),
+	Increase       UMETA(DisplayName = "Increase (X% increased Stat)"),
+	More           UMETA(DisplayName = "More (X% more Stat)"),
+	Less           UMETA(DisplayName = "Less (X% less Stat)"),
+	Chance         UMETA(DisplayName = "Chance (X% chance to Stat)"),
+	Duration       UMETA(DisplayName = "Duration (Xs duration to Stat)"),
+	Cooldown       UMETA(DisplayName = "Cooldown (Xs cooldown on Stat)"),
+	CustomText     UMETA(DisplayName = "Custom Text"),
 };
 
+/* ============================= */
+/* ===   RANK POINTS         === */
+/* ============================= */
 
-/* ================================
-   COMPARISON
-================================ */
-
-enum class EItemComparisonResult : uint8
+UENUM(BlueprintType)
+enum class ERankPoints : uint8
 {
-	Better,
-	Worse,
-	Equal,
-	Incomparable
+	RP_Neg30   UMETA(DisplayName = "-30"),
+	RP_Neg25   UMETA(DisplayName = "-25"),
+	RP_Neg20   UMETA(DisplayName = "-20"),
+	RP_Neg15   UMETA(DisplayName = "-15"),
+	RP_Neg10   UMETA(DisplayName = "-10"),
+	RP_Neg5    UMETA(DisplayName = "-5"),
+	RP_0       UMETA(DisplayName = "0"),
+	RP_5       UMETA(DisplayName = "+5"),
+	RP_10      UMETA(DisplayName = "+10"),
+	RP_15      UMETA(DisplayName = "+15"),
+	RP_20      UMETA(DisplayName = "+20"),
+	RP_25      UMETA(DisplayName = "+25"),
+	RP_30      UMETA(DisplayName = "+30"),
 };

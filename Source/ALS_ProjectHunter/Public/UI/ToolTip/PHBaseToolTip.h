@@ -23,8 +23,7 @@ class ALS_PROJECTHUNTER_API UPHBaseToolTip : public UPHUserWidget
 public:
 
 	virtual void NativePreConstruct() override;
-	virtual void NativeConstruct() override;
-
+	const FItemInstanceData& GetInstanceData() const;
 	UPROPERTY()
 	UItemDefinitionAsset* ItemInfo;
 	
@@ -35,6 +34,25 @@ public:
 	UFUNCTION(BlueprintSetter, BlueprintCallable) virtual void SetItemInfo(UItemDefinitionAsset*& Item);
 
 
+	UFUNCTION(BlueprintCallable, Category = "Tooltip")
+	virtual void SetItem(UBaseItem* Item);
+
+	/** Set the item to display in tooltip */
+	UFUNCTION(BlueprintCallable, Category = "Tooltip")
+	virtual void SetItemObject(UBaseItem* Item);
+
+	/** Get the item definition (immutable) */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Tooltip")
+	const UItemDefinitionAsset* GetItemDefinition() const { return ItemObject ? ItemObject->ItemDefinition : nullptr; }
+
+
+	/** Get the display name (from instance if generated, otherwise from definition) */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Tooltip")
+	FText GetDisplayName() const;
+
+	/** Get the rarity (from instance if set, otherwise from definition) */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Tooltip")
+	EItemRarity GetRarity() const;
 	
 protected:
 
@@ -48,4 +66,12 @@ protected:
 	
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Color")
 	TMap<EItemRarity, FLinearColor> RarityColors;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Tooltip") UBaseItem* ItemInstance;
+
+	UPROPERTY()
+	UBaseItem* ItemObject;
+
+	virtual void NativeConstruct() override;
+	virtual void UpdateTooltipDisplay();
 };

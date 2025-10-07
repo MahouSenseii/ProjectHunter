@@ -34,7 +34,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 
 
 UCLASS(BlueprintType, Blueprintable)
-class ALS_PROJECTHUNTER_API UItemInstanceObject : public UBaseItem  // ✅ Inherit from your UBaseItem
+class ALS_PROJECTHUNTER_API UItemInstanceObject : public UBaseItem 
 {
     GENERATED_BODY()
 
@@ -52,12 +52,12 @@ public:
     virtual void SetQuantity(int32 NewQty) override;
     virtual void SetRotated(bool bNewRotated) override;
     virtual FIntPoint GetDimensions() const override;
-    virtual UItemDefinitionAsset*& GetItemInfo()  override;
+    virtual UItemDefinitionAsset* GetItemInfo() override;
     virtual void SetItemInfo( UItemDefinitionAsset*& NewItemInfo) override;
     virtual bool ValidateItemData()  override;
 
     // Override inline methods from BaseItem
-    virtual bool IsRotated()  override { return GetItemInfo()->Base.Rotated; }
+    virtual bool IsRotated() override { return RuntimeData.bRotated; }
     virtual bool IsStackable()  override { return GetItemInfo()->Base.Stackable; }
     virtual int32 GetMaxStackSize()  override { return GetItemInfo()->Base.MaxStackSize; }
 

@@ -178,33 +178,35 @@ bool UInventoryManager::TryToAddItemToInventory(UBaseItem* Item, bool CheckRotat
 	return TryPlaceItemAtFirstAvailable(Item, CheckRotated);
 }
 
-bool UInventoryManager::TryStackItem(UBaseItem* Item)
-{
-	if (!Item->IsStackable()) return false;
-
+bool UInventoryManager::TryStackItem(UBaseItem* Item) {
+	if (bStackableCacheDirty) {
+		RebuildStackableCache();
+	}
+    
 	const FName ItemID = Item->GetItemInfo()->Base.ItemID;
-	
-	// Find stackable items with matching ID
-	// Note: This iterates through all items, but for typical inventory sizes (100-200 items)
-	// this is still very fast and avoids complex data structure issues with UPROPERTY
-	for (const auto& Pair : TopLeftItemMap)
-	{
-		UBaseItem* ExistingItem = Pair.Value;
-		if (IsValid(ExistingItem) && ExistingItem->GetItemInfo()->Base.ItemID == ItemID)
+	TArray<UBaseItem*> CandidateItems;
+	StackableItemsCache.MultiFind(ItemID, CandidateItems);
+    
+	for (UBaseItem* ExistingItem : CandidateItems) {
+		if (CanStackItems(ExistingItem, Item))
 		{
-			if (CanStackItems(ExistingItem, Item))
-			{
-				ExistingItem->AddQuantity(Item->GetQuantity());
-				Item->ConditionalBeginDestroy();
-				OnInventoryChanged.Broadcast();
-				return true;
-			}
+			
+			if (IsValid(ExistingItem) && ExistingItem->GetItemInfo()->Base.ItemID == ItemID)
+			return true;
 		}
 	}
-	
 	return false;
 }
 
+void UInventoryManager::RebuildStackableCache() {
+	StackableItemsCache.Empty();
+	for (const auto& Pair : TopLeftItemMap) {
+		if (UBaseItem* Item = Pair.Value; IsValid(Item) && Item->IsStackable()) {
+			StackableItemsCache.Add(Item->GetItemInfo()->Base.ItemID, Item);
+		}
+	}
+	bStackableCacheDirty = false;
+}
 bool UInventoryManager::TryPlaceItemAtFirstAvailable(UBaseItem* Item, bool CheckRotated)
 {
 	// Try normal orientation

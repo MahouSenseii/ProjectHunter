@@ -14,7 +14,7 @@ UItemInstanceObject::UItemInstanceObject()
 /* ===      Public API       === */
 /* ============================= */
 
- UItemDefinitionAsset*& UItemInstanceObject::GetItemInfo() 
+UItemDefinitionAsset* UItemInstanceObject::GetItemInfo() 
 {
     if (!bCacheValid)
     {
@@ -109,7 +109,7 @@ void UItemInstanceObject::InitializeFromDefinition(UItemDefinitionAsset* Definit
 
 int32 UItemInstanceObject::GetQuantity() 
 {
-    return GetItemInfo()->Base.Quantity;
+    return RuntimeData.Quantity;
 }
 
 void UItemInstanceObject::SetQuantity(int32 NewQuantity)
@@ -121,10 +121,10 @@ void UItemInstanceObject::SetQuantity(int32 NewQuantity)
 
     // Get the current cached view
     const UItemDefinitionAsset* CurrentInfo = GetItemInfo();
-    if (CurrentInfo->Base.Quantity != NewQuantity)
+    if (RuntimeData.Quantity != NewQuantity)
     {
         // We need to modify the cache since quantity is in ItemInfoView, not Instance
-        const_cast<FItemBase&>(ItemInfoView->Base).Quantity = NewQuantity;
+        RuntimeData.Quantity = NewQuantity;
         NotifyInstanceChanged(EItemChangeType::Quantity);
     }
     
@@ -219,11 +219,11 @@ bool UItemInstanceObject::RepairDurability(float RepairAmount)
 
 void UItemInstanceObject::SetRotated(bool bNewRotated)
 {
-     UItemDefinitionAsset*& CurrentInfo = GetItemInfo();
-    if (CurrentInfo->Base.Rotated != bNewRotated)
+     
+    if (RuntimeData.bRotated != bNewRotated)
     {
         // Modify the cached view since rotation is in ItemInfoView, not Instance
-        const_cast<FItemBase&>(ItemInfoView->Base).Rotated = bNewRotated;
+       RuntimeData.bRotated = bNewRotated;
         NotifyInstanceChanged(EItemChangeType::Rotation);
     }
 }

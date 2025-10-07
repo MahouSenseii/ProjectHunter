@@ -11,13 +11,27 @@ UEquippableItem::UEquippableItem(): StatsDataTable(nullptr)
 {
 }
 
-void UEquippableItem::Initialize( UItemDefinitionAsset*& ItemInfo)
+
+void UEquippableItem::Initialize(UItemDefinitionAsset* ItemInfo)
 {
-	Super::Initialize(ItemInfo);
-	if (!ItemInfo->Equip.Affixes.bAffixesGenerated)
+	ItemDefinition = ItemInfo;  // Store reference (const)
+	
+	if (RuntimeData.UniqueID.IsEmpty())
 	{
-		ItemInfos->Equip.Affixes = UPHItemFunctionLibrary::GenerateStats(StatsDataTable);
-		ItemInfos = UPHItemFunctionLibrary::GenerateItemName(ItemInfo->Equip.Affixes, ItemInfo);
+		RuntimeData.UniqueID = FGuid::NewGuid().ToString();
+	}
+	
+	if (!RuntimeData.bHasNameBeenGenerated)
+	{
+		FPHItemStats CombinedStats;
+		CombinedStats.Prefixes = RuntimeData.Prefixes;
+		CombinedStats.Suffixes = RuntimeData.Suffixes;
+        
+		RuntimeData.DisplayName = UPHItemFunctionLibrary::GenerateItemName(
+			CombinedStats,
+			ItemDefinition
+		);
+		RuntimeData.bHasNameBeenGenerated = true;
 	}
 }
 
@@ -30,36 +44,36 @@ bool UEquippableItem::CanEquipItem(const APHBaseCharacter* Character) const
     if (!AttributeSet) return false;
 
     // Check if the player's stats meet the item's requirements
-    if (AttributeSet->GetStrength() < ItemInfos->Equip.StatRequirements.RequiredStrength) return false;
-    if (AttributeSet->GetIntelligence() < ItemInfos->Equip.StatRequirements.RequiredIntelligence) return false;
-    if (AttributeSet->GetDexterity() < ItemInfos->Equip.StatRequirements.RequiredDexterity) return false;
-    if (AttributeSet->GetEndurance() < ItemInfos->Equip.StatRequirements.RequiredEndurance) return false;
-    if (AttributeSet->GetAffliction() < ItemInfos->Equip.StatRequirements.RequiredAffliction) return false;
-    if (AttributeSet->GetLuck() < ItemInfos->Equip.StatRequirements.RequiredLuck) return false;
-    if (AttributeSet->GetCovenant() < ItemInfos->Equip.StatRequirements.RequiredCovenant) return false;
+    if (AttributeSet->GetStrength() < ItemDefinition->Equip.StatRequirements.RequiredStrength) return false;
+    if (AttributeSet->GetIntelligence() < ItemDefinition->Equip.StatRequirements.RequiredIntelligence) return false;
+    if (AttributeSet->GetDexterity() < ItemDefinition->Equip.StatRequirements.RequiredDexterity) return false;
+    if (AttributeSet->GetEndurance() < ItemDefinition->Equip.StatRequirements.RequiredEndurance) return false;
+    if (AttributeSet->GetAffliction() < ItemDefinition->Equip.StatRequirements.RequiredAffliction) return false;
+    if (AttributeSet->GetLuck() < ItemDefinition->Equip.StatRequirements.RequiredLuck) return false;
+    if (AttributeSet->GetCovenant() < ItemDefinition->Equip.StatRequirements.RequiredCovenant) return false;
 
     return true;
 }
 
 const FItemStatRequirement& UEquippableItem::GetStatRequirements() const
 {
-	return ItemInfos->Equip.StatRequirements;
+	return ItemDefinition->Equip.StatRequirements;
 }
 
 void UEquippableItem::RerollAllMods()
 {
 	UPHItemFunctionLibrary::RerollModifiers(this, StatsDataTable, true, true, {});
-	UPHItemFunctionLibrary::GenerateItemName(ItemInfos->Equip.Affixes, GetItemInfo());
+	UPHItemFunctionLibrary::GenerateItemName(ItemDefinition->Equip.Affixes, GetItemInfo());
 }
 
 TArray<FPHAttributeData> UEquippableItem::GetItemStats() const
 {
-	return ItemInfos->Equip.Affixes.GetAllStats();
+	return ItemDefinition->Equip.Affixes.GetAllStats();
 }
 
 const FPHItemStats& UEquippableItem::GetFullItemStats() const
 {
-	return ItemInfos->Equip.Affixes;
+	return ItemDefinition->Equip.Affixes;
 }
 
 
@@ -68,21 +82,20 @@ const FPHItemStats& UEquippableItem::GetFullItemStats() const
 TArray<FPHAttributeData> UEquippableItem::GetItemStatsByTag(FGameplayTag Tag) const
 {
 	TArray<FPHAttributeData> MatchingStats;
-
-	const auto AllStats = GetItemStats(); // Combines Prefixes + Suffixes
-
+	const auto AllStats = GetItemStats();
+    
 	for (const FPHAttributeData& Stat : AllStats)
 	{
-		if (Stat.AffectedTags.Contains(Tag))
+		if (Stat.AffectedTags.HasTag(Tag))
 		{
 			MatchingStats.Add(Stat);
 		}
 	}
-
+    
 	return MatchingStats;
 }
 
-TArray<FPHAttributeData> UEquippableItem::GetItemStatsByAffixType(EPrefixSuffix Type) const
+TArray<FPHAttributeData> UEquippableItem::GetItemStatsByAffixType(const EAffixes Type) const
 {
 	TArray<FPHAttributeData> Filtered;
 

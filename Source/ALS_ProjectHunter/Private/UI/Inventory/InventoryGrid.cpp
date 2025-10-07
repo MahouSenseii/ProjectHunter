@@ -231,8 +231,8 @@ bool UInventoryGrid::HandleOwnedItemDrop(UBaseItem* Payload, const int32 Index) 
     if (ExistingItem && Payload->IsStackable() && OwnerInventory->AreItemsStackable(ExistingItem, Payload))
     {
         const int32 MaxStack = ExistingItem->GetItemInfo()->Base.MaxStackSize;
-        const int32 CurrentQty = ExistingItem->GetItemInfo()->Base.Quantity;
-        const int32 NewQty = Payload->GetItemInfo()->Base.Quantity;
+        const int32 CurrentQty = ExistingItem->RuntimeData.Quantity;
+        const int32 NewQty = Payload->RuntimeData.Quantity;
 
         if (MaxStack == 0 || (CurrentQty + NewQty) <= MaxStack)
         {
@@ -386,8 +386,8 @@ bool UInventoryGrid::TryStackBaseItems(UBaseItem* ExistingItem, UBaseItem* NewIt
     }
 
     const int32 MaxStack = ExistingItem->GetItemInfo()->Base.MaxStackSize;
-    const int32 CurrentQty = ExistingItem->GetItemInfo()->Base.Quantity;
-    const int32 NewQty = NewItem->GetItemInfo()->Base.Quantity;
+    const int32 CurrentQty = ExistingItem->RuntimeData.Quantity;
+    const int32 NewQty = NewItem->RuntimeData.Quantity;
 
     if (MaxStack == 0 || (CurrentQty + NewQty) <= MaxStack)
     {
@@ -424,8 +424,8 @@ bool UInventoryGrid::TryStackItemInstances(UItemInstanceObject* ExistingInstance
     }
 
     const int32 MaxStack = ExistingInstance->GetItemInfo()->Base.MaxStackSize;
-    const int32 CurrentQty = ExistingInstance->GetItemInfo()->Base.Quantity;
-    const int32 NewQty = NewInstance->GetItemInfo()->Base.Quantity;
+    const int32 CurrentQty = ExistingInstance->RuntimeData.Quantity;
+    const int32 NewQty = NewInstance->RuntimeData.Quantity;
 
     if (MaxStack == 0 || (CurrentQty + NewQty) <= MaxStack)
     {

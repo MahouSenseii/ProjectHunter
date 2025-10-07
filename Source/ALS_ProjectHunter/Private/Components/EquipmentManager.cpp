@@ -303,8 +303,8 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 		}
 
 		// Feed the item's current view into the equipped actor
-		UItemDefinitionAsset*& Info = Item->GetItemInfo();
-		FItemBase&       Base = Info->Base;
+		const UItemDefinitionAsset* Info = Item->GetItemInfo();
+		FItemBase Base = Info->Base;
 		FEquippableItemData& Equip = Info->Equip;
 
 		SpawnedActor->SetItemInfo(Info);
@@ -425,8 +425,8 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
 	const FPHItemStats& ItemStats = Item->GetItemInfo()->Equip.Affixes;
 	const TArray<FPHAttributeData>& Stats = ItemStats.GetAllStats();
 
-	FAppliedStats AppliedStats;
-	AppliedStats.Stats = Stats;
+	FAppliedItemStats AppliedStats;
+	AppliedStats.Stats = Stats.;
 
         for (const FPHAttributeData& Attr : Stats)
         {
@@ -563,7 +563,7 @@ void UEquipmentManager::RemoveItemStatBonuses(UEquippableItem* Item, APHBaseChar
 	// === Remove Stat Bonuses ===
 	if (AppliedItemStats.Contains(Item))
 	{
-		const FAppliedStats& Stats = AppliedItemStats[Item];
+		const FAppliedItemStats& Stats = AppliedItemStats[Item];
 
                 for (int32 i = 0; i < Stats.Stats.Num(); ++i)
                 {

@@ -21,7 +21,7 @@ public:
 	// Sets default values for this actor's properties
 	UEquippableItem();
 	
-	virtual void Initialize( UItemDefinitionAsset*& ItemInfo) override;
+	virtual void Initialize(UItemDefinitionAsset* ItemInfo) override;
 
 	UFUNCTION(BlueprintCallable)
 	bool CanEquipItem(const APHBaseCharacter* Character) const;
@@ -44,7 +44,7 @@ public:
 	TArray<FPHAttributeData> GetItemStatsByTag(FGameplayTag Tag) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
-	TArray<FPHAttributeData> GetItemStatsByAffixType(EPrefixSuffix Type) const;
+	TArray<FPHAttributeData> GetItemStatsByAffixType(EAffixes Type) const;
 
 
 protected:

@@ -5,7 +5,7 @@
 
 #include "Components/InventoryManager.h"
 
-void UConsumableItem::Initialize(UItemDefinitionAsset*& ItemInfo)
+void UConsumableItem::Initialize(UItemDefinitionAsset* ItemInfo)
 {
 	Super::Initialize(ItemInfo);
 	// Initialize the consumable data from the item info

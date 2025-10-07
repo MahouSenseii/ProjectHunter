@@ -153,7 +153,12 @@ FText UPHItemFunctionLibrary::FormatAttributeText(const FPHAttributeData& Attrib
 		return FText::FromString(TEXT("??????"));
 	}
 
-	const FText StatName = FText::FromName(AttributeData.AttributeName); // Swap to DisplayName if you add that
+	// Use StatDisplayName first, fallback to AttributeName
+	FText StatName = AttributeData.StatDisplayName;
+	if (StatName.IsEmpty())
+	{
+		StatName = FText::FromName(AttributeData.AttributeName);
+	}
 
 	const int32 Rolled = FMath::RoundToInt(AttributeData.RolledStatValue);
 	const int32 Min = FMath::RoundToInt(AttributeData.MinStatChanged);
@@ -232,26 +237,28 @@ FText UPHItemFunctionLibrary::FormatAttributeText(const FPHAttributeData& Attrib
 	case EAttributeDisplayFormat::Duration:
 		return FText::Format(
 			FText::FromString(TEXT("{0}s duration to {1}")),
-			FText::AsNumber(AttributeData.RolledStatValue), // Duration may be fractional
+			FText::AsNumber(AttributeData.RolledStatValue), // Keep fractional
 			StatName
 		);
 
 	case EAttributeDisplayFormat::Cooldown:
 		return FText::Format(
 			FText::FromString(TEXT("{0}s cooldown on {1}")),
-			FText::AsNumber(AttributeData.RolledStatValue), // Same here
+			FText::AsNumber(AttributeData.RolledStatValue), // Keep fractional
 			StatName
 		);
 
 	case EAttributeDisplayFormat::CustomText:
-		// Optional: implement a custom text override on your struct like AttributeData.CustomDisplayFormatText
+		if (!AttributeData.CustomDisplayFormatText.IsEmpty())
+		{
+			return AttributeData.CustomDisplayFormatText;
+		}
 		return FText::FromString(TEXT("Custom Attribute Format"));
 
 	default:
 		return FText::FromString(TEXT("Invalid Attribute Format"));
 	}
 }
-
 
 
 
@@ -340,12 +347,12 @@ FPHItemStats UPHItemFunctionLibrary::GenerateStats(const UDataTable* StatsThatCa
         	}
         	
             // Assign stat based on its PrefixSuffix type
-        	if (StatData->PrefixSuffix == EPrefixSuffix::Prefix && PrefixCount < MaxPrefixes)
+        	if (StatData->PrefixSuffix == EAffixes::Prefix && PrefixCount < MaxPrefixes)
         	{
         		GeneratedStats.Prefixes.Add(*StatData);
         		PrefixCount++;
         	}
-        	else if (StatData->PrefixSuffix == EPrefixSuffix::Suffix && SuffixCount < MaxSuffixes)
+        	else if (StatData->PrefixSuffix == EAffixes::Suffix && SuffixCount < MaxSuffixes)
         	{
         		GeneratedStats.Suffixes.Add(*StatData);
         		SuffixCount++;
@@ -380,92 +387,105 @@ int32 UPHItemFunctionLibrary::GetRankPointsValue(ERankPoints Rank)
 	case ERankPoints::RP_20:    return 20;
 	case ERankPoints::RP_25:    return 25;
 	case ERankPoints::RP_30:    return 30;
-	default:                       return 0;
+	default:                    return 0;
 	}
+}
+
+int32 UPHItemFunctionLibrary::CalculateTotalRankPoints(int32 BaseRankPoints, const FPHItemStats& Stats)
+{
+	int32 TotalRankPoints = BaseRankPoints;
+
+	// Add points from each prefix
+	for (const FPHAttributeData& Prefix : Stats.Prefixes)
+	{
+		TotalRankPoints += GetRankPointsValue(Prefix.RankPoints);
+	}
+
+	// Add points from each suffix
+	for (const FPHAttributeData& Suffix : Stats.Suffixes)
+	{
+		TotalRankPoints += GetRankPointsValue(Suffix.RankPoints);
+	}
+
+	return TotalRankPoints;
 }
 
 EItemRarity UPHItemFunctionLibrary::DetermineWeaponRank(const int32 BaseRankPoints, const FPHItemStats& Stats)
 {
-    int32 TotalRankPoints = BaseRankPoints; // Start with base weapon points
+	const int32 TotalRankPoints = CalculateTotalRankPoints(BaseRankPoints, Stats);
 
-    // Sum up RankPoints from all prefixes and suffixes
-    for (const FPHAttributeData& Prefix : Stats.Prefixes)
-    {
-        TotalRankPoints += GetRankPointsValue(Prefix.RankPoints);
-    }
-    for (const FPHAttributeData& Suffix : Stats.Suffixes)
-    {
-        TotalRankPoints += GetRankPointsValue(Suffix.RankPoints);
-    }
-
-    // Determine rank based on adjusted thresholds
-	if (TotalRankPoints >= 55) return EItemRarity::IR_GradeD;
-	if (TotalRankPoints >= 95) return EItemRarity::IR_GradeC;
-	if (TotalRankPoints >= 135) return EItemRarity::IR_GradeB;
+	
+	if (TotalRankPoints >= 205) return EItemRarity::IR_GradeS;
 	if (TotalRankPoints >= 175) return EItemRarity::IR_GradeA;
-    if (TotalRankPoints >= 205) return EItemRarity::IR_GradeS;
+	if (TotalRankPoints >= 135) return EItemRarity::IR_GradeB;
+	if (TotalRankPoints >= 95)  return EItemRarity::IR_GradeC;
+	if (TotalRankPoints >= 55)  return EItemRarity::IR_GradeD;
 
-
-
-    return EItemRarity::IR_GradeF; // Default to F if below 55 points
+	return EItemRarity::IR_GradeF;
 }
 
-UItemDefinitionAsset* UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& ItemStats,  UItemDefinitionAsset*& ItemInfo)
+FText UPHItemFunctionLibrary::GenerateItemName(const FPHItemStats& ItemStats, const UItemDefinitionAsset* ItemInfo)
 {
-	const FText UnknownAffixText = NSLOCTEXT("Item", "Unidentified Affix", "???");
-	UItemDefinitionAsset* Result = ItemInfo;
-	const FPHAttributeData* HighestPrefix = nullptr;
-	const FPHAttributeData* HighestSuffix = nullptr;
+    if (!ItemInfo) return FText::GetEmpty();
 
-	for (const FPHAttributeData& Prefix : ItemStats.Prefixes)
-	{
-		if (!HighestPrefix || Prefix.RankPoints > HighestPrefix->RankPoints)
-		{
-			HighestPrefix = &Prefix;
-		}
-	}
+    const FText UnknownAffixText = NSLOCTEXT("Item", "Unidentified Affix", "???");
+    const FPHAttributeData* HighestPrefix = nullptr;
+    const FPHAttributeData* HighestSuffix = nullptr;
 
-	for (const FPHAttributeData& Suffix : ItemStats.Suffixes)
-	{
-		if (!HighestSuffix || Suffix.RankPoints > HighestSuffix->RankPoints)
-		{
-			HighestSuffix = &Suffix;
-		}
-	}
+    // Find highest rank prefix
+    for (const FPHAttributeData& Prefix : ItemStats.Prefixes)
+    {
+        if (!HighestPrefix || 
+            GetRankPointsValue(Prefix.RankPoints) > GetRankPointsValue(HighestPrefix->RankPoints))
+        {
+            HighestPrefix = &Prefix;
+        }
+    }
 
-	const FText PrefixName = (HighestPrefix)
-		? (HighestPrefix->bIsIdentified
-			? FText::FromName(HighestPrefix->AttributeName)
-			: UnknownAffixText)
-		: FText::GetEmpty();
+    // Find highest rank suffix
+    for (const FPHAttributeData& Suffix : ItemStats.Suffixes)
+    {
+        if (!HighestSuffix || 
+            GetRankPointsValue(Suffix.RankPoints) > GetRankPointsValue(HighestSuffix->RankPoints))
+        {
+            HighestSuffix = &Suffix;
+        }
+    }
 
-	const FText SuffixName = (HighestSuffix)
-		? (HighestSuffix->bIsIdentified
-			? FText::FromName(HighestSuffix->AttributeName)
-			: UnknownAffixText)
-		: FText::GetEmpty();
-	
-	const FText ItemSubTypeName = UEnum::GetDisplayValueAsText(ItemInfo->Base.ItemSubType);
-	
-	FString FullName;
+    const FText PrefixName = (HighestPrefix)
+        ? (HighestPrefix->bIsIdentified
+            ? (HighestPrefix->StatDisplayName.IsEmpty() 
+                ? FText::FromName(HighestPrefix->AttributeName)
+                : HighestPrefix->StatDisplayName)
+            : UnknownAffixText)
+        : FText::GetEmpty();
 
-	if (!PrefixName.IsEmpty())
-	{
-		FullName += PrefixName.ToString() + TEXT(" ");
-	}
+    const FText SuffixName = (HighestSuffix)
+        ? (HighestSuffix->bIsIdentified
+            ? (HighestSuffix->StatDisplayName.IsEmpty()
+                ? FText::FromName(HighestSuffix->AttributeName)
+                : HighestSuffix->StatDisplayName)
+            : UnknownAffixText)
+        : FText::GetEmpty();
+    
+    const FText ItemSubTypeName = UEnum::GetDisplayValueAsText(ItemInfo->Base.ItemSubType);
+    
+    FString FullName;
 
-	FullName += ItemSubTypeName.ToString();
+    if (!PrefixName.IsEmpty())
+    {
+        FullName += PrefixName.ToString() + TEXT(" ");
+    }
 
-	if (!SuffixName.IsEmpty())
-	{
-		FullName += TEXT(" of The ") + SuffixName.ToString();
-	}
+    FullName += ItemSubTypeName.ToString();
 
-	Result->Base.ItemName = FText::FromString(FullName);
-	return ItemInfo;
+    if (!SuffixName.IsEmpty())
+    {
+        FullName += TEXT(" of the ") + SuffixName.ToString();
+    }
+
+    return FText::FromString(FullName); 
 }
-
-
 
 
 
@@ -536,8 +556,8 @@ FPHAttributeData UPHItemFunctionLibrary::RollSingleMod(const UDataTable* ModPool
     TArray<FPHAttributeData*> ValidRows;
     for (FPHAttributeData* Row : AllRows)
     {
-        if ((bIsPrefix && Row->PrefixSuffix == EPrefixSuffix::Prefix) ||
-            (!bIsPrefix && Row->PrefixSuffix == EPrefixSuffix::Suffix))
+        if ((bIsPrefix && Row->PrefixSuffix == EAffixes::Prefix) ||
+            (!bIsPrefix && Row->PrefixSuffix == EAffixes::Suffix))
         {
             ValidRows.Add(Row);
         }
@@ -607,7 +627,7 @@ float UPHItemFunctionLibrary::GetStatValueByAttribute(const FEquippableItemData&
 	Accumulate(Data.Affixes.Prefixes);
 	Accumulate(Data.Affixes.Suffixes);
 	Accumulate(Data.Affixes.Implicits);
-	Accumulate(Data.Affixes.Crafted);
 
 	return Total;
 }
+

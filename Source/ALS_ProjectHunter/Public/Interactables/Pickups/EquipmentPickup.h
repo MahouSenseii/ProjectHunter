@@ -18,8 +18,25 @@ public:
 
 	AEquipmentPickup();
 
-	virtual void BeginPlay() override;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	const UItemDefinitionAsset* ItemDefinition;
+
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Item")
+	FItemInstanceData InstanceData;
+
+	/** Get the display name for this item instance */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
+	FText GetDisplayName() const;
+
+	/** Get the rarity of this item instance */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
+	EItemRarity GetInstanceRarity() const;
+	
+	virtual void BeginPlay() override;
+	void GenerateRandomAffixes();
+
 	virtual bool HandleInteraction(AActor* Actor, bool WasHeld,  UItemDefinitionAsset*& ItemInfo, FConsumableItemData ConsumableItemData) const override;
 	
 	virtual void HandleHeldInteraction(APHBaseCharacter* Character) const override;

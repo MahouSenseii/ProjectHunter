@@ -151,5 +151,5 @@ protected:
 	TMap<const UEquippableItem*, FPassiveEffectHandleList> AppliedPassiveEffects;
 
 	UPROPERTY()
-	TMap<const UEquippableItem*, FAppliedStats> AppliedItemStats;
+	TMap<const UEquippableItem*, FAppliedItemStats> AppliedItemStats;
 };

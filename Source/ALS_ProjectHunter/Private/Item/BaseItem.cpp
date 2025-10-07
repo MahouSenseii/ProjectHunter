@@ -3,6 +3,9 @@
 #include "Item/BaseItem.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "Library/PHItemFunctionLibrary.h"
+#include "Library/PHItemStructLibrary.h"
+
 
 DEFINE_LOG_CATEGORY(LogBaseItem);
 
@@ -13,19 +16,29 @@ UBaseItem::UBaseItem()
 	GenerateUniqueID();
 }
 
-void UBaseItem::Initialize( UItemDefinitionAsset*& ItemInfo)
+void UBaseItem::Initialize(UItemDefinitionAsset* ItemInfo)
 {
-	ItemInfos = ItemInfo;
+	ItemDefinition = ItemInfo;  // Store reference (const)
 	bIsInitialized = true;
-	
-	// Ensure we have a unique ID
-	if (UniqueID.IsEmpty())
+    
+	if (RuntimeData.UniqueID.IsEmpty())
 	{
-		GenerateUniqueID();
+		RuntimeData.UniqueID = FGuid::NewGuid().ToString();
 	}
+    
 	
-	UE_LOG(LogBaseItem, Verbose, TEXT("Initialized item: %s (ID: %s)"), 
-		*ItemInfos->Base.ItemName.ToString(), *UniqueID);
+	if (!RuntimeData.bHasNameBeenGenerated)
+	{
+		FPHItemStats CombinedStats;
+		CombinedStats.Prefixes = RuntimeData.Prefixes;
+		CombinedStats.Suffixes = RuntimeData.Suffixes;
+        
+		RuntimeData.DisplayName = UPHItemFunctionLibrary::GenerateItemName(
+			CombinedStats,
+			ItemDefinition
+		);
+		RuntimeData.bHasNameBeenGenerated = true;
+	}
 }
 
 void UBaseItem::GenerateUniqueID()
@@ -40,41 +53,41 @@ FString UBaseItem::GetItemInstanceID() const
 
 FIntPoint UBaseItem::GetDimensions() const
 {
-	if (ItemInfos->Base.Rotated)
+	if (RuntimeData.bRotated)
 	{
 		// Return swapped dimensions when rotated
-		return FIntPoint(ItemInfos->Base.Dimensions.Y, ItemInfos->Base.Dimensions.X);
+		return FIntPoint(ItemDefinition->Base.Dimensions.Y, ItemDefinition->Base.Dimensions.X);
 	}
-	return ItemInfos->Base.Dimensions;
+	return ItemDefinition->Base.Dimensions;
 }
 
 void UBaseItem::SetRotated(const bool bNewRotated)
 {
-	if (ItemInfos->Base.Rotated != bNewRotated)
+	if (RuntimeData.bRotated != bNewRotated)
 	{
-		const bool bWasRotated = ItemInfos->Base.Rotated;
-		ItemInfos->Base.Rotated = bNewRotated;
+		const bool bWasRotated = RuntimeData.bRotated;
+		RuntimeData.bRotated = bNewRotated;
 		OnRotationChanged(bWasRotated);
 	}
 }
 
 void UBaseItem::ToggleRotation()
 {
-	SetRotated(!ItemInfos->Base.Rotated);
+	SetRotated(!RuntimeData.bRotated);
 }
 
 UMaterialInstance* UBaseItem::GetIcon() 
 {
-	if (ItemInfos->Base.Rotated && ItemInfos->Base.ItemImageRotated)
+	if (RuntimeData.bRotated && ItemDefinition->Base.ItemImageRotated)
 	{
-		return ItemInfos->Base.ItemImageRotated;
+		return ItemDefinition->Base.ItemImageRotated;
 	}
-	return ItemInfos->Base.ItemImage;
+	return ItemDefinition->Base.ItemImage;
 }
 
 int32 UBaseItem::GetQuantity() 
 {
-	return ItemInfos->Base.Quantity;
+	return RuntimeData.Quantity;
 }
 
 bool UBaseItem::AddQuantity(int32 InQty)
@@ -88,12 +101,12 @@ bool UBaseItem::AddQuantity(int32 InQty)
 	if (!IsStackable())
 	{
 		UE_LOG(LogBaseItem, Warning, TEXT("Attempted to add quantity to non-stackable item: %s"), 
-			*ItemInfos->Base.ItemName.ToString());
+			*ItemDefinition->Base.ItemName.ToString());
 		return false;
 	}
 
 	const int32 OldQuantity = GetQuantity();
-	const int32 MaxStack = ItemInfos->Base.MaxStackSize;
+	const int32 MaxStack = ItemDefinition->Base.MaxStackSize;
 	
 	if (MaxStack > 0)
 	{
@@ -105,16 +118,16 @@ bool UBaseItem::AddQuantity(int32 InQty)
 		}
 		
 		const int32 AmountToAdd = FMath::Min(InQty, SpaceAvailable);
-		ItemInfos->Base.Quantity = OldQuantity + AmountToAdd;
+		RuntimeData.Quantity = OldQuantity + AmountToAdd;
 		
-		OnQuantityChanged(OldQuantity, ItemInfos->Base.Quantity);
+		OnQuantityChanged(OldQuantity, RuntimeData.Quantity);
 		return AmountToAdd == InQty; // Return true only if we added the full amount
 	}
 	else
 	{
 		// No max stack limit
-		ItemInfos->Base.Quantity = OldQuantity + InQty;
-		OnQuantityChanged(OldQuantity, ItemInfos->Base.Quantity);
+		RuntimeData.Quantity = OldQuantity + InQty;
+		OnQuantityChanged(OldQuantity, RuntimeData.Quantity);
 		return true;
 	}
 }
@@ -133,8 +146,8 @@ bool UBaseItem::RemoveQuantity(const int32 InQty)
 		return false; // Not enough to remove
 	}
 
-	ItemInfos->Base.Quantity = OldQuantity - InQty;
-	OnQuantityChanged(OldQuantity, ItemInfos->Base.Quantity);
+	RuntimeData.Quantity = OldQuantity - InQty;
+	OnQuantityChanged(OldQuantity, RuntimeData.Quantity);
 	return true;
 }
 
@@ -147,20 +160,20 @@ void UBaseItem::SetQuantity(const int32 NewQty)
 	}
 
 	const int32 OldQuantity = GetQuantity();
-	const int32 MaxStack = ItemInfos->Base.MaxStackSize;
+	const int32 MaxStack = ItemDefinition->Base.MaxStackSize;
 	
 	if (MaxStack > 0)
 	{
-		ItemInfos->Base.Quantity = FMath::Min(NewQty, MaxStack);
+		RuntimeData.Quantity = FMath::Min(NewQty, MaxStack);
 	}
 	else
 	{
-		ItemInfos->Base.Quantity = NewQty;
+		RuntimeData.Quantity = NewQty;
 	}
 	
-	if (OldQuantity != ItemInfos->Base.Quantity)
+	if (OldQuantity != RuntimeData.Quantity)
 	{
-		OnQuantityChanged(OldQuantity, ItemInfos->Base.Quantity);
+		OnQuantityChanged(OldQuantity, RuntimeData.Quantity);
 	}
 }
 
@@ -171,7 +184,7 @@ bool UBaseItem::CanAddQuantity(int32 Amount)
 		return false;
 	}
 
-	const int32 MaxStack = ItemInfos->Base.MaxStackSize;
+	const int32 MaxStack = ItemDefinition->Base.MaxStackSize;
 	if (MaxStack <= 0)
 	{
 		return true; // No limit
@@ -183,7 +196,7 @@ bool UBaseItem::CanAddQuantity(int32 Amount)
 void UBaseItem::SetItemInfo( UItemDefinitionAsset*& NewItemInfo)
 {
 	const FString OldID = UniqueID;
-	ItemInfos = NewItemInfo;
+	ItemDefinition = NewItemInfo;
 	
 	// Preserve the unique instance ID
 	if (!OldID.IsEmpty())
@@ -196,7 +209,7 @@ void UBaseItem::SetItemInfo( UItemDefinitionAsset*& NewItemInfo)
 
 void UBaseItem::SetEquipmentData( FEquippableItemData& InData)
 {
-	ItemInfos->Equip = InData;
+	ItemDefinition->Equip = InData;
 }
 
 void UBaseItem::ApplyEffectToTarget(AActor* Target, TSubclassOf<UGameplayEffect> GameplayEffectClass)
@@ -228,32 +241,32 @@ bool UBaseItem::ValidateItemData()
 {
 	bool bIsValid = true;
 
-	if (ItemInfos->Base.ItemName.IsEmpty())
+	if (ItemDefinition->Base.ItemName.IsEmpty())
 	{
 		UE_LOG(LogBaseItem, Warning, TEXT("Item has no name"));
 		bIsValid = false;
 	}
 
-	if (!ItemInfos->Base.ItemImage)
+	if (!ItemDefinition->Base.ItemImage)
 	{
 		UE_LOG(LogBaseItem, Warning, TEXT("Item '%s' has no icon"), 
-			*ItemInfos->Base.ItemName.ToString());
+			*ItemDefinition->Base.ItemName.ToString());
 		bIsValid = false;
 	}
 
-	if (ItemInfos->Base.Dimensions.X <= 0 || ItemInfos->Base.Dimensions.Y <= 0)
+	if (ItemDefinition->Base.Dimensions.X <= 0 || ItemDefinition->Base.Dimensions.Y <= 0)
 	{
 		UE_LOG(LogBaseItem, Warning, TEXT("Item '%s' has invalid dimensions: %dx%d"), 
-			*ItemInfos->Base.ItemName.ToString(),
-			ItemInfos->Base.Dimensions.X,
-			ItemInfos->Base.Dimensions.Y);
+			*ItemDefinition->Base.ItemName.ToString(),
+			ItemDefinition->Base.Dimensions.X,
+			ItemDefinition->Base.Dimensions.Y);
 		bIsValid = false;
 	}
 
-	if (IsStackable() && ItemInfos->Base.MaxStackSize == 1)
+	if (IsStackable() && ItemDefinition->Base.MaxStackSize == 1)
 	{
 		UE_LOG(LogBaseItem, Warning, TEXT("Item '%s' is marked as stackable but has max stack of 1"), 
-			*ItemInfos->Base.ItemName.ToString());
+			*ItemDefinition->Base.ItemName.ToString());
 		bIsValid = false;
 	}
 
@@ -273,13 +286,13 @@ bool UBaseItem::CanStackWith( UBaseItem* Other)
 	}
 
 	// Items can stack if they have the same item ID
-	if (ItemInfos->Base.ItemID != Other->ItemInfos->Base.ItemID)
+	if (ItemDefinition->Base.ItemID != Other->ItemDefinition->Base.ItemID)
 	{
 		return false;
 	}
 
 	// Check if there's room to stack
-	const int32 MaxStack = ItemInfos->Base.MaxStackSize;
+	const int32 MaxStack = ItemDefinition->Base.MaxStackSize;
 	if (MaxStack > 0 && GetQuantity() >= MaxStack)
 	{
 		return false;
@@ -295,28 +308,28 @@ bool UBaseItem::IsSameItemType(const UBaseItem* Other) const
 		return false;
 	}
 
-	return ItemInfos->Base.ItemID == Other->ItemInfos->Base.ItemID;
+	return ItemDefinition->Base.ItemID == Other->ItemDefinition->Base.ItemID;
 }
 
 void UBaseItem::OnQuantityChanged(int32 OldQuantity, int32 NewQuantity)
 {
 	// Base implementation - derived classes can override
 	UE_LOG(LogBaseItem, Verbose, TEXT("Item '%s' quantity changed from %d to %d"), 
-		*ItemInfos->Base.ItemName.ToString(), OldQuantity, NewQuantity);
+		*ItemDefinition->Base.ItemName.ToString(), OldQuantity, NewQuantity);
 }
 
 void UBaseItem::OnRotationChanged(bool bWasRotated)
 {
 	// Base implementation - derived classes can override
 	UE_LOG(LogBaseItem, Verbose, TEXT("Item '%s' rotation changed from %s to %s"), 
-		*ItemInfos->Base.ItemName.ToString(),
+		*ItemDefinition->Base.ItemName.ToString(),
 		bWasRotated ? TEXT("Rotated") : TEXT("Normal"),
-		ItemInfos->Base.Rotated ? TEXT("Rotated") : TEXT("Normal"));
+		RuntimeData.bRotated ? TEXT("Rotated") : TEXT("Normal"));
 }
 
 void UBaseItem::InternalSetItemInfo( UItemDefinitionAsset*& NewItemInfo)
 {
-	ItemInfos = NewItemInfo;
+	ItemDefinition = NewItemInfo;
 }
 
 bool UBaseItem::GetIsInitialized() const
@@ -338,14 +351,14 @@ bool UBaseItem::SetIsInitialized(bool bNewIsInitialized)
 FString UBaseItem::GetDebugString() 
 {
 	return FString::Printf(TEXT("Item: %s | ID: %s | Type: %d | Qty: %d/%d | Dims: %dx%d | Rotated: %s"),
-		*ItemInfos->Base.ItemName.ToString(),
+		*ItemDefinition->Base.ItemName.ToString(),
 		*UniqueID,
-		(int32)ItemInfos->Base.ItemType,
+		static_cast<int32>(ItemDefinition->Base.ItemType),
 		GetQuantity(),
-		ItemInfos->Base.MaxStackSize,
-		ItemInfos->Base.Dimensions.X,
-		ItemInfos->Base.Dimensions.Y,
-		ItemInfos->Base.Rotated ? TEXT("Yes") : TEXT("No"));
+		ItemDefinition->Base.MaxStackSize,
+		ItemDefinition->Base.Dimensions.X,
+		ItemDefinition->Base.Dimensions.Y,
+		RuntimeData.bRotated ? TEXT("Yes") : TEXT("No"));
 }
 
 void UBaseItem::LogItemInfo() 

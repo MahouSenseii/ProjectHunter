@@ -102,3 +102,38 @@ void UPHBaseToolTip::SetItemInfo(UItemDefinitionAsset*& Item)
 	ItemGrade =  ItemInfo->Base.ItemRarity;
 	ChangeColorByRarity();
 }
+
+void UPHBaseToolTip::SetItemObject(UBaseItem* Item)
+{
+	ItemObject = Item;
+	UpdateTooltipDisplay();
+}
+
+FText UPHBaseToolTip::GetDisplayName() const
+{
+	
+	if (!ItemObject) return FText::GetEmpty();
+
+	// Use instance name if generated
+	if (ItemObject->RuntimeData.bHasNameBeenGenerated)
+	{
+		return ItemObject->RuntimeData.DisplayName;
+	}
+
+	// Fall back to definition name
+	return ItemObject->ItemDefinition ? ItemObject->ItemDefinition->Base.ItemName : FText::GetEmpty();
+}
+
+EItemRarity UPHBaseToolTip::GetRarity() const
+{
+	if (!ItemObject) return EItemRarity::IR_None;
+
+	// Use instance rarity if set
+	if (ItemObject->RuntimeData.Rarity != EItemRarity::IR_None)
+	{
+		return ItemObject->RuntimeData.Rarity;
+	}
+
+	// Fall back to definition rarity
+	return ItemObject->ItemDefinition ? ItemObject->ItemDefinition->Base.ItemRarity : EItemRarity::IR_None;
+}

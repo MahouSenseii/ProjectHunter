@@ -23,7 +23,7 @@ public:
 	FItemBase Base;         
                
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
-	FEquippableItemData Equip;             
+	mutable FEquippableItemData Equip;             
 
 	// Affix pools (PoE-style)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Generation")

@@ -40,7 +40,7 @@ public:
 	UParticleSystemComponent* ParticleSystemComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ItemInfo")
-	UItemDefinitionAsset* ItemInfo;
+	const UItemDefinitionAsset* ItemInfo;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ItemInfo")
 	mutable UBaseItem* ObjItem;

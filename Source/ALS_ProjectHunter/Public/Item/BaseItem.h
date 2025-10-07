@@ -2,10 +2,11 @@
 
 #pragma once
 
+
 #include "CoreMinimal.h"
 #include "Data/UItemDefinitionAsset.h"
-#include "Library/PHItemStructLibrary.h"
 #include "BaseItem.generated.h"
+
 
 DECLARE_LOG_CATEGORY_EXTERN(LogBaseItem, Log, All);
 
@@ -25,7 +26,7 @@ public:
 	/* ============================= */
 
 	/** Initialize the item with given information */
-	virtual void Initialize( UItemDefinitionAsset*& ItemInfo);
+	virtual void Initialize(UItemDefinitionAsset* ItemInfo);
 
 	/** Generate a unique ID for this item instance */
 	void GenerateUniqueID();
@@ -44,7 +45,7 @@ public:
 	
 	/** Check if the item is rotated */
 	UFUNCTION(BlueprintCallable, Category = "Item")
-	virtual bool IsRotated()  { return ItemInfos->Base.Rotated; }
+	virtual bool IsRotated()  { return RuntimeData.bRotated; }
 	
 	/** Set the rotation state of the item */
 	UFUNCTION(BlueprintCallable, Category = "Item")
@@ -80,11 +81,11 @@ public:
 
 	/** Check if this item can be stacked */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")
-	virtual bool IsStackable()  { return ItemInfos->Base.Stackable; }
+	virtual bool IsStackable()  { return ItemDefinition->Base.Stackable; }
 
 	/** Get the maximum stack size (0 = unlimited) */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")
-	virtual int32 GetMaxStackSize()  { return ItemInfos->Base.MaxStackSize; }
+	virtual int32 GetMaxStackSize()  { return ItemDefinition->Base.MaxStackSize; }
 
 	/** Check if this item can accept more quantity */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")
@@ -96,27 +97,27 @@ public:
 
 	/** Get read-only access to item information */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	virtual UItemDefinitionAsset*& GetItemInfo()  { return ItemInfos; }
+	virtual UItemDefinitionAsset* GetItemInfo()  { return ItemDefinition; }
 
 	/** Get the item's display name */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	const FText& GetItemName()  { return ItemInfos->Base.ItemName; }
+	const FText& GetItemName()  { return ItemDefinition->Base.ItemName; }
 
 	/** Get the item's description */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	const FText& GetItemDescription()  { return ItemInfos->Base.ItemDescription; }
+	const FText& GetItemDescription()  { return ItemDefinition->Base.ItemDescription; }
 
 	/** Get the item's type */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	EItemType GetItemType() const { return ItemInfos->Base.ItemType; }
+	EItemType GetItemType() const { return ItemDefinition->Base.ItemType; }
 
 	/** Get the item's rarity */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	EItemRarity GetItemRarity()  { return ItemInfos->Base.ItemRarity; }
+	EItemRarity GetItemRarity()  { return ItemDefinition->Base.ItemRarity; }
 
 	/** Get the item's ID (type identifier, not unique instance ID) */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	FName GetItemID()  { return ItemInfos->Base.ItemID; }
+	FName GetItemID()  { return ItemDefinition->Base.ItemID; }
 
 	/* ============================= */
 	/* ===      Modification     === */
@@ -132,7 +133,7 @@ public:
 
 	/** Get equipment data for this item */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Equipment", meta = (DisplayName = "Get Equipment Data"))
-	const FEquippableItemData& GetEquipmentData() const { return ItemInfos->Equip; }
+	const FEquippableItemData& GetEquipmentData() const { return ItemDefinition->Equip; }
 
 	/* ============================= */
 	/* ===    Gameplay Effects   === */
@@ -179,10 +180,15 @@ protected:
 	bool GetIsInitialized() const;
 	bool SetIsInitialized(bool bNewIsInitialized);
 
-protected:
-	/** Information related to the item */
-	UPROPERTY(BlueprintReadOnly, Category = "Item")
-	UItemDefinitionAsset* ItemInfos;
+public:
+
+	// Immutable reference
+	UPROPERTY()
+	const UItemDefinitionAsset* ItemDefinition;
+
+	// Instance-specific state
+	UPROPERTY()
+	FItemInstanceData RuntimeData; 
 
 private:
 	/** Unique identifier for this specific item instance */

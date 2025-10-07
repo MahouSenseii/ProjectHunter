@@ -51,6 +51,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
+	/** Get current character stats for item requirement checks */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Stats")
+	FItemStatRequirement GetCurrentStats() const;
 
 	/** Equipment & Inventory */
 	UFUNCTION(BlueprintCallable, Category = "Manager")
@@ -76,11 +79,11 @@ public:
 	virtual  int32 GetXPFNeededForNextLevel() override;
 
 	/** Tooltip UI */
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable, Category = "UI")
 	void OpenToolTip(UInteractableManager* InteractableManager);
 
-	UFUNCTION()
-	void CloseToolTip(UInteractableManager* InteractableManager);
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void CloseToolTip() ;
 
 	UFUNCTION()
 	void OnGameplayTagChanged(FGameplayTag Tag, int NewCount);
@@ -119,6 +122,12 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Controller")
 	APHPlayerController* CurrentController;
 
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UEquippableToolTip> EquippableToolTipClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UConsumableToolTip> ConsumableToolTipClass;
+
 	
 private:
 	/** Gameplay Ability System */
@@ -145,12 +154,7 @@ private:
 	/** UI - ToolTips */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "ToolTip", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UPHBaseToolTip> CurrentToolTip;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ToolTip", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UEquippableToolTip> EquippableToolTipClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ToolTip", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UConsumableToolTip> ConsumableToolTipClass;
+	
 	
 
 	/** Internal State */

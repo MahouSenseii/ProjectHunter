@@ -58,7 +58,7 @@ public:
 
 	virtual void NativeConstruct() override;
 	virtual void InitializeToolTip() override;
-	virtual void SetItemInfo(UItemDefinitionAsset*& Item);
+	virtual void SetItemInfo(UItemDefinitionAsset*& Item) override;
 
 	void CreateAffixBox(); 
 	
@@ -71,5 +71,24 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
 	UEquippableStatsBox* StatsBox;
+
+protected:
+	virtual void UpdateTooltipDisplay() override;
+	void AddStatToContainer(const FPHAttributeData& Stat);
+	static void CompareWithEquippedItem();
+	static FLinearColor GetRarityColor(EItemRarity Rarity);
+
+	// UI Elements
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* ItemNameText;
+
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* ItemTypeText;
+
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* RarityText;
+
+	UPROPERTY(meta = (BindWidget))
+	class UVerticalBox* StatsContainer;
 	
 };

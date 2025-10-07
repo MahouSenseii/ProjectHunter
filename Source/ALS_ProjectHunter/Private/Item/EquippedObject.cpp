@@ -25,59 +25,121 @@ AEquippedObject::AEquippedObject()
     
     SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
     SkeletalMesh->SetupAttachment(DefaultScene);
+    SkeletalMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     
     DamageSpline = CreateDefaultSubobject<USplineComponent>(TEXT("DamageSpline"));
     DamageSpline->SetupAttachment(DefaultScene);
 }
 
-void AEquippedObject::PostInitializeComponents()
-{
-    Super::PostInitializeComponents();
-
-    
-    
-    // Generate stats after properties have been set from Blueprint/Editor
-    if (!ItemInfo->ItemStats.bAffixesGenerated &&  ItemInfo->GetStatsDataTable())
-    {
-        ItemInfo->ItemStats = UPHItemFunctionLibrary::GenerateStats(ItemInfo->GetStatsDataTable());
-        ItemInfo = UPHItemFunctionLibrary::GenerateItemName(ItemInfo->ItemStats, ItemInfo);
-    }
-    
-    // Set initial durability
-    CurrentDurability = MaxDurability;
-    
-    // Set static mesh if available
-    if (StaticMesh && ItemInfo->Base.StaticMesh)
-    {
-        StaticMesh->SetStaticMesh(ItemInfo->Base.StaticMesh);
-    }
-}
-
 void AEquippedObject::BeginPlay()
 {
     Super::BeginPlay();
+    
+    if (bIsInitialized)
+    {
+        UpdateVisualEffects();
+    }
 }
 
-#if WITH_EDITOR
-void AEquippedObject::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+// === Initialization ===
+
+void AEquippedObject::InitializeFromItem(const UItemDefinitionAsset* InDefinition, const FItemInstanceData& InInstanceData)
 {
-    Super::PostEditChangeProperty(PropertyChangedEvent);
-    
-    if (PropertyChangedEvent.Property)
+    if (!InDefinition)
     {
-        const FName PropertyName = PropertyChangedEvent.Property->GetFName();
+        UE_LOG(LogTemp, Warning, TEXT("EquippedObject: Cannot initialize with null definition"));
+        return;
+    }
+    
+    
+    ItemDefinition = InDefinition;
+    InstanceData = InInstanceData;
+    bIsInitialized = true;
+    
+    // Setup visual representation
+    SetupMesh();
+    UpdateVisualEffects();
+    
+    UE_LOG(LogTemp, Log, TEXT("EquippedObject initialized: %s"),
+           *GetDisplayName().ToString());
+}
+
+void AEquippedObject::UpdateInstanceData(const FItemInstanceData& NewInstanceData)
+{
+    if (!bIsInitialized)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("EquippedObject: Cannot update instance data before initialization"));
+        return;
+    }
+    
+    // ✅ Update instance data (e.g., after crafting operations)
+    InstanceData = NewInstanceData;
+    
+    // Update visuals to reflect changes
+    UpdateVisualEffects();
+    
+    // Broadcast update event
+    OnInstanceDataUpdated.Broadcast();
+    
+    UE_LOG(LogTemp, Log, TEXT("EquippedObject: Instance data updated"));
+}
+
+void AEquippedObject::SetupMesh()
+{
+    if (!ItemDefinition) return;
+    
+    // ✅ Use static mesh from definition
+    if (ItemDefinition->Base.StaticMesh && StaticMesh)
+    {
+        StaticMesh->SetStaticMesh(ItemDefinition->Base.StaticMesh);
+        StaticMesh->SetVisibility(true);
         
-        if (PropertyName == GET_MEMBER_NAME_CHECKED(AEquippedObject, ItemInfo))
+        if (SkeletalMesh)
         {
-            FString ErrorMsg;
-            if (!ValidateItemInfo(ItemInfo, ErrorMsg))
-            {
-                UE_LOG(LogTemp, Warning, TEXT("Invalid ItemInfo: %s"), *ErrorMsg);
-            }
+            SkeletalMesh->SetVisibility(false);
+        }
+    }
+    // ✅ Or use skeletal mesh from definition
+    else if (ItemDefinition->Base.SkeletalMesh && SkeletalMesh)
+    {
+        SkeletalMesh->SetSkeletalMesh(ItemDefinition->Base.SkeletalMesh);
+        SkeletalMesh->SetVisibility(true);
+        
+        if (StaticMesh)
+        {
+            StaticMesh->SetVisibility(false);
         }
     }
 }
-#endif
+
+void AEquippedObject::UpdateVisualEffects()
+{
+    if (!bIsInitialized) return;
+    
+    // Apply visual effects based on rarity
+    const EItemRarity Rarity = GetRarity();
+    
+    switch (Rarity)
+    {
+    case EItemRarity::IR_GradeS:
+        // Legendary glow, particles, etc.
+        break;
+    case EItemRarity::IR_GradeA:
+        // Epic glow
+        break;
+    case EItemRarity::IR_GradeB:
+        // Rare glow
+        break;
+    default:
+        // No special effects
+        break;
+    }
+    
+    // Could also show visual indicators for:
+    // - Applied runes (glowing symbols)
+    // - Number of affixes (aura intensity)
+    // - Low durability warning (for crafting UI)
+}
 
 // === IEquippable Interface Implementation ===
 
@@ -89,7 +151,13 @@ void AEquippedObject::OnEquipped_Implementation(AActor* NewOwner)
         return;
     }
     
-    SetOwningCharacter(Cast<AALSBaseCharacter>(NewOwner));
+    if (!bIsInitialized)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("OnEquipped: Item not initialized"));
+        return;
+    }
+    
+    OwningCharacter = Cast<AALSBaseCharacter>(NewOwner);
     bIsEquipped = true;
     
     // Apply stats to owner
@@ -98,12 +166,25 @@ void AEquippedObject::OnEquipped_Implementation(AActor* NewOwner)
     // Attach to owner
     if (USkeletalMeshComponent* OwnerMesh = NewOwner->FindComponentByClass<USkeletalMeshComponent>())
     {
-        AttachToComponent(OwnerMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, 
-                         GetAttachmentSocket_Implementation());
+        const FName Socket = GetAttachmentSocket_Implementation();
+        
+        if (ItemDefinition && !ItemDefinition->Base.AttachmentRules.AttachmentOffset.Equals(FTransform::Identity))
+        {
+            // Use custom attachment rules if specified
+            AttachToComponent(OwnerMesh, ItemDefinition->Base.AttachmentRules.ToAttachmentRules(), Socket);
+            SetActorRelativeTransform(ItemDefinition->Base.AttachmentRules.AttachmentOffset);
+        }
+        else
+        {
+            // Default attachment
+            AttachToComponent(OwnerMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, Socket);
+        }
     }
     
     // Broadcast event
     OnEquipped.Broadcast(this, NewOwner);
+    
+    UE_LOG(LogTemp, Log, TEXT("Item equipped: %s"), *GetDisplayName().ToString());
 }
 
 void AEquippedObject::OnUnequipped_Implementation()
@@ -116,17 +197,18 @@ void AEquippedObject::OnUnequipped_Implementation()
     // Detach from owner
     DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
     
-    AActor* PreviousOwner = OwningCharacter;
     OwningCharacter = nullptr;
     bIsEquipped = false;
     
     // Broadcast event
     OnUnequipped.Broadcast(this);
+    
+    UE_LOG(LogTemp, Log, TEXT("Item unequipped: %s"), *GetDisplayName().ToString());
 }
 
 bool AEquippedObject::CanBeEquippedBy_Implementation(AActor* Actor) const
 {
-    if (!Actor || IsBroken())
+    if (!Actor || !bIsInitialized)
     {
         return false;
     }
@@ -134,8 +216,11 @@ bool AEquippedObject::CanBeEquippedBy_Implementation(AActor* Actor) const
     // Check stat requirements if it's a character
     if (const APHBaseCharacter* Character = Cast<APHBaseCharacter>(Actor))
     {
-        // TODO: Add stat requirement checks here
-        // Example: return Character->MeetsRequirements(ItemInfo.ItemData.StatRequirements);
+        if (ItemDefinition)
+        {
+            // Check if character meets requirements
+            return ItemDefinition->Equip.MeetsRequirements(Character->GetCurrentStats());
+        }
     }
     
     return true;
@@ -143,51 +228,81 @@ bool AEquippedObject::CanBeEquippedBy_Implementation(AActor* Actor) const
 
 FName AEquippedObject::GetAttachmentSocket_Implementation() const
 {
-    // Check if item has a specific socket defined
-    if (!ItemInfo->Base.AttachmentSocket.IsNone())
+    if (!ItemDefinition)
     {
-        return ItemInfo->Base.AttachmentSocket;
+        return DefaultAttachmentSocket;
     }
     
-    // Return default socket based on item type
-    switch (ItemInfo->Base.ItemType)
+    // Check if item has a specific socket defined
+    if (!ItemDefinition->Base.AttachmentSocket.IsNone())
     {
-        case EItemType::IT_Weapon:
-            return DefaultAttachmentSocket;
-        case EItemType::IT_Shield:
-            return FName("ShieldSocket");
-        case EItemType::IT_Armor:
-            return FName("ArmorSocket");
-        default:
-            return DefaultAttachmentSocket;
+        return ItemDefinition->Base.AttachmentSocket;
     }
+    
+    // Return socket based on equipment slot
+    return UPHItemFunctionLibrary::GetSocketNameForSlot(ItemDefinition->Base.EquipmentSlot);
 }
 
- UItemDefinitionAsset* AEquippedObject::GetEquippableItemInfo_Implementation() const
+UItemDefinitionAsset* AEquippedObject::GetEquippableItemInfo_Implementation() const
 {
-    return ItemInfo;
+    // Note: Casting away const here - this is a legacy interface issue
+    // In future, this should return const UItemDefinitionAsset*
+    return const_cast<UItemDefinitionAsset*>(ItemDefinition);
 }
 
-void AEquippedObject::ApplyStatsToOwner_Implementation(AActor* RefOnwer)
+void AEquippedObject::ApplyStatsToOwner_Implementation(AActor* RefOwner)
 {
-    if (!RefOnwer)
+    if (!RefOwner || !bIsInitialized)
     {
         return;
     }
     
-    UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(RefOnwer);
+    UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(RefOwner);
     if (!ASC)
     {
         return;
     }
     
-    // Apply each stat as a gameplay effect
-    for (const FPHAttributeData& Stat : ItemInfo->ItemStats.GetAllStats())
+    // Clear any previously applied effects
+    for (const FActiveGameplayEffectHandle& Handle : AppliedEffectHandles)
     {
-        // TODO: Apply stat modifiers to owner
-        // This would require creating gameplay effects based on stats
-        // Example: ASC->ApplyModToAttribute(Stat.AttributeName, EGameplayModOp::Additive, Stat.Value);
+        if (Handle.IsValid())
+        {
+            ASC->RemoveActiveGameplayEffect(Handle);
+        }
     }
+    AppliedEffectHandles.Empty();
+    
+    // Apply passive effects from definition
+    for (const FItemPassiveEffectInfo& PassiveEffect : ItemDefinition->Equip.PassiveEffects)
+    {
+        if (PassiveEffect.EffectClass && PassiveEffect.bIsActive)
+        {
+            FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+            EffectContext.AddSourceObject(this);
+            
+            FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(
+                PassiveEffect.EffectClass,
+                PassiveEffect.Level,
+                EffectContext
+            );
+            
+            if (SpecHandle.IsValid())
+            {
+                FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+                if (ActiveHandle.IsValid())
+                {
+                    AppliedEffectHandles.Add(ActiveHandle);
+                }
+            }
+        }
+    }
+    
+    // Apply stat modifiers from instance affixes
+    // TODO: Create and apply gameplay effects based on affixes
+    // This would require a system to convert FPHAttributeData to gameplay effects
+    
+    UE_LOG(LogTemp, Log, TEXT("Applied %d effects to owner"), AppliedEffectHandles.Num());
 }
 
 void AEquippedObject::RemoveStatsFromOwner_Implementation(AActor* RefOwner)
@@ -203,162 +318,87 @@ void AEquippedObject::RemoveStatsFromOwner_Implementation(AActor* RefOwner)
         return;
     }
     
-    // Remove stat effects
-    // This would require tracking applied effects and removing them
+    // Remove all applied effects
+    for (const FActiveGameplayEffectHandle& Handle : AppliedEffectHandles)
+    {
+        if (Handle.IsValid())
+        {
+            ASC->RemoveActiveGameplayEffect(Handle);
+        }
+    }
+    
+    AppliedEffectHandles.Empty();
+    
+    UE_LOG(LogTemp, Log, TEXT("Removed effects from owner"));
 }
 
 EEquipmentSlot AEquippedObject::GetEquipmentSlot_Implementation() const
 {
-    return ItemInfo->Base.EquipmentSlot;
+    return ItemDefinition ? ItemDefinition->Base.EquipmentSlot : EEquipmentSlot::ES_None;
 }
 
-// === Setters with Validation ===
+// === Getters ===
 
-bool AEquippedObject::SetItemInfo(UItemDefinitionAsset*& Info)
+FText AEquippedObject::GetDisplayName() const
 {
-    FString ErrorMsg;
-    if (!ValidateItemInfo(Info, ErrorMsg))
+    if (!bIsInitialized) return FText::GetEmpty();
+    
+    // Use instance name if generated
+    if (InstanceData.bHasNameBeenGenerated)
     {
-        UE_LOG(LogTemp, Error, TEXT("SetItemInfo failed: %s"), *ErrorMsg);
-        return false;
+        return InstanceData.DisplayName;
     }
     
-    UItemDefinitionAsset*& OldInfo = ItemInfo;
-    ItemInfo = Info;
+    // Fall back to definition name
+    return ItemDefinition ? ItemDefinition->Base.ItemName : FText::GetEmpty();
+}
+
+EItemRarity AEquippedObject::GetRarity() const
+{
+    if (!bIsInitialized) return EItemRarity::IR_None;
     
-    // Update mesh if needed
-    if (StaticMesh && ItemInfo->Base.StaticMesh)
+    // Use instance rarity if set
+    if (InstanceData.Rarity != EItemRarity::IR_None)
     {
-        StaticMesh->SetStaticMesh(ItemInfo->Base.StaticMesh);
+        return InstanceData.Rarity;
     }
     
-    // Broadcast change event
-    OnItemInfoChanged.Broadcast(OldInfo, ItemInfo);
-    
-    return true;
+    // Fall back to definition rarity
+    return ItemDefinition ? ItemDefinition->Base.ItemRarity : EItemRarity::IR_None;
 }
 
-void AEquippedObject::SetItemInfoRotated(bool bRotated)
-{
-    ItemInfo->Base.Rotated = bRotated;
-}
-
-void AEquippedObject::SetMesh(UStaticMesh* Mesh) const
-{
-    ItemInfo->Base.StaticMesh = Mesh;
-}
+// === Utility ===
 
 UCombatManager* AEquippedObject::ConvertActorToCombatManager(const AActor* InActor)
 {
     return InActor ? InActor->FindComponentByClass<UCombatManager>() : nullptr;
 }
 
-bool AEquippedObject::SetOwningCharacter(AALSBaseCharacter* InOwner)
-{
-    if (InOwner == OwningCharacter)
-    {
-        return true; // No change needed
-    }
-    
-    if (bIsEquipped && InOwner != nullptr)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Cannot change owner while equipped"));
-        return false;
-    }
-    
-    OwningCharacter = InOwner;
-    return true;
-}
-
-void AEquippedObject::SetDurability(float NewDurability)
-{
-    const float OldDurability = CurrentDurability;
-    CurrentDurability = FMath::Clamp(NewDurability, 0.0f, MaxDurability);
-    
-    if (OldDurability != CurrentDurability)
-    {
-        OnDurabilityChanged.Broadcast(CurrentDurability);
-        
-        if (CurrentDurability <= 0.0f && OldDurability > 0.0f)
-        {
-            OnItemBroken.Broadcast(this);
-        }
-    }
-}
-
-void AEquippedObject::ModifyDurability(float DeltaDurability)
-{
-    SetDurability(CurrentDurability + DeltaDurability);
-}
-
-bool AEquippedObject::SetMesh(UStaticMesh* Mesh)
-{
-    if (!StaticMesh)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("SetMesh: StaticMesh component is null"));
-        return false;
-    }
-    
-    if (!Mesh)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("SetMesh: Mesh parameter is null"));
-        return false;
-    }
-    
-    StaticMesh->SetStaticMesh(Mesh);
-    return true;
-}
-
-// === Validation Functions ===
-
-bool AEquippedObject::ValidateItemInfo( UItemDefinitionAsset*& Info, FString& OutError) const
-{
-    if (Info->Base.ItemName.IsEmpty())
-    {
-        OutError = TEXT("Item name cannot be empty");
-        return false;
-    }
-    
-    if (Info->Base.Dimensions.X <= 0 || Info->Base.Dimensions.Y <= 0)
-    {
-        OutError = FString::Printf(TEXT("Invalid dimensions: %dx%d"), 
-                                   Info->Base.Dimensions.X, 
-                                   Info->Base.Dimensions.Y);
-        return false;
-    }
-    
-    if (!Info->Base.ItemImage && !Info->Base.StaticMesh)
-    {
-        OutError = TEXT("Item must have either an icon or a mesh");
-        return false;
-    }
-    
-    if (Info->Base.MaxStackSize < 0)
-    {
-        OutError = TEXT("Max stack size cannot be negative");
-        return false;
-    }
-    
-    OutError.Empty();
-    return true;
-}
-
 bool AEquippedObject::IsValidForEquipping() const
 {
-    return !IsBroken() && !ItemInfo->Base.ItemName.IsEmpty();
+    return bIsInitialized && ItemDefinition && !GetDisplayName().IsEmpty();
 }
 
 // === Pooling Support ===
 
 void AEquippedObject::ResetForPool()
 {
+    // Remove effects if equipped
+    if (bIsEquipped && OwningCharacter)
+    {
+        RemoveStatsFromOwner(OwningCharacter);
+    }
+    
     // Reset all state
     bIsEquipped = false;
+    bIsInitialized = false;
     bIsFromPool = true;
     OwningCharacter = nullptr;
-    CurrentDurability = MaxDurability;
+    ItemDefinition = nullptr;
+    InstanceData = FItemInstanceData();
     CurrentActorHit.Empty();
     PrevTracePoints.Empty();
+    AppliedEffectHandles.Empty();
     
     // Detach from any parent
     DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
@@ -368,25 +408,31 @@ void AEquippedObject::ResetForPool()
     SetActorEnableCollision(false);
     SetActorTickEnabled(false);
     
-    // Clear mesh
+    // Clear meshes
     if (StaticMesh)
     {
         StaticMesh->SetStaticMesh(nullptr);
+        StaticMesh->SetVisibility(false);
+    }
+    
+    if (SkeletalMesh)
+    {
+        SkeletalMesh->SetSkeletalMesh(nullptr);
+        SkeletalMesh->SetVisibility(false);
     }
 }
 
-void AEquippedObject::InitializeFromPool(UItemDefinitionAsset*& Info)
+void AEquippedObject::ReinitializeFromPool(const UItemDefinitionAsset* InDefinition, const FItemInstanceData& InInstanceData)
 {
-    // Set new item info
-    SetItemInfo(Info);
-    
-    // Reset durability
-    CurrentDurability = MaxDurability;
+    // Initialize with new data
+    InitializeFromItem(InDefinition, InInstanceData);
     
     // Show the actor
     SetActorHiddenInGame(false);
     SetActorEnableCollision(true);
     SetActorTickEnabled(PrimaryActorTick.bStartWithTickEnabled);
+    
+    bIsFromPool = true;
 }
 
 #undef LOCTEXT_NAMESPACE

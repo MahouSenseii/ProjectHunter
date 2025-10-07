@@ -176,18 +176,11 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
         return;
     }
 
-    // --- HYDRATE PICKUP FROM THE ASSET ---
-    // If your AItemPickup holds a UBaseItem (recommended):
-    //   Item->ItemObject->BaseDef = Def;
-    //   Roll affixes from Def->AffixTable into Item->ItemObject->Instance;
-    //   Item->ItemObject->RebuildItemInfoView();  // builds the same FItemInformation view as before
-
-    // Back-compat fallback (no AItemPickup changes): build a temp FItemInformation and assign it,
-    // so your existing Construction Script and mesh code still work.
+  
     {
     	UItemDefinitionAsset* TempView = nullptr;
-        TempView->Base= Def->Base;    // static/base data (meshes, value, sockets, rules)
-        TempView->Equip = Def->Equip;   // equip class/slot/base stats/passives
+        TempView->Base= Def->Base;   
+        TempView->Equip = Def->Equip;  
 
         // Optional: put fixed implicits here (and rolled affixes if you roll at spawn time)
         TempView->Equip.Affixes.Implicits = Def->Implicits;

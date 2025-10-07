@@ -154,6 +154,7 @@ private:
 
 	// Stacking
 	bool TryStackItem(UBaseItem* Item);
+	void RebuildStackableCache();
 
 public:
 	/* ============================= */

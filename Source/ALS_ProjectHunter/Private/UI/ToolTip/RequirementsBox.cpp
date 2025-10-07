@@ -55,7 +55,6 @@ void URequirementsBox::SetItemRequirements(const FEquippableItemData& PassedItem
 	ShowRequirement(AFFBox, AFFValue, Requirements.RequiredAffliction, AttributeSet->GetAffliction());
 	ShowRequirement(LUCKBox, LUCKValue, Requirements.RequiredLuck, AttributeSet->GetLuck());
 	ShowRequirement(COVBox, COVValue, Requirements.RequiredCovenant, AttributeSet->GetCovenant());
-	ShowRequirement(LVLBox, LVLValue, Requirements.RequiredLevel, Character->GetPlayerLevel());
 
 	// Remove the entire box if no requirement is present
 	if (!bHasAnyRequirement)
