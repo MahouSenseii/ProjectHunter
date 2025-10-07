@@ -14,7 +14,7 @@ UItemInstanceObject::UItemInstanceObject()
 /* ===      Public API       === */
 /* ============================= */
 
-UItemDefinitionAsset* UItemInstanceObject::GetItemInfo() 
+const UItemDefinitionAsset* UItemInstanceObject::GetItemInfo() 
 {
     if (!bCacheValid)
     {
@@ -23,7 +23,7 @@ UItemDefinitionAsset* UItemInstanceObject::GetItemInfo()
     return ItemInfoView;
 }
 
-void UItemInstanceObject::SetItemInfo( UItemDefinitionAsset*& NewItemInfo)
+void UItemInstanceObject::SetItemInfo(const UItemDefinitionAsset* NewItemInfo)
 {
     Super::SetItemInfo(NewItemInfo);
 }

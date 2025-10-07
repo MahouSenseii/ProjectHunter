@@ -10,7 +10,7 @@
 #include "Item/EquippedObject.h"
 #include "Item/WeaponItem.h"
 
-bool UPHItemFunctionLibrary::AreItemSlotsEqual(UItemDefinitionAsset* FirstItem, UItemDefinitionAsset* SecondItem)
+bool UPHItemFunctionLibrary::AreItemSlotsEqual(const UItemDefinitionAsset* FirstItem, const UItemDefinitionAsset* SecondItem)
 {
 	if((FirstItem->Base.EquipmentSlot == SecondItem->Base.EquipmentSlot)|| 
 	(FirstItem->Base.EquipmentSlot == EEquipmentSlot::ES_MainHand && SecondItem->Base.EquipmentSlot == EEquipmentSlot::ES_OffHand)||

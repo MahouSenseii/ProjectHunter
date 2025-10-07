@@ -287,7 +287,7 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 	if (UPHBaseToolTip* ToolTip = Cast<UPHBaseToolTip>(ToolTipWidget))
 	{
 		// Pass the complete item object (definition + instance)
-		ToolTip->SetItem(ItemObject);
+		ToolTip->SetItemObject(ItemObject);
         
 		if (UEquippableToolTip* EquipToolTip = Cast<UEquippableToolTip>(ToolTip))
 		{
@@ -299,9 +299,9 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 	}
 }
 
-void APHBaseCharacter::CloseToolTip() 
+void APHBaseCharacter::CloseToolTip(UInteractableManager* InteractableManager) 
 {
-	if (IsValid(CurrentToolTip))
+	if (IsValid(CurrentToolTip) )
 	{
 		CurrentToolTip->RemoveFromParent();
 	}

@@ -31,7 +31,7 @@ class ALS_PROJECTHUNTER_API UPHItemFunctionLibrary : public UBlueprintFunctionLi
 public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Checker")
-	static bool AreItemSlotsEqual(UItemDefinitionAsset* FirstItem, UItemDefinitionAsset* SecondItem);
+	static bool AreItemSlotsEqual(const UItemDefinitionAsset* FirstItem, const UItemDefinitionAsset* SecondItem);
 	static UBaseItem* GetItemInformation(UItemDefinitionAsset* ItemInfo, FConsumableItemData ConsumableItemData);
 
 	static UEquippableItem* CreateEquippableItem(UItemDefinitionAsset*& ItemInfo);

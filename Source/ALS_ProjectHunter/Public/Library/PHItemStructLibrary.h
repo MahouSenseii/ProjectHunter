@@ -288,99 +288,119 @@ struct FItemAttachmentRules
 /* ===   AFFIX SYSTEM        === */
 /* ============================= */
 
+// PHItemStructLibrary.h
+
 USTRUCT(BlueprintType)
 struct FPHAttributeData : public FTableRowBase
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-	// === Core Attribute ===
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute")
-	FGameplayAttribute ModifiedAttribute;
+    // === Core Attribute ===
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute")
+    FGameplayAttribute ModifiedAttribute;
 
-	// === Rolled Value ===
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Value")
-	float RolledStatValue = 0.0f;
+    // === Rolled Value ===
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Value")
+    float RolledStatValue = 0.0f;
 
-	// === Reroll System ===
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reroll")
-	FGuid ModifierUID;
+    // === Reroll System ===
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reroll")
+    FGuid ModifierUID;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Value")
-	bool bRollsAsInteger = true;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Value")
+    bool bRollsAsInteger = true;
 
-	// === Roll Range ===
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Value")
-	FVector2D StatRollRange = FVector2D(0.0f, 0.0f);
+    // === Roll Range ===
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Value")
+    FVector2D StatRollRange = FVector2D(0.0f, 0.0f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Value")
-	float MinStatChanged = 0.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Value")
+    float MinStatChanged = 0.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Value")
-	float MaxStatChanged = 0.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Value")
+    float MaxStatChanged = 0.0f;
 
-	// === Display ===
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
-	FText StatDisplayName;
+    // === Display ===
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+    FText StatDisplayName;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
-	FName AttributeName;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+    FName AttributeName;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
-	EAttributeDisplayFormat DisplayFormat = EAttributeDisplayFormat::Additive;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+    EAttributeDisplayFormat DisplayFormat = EAttributeDisplayFormat::Additive;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
-	bool bDisplayAsRange = false;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+    bool bDisplayAsRange = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
-	FText CustomDisplayFormatText;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+    FText CustomDisplayFormatText;
 
-	// === Identification ===
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Identification", SaveGame)
-	bool bIsIdentified = true;
+    // === Identification ===
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Identification", SaveGame)
+    bool bIsIdentified = true;
 
-	// === Affix Classification ===
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix")
-	EAffixes PrefixSuffix = EAffixes::Prefix; 
+    // === Affix Classification ===
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix")
+    EAffixes PrefixSuffix = EAffixes::Prefix;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix")
-	FName AffixID;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix")
+    FName AffixID;
 
-	// === Rank Points (for rarity calculation) ===
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix")
-	ERankPoints RankPoints = ERankPoints::RP_0;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix")
+    ERankPoints RankPoints = ERankPoints::RP_0;
 
-	// === Gameplay Tags (MISSING - ADD THIS!) ===
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tags")
-	FGameplayTagContainer AffectedTags;
+    // === Gameplay Tags ===
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tags")
+    FGameplayTagContainer AffectedTags;
 
-	// === Helper Functions ===
-	
-	void UpdateMinMaxFromRange()
-	{
-		if (MinStatChanged == 0.0f && MaxStatChanged == 0.0f)
-		{
-			MinStatChanged = StatRollRange.X;
-			MaxStatChanged = StatRollRange.Y;
-		}
-	}
+    // === Application Rules ===
+    
+    /** 
+     * If true, this stat modifies the weapon's base damage/stats directly
+     * (e.g., "Adds 10-20 Physical Damage" to weapon)
+     * If false, it's applied to the character's stats
+     * (e.g., "+15% Increased Physical Damage" to character)
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Application")
+    bool bAffectsBaseWeaponStatsDirectly = false;
 
-	float RollValue()
-	{
-		if (StatRollRange.X == StatRollRange.Y)
-		{
-			RolledStatValue = StatRollRange.X;
-		}
-		else
-		{
-			RolledStatValue = FMath::FRandRange(StatRollRange.X, StatRollRange.Y);
-		}
-		
-		UpdateMinMaxFromRange();
-		return RolledStatValue;
-	}
+    /** 
+     * If true, this stat applies to local weapon only
+     * If false, it's a global character stat
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Application")
+    bool bIsLocalToWeapon = true;
 
-	FPHAttributeData() = default;
+    // === Helper Functions ===
+    
+    void UpdateMinMaxFromRange()
+    {
+        if (MinStatChanged == 0.0f && MaxStatChanged == 0.0f)
+        {
+            MinStatChanged = StatRollRange.X;
+            MaxStatChanged = StatRollRange.Y;
+        }
+    }
+
+    float RollValue()
+    {
+        if (StatRollRange.X == StatRollRange.Y)
+        {
+            RolledStatValue = StatRollRange.X;
+        }
+        else
+        {
+            RolledStatValue = FMath::FRandRange(StatRollRange.X, StatRollRange.Y);
+        }
+        
+        UpdateMinMaxFromRange();
+        return RolledStatValue;
+    }
+
+    FPHAttributeData() = default;
 };
+
 // PHItemStructLibrary.h
 
 USTRUCT(BlueprintType)
@@ -1212,6 +1232,9 @@ struct FEquippableItemData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	EEquipmentSlot EquipSlot;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	EALSOverlayState OverlayState;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	FName ItemName;

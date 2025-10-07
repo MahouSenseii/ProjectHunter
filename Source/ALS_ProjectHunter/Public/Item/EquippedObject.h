@@ -75,6 +75,9 @@ public:
     
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Character")
     AALSBaseCharacter* GetOwningCharacter() const { return OwningCharacter; }
+
+    UFUNCTION(BlueprintCallable, Category = "Character")
+    void SetOwningCharacter(AALSBaseCharacter* NewOwner) { OwningCharacter = NewOwner; }
     
     // === Utility ===
     
@@ -83,6 +86,13 @@ public:
     
     UFUNCTION(BlueprintCallable, Category = "Validation")
     bool IsValidForEquipping() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Equipment|Mesh")
+    bool SetMesh(UStaticMesh* Mesh);
+    
+    /** Set skeletal mesh for this equipped object */
+    UFUNCTION(BlueprintCallable, Category = "Equipment|Mesh")
+    bool SetSkeletalMesh(USkeletalMesh* Mesh);
     
     // === Pooling Support ===
     

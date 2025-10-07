@@ -232,7 +232,7 @@ void UItemWidget::CreateToolTip()
 
     TSubclassOf<UUserWidget> TooltipClassToUse = nullptr;
 
-    UItemDefinitionAsset* ItemInfo = ItemObject->GetItemInfo();
+    const UItemDefinitionAsset* ItemInfo = ItemObject->GetItemInfo();
     switch (ItemInfo->Base.ItemType)
     {
         case EItemType::IT_Armor:

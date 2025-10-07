@@ -103,6 +103,8 @@ void UPHBaseToolTip::SetItemInfo(UItemDefinitionAsset*& Item)
 	ChangeColorByRarity();
 }
 
+
+
 void UPHBaseToolTip::SetItemObject(UBaseItem* Item)
 {
 	ItemObject = Item;

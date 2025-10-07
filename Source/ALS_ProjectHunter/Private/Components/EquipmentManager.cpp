@@ -307,7 +307,7 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 		FItemBase Base = Info->Base;
 		FEquippableItemData& Equip = Info->Equip;
 
-		SpawnedActor->SetItemInfo(Info);
+		SpawnedActor->InitializeFromItem (Info, );
 
 		// Resolve the desired socket:
 		// 1) Use explicit per-item socket if provided
@@ -414,86 +414,53 @@ void UEquipmentManager::ApplyAllEquipmentStatsToAttributes(APHBaseCharacter* Cha
 
 
 
-void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character)
+void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem* Item, EEquipmentSlot Slot)
 {
-	if (!Item || !Character) return;
-
-	UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
-	if (!ASC) return;
-
-	// === Apply Attribute Bonuses from FPHItemStats ===
-	const FPHItemStats& ItemStats = Item->GetItemInfo()->Equip.Affixes;
-	const TArray<FPHAttributeData>& Stats = ItemStats.GetAllStats();
-
-	FAppliedItemStats AppliedStats;
-	AppliedStats.Stats = Stats.;
-
-        for (const FPHAttributeData& Attr : Stats)
-        {
-                if (!Attr.ModifiedAttribute.IsValid()) continue;
-
-                const float Rolled = Attr.RolledStatValue;
-                AppliedStats.RolledValues.Add(Rolled);
-
-                const float CurrentValue = ASC->GetNumericAttribute(Attr.ModifiedAttribute);
-                ASC->SetNumericAttributeBase(Attr.ModifiedAttribute, CurrentValue + Rolled);
-        }
-
-        // === Apply Base Weapon Damage to Attributes ===
-        const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = Item->GetItemInfo()->Equip.WeaponBaseStats.BaseDamage;
-        for (const TPair<EDamageTypes, FDamageRange>& Pair : BaseDamageMap)
-        {
-                const FString TypeName = DamageTypeToString(Pair.Key);
-
-                const FString MinKey = FString::Printf(TEXT("Min %s"), *TypeName);
-                const FString MaxKey = FString::Printf(TEXT("Max %s"), *TypeName);
-
-                if (const FGameplayAttribute* MinAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MinKey))
-                {
-                        Character->GetStatsManager()->ApplyFlatModifier(*MinAttr, Pair.Value.Min);
-                        AppliedStats.BaseDamageAttributes.Add(*MinAttr);
-                        AppliedStats.BaseDamageValues.Add(Pair.Value.Min);
-                }
-
-                if (const FGameplayAttribute* MaxAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MaxKey))
-                {
-                        Character->GetStatsManager()->ApplyFlatModifier(*MaxAttr, Pair.Value.Max);
-                        AppliedStats.BaseDamageAttributes.Add(*MaxAttr);
-                        AppliedStats.BaseDamageValues.Add(Pair.Value.Max);
-                }
-        }
-
-        if (AppliedStats.Stats.Num() > 0 || AppliedStats.BaseDamageAttributes.Num() > 0)
-        {
-                AppliedItemStats.Add(Item, AppliedStats);
-        }
-
-	// === Apply Passive Effects ===
-	const TArray<FItemPassiveEffectInfo>& Passives = Item->GetItemInfo()->Equip.PassiveEffects;
-	FPassiveEffectHandleList PassiveHandles;
-
-	for (const FItemPassiveEffectInfo& Passive : Passives)
+	if (!IsValid(Item) || !IsValid(OwnerCharacter) || !Class)
 	{
-		if (!Passive.EffectClass) continue;
-
-		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-		Context.AddSourceObject(Item);
-
-		FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(Passive.EffectClass, Passive.Level, Context);
-		if (Spec.IsValid())
-		{
-			FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-			PassiveHandles.Handles.Add(Handle);
-		}
+		UE_LOG(LogEquipmentManager, Warning, TEXT("Invalid parameters in AttachItem"));
+		return;
 	}
 
-	if (PassiveHandles.Handles.Num() > 0)
+	if (UWorld* World = GetWorld())
 	{
-		AppliedPassiveEffects.Add(Item, PassiveHandles);
+		// Spawn the equipped actor
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		AEquippedObject* SpawnedActor = World->SpawnActor<AEquippedObject>(
+			Class, 
+			FVector::ZeroVector, 
+			FRotator::ZeroRotator, 
+			SpawnParams
+		);
+
+		if (!IsValid(SpawnedActor))
+		{
+			UE_LOG(LogEquipmentManager, Error, TEXT("Failed to spawn equipped object"));
+			return;
+		}
+
+		// ✅ Initialize the equipped object with item data
+		SpawnedActor->InitializeFromItem(Item->ItemDefinition, Item->RuntimeData);
+
+		// ✅ Call OnEquipped - this handles:
+		// - Socket resolution and attachment
+		// - Stat application
+		// - Overlay state
+		// - Effect application
+		SpawnedActor->OnEquipped(OwnerCharacter);
+
+		// ✅ Store references
+		EquipmentData.Add(Slot, Item);
+		EquipmentItem.Add(Slot, SpawnedActor);
+
+		UE_LOG(LogEquipmentManager, Log, TEXT("Equipped: %s to slot %s"),
+			   *Item->RuntimeData.DisplayName.ToString(),
+			   *UEnum::GetValueAsString(Slot));
 	}
 }
-
-void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, APHBaseCharacter* Character)
+void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, const APHBaseCharacter* Character)
 {
 	if (!WeaponItem)
 	{
@@ -553,54 +520,52 @@ void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, APHBa
 	}
 }
 
-void UEquipmentManager::RemoveItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character)
+// EquipmentManager.cpp
+
+void UEquipmentManager::RemoveItemStatBonuses(AEquippedObject* EquippedObject, APHBaseCharacter* Character)
 {
-	if (!Item || !Character) return;
+	if (!EquippedObject || !Character)
+	{
+		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveItemStatBonuses: Invalid parameters"));
+		return;
+	}
+
+	if (!EquippedObject->IsInitialized())
+	{
+		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveItemStatBonuses: Item not initialized"));
+		return;
+	}
 
 	UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
-	if (!ASC) return;
-
-	// === Remove Stat Bonuses ===
-	if (AppliedItemStats.Contains(Item))
+	if (!ASC)
 	{
-		const FAppliedItemStats& Stats = AppliedItemStats[Item];
-
-                for (int32 i = 0; i < Stats.Stats.Num(); ++i)
-                {
-                        const FPHAttributeData& Attr = Stats.Stats[i];
-                        if (!Attr.ModifiedAttribute.IsValid()) continue;
-
-                        const float Rolled = Stats.RolledValues.IsValidIndex(i) ? Stats.RolledValues[i] : 0.0f;
-                        Character->GetStatsManager()->ApplyFlatModifier(Attr.ModifiedAttribute, -Rolled);
-                        UE_LOG(LogEquipmentManager, Log, TEXT("Removing %.2f from %s"), Rolled, *Attr.ModifiedAttribute.GetName());
-                }
-
-                for (int32 i = 0; i < Stats.BaseDamageAttributes.Num(); ++i)
-                {
-                        const FGameplayAttribute& Attr = Stats.BaseDamageAttributes[i];
-                        const float Value = Stats.BaseDamageValues.IsValidIndex(i) ? Stats.BaseDamageValues[i] : 0.0f;
-                        if (!Attr.IsValid()) continue;
-
-                        Character->GetStatsManager()->ApplyFlatModifier(Attr, -Value);
-                }
-
-                AppliedItemStats.Remove(Item);
+		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveItemStatBonuses: Character has no ASC"));
+		return;
 	}
 
-	// === Remove Passive Effects ===
-	if (AppliedPassiveEffects.Contains(Item))
+	// ✅ Get applied stats from the equipped object
+	const FAppliedItemStats& AppliedStats = EquippedObject->;
+
+	// === Remove Flat Stat Bonuses ===
+	for (const FAppliedItemStats& StatValue : AppliedStats.Values)
 	{
-		for (const FActiveGameplayEffectHandle& Handle : AppliedPassiveEffects[Item].Handles)
-		{
-			if (Handle.IsValid())
-			{
-				ASC->RemoveActiveGameplayEffect(Handle);
-			}
-		}
-		AppliedPassiveEffects.Remove(Item);
+		if (!StatValue.Attribute.IsValid()) continue;
+
+		// Remove the stat modifier
+		Character->GetStatsManager()->ApplyFlatModifier(StatValue.Attribute, -StatValue.RolledValue);
+        
+		UE_LOG(LogEquipmentManager, Log, TEXT("Removing %.2f from %s"), 
+			   StatValue.RolledValue, 
+			   *StatValue.Attribute.GetName());
 	}
+
+	// === Remove Passive Effects (handled by AEquippedObject) ===
+	// The equipped object tracks its own effect handles
+	EquippedObject->RemoveStatsFromOwner(Character);
+
+	UE_LOG(LogEquipmentManager, Log, TEXT("Removed all stat bonuses from %s"),
+		   *EquippedObject->GetDisplayName().ToString());
 }
-
 
 void UEquipmentManager::ResetAllEquipmentBonuses(APHBaseCharacter* Character)
 {

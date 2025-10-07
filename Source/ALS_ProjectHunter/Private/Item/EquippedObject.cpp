@@ -379,6 +379,59 @@ bool AEquippedObject::IsValidForEquipping() const
     return bIsInitialized && ItemDefinition && !GetDisplayName().IsEmpty();
 }
 
+bool AEquippedObject::SetMesh(UStaticMesh* Mesh)
+{
+    if (!StaticMesh)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SetMesh: StaticMesh component is null"));
+        return false;
+    }
+    
+    if (!Mesh)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SetMesh: Mesh parameter is null"));
+        return false;
+    }
+    
+    
+    StaticMesh->SetStaticMesh(Mesh);
+    StaticMesh->SetVisibility(true);
+    
+    // Hide skeletal mesh if using static
+    if (SkeletalMesh)
+    {
+        SkeletalMesh->SetVisibility(false);
+    }
+    
+    return true;
+}
+
+bool AEquippedObject::SetSkeletalMesh(USkeletalMesh* Mesh)
+{
+    if (!SkeletalMesh)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SetSkeletalMesh: SkeletalMesh component is null"));
+        return false;
+    }
+    
+    if (!Mesh)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SetSkeletalMesh: Mesh parameter is null"));
+        return false;
+    }
+    
+    
+    SkeletalMesh->SetSkeletalMesh(Mesh);
+    SkeletalMesh->SetVisibility(true);
+    
+    // Hide static mesh if using skeletal
+    if (StaticMesh)
+    {
+        StaticMesh->SetVisibility(false);
+    }
+    
+    return true;
+}
 // === Pooling Support ===
 
 void AEquippedObject::ResetForPool()

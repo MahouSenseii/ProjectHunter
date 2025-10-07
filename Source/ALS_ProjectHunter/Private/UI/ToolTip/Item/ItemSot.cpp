@@ -64,6 +64,7 @@ bool UItemSot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& I
         return false; // Drop payload is invalid
     }
 
+
     if (UPHItemFunctionLibrary::AreItemSlotsEqual(CastedItem->GetItemInfo(), SlotData))
     {
         if (CanvasPanel->HasChild(ChildContent))
@@ -73,9 +74,8 @@ bool UItemSot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& I
         }
 
         // Rotate the item for placement
-		UItemDefinitionAsset * TempItemInformation = CastedItem->GetItemInfo();
-    	TempItemInformation->Base.Rotated = false;
-    	CastedItem->SetItemInfo(TempItemInformation);
+    	CastedItem->RuntimeData.bRotated = false;
+    	CastedItem->SetItemInfo(CastedItem->GetItemInfo());
     	if(ItemWidgetClass)
     	{
     		CreateChildContent();

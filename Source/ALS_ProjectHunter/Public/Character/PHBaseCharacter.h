@@ -83,7 +83,7 @@ public:
 	void OpenToolTip(UInteractableManager* InteractableManager);
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void CloseToolTip() ;
+	void CloseToolTip(UInteractableManager* InteractableManager) ;
 
 	UFUNCTION()
 	void OnGameplayTagChanged(FGameplayTag Tag, int NewCount);

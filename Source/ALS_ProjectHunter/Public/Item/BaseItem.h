@@ -97,7 +97,7 @@ public:
 
 	/** Get read-only access to item information */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	virtual UItemDefinitionAsset* GetItemInfo()  { return ItemDefinition; }
+	virtual const UItemDefinitionAsset* GetItemInfo()  { return ItemDefinition; }
 
 	/** Get the item's display name */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
@@ -125,7 +125,7 @@ public:
 
 	/** Update item information (use with caution) */
 	UFUNCTION(BlueprintCallable, Category = "Item|Modification")
-	virtual void SetItemInfo( UItemDefinitionAsset*& NewItemInfo);
+	virtual void SetItemInfo( const UItemDefinitionAsset* NewItemInfo);
 
 	/** Set equipment data for this item */
 	UFUNCTION(BlueprintCallable, Category = "Item|Modification")

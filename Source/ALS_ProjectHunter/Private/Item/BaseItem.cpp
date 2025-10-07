@@ -193,7 +193,7 @@ bool UBaseItem::CanAddQuantity(int32 Amount)
 	return (GetQuantity() + Amount) <= MaxStack;
 }
 
-void UBaseItem::SetItemInfo( UItemDefinitionAsset*& NewItemInfo)
+void UBaseItem::SetItemInfo(const UItemDefinitionAsset* NewItemInfo)
 {
 	const FString OldID = UniqueID;
 	ItemDefinition = NewItemInfo;

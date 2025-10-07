@@ -33,10 +33,6 @@ public:
 	UFUNCTION() FLinearColor GetColorBaseOnRarity();
 	UFUNCTION(BlueprintSetter, BlueprintCallable) virtual void SetItemInfo(UItemDefinitionAsset*& Item);
 
-
-	UFUNCTION(BlueprintCallable, Category = "Tooltip")
-	virtual void SetItem(UBaseItem* Item);
-
 	/** Set the item to display in tooltip */
 	UFUNCTION(BlueprintCallable, Category = "Tooltip")
 	virtual void SetItemObject(UBaseItem* Item);
