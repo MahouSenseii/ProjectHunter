@@ -10,6 +10,7 @@
 #include "Interactables/Pickups/ConsumablePickup.h"
 #include "Materials/MaterialInstance.h"
 #include "UI/ToolTip/ConsumableToolTip.h"
+#include "UI/ToolTip/RequirementsBox.h"
 
 
 class UConsumableToolTip;
@@ -229,7 +230,6 @@ void UItemWidget::CreateToolTip()
     check(ItemObject); 
     check(EquippableToolTipClass);
 
-
     TSubclassOf<UUserWidget> TooltipClassToUse = nullptr;
 
     const UItemDefinitionAsset* ItemInfo = ItemObject->GetItemInfo();
@@ -254,31 +254,36 @@ void UItemWidget::CreateToolTip()
         UUserWidget* NewToolTip = CreateWidget<UUserWidget>(GetWorld(), TooltipClassToUse);
         if (!NewToolTip) return;
 
-
         if (UEquippableToolTip* AsEquippable = Cast<UEquippableToolTip>(NewToolTip))
         {
-            AsEquippable->SetItemInfo(ItemObject->GetItemInfo());
+            AsEquippable->SetItemInfo(ItemObject->GetItemInfo(), ItemObject->RuntimeData);
             CurrentToolTip = AsEquippable;
+            
+            // Set requirements (fix: use non-const version or cast)
+            if (AsEquippable->StatsBox && AsEquippable->StatsBox->GetRequirementsBox())
+            {
+
+                AsEquippable->StatsBox->GetRequirementsBox()->SetItemRequirements(
+                   ItemObject->GetItemInfo()->Equip, OwnerCharacter);
+            }
         }
         else if (UConsumableToolTip* AsConsumable = Cast<UConsumableToolTip>(NewToolTip))
         {
-            AsConsumable->SetItemInfo(ItemObject->GetItemInfo());
+            AsConsumable->SetItemInfo(ItemObject->GetItemInfo(),ItemObject->RuntimeData);
+            CurrentToolTip = AsConsumable;  // Fixed: was missing this assignment
         }
 
         // Positioning
         const FVector2D DesiredPosition = CalculateTooltipPosition();
         const float Width = GetTooltipWidth();
         const float Height = GetTooltipHeight();
-        Cast<UEquippableToolTip>(CurrentToolTip)->StatsBox->GetRequirementsBox()->SetItemRequirements(
-            ItemObject->GetItemInfo()->Equip,OwnerCharacter);
+        
         SetToolTip(NewToolTip);
         NewToolTip->SetDesiredSizeInViewport(FVector2D(Width, Height));
         NewToolTip->SetPositionInViewport(DesiredPosition);
         NewToolTip->AddToViewport(100);
-       
     }
 }
-
 void UItemWidget::EventMouseUnHovered()
 {
     RemoveToolTip();

@@ -4,7 +4,67 @@
 #include "UI/HUD/PHHUD.h"
 
 #include "Blueprint/UserWidget.h"
+#include "Components/CanvasPanel.h"
 #include "UI/WidgetController/PHOverlayWidgetController.h"
+
+void APHHUD::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (!TooltipCanvas && TooltipContainerClass)
+	{
+		if (UUserWidget* TooltipContainer = CreateWidget<UUserWidget>(GetWorld(), TooltipContainerClass))
+		{
+			TooltipCanvas = Cast<UCanvasPanel>(TooltipContainer->GetRootWidget());
+			if (TooltipCanvas)
+			{
+				TooltipContainer->AddToViewport(100); // High Z-order
+				UE_LOG(LogTemp, Log, TEXT("✅ TooltipCanvas created successfully"));
+			}
+		}
+	}
+
+	GetOrCreateTooltipCanvas();
+}
+
+UCanvasPanel* APHHUD::GetOrCreateTooltipCanvas()
+{
+	// If already created, return it
+	if (TooltipCanvas)
+	{
+		return TooltipCanvas;
+	}
+
+	//Check if the class is set
+	if (!TooltipContainerClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("❌ TooltipContainerClass is NOT SET in BP_PHHUD! Please assign WBP_TooltipContainer"));
+		return nullptr;
+	}
+
+	// Create the container widget
+	UUserWidget* TooltipContainer = CreateWidget<UUserWidget>(GetWorld(), TooltipContainerClass);
+	if (!TooltipContainer)
+	{
+		UE_LOG(LogTemp, Error, TEXT("❌ Failed to create TooltipContainer widget"));
+		return nullptr;
+	}
+
+	// Get the canvas panel from the root widget
+	TooltipCanvas = Cast<UCanvasPanel>(TooltipContainer->GetRootWidget());
+	if (!TooltipCanvas)
+	{
+		UE_LOG(LogTemp, Error, TEXT("❌ TooltipContainer root widget is not a Canvas Panel!"));
+		return nullptr;
+	}
+
+	// Add to viewport with high Z-order
+	TooltipContainer->AddToViewport(100);
+	UE_LOG(LogTemp, Log, TEXT("✅ TooltipCanvas created and added to viewport"));
+
+	return TooltipCanvas;
+}
+
 
 UAttributeMenuWidgetController* APHHUD::GetAttributeWidgetController(const FWidgetControllerParams& WCParams)
 {

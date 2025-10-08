@@ -27,7 +27,7 @@ void UItemSot::NativeConstruct()
 		// added equipment manager
 		Equipment = Owner->GetEquipmentManager();
 		Inventory = Owner->GetInventoryManager();
-		Equipment->OnEquipmentChanged.AddDynamic(this, &ThisClass::Refresh);
+		Equipment->OnEquipmentChangedSimple.AddDynamic(this, &ThisClass::Refresh);
 		Refresh();
 	}
 	if(EquipmentSlot!= EEquipmentSlot::ES_None)

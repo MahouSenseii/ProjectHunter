@@ -9,7 +9,11 @@
 #include "EquipmentManager.generated.h"
 
 // Delegate for broadcasting equipment changes
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEquipmentChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemEquippedSignature, EEquipmentSlot, Slot, UBaseItem*, Item);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemUnequippedSignature, EEquipmentSlot, Slot, UBaseItem*, Item);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnEquipmentChanged, EEquipmentSlot, Slot, UBaseItem*, OldItem, UBaseItem*, NewItem);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEquipmentChangedSimple);
+
 
 class UBaseItem;
 class AALSCharacter;
@@ -77,6 +81,9 @@ public:
 	void RemoveEquippedItem(UBaseItem* Item, EEquipmentSlot Slot);
 	static void RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHBaseCharacter* Character);
 
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void RemoveItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character);
+
 	/** Removes whatever item is currently in the slot */
 	UFUNCTION(BlueprintCallable)
 	void RemoveItemInSlot(EEquipmentSlot Slot);
@@ -91,10 +98,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void ApplyItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character);
 	static void ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, const APHBaseCharacter* Character);
-
-	UFUNCTION(BlueprintCallable, Category = "Stats")
-	void RemoveItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character);
-
+	
+	
+	void HandleItemEquipped(AEquippedObject* EquippedObject, AActor* Owner);
+	void HandleItemUnequipped(AEquippedObject* EquippedObject);
+	
+	// Equipment management
+	UFUNCTION(BlueprintCallable, Category = "Equipment")
+	void EquipItem(UBaseItem* Item, EEquipmentSlot Slot);
+    
+	UFUNCTION(BlueprintCallable, Category = "Equipment")
+	void UnequipItem(EEquipmentSlot Slot);
+    
+	UFUNCTION(BlueprintCallable, Category = "Equipment")
+	void SwapEquipment(EEquipmentSlot FromSlot, EEquipmentSlot ToSlot);
 	//Not used but optional in case of later development 
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void ResetAllEquipmentBonuses(APHBaseCharacter* Character);
@@ -128,9 +145,18 @@ protected:
 	/* ============================= */
 
 public:
-	/** Delegate for notifying when equipment changes */
-	UPROPERTY(BlueprintAssignable)
+
+	UPROPERTY(BlueprintAssignable, Category = "Equipment|Events")
+	FOnItemEquippedSignature OnItemEquipped;
+    
+	UPROPERTY(BlueprintAssignable, Category = "Equipment|Events")
+	FOnItemUnequippedSignature OnItemUnequipped;
+
+	UPROPERTY(BlueprintAssignable, Category = "Equipment|Events")
 	FOnEquipmentChanged OnEquipmentChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Equipment|Events")
+	FOnEquipmentChangedSimple OnEquipmentChangedSimple;
 
 	/** Reference to the character that owns this equipment manager */
 	UPROPERTY(BlueprintReadOnly, Category = "Owner")

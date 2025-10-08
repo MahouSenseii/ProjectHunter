@@ -1,141 +1,173 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// PHBaseToolTip.cpp
 
 #include "UI/ToolTip/PHBaseToolTip.h"
-#include "Library/PHItemEnumLibrary.h"
-
-void UPHBaseToolTip::NativePreConstruct()
-{
-	Super::NativePreConstruct();
-
-	RarityColors.Add(EItemRarity::IR_GradeF, FLinearColor(0.025f, 0.46f, 0.982f, 1.0f));
-	RarityColors.Add(EItemRarity::IR_GradeD, FLinearColor(0.16f, 0.86f, 1.0f, 1.0f));
-	RarityColors.Add(EItemRarity::IR_GradeC, FLinearColor(1.0f, 0.946f, 0.447f, 1.0f));
-	RarityColors.Add(EItemRarity::IR_GradeB, FLinearColor(0.41f, 0.032f, 0.5f, 1.0f));
-	RarityColors.Add(EItemRarity::IR_GradeA, FLinearColor(0.11f, 0.49f, 1.0f, 1.0f));
-	RarityColors.Add(EItemRarity::IR_GradeS, FLinearColor(1.0f, 0.0f, 0.0f, 1.0f));
-	RarityColors.Add(EItemRarity::IR_Corrupted, FLinearColor::Black);
-	RarityColors.Add(EItemRarity::IR_Unknown, FLinearColor(0.0251f, 0.462f, 0.982f, 1.0f));
-	RarityColors.Add(EItemRarity::IR_None, FLinearColor(0.f, 0.f, 0.f, 1.0f));
-}
+#include "Item/BaseItem.h"
+#include "Character/PHBaseCharacter.h"
+#include "Components/Image.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 
 void UPHBaseToolTip::NativeConstruct()
 {
-	Super::NativeConstruct();
-	
-	InitializeToolTip();
+    Super::NativeConstruct();
+    
+    // Initialize rarity colors
+    if (RarityColorMap.Num() == 0)
+    {
+        RarityColorMap.Add(EItemRarity::IR_None,      FLinearColor(0.5f, 0.5f, 0.5f));
+        RarityColorMap.Add(EItemRarity::IR_GradeF,    FLinearColor(0.4f, 0.3f, 0.2f));
+        RarityColorMap.Add(EItemRarity::IR_GradeD,    FLinearColor::White);
+        RarityColorMap.Add(EItemRarity::IR_GradeC,    FLinearColor(0.3f, 1.0f, 0.3f));
+        RarityColorMap.Add(EItemRarity::IR_GradeB,    FLinearColor(0.2f, 0.6f, 1.0f));
+        RarityColorMap.Add(EItemRarity::IR_GradeA,    FLinearColor(0.7f, 0.2f, 1.0f));
+        RarityColorMap.Add(EItemRarity::IR_GradeS,    FLinearColor(1.0f, 0.65f, 0.0f));
+        RarityColorMap.Add(EItemRarity::IR_Unknown,   FLinearColor(1.0f, 0.0f, 1.0f));
+        RarityColorMap.Add(EItemRarity::IR_Corrupted, FLinearColor(0.5f, 0.0f, 0.15f));
+    }
+}
+
+void UPHBaseToolTip::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+}
+
+void UPHBaseToolTip::PositionAtBottomRight(FVector2D Offset)
+{
+    // Try to get canvas slot first
+    UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Slot);
+    
+    if (CanvasSlot)
+    {
+        // We're in a canvas panel - use slot positioning
+        CanvasSlot->SetAnchors(FAnchors(1.0f, 1.0f, 1.0f, 1.0f));
+        CanvasSlot->SetAlignment(FVector2D(1.0f, 1.0f));
+        CanvasSlot->SetPosition(FVector2D(-Offset.X, -Offset.Y));
+        CanvasSlot->SetSize(TooltipSize);
+        
+        UE_LOG(LogTemp, Log, TEXT("✅ Positioned via Canvas Panel Slot"));
+    }
+    else
+    {
+        // We're added directly to viewport - use position and alignment
+        FVector2D ViewportSize = UWidgetLayoutLibrary::GetViewportSize(this);
+        
+        // Calculate position from bottom-right
+        FVector2D DesiredPosition;
+        DesiredPosition.X = ViewportSize.X - Offset.X - TooltipSize.X;
+        DesiredPosition.Y = ViewportSize.Y - Offset.Y - TooltipSize.Y;
+        
+        // Set position in viewport space
+        SetPositionInViewport(DesiredPosition, false);
+        
+        // Set desired size
+        SetDesiredSizeInViewport(TooltipSize);
+        
+        UE_LOG(LogTemp, Log, TEXT("✅ Positioned via SetPositionInViewport at %s"), 
+            *DesiredPosition.ToString());
+    }
 }
 
 void UPHBaseToolTip::InitializeToolTip()
 {
-	if (!ItemInfo->Base.IsValid())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("InitializeToolTip: ItemObj is null."));
-		return;
-	}
+    if (!ItemDefinition)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("InitializeToolTip: No item definition set"));
+        return;
+    }
 
-	ItemGrade =  ItemInfo->Base.ItemRarity;
-	ChangeColorByRarity();
+    // Set basic item info
+    if (ItemNameText)
+    {
+        FText DisplayName = InstanceData.bHasNameBeenGenerated ? 
+            InstanceData.DisplayName : 
+            ItemDefinition->Base.ItemName;
+            
+        ItemNameText->SetText(DisplayName);
+    }
 
-	if (ItemName)
-	{
-		ItemName->SetText( ItemInfo->Base.ItemName);
-	}
+    if (ItemTypeText)
+    {
+        ItemTypeText->SetText(UEnum::GetDisplayValueAsText(ItemDefinition->Base.ItemType));
+    }
+
+    if (ItemIcon && ItemDefinition->Base.ItemImage)
+    {
+        ItemIcon->SetBrushFromMaterial(ItemDefinition->Base.ItemImage);
+    }
+    
+    // Update colors based on rarity
+    UpdateRarityColors();
 }
 
-FString UPHBaseToolTip::GetRarityText(const EItemRarity Rarity)
+void UPHBaseToolTip::SetItemFromBaseItem(UBaseItem* Item)
 {
-	switch (Rarity)
-	{
-	case EItemRarity::IR_GradeF:
-		return TEXT("Grade F");
-	case EItemRarity::IR_GradeD:
-		return TEXT("Grade D");
-	case EItemRarity::IR_GradeC:
-		return TEXT("Grade C");
-	case EItemRarity::IR_GradeB:
-		return TEXT("Grade B");
-	case EItemRarity::IR_GradeA:
-		return TEXT("Grade A");
-	case EItemRarity::IR_GradeS:
-		return TEXT("Unknown");
-	case EItemRarity::IR_Corrupted:
-		return TEXT("!@#$%@%");
-	case EItemRarity::IR_Unknown:
-		return TEXT("########");
-	default: ;
-	}
-	return {};
+    if (!Item || !Item->ItemDefinition)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SetItemFromBaseItem: Invalid item"));
+        return;
+    }
+
+    SetItemInfo(Item->ItemDefinition, Item->RuntimeData);
 }
 
-void UPHBaseToolTip::ChangeColorByRarity()
+void UPHBaseToolTip::SetItemInfo( UItemDefinitionAsset* Definition,  FItemInstanceData& InInstanceData)
 {
-	if (!ToolTipBGMaterial && !ToolTipBGMaterial2)
-	{
-		ToolTipBGMaterial = ToolTipBackgroundImage->GetDynamicMaterial();
-		ToolTipBGMaterial2 = ToolTipBackgroundImageFlicker->GetDynamicMaterial();
-	}
+    if (!Definition)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SetItemInfo: Null definition"));
+        return;
+    }
 
-	if (ToolTipBGMaterial && ToolTipBGMaterial2)
-	{
-		const FLinearColor ColorToChange = GetColorBaseOnRarity();
-		ToolTipBGMaterial->SetVectorParameterValue("ImageTint", ColorToChange);
-		ToolTipBGMaterial2->SetVectorParameterValue("ImageTint", ColorToChange);
-	}
+    ItemDefinition = Definition;
+    InstanceData = InInstanceData;
+
+    InitializeToolTip();
 }
 
-FLinearColor UPHBaseToolTip::GetColorBaseOnRarity()
+void UPHBaseToolTip::UpdateRarityColors()
 {
-	// Make sure the color map contains the current item grade
-	if (const FLinearColor* FoundColor = RarityColors.Find(ItemGrade))
-	{
-		return *FoundColor;
-	}
-
-	// Fallback color if not found
-	return FLinearColor(0.f, 0.f, 0.f, 0.1f);
+    // Get rarity
+    EItemRarity Rarity = InstanceData.Rarity;
+    if (Rarity == EItemRarity::IR_None && ItemDefinition)
+    {
+        Rarity = ItemDefinition->Base.ItemRarity;
+    }
+    
+    const FLinearColor RarityColor = GetRarityColor(Rarity);
+    
+    // Apply subtle tint to background
+    if (TooltipBackground)
+    {
+        FLinearColor BackgroundTint = RarityColor * 0.15f;
+        BackgroundTint.A = 0.95f;
+        
+        if (Rarity == EItemRarity::IR_Corrupted)
+        {
+            BackgroundTint = RarityColor * 0.25f;
+            BackgroundTint.A = 0.98f;
+        }
+        else if (Rarity == EItemRarity::IR_Unknown)
+        {
+            BackgroundTint = RarityColor * 0.2f;
+            BackgroundTint.A = 0.9f;
+        }
+        
+        TooltipBackground->SetColorAndOpacity(BackgroundTint);
+    }
+    
+    // Apply color to item name
+    if (ItemNameText)
+    {
+        ItemNameText->SetColorAndOpacity(FSlateColor(RarityColor));
+    }
 }
 
-void UPHBaseToolTip::SetItemInfo(UItemDefinitionAsset*& Item)
+FLinearColor UPHBaseToolTip::GetRarityColor(EItemRarity Rarity) const
 {
-	 ItemInfo = Item;
-	ItemGrade =  ItemInfo->Base.ItemRarity;
-	ChangeColorByRarity();
-}
-
-
-
-void UPHBaseToolTip::SetItemObject(UBaseItem* Item)
-{
-	ItemObject = Item;
-	UpdateTooltipDisplay();
-}
-
-FText UPHBaseToolTip::GetDisplayName() const
-{
-	
-	if (!ItemObject) return FText::GetEmpty();
-
-	// Use instance name if generated
-	if (ItemObject->RuntimeData.bHasNameBeenGenerated)
-	{
-		return ItemObject->RuntimeData.DisplayName;
-	}
-
-	// Fall back to definition name
-	return ItemObject->ItemDefinition ? ItemObject->ItemDefinition->Base.ItemName : FText::GetEmpty();
-}
-
-EItemRarity UPHBaseToolTip::GetRarity() const
-{
-	if (!ItemObject) return EItemRarity::IR_None;
-
-	// Use instance rarity if set
-	if (ItemObject->RuntimeData.Rarity != EItemRarity::IR_None)
-	{
-		return ItemObject->RuntimeData.Rarity;
-	}
-
-	// Fall back to definition rarity
-	return ItemObject->ItemDefinition ? ItemObject->ItemDefinition->Base.ItemRarity : EItemRarity::IR_None;
+    if (const FLinearColor* Color = RarityColorMap.Find(Rarity))
+    {
+        return *Color;
+    }
+    
+    return FLinearColor::White;
 }

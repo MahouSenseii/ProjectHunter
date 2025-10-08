@@ -2,6 +2,7 @@
 
 #include "Library/FL_InteractUtility.h"
 
+#include "AbilitySystem/PHAttributeSet.h"
 #include "Character/PHBaseCharacter.h"
 #include "Components/InteractionManager.h"
 #include "Item/WeaponItem.h"

@@ -97,7 +97,7 @@ public:
 
 	/** Get read-only access to item information */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
-	virtual const UItemDefinitionAsset* GetItemInfo()  { return ItemDefinition; }
+	virtual  UItemDefinitionAsset* GetItemInfo()  { return ItemDefinition; }
 
 	/** Get the item's display name */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Info")
@@ -125,7 +125,7 @@ public:
 
 	/** Update item information (use with caution) */
 	UFUNCTION(BlueprintCallable, Category = "Item|Modification")
-	virtual void SetItemInfo( const UItemDefinitionAsset* NewItemInfo);
+	virtual void SetItemInfo(UItemDefinitionAsset* NewItemInfo);
 
 	/** Set equipment data for this item */
 	UFUNCTION(BlueprintCallable, Category = "Item|Modification")
@@ -184,7 +184,7 @@ public:
 
 	// Immutable reference
 	UPROPERTY()
-	const UItemDefinitionAsset* ItemDefinition;
+	UItemDefinitionAsset* ItemDefinition;
 
 	// Instance-specific state
 	UPROPERTY()

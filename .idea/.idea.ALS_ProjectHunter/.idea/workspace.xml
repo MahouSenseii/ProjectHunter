@@ -15,9 +15,38 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/ToolTip/WBP_TooltipContainer.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/BP_PHHUD.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/BP_PHHUD.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/ToolTip/WBP_EquippableStatsBox.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/ToolTip/WBP_EquippableStatsBox.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/ToolTip/WBP_EquippableToolTip.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/ToolTip/WBP_EquippableToolTip.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Data/AttributeInfo.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Data/AttributeInfo.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/EquipmentManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/EquipmentManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/SpawnableLootManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/SpawnableLootManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/ConsumablePickup.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/ConsumablePickup.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/EquipmentPickup.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/EquipmentPickup.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/ItemPickup.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/ItemPickup.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/BaseItem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/BaseItem.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemInstance.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemInstance.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Library/FL_InteractUtility.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Library/FL_InteractUtility.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/HUD/PHHUD.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/HUD/PHHUD.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/EquippableStatsBox.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/EquippableStatsBox.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/EquippableToolTip.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/EquippableToolTip.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/Item/ItemSot.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/Item/ItemSot.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/Item/ItemWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/Item/ItemWidget.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/PHBaseToolTip.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/PHBaseToolTip.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/EquipmentManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/EquipmentManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/WidgetManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/WidgetManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactables/Pickups/ItemPickup.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactables/Pickups/ItemPickup.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/BaseItem.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/BaseItem.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemInstance.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemInstance.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHItemStructLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHItemStructLibrary.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/HUD/PHHUD.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/HUD/PHHUD.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/ToolTip/EquippableStatsBox.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/ToolTip/EquippableStatsBox.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/ToolTip/EquippableToolTip.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/ToolTip/EquippableToolTip.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/ToolTip/PHBaseToolTip.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/ToolTip/PHBaseToolTip.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -271,7 +300,179 @@
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="cidr-memory-view://30" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="cidr-memory-view://70" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.36.32532/include/atomic" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.36.32532/include/cmath" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/include/atomic" root0="SKIP_HIGHLIGHTING" />
@@ -280,15 +481,20 @@
     <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/InteractableObjectInterface.gen.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/ItemPickup.gen.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/ItemPickup.generated.h" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/PHBaseCharacter.generated.h" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/PHBaseCharacter.generated.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/PHItemFunctionLibrary.gen.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/PHItemFunctionLibrary.generated.h" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/PHItemFunctionLibrary.generated.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/PHPlayerController.gen.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/WidgetInterface.gen.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Data/GE/RegenEffect.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveStamina.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_Regen.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Player/PHPlayerCharacter.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/InteractableManager.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/StatsManager.cpp" root0="FORCE_HIGHLIGHTING" />
@@ -299,6 +505,11 @@
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemInstance.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Library/PHGameplayTagLibrary.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameMode.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/UI/ToolTip/EquippableToolTip.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/UI/ToolTip/EquippableToolTip.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/UI/ToolTip/EquippableToolTip.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/UI/ToolTip/EquippableToolTip.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Private/UI/ToolTip/EquippableToolTip.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/Widgets/DamagePopup.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Data/GE/RegenEffect.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagCalc/MMC_MaxEffectiveMana.h" root0="FORCE_HIGHLIGHTING" />
@@ -306,6 +517,8 @@
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagCalc/MMC_Regen.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagCalc/MMC_ReservedMana.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/PHAttributeSet.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://H:/C++  Games/ARPG/ProjectHunter/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Player/PHPlayerCharacter.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/StatsManager.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interfaces/IEquippable.h" root0="FORCE_HIGHLIGHTING" />
@@ -331,8 +544,10 @@
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/Core/Public/Misc/AssertionMacros.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/Core/Public/Templates/RefCounting.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/Core/Public/Templates/SharedPointer.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://I:/UE_5.5/Engine/Source/Runtime/Core/Public/Templates/Tuple.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/Core/Public/Templates/UnrealTemplate.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/Core/Public/UObject/NameTypes.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://I:/UE_5.5/Engine/Source/Runtime/Core/Public/UObject/ScriptDelegates.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/Core/Public/UObject/WeakObjectPtrTemplates.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/CoreUObject/Public/Templates/Casts.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/CoreUObject/Public/Templates/SubclassOf.h" root0="FORCE_HIGHLIGHTING" />
@@ -359,8 +574,10 @@
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/InputCore/Classes/InputCoreTypes.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/Slate/Public/Widgets/Views/SHeaderRow.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/SlateCore/Public/Layout/Geometry.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://I:/UE_5.5/Engine/Source/Runtime/UMG/Public/Blueprint/UserWidget.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/UMG/Public/Components/Button.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://I:/UE_5.5/Engine/Source/Runtime/UMG/Public/Components/SizeBox.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://I:/UE_5.5/Engine/Source/Runtime/UMG/Public/Components/Widget.h" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="KubernetesApiPersistence">{}</component>
   <component name="KubernetesApiProvider">{
@@ -1253,7 +1470,7 @@
       <workItem from="1757945141827" duration="157941000" />
       <workItem from="1759672729736" duration="9253000" />
       <workItem from="1759683290282" duration="24302000" />
-      <workItem from="1759734924440" duration="40791000" />
+      <workItem from="1759734924440" duration="68855000" />
     </task>
     <servers />
   </component>
@@ -1294,23 +1511,18 @@
       <breakpoints>
         <line-breakpoint type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/UI/ToolTip/PHBaseToolTip.h</url>
-          <line>59</line>
+          <line>64</line>
           <option name="timeStamp" value="40" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/ConsumablePickup.cpp</url>
-          <line>20</line>
-          <option name="timeStamp" value="115" />
+          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHItemStructLibrary.h</url>
+          <line>1369</line>
+          <option name="timeStamp" value="126" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp</url>
-          <line>243</line>
-          <option name="timeStamp" value="122" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp</url>
-          <line>301</line>
-          <option name="timeStamp" value="123" />
+          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/UI/ToolTip/Item/ItemWidget.cpp</url>
+          <line>253</line>
+          <option name="timeStamp" value="130" />
         </line-breakpoint>
         <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
           <properties exception="System.OperationCanceledException" breakIfHandledByOtherCode="false" displayValue="System.OperationCanceledException" />
@@ -1334,6 +1546,7 @@
         <watch expression="@ ALREADY PREPROCESSED @Btn-&gt;MenuButton" />
         <watch expression="this" />
         <watch expression="this" language="C++" />
+        <watch expression="TagsToAttributes.Elements[7]" />
       </configuration>
     </watches-manager>
   </component>

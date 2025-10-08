@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// EquippableToolTip.h
 
 #pragma once
 
@@ -10,24 +10,18 @@
 #include "EquippableToolTip.generated.h"
 
 class UBaseItem;
-/**
- *  Struct that holds information for checking and displaying a specific stat.
- */
 
 USTRUCT(BlueprintType)
 struct FStatCheckInfo
 {
 	GENERATED_BODY()
 
-	// Enum for the stat type
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EItemStats StatType;
 
-	// Pointer to the size box widget
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	USizeBox* SizeBox;
 
-	// Pointer to the text block widget
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UTextBlock* TextBlock;
 };
@@ -37,58 +31,42 @@ struct FStatRequirementInfo
 {
 	GENERATED_BODY()
 
-	// Enum for the stat type
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EItemRequiredStatsCategory StatType;
 
-	// Pointer to the size box widget
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	USizeBox* SizeBox;
 
-	// Pointer to the text block widget
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UTextBlock* TextBlock;
 };
+
 UCLASS(BlueprintType)
 class ALS_PROJECTHUNTER_API UEquippableToolTip : public UPHBaseToolTip
 {
 	GENERATED_BODY()
-	
+    
 public:
-
 	virtual void NativeConstruct() override;
 	virtual void InitializeToolTip() override;
-	virtual void SetItemInfo(UItemDefinitionAsset*& Item) override;
+    
+	
+	virtual void SetItemInfo( UItemDefinitionAsset* Definition,  FItemInstanceData& InstanceData) override;
 
-	void CreateAffixBox(); 
-	
-	
+protected:
+	/** Create affix display boxes from instance data */
+	void CreateAffixBox();
+    
+	/** Update stats display */
+	void UpdateStatsDisplay();
+
+public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
 	UTextBlock* LoreText;
-	
+    
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
 	UVerticalBox* AffixBoxContainer;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
 	UEquippableStatsBox* StatsBox;
-
-protected:
-	virtual void UpdateTooltipDisplay() override;
-	void AddStatToContainer(const FPHAttributeData& Stat);
-	static void CompareWithEquippedItem();
-	static FLinearColor GetRarityColor(EItemRarity Rarity);
-
-	// UI Elements
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* ItemNameText;
-
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* ItemTypeText;
-
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* RarityText;
-
-	UPROPERTY(meta = (BindWidget))
-	class UVerticalBox* StatsContainer;
-	
 };

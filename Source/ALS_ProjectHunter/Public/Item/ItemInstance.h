@@ -52,8 +52,8 @@ public:
     virtual void SetQuantity(int32 NewQty) override;
     virtual void SetRotated(bool bNewRotated) override;
     virtual FIntPoint GetDimensions() const override;
-    virtual const UItemDefinitionAsset* GetItemInfo() override;
-    virtual void SetItemInfo(const UItemDefinitionAsset* NewItemInfo) override;
+    virtual  UItemDefinitionAsset* GetItemInfo() override;
+    virtual void SetItemInfo(UItemDefinitionAsset* NewItemInfo) override;
     virtual bool ValidateItemData()  override;
 
     // Override inline methods from BaseItem

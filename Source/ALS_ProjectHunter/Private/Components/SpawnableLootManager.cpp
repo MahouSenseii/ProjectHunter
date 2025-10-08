@@ -182,14 +182,14 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
         TempView->Base= Def->Base;   
         TempView->Equip = Def->Equip;  
 
-        // Optional: put fixed implicits here (and rolled affixes if you roll at spawn time)
+      
         TempView->Equip.Affixes.Implicits = Def->Implicits;
         TempView->Equip.Affixes.bAffixesGenerated = TempView->Equip.Affixes.GetTotalAffixCount() > 0;
 
         Item->ItemInfo = MoveTemp(TempView); // same place you previously assigned the row
     }
 
-    // Mesh assignment stays the same; Construction Script will see the data (deferred spawn)
+    
     if (Item->ItemInfo->Base.StaticMesh)
     {
         Item->SetNewMesh(Item->ItemInfo->Base.StaticMesh);
@@ -205,7 +205,7 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
 
 void USpawnableLootManager::GetSpawnItem(UPHAttributeSet* AttributeSet)
 {
-    if (!SpawnableItems) 
+  if (!SpawnableItems) 
     {
         UE_LOG(LogLoot, Warning, TEXT("[Loot] SpawnableItems DataTable is NULL!"));
         return;
@@ -217,11 +217,11 @@ void USpawnableLootManager::GetSpawnItem(UPHAttributeSet* AttributeSet)
         return;
     }
 
-    // Calculate total drop rating
+    
     int32 TotalDropRating = 0;
     for (const auto& Row : SpawnableItems->GetRowMap())
     {
-        if (const FDropTable* ItemInfo = SpawnableItems->FindRow<FDropTable>(Row.Key, TEXT("SpawnRatingCalc")))
+        if (const FSpawnableItemRow_DA* ItemInfo = SpawnableItems->FindRow<FSpawnableItemRow_DA>(Row.Key, TEXT("SpawnRatingCalc")))
         {
             TotalDropRating += ItemInfo->DropRating;
         }
@@ -244,58 +244,47 @@ void USpawnableLootManager::GetSpawnItem(UPHAttributeSet* AttributeSet)
         return;
     }
 
-	for (int32 i = 0; i < NumberOfItemsToSpawn; ++i)
-	{
-		int32 RandomScore = FMath::RandRange(1, TotalDropRating);
-		UE_LOG(LogLoot, Warning, TEXT("[Loot] Roll #%d: RandomScore = %d"), i + 1, RandomScore);
+    for (int32 i = 0; i < NumberOfItemsToSpawn; ++i)
+    {
+        int32 RandomScore = FMath::RandRange(1, TotalDropRating);
+        UE_LOG(LogLoot, Warning, TEXT("[Loot] Roll #%d: RandomScore = %d"), i + 1, RandomScore);
 
-		FName SelectedItemName;
-		for (const auto& Row : SpawnableItems->GetRowMap())
-		{
-			if (const FDropTable* ItemInfo = SpawnableItems->FindRow<FDropTable>(Row.Key, TEXT("ItemRoll")))
-			{
-				RandomScore -= ItemInfo->DropRating;
-				if (RandomScore <= 0)
-				{
-					SelectedItemName = Row.Key;
+        FName SelectedItemName;
+        for (const auto& Row : SpawnableItems->GetRowMap())
+        {
+     
+            if (const FSpawnableItemRow_DA* ItemInfo = SpawnableItems->FindRow<FSpawnableItemRow_DA>(Row.Key, TEXT("ItemRoll")))
+            {
+                RandomScore -= ItemInfo->DropRating;
+                if (RandomScore <= 0)
+                {
+                    SelectedItemName = Row.Key;
+                    UE_LOG(LogLoot, Warning, TEXT("[Loot] Selected item: %s"), *SelectedItemName.ToString());
+                    break;
+                }
+            }
+        }
 
-					// Log which item was picked
-					UE_LOG(LogLoot, Warning, TEXT("[Loot] Selected item: %s"), *SelectedItemName.ToString());
+        if (SelectedItemName.IsNone())
+        {
+            UE_LOG(LogLoot, Warning, TEXT("[Loot] No item selected. Check DropRating values in DataTable."));
+            continue;
+        }
 
-					break;
-				}
-			}
-		}
+        FTransform SpawnTransform = GetSpawnLocation();
+        const FRotator DesiredRot(0.f, 180.f, 0.f);
+        SpawnTransform.SetRotation(DesiredRot.Quaternion());
+        SpawnTransform.AddToTranslation(FVector(0.f, 0.f, 180.f));
 
-		if (SelectedItemName.IsNone())
-		{
-			UE_LOG(LogLoot, Warning, TEXT("[Loot] No item selected. Check DropRating values in DataTable."));
-			continue;
-		}
+        UE_LOG(LogLoot, Warning, TEXT("[Loot] Spawning %s at Location: %s, Rot: %s"),
+            *SelectedItemName.ToString(),
+            *SpawnTransform.GetLocation().ToString(),
+            *SpawnTransform.GetRotation().Rotator().ToCompactString());
 
-		// Log where it's spawning
-		// Log where it's spawning
-		FTransform SpawnTransform = GetSpawnLocation();
-
-		// 180° yaw (turn-around). Use (0,0,180) for roll(X) or (180,0,0) for pitch(Y).
-		const FRotator DesiredRot(0.f, 180.f, 0.f);
-		SpawnTransform.SetRotation(DesiredRot.Quaternion());
-
-		// Raise Z by 180 units (or use your GroundOffsetZ instead)
-		SpawnTransform.AddToTranslation(FVector(0.f, 0.f, 180.f));
-
-		// Optional: log rotation too
-		UE_LOG(LogLoot, Warning, TEXT("[Loot] Spawning %s at Location: %s, Rot: %s"),
-			*SelectedItemName.ToString(),
-			*SpawnTransform.GetLocation().ToString(),
-			*SpawnTransform.GetRotation().Rotator().ToCompactString());
-
-
-		SpawnItemByName(SelectedItemName, MasterDropList, SpawnTransform);
-	}
-
+        SpawnItemByName(SelectedItemName, MasterDropList, SpawnTransform);
+    }
 
     bLooted = true;
-    UE_LOG(LogLoot, Warning, TEXT("[Loot] Spawn completed. Marking chest as looted."));
+    UE_LOG(LogLoot, Warning, TEXT("[Loot] Spawn completed. bLooted set to true."));
 }
 

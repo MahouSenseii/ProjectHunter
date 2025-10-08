@@ -13,6 +13,7 @@
 /* ===   FORWARD DECLARATIONS === */
 /* ============================= */
 
+enum class EALSOverlayState : uint8;
 class UGameplayEffect;
 class UItemDefinitionAsset;
 class UStaticMesh;
@@ -1201,6 +1202,38 @@ struct FItemInstanceData
 	FItemInstanceData() = default;
 };
 
+
+/**
+ * Drop table entry for loot spawning
+ */
+USTRUCT(BlueprintType)
+struct FDropTable : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	/** The weight/rating for this item to be selected (higher = more likely) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop")
+	int32 DropRating = 1;
+
+	/** Reference to the item definition asset */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop")
+	TSoftObjectPtr<UItemDefinitionAsset> ItemDefinition;
+
+	/** Minimum quantity to drop */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop")
+	int32 MinQuantity = 1;
+
+	/** Maximum quantity to drop */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop")
+	int32 MaxQuantity = 1;
+
+	FDropTable()
+		: DropRating(1)
+		, MinQuantity(1)
+		, MaxQuantity(1)
+	{}
+};
+
 /* ============================= */
 /* ===   EQUIPMENT DATA      === */
 /* ============================= */
@@ -1362,6 +1395,9 @@ struct FSpawnableItemRow_DA : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSoftObjectPtr<UItemDefinitionAsset> BaseDef;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drop")
+	int32 DropRating = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString Notes;

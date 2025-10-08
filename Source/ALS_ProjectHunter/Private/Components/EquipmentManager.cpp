@@ -125,7 +125,6 @@ void UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh, EEquipmentSlot
 
 	HasMesh ? HandleHasMesh(Item, Slot) : HandleNoMesh(Item, Slot);
 
-	// Apply stats (unchanged)
 	if (UEquippableItem* EquipItem = Cast<UEquippableItem>(Item))
 	{
 		if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(GetOwner()))
@@ -135,7 +134,8 @@ void UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh, EEquipmentSlot
 		}
 	}
 
-	OnEquipmentChanged.Broadcast();
+	
+	OnEquipmentChangedSimple.Broadcast();
 }
 
 
@@ -262,6 +262,54 @@ void UEquipmentManager::RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHB
 	}
 }
 
+void UEquipmentManager::RemoveItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character)
+{
+	if (!Item || !Character)
+	{
+		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveItemStatBonuses: Invalid parameters"));
+		return;
+	}
+
+	UStatsManager* StatsManager = Character->GetStatsManager();
+	if (!StatsManager)
+	{
+		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveItemStatBonuses: No StatsManager"));
+		return;
+	}
+
+	// Check if we have applied stats for this item
+	if (!AppliedItemStats.Contains(Item))
+	{
+		UE_LOG(LogEquipmentManager, Log, TEXT("No stats to remove for this item"));
+		return;
+	}
+
+	// Get the full item stats
+	const FPHItemStats& Stats = Item->GetFullItemStats();
+	const TArray<FPHAttributeData> AllStats = Stats.GetAllStats();
+
+	// Remove each stat modifier by applying negative values
+	for (const FPHAttributeData& Attr : AllStats)
+	{
+		const FGameplayAttribute& TargetAttr = Attr.ModifiedAttribute;
+		if (!TargetAttr.IsValid()) continue;
+
+		const float RolledValue = Attr.RolledStatValue;
+		
+		// Apply negative value to remove the bonus
+		StatsManager->ApplyFlatModifier(TargetAttr, -RolledValue);
+		
+		UE_LOG(LogEquipmentManager, Log, TEXT("Removed stat: %s = -%.2f"), 
+			*TargetAttr.GetName(), RolledValue);
+	}
+
+	// Remove from tracking
+	AppliedItemStats.Remove(Item);
+
+	UE_LOG(LogEquipmentManager, Log, TEXT("Removed item stat bonuses for: %s"), 
+		*Item->GetItemInfo()->Base.ItemName.ToString());
+}
+
 
 void UEquipmentManager::RemoveItemInSlot(EEquipmentSlot Slot)
 {
@@ -307,7 +355,7 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 		FItemBase Base = Info->Base;
 		FEquippableItemData& Equip = Info->Equip;
 
-		SpawnedActor->InitializeFromItem (Info, );
+		SpawnedActor->InitializeFromItem(Info, Item->RuntimeData);
 
 		// Resolve the desired socket:
 		// 1) Use explicit per-item socket if provided
@@ -480,76 +528,48 @@ void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, const
 // EquipmentManager.cpp
 void UEquipmentManager::EquipItem(UBaseItem* Item, EEquipmentSlot Slot)
 {
-    if (!IsValid(Item) || !Item->ItemDefinition)
-    {
-        UE_LOG(LogEquipmentManager, Warning, TEXT("Invalid item"));
-        return;
-    }
+  	AEquippedObject** EquippedObjectPtr = EquipmentItem.Find(Slot);
+	if (!EquippedObjectPtr || !*EquippedObjectPtr)
+	{
+		return;
+	}
 
-    // Store old item for event
-    UBaseItem* OldItem = EquipmentData.FindRef(Slot);
+	AEquippedObject* EquippedObject = *EquippedObjectPtr;
+	UBaseItem* LItem = EquipmentData.FindRef(Slot);
 
-    // Unequip existing item in this slot first
-    if (EquipmentItem.Contains(Slot))
-    {
-        UnequipItem(Slot);
-    }
+	// Unbind from equipped object's events
+	EquippedObject->OnEquipped.RemoveDynamic(this, &UEquipmentManager::HandleItemEquipped);
+	EquippedObject->OnUnequipped.RemoveDynamic(this, &UEquipmentManager::HandleItemUnequipped);
 
-    // Get equip class from definition
-    TSubclassOf<AEquippedObject> EquipClass = Item->ItemDefinition->Equip.EquipClass;
-    if (!EquipClass)
-    {
-        UE_LOG(LogEquipmentManager, Error, TEXT("No EquipClass for item"));
-        return;
-    }
+	// Perform unequip logic (remove stat bonuses, etc.)
+	if (UEquippableItem* EquippableItem = Cast<UEquippableItem>(LItem))
+	{
+		if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(GetOwner()))
+		{
+			RemoveItemStatBonuses(EquippableItem, Character);
+			RemoveWeaponBaseDamage(EquippableItem, Character);
+		}
+	}
 
-    // Spawn equipped object
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	// Broadcast the delegate (notify listeners that item was unequipped)
+	EquippedObject->OnUnequipped.Broadcast(EquippedObject);
 
-    AEquippedObject* EquippedObject = GetWorld()->SpawnActor<AEquippedObject>(
-        EquipClass,
-        FVector::ZeroVector,
-        FRotator::ZeroRotator,
-        SpawnParams
-    );
+	// Destroy the equipped object
+	EquippedObject->Destroy();
 
-    if (!EquippedObject)
-    {
-        UE_LOG(LogEquipmentManager, Error, TEXT("Failed to spawn equipped object"));
-        return;
-    }
+	// Remove references
+	EquipmentItem.Remove(Slot);
+	EquipmentData.Remove(Slot);
 
-    // Initialize
-    EquippedObject->InitializeFromItem(Item->ItemDefinition, Item->RuntimeData);
+	// Broadcast manager-level events
+	if (LItem)
+	{
+		OnItemUnequipped.Broadcast(Slot, LItem);
+		OnEquipmentChanged.Broadcast(Slot, LItem, nullptr);
+	}
 
-    // Check requirements
-    if (!EquippedObject->CanBeEquippedBy(OwnerCharacter))
-    {
-        UE_LOG(LogEquipmentManager, Warning, TEXT("Character cannot equip %s"),
-               *Item->RuntimeData.DisplayName.ToString());
-        EquippedObject->Destroy();
-        return;
-    }
-
-    
-    EquippedObject->OnEquipped.AddDynamic(this, &UEquipmentManager::HandleItemEquipped);
-    EquippedObject->OnUnequipped.AddDynamic(this, &UEquipmentManager::HandleItemUnequipped);
-
-    // Equip the item
-    EquippedObject->OnEquipped(OwnerCharacter);
-
-    // Store references
-    EquipmentItem.Add(Slot, EquippedObject);
-    EquipmentData.Add(Slot, Item);
-
-    
-    OnItemEquipped.Broadcast(Slot, Item);
-    OnEquipmentChanged.Broadcast(Slot, OldItem, Item);
-
-    UE_LOG(LogEquipmentManager, Log, TEXT("Equipped: %s to slot %s"),
-           *Item->RuntimeData.DisplayName.ToString(),
-           *UEnum::GetValueAsString(Slot));
+	UE_LOG(LogEquipmentManager, Log, TEXT("Unequipped item from slot %s"),
+		   *UEnum::GetValueAsString(Slot));
 }
 
 
@@ -564,21 +584,31 @@ void UEquipmentManager::UnequipItem(EEquipmentSlot Slot)
 	AEquippedObject* EquippedObject = *EquippedObjectPtr;
 	UBaseItem* Item = EquipmentData.FindRef(Slot);
 
-	// ✅ Unbind from equipped object's events
+	// Unbind from equipped object's events
 	EquippedObject->OnEquipped.RemoveDynamic(this, &UEquipmentManager::HandleItemEquipped);
 	EquippedObject->OnUnequipped.RemoveDynamic(this, &UEquipmentManager::HandleItemUnequipped);
 
-	// Unequip
-	EquippedObject->OnUnequipped();
+	// Perform unequip logic (remove stat bonuses, etc.)
+	if (UEquippableItem* EquippableItem = Cast<UEquippableItem>(Item))
+	{
+		if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(GetOwner()))
+		{
+			RemoveItemStatBonuses(EquippableItem, Character);
+			RemoveWeaponBaseDamage(EquippableItem, Character);
+		}
+	}
 
-	// Destroy
+	// Broadcast the delegate (notify listeners that item was unequipped)
+	EquippedObject->OnUnequipped.Broadcast(EquippedObject);
+
+	// Destroy the equipped object
 	EquippedObject->Destroy();
 
 	// Remove references
 	EquipmentItem.Remove(Slot);
 	EquipmentData.Remove(Slot);
 
-	// ✅ Broadcast manager-level events
+	// Broadcast manager-level events
 	if (Item)
 	{
 		OnItemUnequipped.Broadcast(Slot, Item);
@@ -587,6 +617,34 @@ void UEquipmentManager::UnequipItem(EEquipmentSlot Slot)
 
 	UE_LOG(LogEquipmentManager, Log, TEXT("Unequipped item from slot %s"),
 		   *UEnum::GetValueAsString(Slot));
+}
+
+void UEquipmentManager::SwapEquipment(EEquipmentSlot FromSlot, EEquipmentSlot ToSlot)
+{
+	if (FromSlot == ToSlot)
+	{
+		UE_LOG(LogEquipmentManager, Warning, TEXT("Cannot swap equipment to the same slot"));
+		return;
+	}
+
+	UBaseItem* FromItem = EquipmentData.FindRef(FromSlot);
+	UBaseItem* ToItem = EquipmentData.FindRef(ToSlot);
+
+	if (!FromItem)
+	{
+		UE_LOG(LogEquipmentManager, Warning, TEXT("No item in FromSlot to swap"));
+		return;
+	}
+
+	// Unequip both items
+	if (FromItem) UnequipItem(FromSlot);
+	if (ToItem) UnequipItem(ToSlot);
+
+	// Re-equip in swapped positions
+	if (FromItem) EquipItem(FromItem, ToSlot);
+	if (ToItem) EquipItem(ToItem, FromSlot);
+
+	UE_LOG(LogEquipmentManager, Log, TEXT("Swapped equipment between slots"));
 }
 
 void UEquipmentManager::HandleItemEquipped(AEquippedObject* EquippedObject, AActor* Owner)

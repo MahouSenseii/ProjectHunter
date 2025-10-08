@@ -8,6 +8,7 @@
 #include "Character/ALSPlayerController.h"
 #include "Character/Player/PHPlayerController.h"
 #include "Character/Player/State/PHPlayerState.h"
+#include "Components/CanvasPanel.h"
 #include "Components/EquipmentManager.h"
 #include "Components/InventoryManager.h"
 #include "Components/CombatManager.h"
@@ -256,7 +257,6 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 		CurrentToolTip = nullptr;
 	}
 
-	
 	UUserWidget* ToolTipWidget = nullptr;
 
 	if (Cast<AEquipmentPickup>(PickupItem) && EquippableToolTipClass)
@@ -270,32 +270,62 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 
 	if (!ToolTipWidget) return;
 
-	
 	UBaseItem* ItemObject = PickupItem->CreateItemObject(GetTransientPackage());
 	if (!ItemObject) return;
 
-	
 	ItemObject->ItemDefinition = PickupItem->ItemInfo;
     
-	
 	if (AEquipmentPickup* EquipPickup = Cast<AEquipmentPickup>(PickupItem))
 	{
 		ItemObject->RuntimeData = EquipPickup->InstanceData;
 	}
 
-	
 	if (UPHBaseToolTip* ToolTip = Cast<UPHBaseToolTip>(ToolTipWidget))
 	{
-		// Pass the complete item object (definition + instance)
-		ToolTip->SetItemObject(ItemObject);
+		ToolTip->SetItemInfo(ItemObject->ItemDefinition, ItemObject->RuntimeData);
         
 		if (UEquippableToolTip* EquipToolTip = Cast<UEquippableToolTip>(ToolTip))
 		{
-			EquipToolTip->OwnerCharacter = this;
+			EquipToolTip->SetOwnerCharacter(this);
 		}
         
-		ToolTip->AddToViewport();
-		CurrentToolTip = ToolTip;
+		// ✅ Get the player controller
+		APHPlayerController* PC = Cast<APHPlayerController>(GetController());
+		if (!PC)
+		{
+			UE_LOG(LogTemp, Error, TEXT("❌ Controller is not APHPlayerController"));
+			return;
+		}
+
+		// ✅ Get the HUD
+		APHHUD* HUD = Cast<APHHUD>(PC->GetHUD());
+		if (!HUD)
+		{
+			UE_LOG(LogTemp, Error, TEXT("❌ HUD is null! Make sure BP_PHHUD is set in your GameMode"));
+			return;
+		}
+
+		// ✅ Get or create the tooltip canvas (lazy initialization)
+		UCanvasPanel* Canvas = HUD->GetOrCreateTooltipCanvas();
+		if (Canvas)
+		{
+			// Add to the HUD's canvas panel
+			Canvas->AddChildToCanvas(ToolTip);
+			
+			// Now position it (Slot will be valid!)
+			ToolTip->PositionAtBottomRight(FVector2D(20.0f, 20.0f));
+			
+			CurrentToolTip = ToolTip;
+			UE_LOG(LogTemp, Log, TEXT("✅ Tooltip added to HUD canvas successfully"));
+		}
+		else
+		{
+			// Fallback: Add directly to viewport
+			UE_LOG(LogTemp, Warning, TEXT("⚠️ Canvas is null, falling back to AddToViewport"));
+			ToolTip->AddToViewport(100);
+			ToolTip->PositionAtBottomRight(FVector2D(20.0f, 20.0f));
+			CurrentToolTip = ToolTip;
+		}
 	}
 }
 

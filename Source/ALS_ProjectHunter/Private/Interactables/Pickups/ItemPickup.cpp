@@ -114,7 +114,9 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinition
 	{
 		return false;
 	}
-	PassedItemInfo = ItemInfo;
+	const UItemDefinitionAsset* LItemInfo = PassedItemInfo;
+	UItemDefinitionAsset* MutableItemInfo = const_cast<UItemDefinitionAsset*>(LItemInfo);
+	PassedItemInfo = MutableItemInfo;
 	UBaseItem* ReturnItem = UPHItemFunctionLibrary::GetItemInformation( PassedItemInfo, ConsumableItemData);
 	if (!ReturnItem)
 	{
@@ -123,14 +125,14 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinition
 	}
 
 	// Set the Owner ID for the item
-	UItemDefinitionAsset* ReturnItemInfo = ReturnItem->GetItemInfo();
-	ReturnItemInfo->Base.OwnerID = OwnerCharacter->GetInventoryManager()->GetID();
-	ReturnItem->SetItemInfo(ReturnItemInfo);
+	const UItemDefinitionAsset* ReturnItemInfo = ReturnItem->GetItemInfo();
+	ReturnItem->RuntimeData.OwnerID = OwnerCharacter->GetInventoryManager()->GetID();
+	ReturnItem->SetItemInfo( ReturnItem->GetItemInfo());
 
 	// If the interaction was held, try to equip the item
 	if (WasHeld)
 	{
-		if (OwnerCharacter->GetEquipmentManager()->IsItemEquippable(ReturnItem))
+		if (OwnerCharacter->GetEquipmentManager()->IsItemEquippable(ReturnItem))	
 		{
 			OwnerCharacter->GetEquipmentManager()->TryToEquip(ReturnItem, true, ReturnItemInfo->Base.EquipmentSlot);
 		}

@@ -115,7 +115,8 @@ EItemRarity AEquipmentPickup::GetInstanceRarity() const
 bool AEquipmentPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*& PassedItemInfo, FConsumableItemData ConsumableItemData) const
 {
 	Super::InteractionHandle(Actor, WasHeld);
-	PassedItemInfo = ItemInfo; 
+	
+	PassedItemInfo = const_cast<UItemDefinitionAsset*>(ItemInfo);
 	return Super::HandleInteraction(Actor, WasHeld, PassedItemInfo, FConsumableItemData());
 }
 

@@ -1,143 +1,125 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// EquippableStatsBox.h
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MinMaxBox.h"
-#include "RequirementsBox.h"
-#include "Components/VerticalBox.h"
+#include "Blueprint/UserWidget.h"
 #include "Item/Data/UItemDefinitionAsset.h"
 #include "Library/PHItemStructLibrary.h"
-#include "UI/Widgets/PHUserWidget.h"
+#include "Components/TextBlock.h"
+#include "Components/HorizontalBox.h"
+#include "Components/VerticalBox.h"
 #include "EquippableStatsBox.generated.h"
 
-class UEquippableItem;
-class UTextBlock;
-class UHorizontalBox;
-/**
- * @class UEquippableStatsBox
- * @brief UI widget that displays stat blocks for equippable items.
- */
+class UMinMaxBox;
+class URequirementsBox;
 
-UCLASS(BlueprintType)
-class ALS_PROJECTHUNTER_API UEquippableStatsBox : public UPHUserWidget
+UCLASS()
+class ALS_PROJECTHUNTER_API UEquippableStatsBox : public UUserWidget
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
+    virtual void NativeConstruct() override;
 
-	/** Called when the widget is constructed */
-	virtual void NativeConstruct() override;
-
-	/** Sets the item this widget should display stats for */
-	UFUNCTION(BlueprintCallable)
-	void SetEquippableItem(const FEquippableItemData Item);
-
-	
-	UFUNCTION(BlueprintCallable)
-	FEquippableItemData GetEquippableItem() { return  ItemData->Equip;}
-
-	/** Generates elemental damage min-max boxes */
-	UFUNCTION(BlueprintCallable)
-	void CreateMinMaxBoxByDamageTypes();
-
-	/** Sets values for non-elemental stats */
-	UFUNCTION()
-	void SetMinMaxForOtherStats() const;
-	void CreateResistanceBoxes();
-
-	URequirementsBox* GetRequirementsBox() const { return RequirementsBox;}
-
-	UFUNCTION(BlueprintCallable)
-	void SetItemData(UItemDefinitionAsset*& InData) { ItemData = InData;}
+    /** Set item data for display - NEW METHOD */
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    void SetItemData(const UItemDefinitionAsset* Definition, const FItemInstanceData& InstanceData);
+    
+    /** Create damage type boxes */
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    void CreateMinMaxBoxByDamageTypes();
+    
+    /** Set other stat displays */
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    void SetMinMaxForOtherStats();
+    
+    /** Create resistance boxes */
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    void CreateResistanceBoxes();
+    
+    /** Get requirements box */
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Stats")
+    URequirementsBox* GetRequirementsBox() { return RequirementsBox; }
 
 protected:
+    // ✅ Separate definition and instance
+    UPROPERTY(BlueprintReadOnly, Category = "Item")
+    const UItemDefinitionAsset* ItemDefinition;
+    
+    UPROPERTY(BlueprintReadOnly, Category = "Item")
+    FItemInstanceData InstanceData;
 
-	/** The equippable item to display */
-	UPROPERTY(EditAnywhere, Category = "Item")
-	TObjectPtr<UItemDefinitionAsset> ItemData;
+    // Widget references
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    URequirementsBox* RequirementsBox;
 
-	/** Widget class used for each elemental MinMaxBox */
-	UPROPERTY(EditAnywhere, Category = "Class")
-	TSubclassOf<UMinMaxBox> MinMaxBoxClass;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UHorizontalBox* PhysicalDamageBox;
 
-	/** Elemental Damage Box container */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UHorizontalBox* EDBox;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UTextBlock* PhysicalDamageValueMin;
 
-	/** Physical Damage Display */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UHorizontalBox* PhysicalDamageBox;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UTextBlock* PhysicalDamageValueMax;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* PhysicalDamageValueMin;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UHorizontalBox* EDBox;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* PhysicalDamageValueMax;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UHorizontalBox* ArmourBox;
 
-	/** Armor Display */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UHorizontalBox* ArmourBox;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UTextBlock* ArmourValue;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* ArmourValue;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UHorizontalBox* PoiseBox;
 
-	/** Critical Chance Display */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UHorizontalBox* CritChanceBox;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UTextBlock* PoiseValue;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* CritChanceValue;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UHorizontalBox* CritChanceBox;
 
-	/** Attack Speed Display */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UHorizontalBox* AtkSpeedBox;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UTextBlock* CritChanceValue;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* AtkSpeedValue;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UHorizontalBox* AtkSpeedBox;
 
-	/** Cast Time Display */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UHorizontalBox* CastTimeBox;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UTextBlock* AtkSpeedValue;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* CastTimeValue;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UHorizontalBox* CastTimeBox;
 
-	/** Mana Cost Display */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UHorizontalBox* ManaCostBox;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UTextBlock* CastTimeValue;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* ManaCostValue;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UHorizontalBox* ManaCostBox;
 
-	/** Stamina Cost Display */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UHorizontalBox* StaminaCostBox;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UTextBlock* ManaCostValue;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* StaminaCostValue;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UHorizontalBox* StaminaCostBox;
 
-	/** Weapon Range Display */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UHorizontalBox* WeaponRangeBox;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UTextBlock* StaminaCostValue;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* WeaponRangeValue;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UHorizontalBox* WeaponRangeBox;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UHorizontalBox* PoiseBox;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UTextBlock* WeaponRangeValue;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UTextBlock* PoiseValue;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UHorizontalBox* ResistanceBox;
 
-	// Resistances
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UVerticalBox* ResistanceBoxContainer;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+    UVerticalBox* ResistanceBoxContainer;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	UHorizontalBox* ResistanceBox;
-
-	/** Requirements Box (e.g., STR, INT, etc.) */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-	URequirementsBox* RequirementsBox;
+    UPROPERTY(EditDefaultsOnly, Category = "Widgets")
+    TSubclassOf<UMinMaxBox> MinMaxBoxClass;
 };

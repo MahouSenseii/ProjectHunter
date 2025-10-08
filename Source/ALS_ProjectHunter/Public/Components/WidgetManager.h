@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Interfaces/WidgetInterface.h"
+#include "UI/Widgets/PHUserWidget.h"
 #include "WidgetManager.generated.h"
 
 
