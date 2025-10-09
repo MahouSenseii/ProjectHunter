@@ -215,21 +215,6 @@ void UInteractionManager::AssignCurrentInteraction()
 {
     if (!IsValidForInteraction()) return;
     
-    // First, check if current interactable still meets minimum dot product threshold
-    if (IsValid(CurrentInteractable))
-    {
-        const FVector ToCurrentInteractable = (CurrentInteractable->GetOwner()->GetActorLocation() 
-            - CachedPlayerLocation).GetSafeNormal();
-        const float CurrentDot = FVector::DotProduct(CachedLookDirection, ToCurrentInteractable);
-        
-        
-        if (CurrentDot < MinDotThreshold)
-        {
-            SetCurrentInteraction(nullptr);
-            return;
-        }
-    }
-    
     // Clear candidate cache
     CandidateCache.Reset();
     
@@ -258,44 +243,57 @@ void UInteractionManager::AssignCurrentInteraction()
         }
     }
     
-    // Build candidate list with scores
-    CandidateCache.Reserve(NearbyCache.Num());
+    // SOLUTION 1: Pre-filter and sort candidates by distance
+    TArray<TPair<UInteractableManager*, float>> CandidatesWithDistance;
+    CandidatesWithDistance.Reserve(NearbyCache.Num());
+    
+    // Create distance-sorted candidates
     for (UInteractableManager* Interactable : NearbyCache)
     {
         if (!IsValid(Interactable) || !Interactable->IsInteractable) continue;
         
-        FInteractionCandidate Candidate = CreateCandidate(Interactable);
-        CandidateCache.Add(Candidate);
-    }
-    
-    // Find best candidate
-    if (CandidateCache.Num() == 0)
-    {
-        SetCurrentInteraction(nullptr);
-        return;
-    }
-    
-    UInteractableManager* BestInteractable = nullptr;
-    float BestScore = -FLT_MAX;
-    
-    for (const FInteractionCandidate& Candidate : CandidateCache)
-    {
-        const float Score = CalculateInteractionScore(Candidate);
-        
-        if (Score > BestScore)
+        const float DistanceSq = FVector::DistSquared(CachedPlayerLocation, 
+            Interactable->GetOwner()->GetActorLocation());
+            
+        if (DistanceSq <= FMath::Square(InteractMaxDistance))
         {
-            BestScore = Score;
-            BestInteractable = Candidate.Interactable;
+            CandidatesWithDistance.Add(TPair<UInteractableManager*, float>(Interactable, DistanceSq));
         }
     }
     
-    // Set the best interactable as current
+    // Sort by distance (closest first)
+    CandidatesWithDistance.Sort([](const TPair<UInteractableManager*, float>& A, 
+                                   const TPair<UInteractableManager*, float>& B)
+    {
+        return A.Value < B.Value;
+    });
+    
+    // SOLUTION 2: Evaluate best candidates (closest first)
+    const int32 MaxCandidates = FMath::Min(CandidatesWithDistance.Num(), MaxCandidatesPerFrame);
+    
+    float BestScore = 0.0f;
+    UInteractableManager* BestInteractable = nullptr;
+    
+    for (int32 i = 0; i < MaxCandidates; ++i)
+    {
+        UInteractableManager* Interactable = CandidatesWithDistance[i].Key;
+        
+        FInteractionCandidate Candidate = CreateCandidate(Interactable);
+        const float Score = CalculateInteractionScore(Candidate);
+        
+        if (Score > BestScore && Score >= InteractThreshold)
+        {
+            BestScore = Score;
+            BestInteractable = Interactable;
+        }
+    }
+    
     SetCurrentInteraction(BestInteractable);
     
-    // Optional debug logging
-    if (bDebugInteraction)
+    if (bDebugMode)
     {
-        UE_LOG(LogInteract, Verbose, TEXT("Best Interactable: %s (Score: %.2f)"),
+        UE_LOG(LogInteract, Log, TEXT("Evaluated %d/%d candidates, selected: %s (Score: %.3f)"),
+            MaxCandidates, CandidatesWithDistance.Num(),
             BestInteractable ? *BestInteractable->GetOwner()->GetName() : TEXT("None"),
             BestScore);
     }

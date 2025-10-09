@@ -39,5 +39,4 @@ private:
     
 	/** Setup modifiers for Arcane Shield regeneration */
 	void SetupArcaneShieldRegen();
-	
 };
