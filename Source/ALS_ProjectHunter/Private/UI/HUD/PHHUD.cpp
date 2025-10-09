@@ -18,7 +18,7 @@ void APHHUD::BeginPlay()
 			TooltipCanvas = Cast<UCanvasPanel>(TooltipContainer->GetRootWidget());
 			if (TooltipCanvas)
 			{
-				TooltipContainer->AddToViewport(100); // High Z-order
+				TooltipContainer->AddToViewport(100);
 				UE_LOG(LogTemp, Log, TEXT("✅ TooltipCanvas created successfully"));
 			}
 		}
