@@ -138,6 +138,9 @@ protected:
     UPROPERTY()
     TArray<UInteractableManager*> NearbyCache;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction Settings", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float MinDotThreshold = 0.5f;
+
     void ScheduleNextUpdate();
     void UpdateInteractionOptimized();
     void CachePlayerData();
@@ -170,10 +173,14 @@ public:
     
     bool IsValidForInteraction() const;
 
+
+    
+
 private:
     void RemoveInteractionFromCurrent(UInteractableManager* Interactable);
     void AddInteraction(UInteractableManager* Interactable);
 
+    bool bDebugInteraction = true;
     
     
     // Optimized scoring

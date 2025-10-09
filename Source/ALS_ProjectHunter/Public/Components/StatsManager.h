@@ -68,9 +68,6 @@ public:
 	/** Optional: Data asset for more complex initialization */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Initialization")
 	TObjectPtr<UAttributeConfigDataAsset> AttributeConfig;
-
-	
-
 	
 	/* ============================= */
 	/* ===   Attribute Access    === */
@@ -205,6 +202,11 @@ public:
 	FActiveGameplayEffectHandle ApplyGameplayEffectSpecToSelf(
 		const FGameplayEffectSpec& Spec);
 
+	
+	UFUNCTION(BlueprintCallable, Category = "Regen")
+	void InitRegen();
+	
+
 protected:
 
 
@@ -256,4 +258,16 @@ protected:
 	 */
 	UPROPERTY(BlueprintReadOnly, Category = "Setup")
 	TObjectPtr<APHBaseCharacter> Owner;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Regen")
+	TSubclassOf<UGameplayEffect> HealthRegenEffectClass;
+    
+	UPROPERTY(EditDefaultsOnly, Category = "Regen")
+	TSubclassOf<UGameplayEffect> ManaRegenEffectClass;
+    
+	UPROPERTY(EditDefaultsOnly, Category = "Regen")
+	TSubclassOf<UGameplayEffect> StaminaRegenEffectClass;
+    
+	UPROPERTY(EditDefaultsOnly, Category = "Regen")
+	TSubclassOf<UGameplayEffect> ArcaneShieldRegenEffectClass;
 };

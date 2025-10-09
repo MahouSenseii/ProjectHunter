@@ -43,10 +43,9 @@ void URegenEffect::SetupHealthRegen()
 {
     const FPHGameplayTags& Tags = FPHGameplayTags::Get();
     
-    // Period defaults to 1.0 second (you can adjust in Blueprint)
+    // Set Period to 1.0 second - MMC will calculate amount per second
     Period.SetValue(1.0f);
     
-    // Add modifier
     int32 Idx = Modifiers.Num();
     Modifiers.SetNum(Idx + 1);
     
@@ -54,12 +53,10 @@ void URegenEffect::SetupHealthRegen()
     ModifierInfo.Attribute = UPHAttributeSet::GetHealthAttribute();
     ModifierInfo.ModifierOp = EGameplayModOp::Additive;
     
-    // Create custom calculation
     FCustomCalculationBasedFloat CustomCalc;
     CustomCalc.CalculationClassMagnitude = UMMC_Regen::StaticClass();
     ModifierInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(CustomCalc);
     
-    // Add tags using the new API
     UTargetTagsGameplayEffectComponent& TargetTagsComponent = FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
     TargetTagsComponent.SetAndApplyTargetTagChanges(
         FInheritedTagContainer(FGameplayTagContainer(Tags.Effect_Health_RegenActive))
@@ -69,14 +66,16 @@ void URegenEffect::SetupHealthRegen()
 void URegenEffect::SetupManaRegen()
 {
     const FPHGameplayTags& Tags = FPHGameplayTags::Get();
-
+    
+    // Set Period to 1.0 second - MMC will calculate amount per second
     Period.SetValue(1.0f);
-
-    const int32 Idx = Modifiers.Num();
+    
+    int32 Idx = Modifiers.Num();
     Modifiers.SetNum(Idx + 1);
     
     FGameplayModifierInfo& ModifierInfo = Modifiers[Idx];
-    ModifierInfo.Attribute = UPHAttributeSet::GetManaAttribute();
+    // FIX: Change from GetHealthAttribute() to GetManaAttribute()
+    ModifierInfo.Attribute = UPHAttributeSet::GetManaAttribute(); 
     ModifierInfo.ModifierOp = EGameplayModOp::Additive;
     
     FCustomCalculationBasedFloat CustomCalc;
@@ -93,13 +92,15 @@ void URegenEffect::SetupStaminaRegen()
 {
     const FPHGameplayTags& Tags = FPHGameplayTags::Get();
     
+    // Set Period to 1.0 second - MMC will calculate amount per second
     Period.SetValue(1.0f);
-
-    const int32 Idx = Modifiers.Num();
+    
+    int32 Idx = Modifiers.Num();
     Modifiers.SetNum(Idx + 1);
     
     FGameplayModifierInfo& ModifierInfo = Modifiers[Idx];
-    ModifierInfo.Attribute = UPHAttributeSet::GetStaminaAttribute();
+    // FIX: Change from GetHealthAttribute() to GetStaminaAttribute()
+    ModifierInfo.Attribute = UPHAttributeSet::GetStaminaAttribute();  // ← FIXED!
     ModifierInfo.ModifierOp = EGameplayModOp::Additive;
     
     FCustomCalculationBasedFloat CustomCalc;

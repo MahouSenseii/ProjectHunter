@@ -96,7 +96,6 @@ public:
 	//Changed Handle
 	virtual void OnGaitChanged(EALSGait PreviousGait) override;
 
-	
 
 protected:
 	/** Begin Play */
@@ -116,7 +115,6 @@ protected:
 	void DestroyAllComponents();
 
 
-
 protected:
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Controller")
@@ -127,7 +125,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UConsumableToolTip> ConsumableToolTipClass;
-
 	
 private:
 	/** Gameplay Ability System */

@@ -210,6 +210,9 @@ void APHBaseCharacter::InitAbilityActorInfo()
 			EGameplayTagEventType::NewOrRemoved
 		).AddUObject(this, &APHBaseCharacter::OnGameplayTagChanged);
 	}
+
+	StatsManager->InitRegen();
+
 }
 
 /* =========================== */
@@ -368,7 +371,6 @@ void APHBaseCharacter::HandleDeathState()
 
 void APHBaseCharacter::DestroyAllComponents()
 {
-
 	// Check for and destroy the InteractableManager component
 	if (UInteractableManager* InteractableManager = GetComponentByClass<UInteractableManager>())
 	{
