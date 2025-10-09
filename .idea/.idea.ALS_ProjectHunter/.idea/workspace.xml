@@ -16,10 +16,13 @@
   <component name="ChangeListManager">
     <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
+<<<<<<< HEAD
       <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/GAS/DataTable/Asset/DA_AttributeInfo.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/GAS/DataTable/Asset/DA_AttributeInfo.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/GAS/GameplayEffects/Effects/GE_HealthRegen.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/GAS/GameplayEffects/Effects/GE_HealthRegen.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/GAS/GameplayEffects/Effects/GE_ManaRegen.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/GAS/GameplayEffects/Effects/GE_ManaRegen.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/GAS/GameplayEffects/Effects/GE_StaminaRegen.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/GAS/GameplayEffects/Effects/GE_StaminaRegen.uasset" afterDir="false" />
+=======
+>>>>>>> parent of 1d94268 (All vital regen is working)
       <change beforePath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Data/AttributeInfo.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Data/AttributeInfo.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Data/GE/RegenEffect.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Data/GE/RegenEffect.cpp" afterDir="false" />
@@ -27,12 +30,17 @@
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/InteractionManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/InteractionManager.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/StatsManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/StatsManager.cpp" afterDir="false" />
+<<<<<<< HEAD
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Data/AttributeInfo.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Data/AttributeInfo.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Data/GE/RegenEffect.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Data/GE/RegenEffect.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagCalc/MMC_Regen.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagCalc/MMC_Regen.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/InteractionManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/InteractionManager.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/StatsManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/StatsManager.h" afterDir="false" />
+=======
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/StatsManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Components/StatsManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHCharacterStructLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Library/PHCharacterStructLibrary.h" afterDir="false" />
+>>>>>>> parent of 1d94268 (All vital regen is working)
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,7 +54,13 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
+<<<<<<< HEAD
     <setting file="cidr-memory-view://5" root0="FORCE_HIGHLIGHTING" />
+=======
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="cidr-memory-view://4" root0="FORCE_HIGHLIGHTING" />
+>>>>>>> parent of 1d94268 (All vital regen is working)
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.36.32532/include/atomic" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.36.32532/include/cmath" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/include/atomic" root0="SKIP_HIGHLIGHTING" />
@@ -1019,6 +1033,7 @@
       <workItem from="1754585604509" duration="35457000" />
       <workItem from="1754958786525" duration="11210000" />
       <workItem from="1755224512312" duration="84161000" />
+<<<<<<< HEAD
       <workItem from="1756299308297" duration="26762000" />
       <workItem from="1756823815279" duration="1301000" />
       <workItem from="1756901561730" duration="18964000" />
@@ -1033,6 +1048,9 @@
       <workItem from="1759734924440" duration="68855000" />
       <workItem from="1759967876723" duration="299000" />
       <workItem from="1760003182878" duration="6733000" />
+=======
+      <workItem from="1756299308297" duration="7732000" />
+>>>>>>> parent of 1d94268 (All vital regen is working)
     </task>
     <servers />
   </component>

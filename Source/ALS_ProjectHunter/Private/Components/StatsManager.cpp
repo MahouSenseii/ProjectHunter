@@ -654,9 +654,115 @@ bool UStatsManager::ApplyInitializationEffect(
     // Set all the SetByCaller magnitudes
     for (const auto& Pair : AttributeValues)
     {
+<<<<<<< HEAD
         SpecHandle.Data->SetSetByCallerMagnitude(Pair.Key, Pair.Value);
         UE_LOG(LogStatsManager, Verbose, TEXT("  Set %s = %.2f"), 
             *Pair.Key.ToString(), Pair.Value);
+=======
+        // Vital Regen Rates
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_HealthRegenRate, 
+            ValidateInitValue(SecondaryInitAttributes.HealthRegenRate, TEXT("HealthRegenRate")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ManaRegenRate, 
+            ValidateInitValue(SecondaryInitAttributes.ManaRegenRate, TEXT("ManaRegenRate")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_StaminaRegenRate, 
+            ValidateInitValue(SecondaryInitAttributes.StaminaRegenRate, TEXT("StaminaRegenRate")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ArcaneShieldRegenRate, 
+            ValidateInitValue(SecondaryInitAttributes.ArcaneShieldRegenRate, TEXT("ArcaneShieldRegenRate")));
+
+        // Vital Regen Amounts
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_HealthRegenAmount, 
+            ValidateInitValue(SecondaryInitAttributes.HealthRegenAmount, TEXT("HealthRegenAmount")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ManaRegenAmount, 
+            ValidateInitValue(SecondaryInitAttributes.ManaRegenAmount, TEXT("ManaRegenAmount")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_StaminaRegenAmount, 
+            ValidateInitValue(SecondaryInitAttributes.StaminaRegenAmount, TEXT("StaminaRegenAmount")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ArcaneShieldRegenAmount, 
+            ValidateInitValue(SecondaryInitAttributes.ArcaneShieldRegenAmount, TEXT("ArcaneShieldRegenAmount")));
+
+        // Flat Reserved Amounts
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_HealthFlatReservedAmount, 
+            ValidateInitValue(SecondaryInitAttributes.FlatReservedHealth, TEXT("FlatReservedHealth")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ManaFlatReservedAmount, 
+            ValidateInitValue(SecondaryInitAttributes.FlatReservedMana, TEXT("FlatReservedMana")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_StaminaFlatReservedAmount, 
+            ValidateInitValue(SecondaryInitAttributes.FlatReservedStamina, TEXT("FlatReservedStamina")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ArcaneShieldFlatReservedAmount, 
+            ValidateInitValue(SecondaryInitAttributes.FlatReservedArcaneShield, TEXT("FlatReservedArcaneShield")));
+
+        // Percentage Reserved
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_HealthPercentageReserved, 
+            ValidateInitValue(SecondaryInitAttributes.PercentageReservedHealth, TEXT("PercentageReservedHealth")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ManaPercentageReserved, 
+            ValidateInitValue(SecondaryInitAttributes.PercentageReservedMana, TEXT("PercentageReservedMana")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_StaminaPercentageReserved, 
+            ValidateInitValue(SecondaryInitAttributes.PercentageReservedStamina, TEXT("PercentageReservedStamina")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_ArcaneShieldPercentageReserved, 
+            ValidateInitValue(SecondaryInitAttributes.PercentageReservedArcaneShield, TEXT("PercentageReservedArcaneShield")));
+
+        // Flat Resistances
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_FireResistanceFlat, 
+            ValidateInitValue(SecondaryInitAttributes.FireResistanceFlat, TEXT("FireResistanceFlat")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_IceResistanceFlat, 
+            ValidateInitValue(SecondaryInitAttributes.IceResistanceFlat, TEXT("IceResistanceFlat")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_LightningResistanceFlat, 
+            ValidateInitValue(SecondaryInitAttributes.LightningResistanceFlat, TEXT("LightningResistanceFlat")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_LightResistanceFlat, 
+            ValidateInitValue(SecondaryInitAttributes.LightResistanceFlat, TEXT("LightResistanceFlat")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_CorruptionResistanceFlat, 
+            ValidateInitValue(SecondaryInitAttributes.CorruptionResistanceFlat, TEXT("CorruptionResistanceFlat")));
+
+        // Percentage Resistances
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_FireResistancePercentage, 
+            ValidateInitValue(SecondaryInitAttributes.FireResistancePercent, TEXT("FireResistancePercent")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_IceResistancePercentage, 
+            ValidateInitValue(SecondaryInitAttributes.IceResistancePercent, TEXT("IceResistancePercent")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_LightningResistancePercentage, 
+            ValidateInitValue(SecondaryInitAttributes.LightningResistancePercent, TEXT("LightningResistancePercent")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_LightResistancePercentage, 
+            ValidateInitValue(SecondaryInitAttributes.LightResistancePercent, TEXT("LightResistancePercent")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Resistances_CorruptionResistancePercentage, 
+            ValidateInitValue(SecondaryInitAttributes.CorruptionResistancePercent, TEXT("CorruptionResistancePercent")));
+
+        // Misc Stats
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Money_Gems, 
+            ValidateInitValue(SecondaryInitAttributes.Gems, TEXT("Gems")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_LifeLeech, 
+            ValidateInitValue(SecondaryInitAttributes.LifeLeech, TEXT("LifeLeech")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_ManaLeech, 
+            ValidateInitValue(SecondaryInitAttributes.ManaLeech, TEXT("ManaLeech")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_MovementSpeed, 
+            ValidateInitValue(SecondaryInitAttributes.MovementSpeed, TEXT("MovementSpeed")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_CritChance, 
+            ValidateInitValue(SecondaryInitAttributes.CritChance, TEXT("CritChance")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_CritMultiplier, 
+            ValidateInitValue(SecondaryInitAttributes.CritMultiplier, TEXT("CritMultiplier")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_Poise, 
+            ValidateInitValue(SecondaryInitAttributes.Poise, TEXT("Poise")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Misc_StunRecovery, 
+            ValidateInitValue(SecondaryInitAttributes.StunRecovery, TEXT("StunRecovery")));
+
+        // Max Vital Regen Rates
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxHealthRegenRate, 
+            ValidateInitValue(SecondaryInitAttributes.HealthRegenRate, TEXT("MaxHealthRegenRate")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxManaRegenRate, 
+            ValidateInitValue(SecondaryInitAttributes.ManaRegenRate, TEXT("MaxManaRegenRate")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxStaminaRegenRate, 
+            ValidateInitValue(SecondaryInitAttributes.StaminaRegenRate, TEXT("MaxStaminaRegenRate")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxArcaneShieldRegenRate, 
+            ValidateInitValue(SecondaryInitAttributes.ArcaneShieldRegenRate, TEXT("MaxArcaneShieldRegenRate")));
+
+        // Max Vital Regen Amounts
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxHealthRegenAmount, 
+            ValidateInitValue(SecondaryInitAttributes.HealthRegenAmount, TEXT("MaxHealthRegenAmount")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxManaRegenAmount, 
+            ValidateInitValue(SecondaryInitAttributes.ManaRegenAmount, TEXT("MaxManaRegenAmount")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxStaminaRegenAmount, 
+            ValidateInitValue(SecondaryInitAttributes.StaminaRegenAmount, TEXT("MaxStaminaRegenAmount")));
+        SecondarySpec.Data->SetSetByCallerMagnitude(PHTags.Attributes_Secondary_Vital_MaxArcaneShieldRegenAmount, 
+            ValidateInitValue(SecondaryInitAttributes.ArcaneShieldRegenAmount, TEXT("MaxArcaneShieldRegenAmount")));
+
+        ASC->ApplyGameplayEffectSpecToSelf(*SecondarySpec.Data);
+>>>>>>> parent of 1d94268 (All vital regen is working)
     }
 
     // Final validation before applying
