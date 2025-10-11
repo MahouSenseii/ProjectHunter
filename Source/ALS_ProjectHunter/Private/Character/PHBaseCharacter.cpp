@@ -273,7 +273,7 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 	UBaseItem* ItemObject = PickupItem->CreateItemObject(GetTransientPackage());
 	if (!ItemObject) return;
 
-	ItemObject->ItemDefinition = PickupItem->ItemDefinition;
+	ItemObject->ItemDefinition = PickupItem->ItemInfo;
     
 	if (AEquipmentPickup* EquipPickup = Cast<AEquipmentPickup>(PickupItem))
 	{

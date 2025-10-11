@@ -18,7 +18,11 @@ public:
 
 	AEquipmentPickup();
 
-		
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	const UItemDefinitionAsset* ItemDefinition;
+
+	
 	UPROPERTY(BlueprintReadOnly, Category = "Item")
 	FItemInstanceData InstanceData;
 

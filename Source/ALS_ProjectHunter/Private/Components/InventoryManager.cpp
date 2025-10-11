@@ -375,7 +375,7 @@ bool UInventoryManager::DropItemFromInventory(UBaseItem* Item)
 	if (CreatedPickup)
 	{
 		// Configure the pickup
-		CreatedPickup->ItemDefinition = Item->GetItemInfo();
+		CreatedPickup->ItemInfo = Item->GetItemInfo();
 		CreatedPickup->SetNewMesh(Item->GetItemInfo()->Base.StaticMesh);
 		CreatedPickup->SetupMesh();
 

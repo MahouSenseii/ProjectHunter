@@ -4,7 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Item/Data/UItemDefinitionAsset.h"
 #include "Library/PHItemStructLibrary.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "PHBaseToolTip.generated.h"
@@ -76,9 +78,6 @@ protected:
     // Tooltip visual elements
     UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
     UImage* TooltipBackground;
-
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-    UImage* ToolTipBackgroundFlicker;
     
     UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
     UTextBlock* ItemNameText;

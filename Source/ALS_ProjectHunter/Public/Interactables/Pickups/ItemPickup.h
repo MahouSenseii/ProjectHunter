@@ -24,9 +24,6 @@ public:
 
 	AItemPickup();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-	UItemDefinitionAsset* ItemDefinition;
-	
 	UFUNCTION(BlueprintCallable)
 	virtual UBaseItem* CreateItemObject(UObject* Outer);
 protected:
@@ -41,6 +38,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Particles")
 	UParticleSystemComponent* ParticleSystemComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ItemInfo")
+	UItemDefinitionAsset* ItemInfo;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ItemInfo")
 	mutable UBaseItem* ObjItem;

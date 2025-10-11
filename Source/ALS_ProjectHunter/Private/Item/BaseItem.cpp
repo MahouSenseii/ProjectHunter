@@ -12,6 +12,7 @@ DEFINE_LOG_CATEGORY(LogBaseItem);
 UBaseItem::UBaseItem()
 	: bIsInitialized(false)
 {
+	// Generate unique ID on construction
 	GenerateUniqueID();
 }
 

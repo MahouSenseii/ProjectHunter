@@ -226,7 +226,7 @@ protected:
     void CheckCombatTimeout();
     void OnEnterCombat();
     void OnExitCombat();
-    
+    void HandleOutOfCombatRegeneration(float DeltaTime) const;
 
 public:
     /* ================================ */

@@ -26,9 +26,9 @@ AItemPickup::AItemPickup()
 	RotatingMovementComponent->RotationRate = FRotator(0.f, 180.f, 0.f);
 	// Rotate 180 degrees per second around the yaw axis.
 
-	if (ItemDefinition)
+	if (ItemInfo)
 	{
-		StaticMesh->SetStaticMesh(ItemDefinition->Base.StaticMesh);
+		StaticMesh->SetStaticMesh(ItemInfo->Base.StaticMesh);
 	};
 }
 
@@ -55,9 +55,9 @@ void AItemPickup::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (ItemDefinition)
+	if (ItemInfo)
 	{
-		StaticMesh->SetStaticMesh(ItemDefinition->Base.StaticMesh);
+		StaticMesh->SetStaticMesh(ItemInfo->Base.StaticMesh);
 		StaticMesh->CanCharacterStepUpOn = ECB_No;
 		StaticMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
 		if(InteractableManager)
@@ -85,7 +85,7 @@ UBaseItem* AItemPickup::GenerateItem()
 	{
 		if (UBaseItem* NewItem = NewObject<UBaseItem>(GetTransientPackage(), UBaseItem::StaticClass()))
 		{
-			NewItem->SetItemInfo(ItemDefinition);			
+			NewItem->SetItemInfo(ItemInfo);			
 			// Initialize  item's properties here 
 			return NewItem;
 		}
@@ -110,7 +110,7 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinition
 	}
 
 	// Get the item information
-	if (!ItemDefinition)
+	if (!ItemInfo)
 	{
 		return false;
 	}
@@ -185,7 +185,7 @@ void AItemPickup::SetWidgetRarity()
         {
                 if (UInteractableWidget* InteractableWidget = InteractableManager->InteractionWidgetRef)
                 {
-                        InteractableWidget->SetGrade(ItemDefinition->Base.ItemRarity);
+                        InteractableWidget->SetGrade(ItemInfo->Base.ItemRarity);
                 }
         }
 }

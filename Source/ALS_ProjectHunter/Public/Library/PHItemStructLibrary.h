@@ -399,50 +399,6 @@ struct FPHAttributeData : public FTableRowBase
         return RolledStatValue;
     }
 
-    /**
-     * Checks if this attribute data is valid and properly configured
-     * @return true if the data is valid, false otherwise
-     */
-    bool IsValid() const
-    {
-        // Check if the core attribute is valid
-        if (!ModifiedAttribute.IsValid())
-        {
-            return false;
-        }
-
-        // Check if stat roll range is properly configured (min <= max)
-        if (StatRollRange.X > StatRollRange.Y)
-        {
-            return false;
-        }
-
-        // Check if attribute name is set
-        if (AttributeName.IsNone())
-        {
-            return false;
-        }
-
-        // Check if display name is set (optional but recommended)
-        // Uncomment if you want to enforce display names
-        // if (StatDisplayName.IsEmpty())
-        // {
-        //     return false;
-        // }
-
-        return true;
-    }
-
-    /**
-     * Checks if this attribute data has been properly initialized
-     * More lenient than IsValid() - just checks minimum requirements
-     * @return true if initialized, false otherwise
-     */
-    bool IsInitialized() const
-    {
-        return ModifiedAttribute.IsValid() && !AttributeName.IsNone();
-    }
-
     FPHAttributeData() = default;
 };
 
@@ -1168,35 +1124,35 @@ struct FItemInstanceData
 
 	// === Inventory State ===
 	UPROPERTY(SaveGame, BlueprintReadWrite)
-	int32 Quantity;
+	int32 Quantity = 1;
 
 	UPROPERTY(SaveGame, BlueprintReadWrite)
-	bool bRotated;
+	bool bRotated = false;
 
 	UPROPERTY(SaveGame, BlueprintReadOnly)
-	ECurrentItemSlot LastSavedSlot;
+	ECurrentItemSlot LastSavedSlot = ECurrentItemSlot::CIS_None;
 
 	UPROPERTY(SaveGame)
 	FTransform WorldTransform;
 
 	// === Procedural Properties ===
 	UPROPERTY(SaveGame, BlueprintReadWrite)
-	int32 ItemLevel;
+	int32 ItemLevel = 1;
 
 	UPROPERTY(SaveGame, BlueprintReadWrite)
-	EItemRarity Rarity;
+	EItemRarity Rarity = EItemRarity::IR_GradeF;
 
 	UPROPERTY(SaveGame, BlueprintReadWrite)
-	bool bIdentified;
+	bool bIdentified = true;
 
 	UPROPERTY(SaveGame, BlueprintReadWrite)
-	int32 Seed;
+	int32 Seed = 0;
 
 	UPROPERTY(SaveGame, BlueprintReadWrite)
 	FText DisplayName;
 
 	UPROPERTY(SaveGame, BlueprintReadWrite)
-	bool bHasNameBeenGenerated;
+	bool bHasNameBeenGenerated = false;
 
 	// === Affixes ===
 	UPROPERTY(SaveGame, BlueprintReadWrite)
@@ -1221,77 +1177,31 @@ struct FItemInstanceData
 
 	// === Economy (instance-specific) ===
 	UPROPERTY(SaveGame, BlueprintReadWrite)
-	int32 CurrentValue;
+	int32 CurrentValue = 0;
 
 	UPROPERTY(SaveGame, BlueprintReadWrite)
-	float ValueModifier;
+	float ValueModifier = 1.0f;
 
 	UPROPERTY(SaveGame, BlueprintReadWrite)
-	bool bIsTradeable;
+	bool bIsTradeable = true;
 
 	UPROPERTY(SaveGame, BlueprintReadWrite)
-	bool bIsSoulbound;
+	bool bIsSoulbound = false;
 
 	// === Runtime Effects (NOT saved, transient) ===
 	UPROPERTY(Transient)
 	TArray<FActiveGameplayEffectHandle> AppliedEffectHandles;
 
 	UPROPERTY(Transient)
-	bool bEffectsActive;
+	bool bEffectsActive = false;
 
 	// === Cached State (NOT saved, transient) ===
 	UPROPERTY(Transient)
-	bool bCacheDirty;
+	bool bCacheDirty = true;
 
-	// PROPER CONSTRUCTOR
-	FItemInstanceData()
-		: UniqueID(TEXT(""))
-		, OwnerID(TEXT(""))
-		, Quantity(0)
-		, bRotated(false)
-		, LastSavedSlot(ECurrentItemSlot::CIS_None)
-		, WorldTransform(FTransform::Identity)
-		, ItemLevel(1)
-		, Rarity(EItemRarity::IR_GradeF)
-		, bIdentified(true)
-		, Seed(0)
-		, DisplayName(FText::GetEmpty())
-		, bHasNameBeenGenerated(false)
-		, Durability()
-		, RuneCraftingData()
-		, CurrentValue(0)
-		, ValueModifier(1.0f)
-		, bIsTradeable(true)
-		, bIsSoulbound(false)
-		, bEffectsActive(false)
-		, bCacheDirty(true)
-	{
-	
-	}
-
-	/** Quick guard to ensure invariants after load / spawn */
-	void Sanitize()
-	{
-		if (!WorldTransform.IsValid()) 
-		{ 
-			WorldTransform = FTransform::Identity; 
-		}
-		
-		Quantity = FMath::Max(0, Quantity);
-		ItemLevel = FMath::Max(1, ItemLevel);
-		ValueModifier = FMath::IsFinite(ValueModifier) ? ValueModifier : 1.0f;
-		
-		Prefixes.RemoveAll([](const FPHAttributeData& D){ return !D.IsValid(); });
-		Suffixes.RemoveAll([](const FPHAttributeData& D){ return !D.IsValid(); });
-		Crafted.RemoveAll([](const FPHAttributeData& D){ return !D.IsValid(); });
-		Implicits.RemoveAll([](const FPHAttributeData& D){ return !D.IsValid(); });
-		
-		if (!StaticEnum<ECurrentItemSlot>()->IsValidEnumValue(static_cast<int64>(LastSavedSlot)))
-		{
-			LastSavedSlot = ECurrentItemSlot::CIS_None;
-		}
-	}
+	FItemInstanceData() = default;
 };
+
 
 /**
  * Drop table entry for loot spawning
@@ -1390,9 +1300,8 @@ struct FEquippableItemData
 	FItemDurability Durability;
 
 	FEquippableItemData()
-		: EquipSlot(EEquipmentSlot::ES_None), OverlayState()
-	{
-	}
+		: EquipSlot(EEquipmentSlot::ES_None)
+	{}
 
 	FORCEINLINE bool IsValid() const
 	{

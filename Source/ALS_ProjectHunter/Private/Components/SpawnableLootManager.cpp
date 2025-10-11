@@ -186,20 +186,20 @@ void USpawnableLootManager::SpawnItemByName(const FName ItemName, UDataTable* Da
         TempView->Equip.Affixes.Implicits = Def->Implicits;
         TempView->Equip.Affixes.bAffixesGenerated = TempView->Equip.Affixes.GetTotalAffixCount() > 0;
 
-        Item->ItemDefinition = MoveTemp(TempView); // same place you previously assigned the row
+        Item->ItemInfo = MoveTemp(TempView); // same place you previously assigned the row
     }
 
     
-    if (Item->ItemDefinition->Base.StaticMesh)
+    if (Item->ItemInfo->Base.StaticMesh)
     {
-        Item->SetNewMesh(Item->ItemDefinition->Base.StaticMesh);
+        Item->SetNewMesh(Item->ItemInfo->Base.StaticMesh);
     }
 
     UGameplayStatics::FinishSpawningActor(Item, SpawnTransform); // unchanged
 
     UE_LOG(LogLoot, Log, TEXT("Spawned %s | Mesh=%s | Class=%s"),
         *ItemName.ToString(),
-        Item->ItemDefinition->Base.StaticMesh ? *Item->ItemDefinition->Base.StaticMesh->GetName() : TEXT("None"),
+        Item->ItemInfo->Base.StaticMesh ? *Item->ItemInfo->Base.StaticMesh->GetName() : TEXT("None"),
         *ClassToSpawn->GetName());
 }
 

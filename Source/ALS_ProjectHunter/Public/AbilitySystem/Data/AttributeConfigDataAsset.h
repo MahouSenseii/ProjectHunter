@@ -21,10 +21,13 @@ class ALS_PROJECTHUNTER_API UAttributeConfigDataAsset : public UDataAsset
 public:
     UAttributeConfigDataAsset();
  
+
     // All primary attributes (Strength, Intelligence, etc.)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Primary Attributes")
     TArray<FAttributeInitConfig> Attributes;
     
+  
+
     // Helper function to find a specific attribute config
     UFUNCTION(BlueprintCallable, Category = "Attribute Config")
     FAttributeInitConfig FindAttributeConfig(FGameplayTag AttributeTag, bool& bFound) const;
@@ -37,6 +40,5 @@ public:
     // Editor-only function to auto-populate with default values
     UFUNCTION(CallInEditor, Category = "Editor")
     void AutoPopulateFromGameplayTags();
-    
 #endif
 };
