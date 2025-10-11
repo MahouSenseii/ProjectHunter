@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Item/Data/UItemDefinitionAsset.h"
 #include "Library/PHItemStructLibrary.h"
 #include "Components/TextBlock.h"
 #include "Components/HorizontalBox.h"

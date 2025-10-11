@@ -116,7 +116,7 @@ bool AEquipmentPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefin
 {
 	Super::InteractionHandle(Actor, WasHeld);
 	
-	PassedItemInfo = const_cast<UItemDefinitionAsset*>(ItemInfo);
+	PassedItemInfo = const_cast<UItemDefinitionAsset*>(ItemDefinition);
 	return Super::HandleInteraction(Actor, WasHeld, PassedItemInfo, FConsumableItemData());
 }
 
@@ -124,7 +124,7 @@ void AEquipmentPickup::HandleHeldInteraction(APHBaseCharacter* Character) const
 {
 	Super::HandleHeldInteraction(Character);
 
-if (Character->GetEquipmentManager()->IsItemEquippable(ObjItem) && (UFL_InteractUtility::AreRequirementsMet(ObjItem, Character)))
+	if (Character->GetEquipmentManager()->IsItemEquippable(ObjItem) && (UFL_InteractUtility::AreRequirementsMet(ObjItem, Character)))
 	{
 		Character->GetEquipmentManager()->TryToEquip(ObjItem, true, ObjItem->GetItemInfo()->Base.EquipmentSlot);
 	}

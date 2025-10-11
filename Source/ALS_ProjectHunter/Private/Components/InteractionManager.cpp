@@ -146,13 +146,13 @@ void UInteractionManager::ScheduleNextUpdate()
     GetWorld()->GetTimerManager().SetTimer(
         UpdateTimerHandle,
         this,
-        &UInteractionManager::UpdateInteractionOptimized,
+        &UInteractionManager::UpdateInteraction,
         UpdateInterval,
         false
     );
 }
 
-void UInteractionManager::UpdateInteractionOptimized()
+void UInteractionManager::UpdateInteraction()
 {
     // Cache player data once per update
     CachePlayerData();
@@ -242,6 +242,21 @@ void UInteractionManager::AssignCurrentInteraction()
             }
         }
     }
+
+    
+    if (IsValid(CurrentInteractable))
+    {
+        const FVector ToCurrentInteractable = (CurrentInteractable->GetOwner()->GetActorLocation() 
+            - CachedPlayerLocation).GetSafeNormal();
+        const float CurrentDot = FVector::DotProduct(CachedLookDirection, ToCurrentInteractable);
+        
+        
+        if (CurrentDot < MinDotThreshold)
+        {
+            SetCurrentInteraction(nullptr);
+            return;
+        }
+    }
     
     // SOLUTION 1: Pre-filter and sort candidates by distance
     TArray<TPair<UInteractableManager*, float>> CandidatesWithDistance;
@@ -260,15 +275,14 @@ void UInteractionManager::AssignCurrentInteraction()
             CandidatesWithDistance.Add(TPair<UInteractableManager*, float>(Interactable, DistanceSq));
         }
     }
-    
-    // Sort by distance (closest first)
+
     CandidatesWithDistance.Sort([](const TPair<UInteractableManager*, float>& A, 
                                    const TPair<UInteractableManager*, float>& B)
     {
         return A.Value < B.Value;
     });
     
-    // SOLUTION 2: Evaluate best candidates (closest first)
+   
     const int32 MaxCandidates = FMath::Min(CandidatesWithDistance.Num(), MaxCandidatesPerFrame);
     
     float BestScore = 0.0f;

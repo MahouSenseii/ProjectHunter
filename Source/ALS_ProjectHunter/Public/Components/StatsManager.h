@@ -245,6 +245,9 @@ protected:
 		EGameplayModOp::Type ModifierOp,
 		float Magnitude);
 
+	
+	void InitRegen();
+
 	/** Validate that ASC is ready */
 	bool IsInitialized() const { return ASC != nullptr; }
 
@@ -256,4 +259,17 @@ protected:
 	 */
 	UPROPERTY(BlueprintReadOnly, Category = "Setup")
 	TObjectPtr<APHBaseCharacter> Owner;
+
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Regen")
+	TSubclassOf<UGameplayEffect> HealthRegenEffectClass;
+    
+	UPROPERTY(EditDefaultsOnly, Category = "Regen")
+	TSubclassOf<UGameplayEffect> ManaRegenEffectClass;
+    
+	UPROPERTY(EditDefaultsOnly, Category = "Regen")
+	TSubclassOf<UGameplayEffect> StaminaRegenEffectClass;
+    
+	UPROPERTY(EditDefaultsOnly, Category = "Regen")
+	TSubclassOf<UGameplayEffect> ArcaneShieldRegenEffectClass;
 };

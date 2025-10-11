@@ -717,7 +717,7 @@ bool UEquipmentManager::DropItem(UBaseItem* Item)
 	}
 
 	// Set properties of the dropped item
-	DroppedItem->ItemInfo = Item->GetItemInfo();
+	DroppedItem->ItemDefinition = Item->GetItemInfo();
 	DroppedItem->SetNewMesh(Item->GetItemInfo()->Base.StaticMesh);
 	DroppedItem->SetSkeletalMesh(Item->GetItemInfo()->Base.SkeletalMesh);
 

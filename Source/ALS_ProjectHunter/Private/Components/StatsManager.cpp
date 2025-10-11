@@ -2,6 +2,7 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
 #include "PHGameplayTags.h"
+#include "AbilitySystem/PHAttributeSet.h"
 #include "AbilitySystem/Data/AttributeConfigDataAsset.h"
 #include "Character/PHBaseCharacter.h"
 
@@ -705,4 +706,29 @@ UGameplayEffect* UStatsManager::CreateModifierEffect(
 	Effect->Modifiers.Add(Modifier);
 
 	return Effect;
+}
+
+void UStatsManager::InitRegen()
+{
+	// Apply regen effects
+	if (ASC)
+	{
+		// Apply health regen
+		if (HealthRegenEffectClass)
+		{
+			ApplyGameplayEffectToSelf(HealthRegenEffectClass, 1.0f);
+		}
+        
+		// Apply mana regen
+		if (ManaRegenEffectClass)
+		{
+			ApplyGameplayEffectToSelf(ManaRegenEffectClass, 1.0f);
+		}
+        
+		// Apply stamina regen
+		if (StaminaRegenEffectClass)
+		{
+			ApplyGameplayEffectToSelf(StaminaRegenEffectClass, 1.0f);
+		}
+	}
 }

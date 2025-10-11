@@ -125,6 +125,9 @@ protected:
 
     UPROPERTY()
     TObjectPtr<APlayerCameraManager> CachedCamera;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction Settings", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float MinDotThreshold = 0.5f;
     
     // Update management
     FTimerHandle UpdateTimerHandle;
@@ -139,7 +142,7 @@ protected:
     TArray<UInteractableManager*> NearbyCache;
 
     void ScheduleNextUpdate();
-    void UpdateInteractionOptimized();
+    void UpdateInteraction();
     void CachePlayerData();
     bool ShouldUpdateInteraction();
     void AssignCurrentInteraction();
@@ -173,8 +176,8 @@ public:
 private:
     void RemoveInteractionFromCurrent(UInteractableManager* Interactable);
     void AddInteraction(UInteractableManager* Interactable);
-
     
+    bool bDebugInteraction = true;
     
     // Optimized scoring
     float CalculateInteractionScore(const FInteractionCandidate& Candidate) const;

@@ -153,6 +153,19 @@ void UPHBaseToolTip::UpdateRarityColors()
         }
         
         TooltipBackground->SetColorAndOpacity(BackgroundTint);
+        UMaterialInstanceDynamic* MID = ToolTipBackgroundFlicker->GetDynamicMaterial();
+        if (!MID)
+        {
+            if (UMaterialInterface* BaseMat = Cast<UMaterialInterface>(ToolTipBackgroundFlicker->GetDynamicMaterial()))
+            {
+                MID = UMaterialInstanceDynamic::Create(BaseMat, this);
+                ToolTipBackgroundFlicker->SetBrushFromMaterial(MID);
+            }
+        }
+        if (MID)
+        {
+            MID->SetVectorParameterValue(TEXT("ImageTint"), RarityColor);
+        }
     }
     
     // Apply color to item name
