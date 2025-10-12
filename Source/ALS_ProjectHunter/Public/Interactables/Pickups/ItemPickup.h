@@ -23,9 +23,10 @@ class ALS_PROJECTHUNTER_API AItemPickup : public ABaseInteractable
 public:
 
 	AItemPickup();
-
+	UBaseItem* CreateItemObjectWClass(TSubclassOf<UBaseItem> ItemClass, UObject* Outer);
+	
 	UFUNCTION(BlueprintCallable)
-	virtual UBaseItem* CreateItemObject(UObject* Outer);
+	virtual  UEquippableItem* CreateItemObject(UObject* Outer);
 protected:
 
 	virtual void BeginPlay() override;
@@ -39,11 +40,11 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Particles")
 	UParticleSystemComponent* ParticleSystemComponent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ItemInfo")
-	UItemDefinitionAsset* ItemInfo;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="ItemInfo")
+	TSubclassOf<UBaseItem> ObjItemClass;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ItemInfo")
-	mutable UBaseItem* ObjItem;
+	UPROPERTY(EditAnywhere, Instanced, BlueprintReadWrite, Category="ItemInfo")
+	TObjectPtr<UBaseItem> ObjItem = nullptr;
 
 	virtual void BPIInteraction_Implementation(AActor* Interactor, bool WasHeld) override;
 	
@@ -51,7 +52,7 @@ public:
 	virtual UBaseItem* GenerateItem() ;
 
 	virtual bool HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*& ItemInfo,
-		FConsumableItemData ConsumableItemData) const;
+		FConsumableItemData ConsumableItemData) ;
 
 	UFUNCTION(BlueprintCallable)
 	virtual void HandleHeldInteraction(APHBaseCharacter* Character) const;

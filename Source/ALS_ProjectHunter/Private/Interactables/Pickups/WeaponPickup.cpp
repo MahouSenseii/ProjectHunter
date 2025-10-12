@@ -6,13 +6,10 @@
 
 
 bool AWeaponPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*& ItemData,
-	FConsumableItemData ConsumableItemData) const
+	FConsumableItemData ConsumableItemData)
 {
+	UItemDefinitionAsset*  PassedItemInformation = ObjItem->ItemDefinition;
 	Super::HandleInteraction(Actor, WasHeld, ItemData, ConsumableItemData);
-
-	
-	UItemDefinitionAsset*  PassedItemInformation = ItemData;
-
 	return AItemPickup::HandleInteraction(Actor, WasHeld, PassedItemInformation,  FConsumableItemData());
 }
 

@@ -271,9 +271,12 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 	if (!ToolTipWidget) return;
 
 	UBaseItem* ItemObject = PickupItem->CreateItemObject(GetTransientPackage());
+	if(PickupItem->ObjItem)
+	{
+		ItemObject->ItemDefinition = PickupItem->ObjItem->ItemDefinition;
+	}
 	if (!ItemObject) return;
 
-	ItemObject->ItemDefinition = PickupItem->ItemInfo;
     
 	if (AEquipmentPickup* EquipPickup = Cast<AEquipmentPickup>(PickupItem))
 	{
@@ -289,7 +292,7 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 			EquipToolTip->SetOwnerCharacter(this);
 		}
         
-		// ✅ Get the player controller
+		//  Get the player controller
 		APHPlayerController* PC = Cast<APHPlayerController>(GetController());
 		if (!PC)
 		{
@@ -297,7 +300,7 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 			return;
 		}
 
-		// ✅ Get the HUD
+		//  Get the HUD
 		APHHUD* HUD = Cast<APHHUD>(PC->GetHUD());
 		if (!HUD)
 		{

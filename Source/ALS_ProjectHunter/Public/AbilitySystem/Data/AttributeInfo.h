@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AttributeConfigDataAsset.h"
 #include "Engine/DataAsset.h"
 #include "Library/AttributeStructsLibrary.h"
 
@@ -19,7 +20,21 @@ class ALS_PROJECTHUNTER_API UAttributeInfo : public UDataAsset
 public:
 
 	FPHAttributeInfo FindAttributeInfoForTag(const FGameplayTag& AttributeTag, bool bLogNotFound = false ) const;
+
+	/** Reference to AttributeConfigDataAsset to populate from */
+	UPROPERTY(EditAnywhere, Category = "Editor")
+	TObjectPtr<UAttributeConfigDataAsset> SourceConfig;
 	
+
+	/** Auto-populate from AttributeConfigDataAsset */
+	UFUNCTION(CallInEditor, Category = "Editor")
+	void PopulateFromConfig();
+
+	/** Clear all attribute information */
+	UFUNCTION(CallInEditor, Category = "Editor")
+	void ClearAllAttributes();
+	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TArray<FPHAttributeInfo> AttributeInformation;
 	

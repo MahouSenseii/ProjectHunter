@@ -17,6 +17,6 @@ class ALS_PROJECTHUNTER_API AWeaponPickup : public AEquipmentPickup
 	GENERATED_BODY()
 
 public:
-virtual bool HandleInteraction(AActor* Actor, bool WasHeld,  UItemDefinitionAsset*& ItemData, FConsumableItemData ConsumableItemData) const override;
+virtual bool HandleInteraction(AActor* Actor, bool WasHeld,  UItemDefinitionAsset*& ItemData, FConsumableItemData ConsumableItemData)  override;
 
 };

@@ -50,7 +50,7 @@ void UEquipmentManager::BeginPlay()
 
 bool UEquipmentManager::CheckSlot(UBaseItem* Item)
 {
-	if (!IsValid(Item)) return false;
+	if (!Item) return false;
 
 	// Check if the item's target slot exists in the EquipmentData map
 	UEquippableItem* EquippableItem = Cast<UEquippableItem>(Item);
@@ -119,15 +119,14 @@ bool UEquipmentManager::AddItemInSlotToInventory(UBaseItem* Item)
 /* === Equipping Items === */
 /* ============================= */
 
-void UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh, EEquipmentSlot Slot)
+void UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh)
 {
 	if (!IsValid(Item)) return;
 
-	HasMesh ? HandleHasMesh(Item, Slot) : HandleNoMesh(Item, Slot);
-
-	if (UEquippableItem* EquipItem = Cast<UEquippableItem>(Item))
+	HasMesh ? HandleHasMesh(Item, Item->ItemDefinition->Base.EquipmentSlot) : HandleNoMesh(Item, Item->ItemDefinition->Base.EquipmentSlot);
+	if (UEquippableItem* EquipItem = ::Cast<UEquippableItem>(Item))
 	{
-		if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(GetOwner()))
+		if (APHBaseCharacter* Character = ::Cast<APHBaseCharacter>(GetOwner()))
 		{
 			ApplyWeaponBaseDamage(EquipItem, Character);
 			ApplyItemStatBonuses(EquipItem, Character);
@@ -357,10 +356,7 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 
 		SpawnedActor->InitializeFromItem(Info, Item->RuntimeData);
 
-		// Resolve the desired socket:
-		// 1) Use explicit per-item socket if provided
-		// 2) (Optional) Use the first ContextualSockets entry if any were authored
-		// 3) Fallback to your library's mapping by slot
+
 		FName SocketToAttach = Base.AttachmentSocket;
 
 		if (SocketToAttach.IsNone())
@@ -717,7 +713,7 @@ bool UEquipmentManager::DropItem(UBaseItem* Item)
 	}
 
 	// Set properties of the dropped item
-	DroppedItem->ItemInfo = Item->GetItemInfo();
+	DroppedItem->ObjItem->ItemDefinition = Item->GetItemInfo();
 	DroppedItem->SetNewMesh(Item->GetItemInfo()->Base.StaticMesh);
 	DroppedItem->SetSkeletalMesh(Item->GetItemInfo()->Base.SkeletalMesh);
 

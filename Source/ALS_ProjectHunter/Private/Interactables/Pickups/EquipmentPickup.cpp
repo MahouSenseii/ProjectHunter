@@ -23,19 +23,32 @@ void AEquipmentPickup::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!ItemDefinition)
+	if (!ObjItem && ObjItemClass) // Also check if ObjItemClass is valid
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EquipmentPickup: No ItemDefinition set!"));
-		return;
+		ObjItem = CreateItemObjectWClass(ObjItemClass, this); 
+        
+		// Check if creation succeeded
+		if (!ObjItem)
+		{
+			UE_LOG(LogTemp, Error, TEXT("EquipmentPickup: Failed to create item object!"));
+			return;
+		}
+        
+		if (!ObjItem->ItemDefinition)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("EquipmentPickup: No ItemDefinition set!"));
+			return;
+		}
 	}
 
 	// Generate unique instance data
 	GenerateRandomAffixes();
 }
 
+
 void AEquipmentPickup::GenerateRandomAffixes()
 {
-    if (!ItemDefinition || !ItemDefinition->GetStatsDataTable())
+    if (!ObjItem->ItemDefinition || !ObjItem->ItemDefinition->GetStatsDataTable())
     {
         UE_LOG(LogTemp, Warning, TEXT("EquipmentPickup: Cannot generate affixes - missing definition or stats table"));
         return;
@@ -46,7 +59,7 @@ void AEquipmentPickup::GenerateRandomAffixes()
 
     
     FPHItemStats GeneratedStats = UPHItemFunctionLibrary::GenerateStats(
-        ItemDefinition->GetStatsDataTable()
+        ObjItem->ItemDefinition->GetStatsDataTable()
     );
 
     // Store in instance data
@@ -54,7 +67,7 @@ void AEquipmentPickup::GenerateRandomAffixes()
     InstanceData.Suffixes = GeneratedStats.Suffixes;
 
     // Copy any fixed implicits from definition to instance
-    InstanceData.Implicits = ItemDefinition->GetImplicits();
+    InstanceData.Implicits = ObjItem->ItemDefinition->GetImplicits();
 
     
     int32 BaseRankPoints = 0; 
@@ -71,18 +84,18 @@ void AEquipmentPickup::GenerateRandomAffixes()
    
     InstanceData.DisplayName = UPHItemFunctionLibrary::GenerateItemName(
         CombinedStats,
-        ItemDefinition
+        ObjItem->ItemDefinition
     );
     
     InstanceData.bHasNameBeenGenerated = true;
 
     // Initialize other instance data
     InstanceData.Quantity = 1;
-    InstanceData.ItemLevel = 1;  // Or calculate based on area level, etc.
-    InstanceData.bIdentified = true;  // Or false for unidentified items
+    InstanceData.ItemLevel = 1;  
+    InstanceData.bIdentified = true;
     
     // Copy durability from definition
-    InstanceData.Durability = ItemDefinition->Equip.Durability;
+    InstanceData.Durability = ObjItem->ItemDefinition->Equip.Durability;
 
     UE_LOG(LogTemp, Log, TEXT("Generated item: %s (Rarity: %d, Affixes: %d)"), 
            *InstanceData.DisplayName.ToString(),
@@ -98,7 +111,7 @@ FText AEquipmentPickup::GetDisplayName() const
         return InstanceData.DisplayName;
     }
     
-    return ItemDefinition ? ItemDefinition->Base.ItemName : FText::GetEmpty();
+    return ObjItem->ItemDefinition ? ObjItem->ItemDefinition->Base.ItemName : FText::GetEmpty();
 }
 
 EItemRarity AEquipmentPickup::GetInstanceRarity() const
@@ -109,14 +122,14 @@ EItemRarity AEquipmentPickup::GetInstanceRarity() const
         return InstanceData.Rarity;
     }
     
-    return ItemDefinition ? ItemDefinition->Base.ItemRarity : EItemRarity::IR_None;
+    return ObjItem->ItemDefinition ? ObjItem->ItemDefinition->Base.ItemRarity : EItemRarity::IR_None;
 }
 
-bool AEquipmentPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*& PassedItemInfo, FConsumableItemData ConsumableItemData) const
+bool AEquipmentPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*& PassedItemInfo, FConsumableItemData ConsumableItemData) 
 {
 	Super::InteractionHandle(Actor, WasHeld);
 	
-	PassedItemInfo = const_cast<UItemDefinitionAsset*>(ItemInfo);
+	PassedItemInfo = Cast<UItemDefinitionAsset>(ObjItem->ItemDefinition);
 	return Super::HandleInteraction(Actor, WasHeld, PassedItemInfo, FConsumableItemData());
 }
 
@@ -124,21 +137,24 @@ void AEquipmentPickup::HandleHeldInteraction(APHBaseCharacter* Character) const
 {
 	Super::HandleHeldInteraction(Character);
 
-if (Character->GetEquipmentManager()->IsItemEquippable(ObjItem) && (UFL_InteractUtility::AreRequirementsMet(ObjItem, Character)))
+	if (Character)
 	{
-		Character->GetEquipmentManager()->TryToEquip(ObjItem, true, ObjItem->GetItemInfo()->Base.EquipmentSlot);
-	}
-	else
-	{
-		// Attempt to get the Inventory Manager component from the ALSCharacter
-		if (UInventoryManager* OwnersInventory = Cast<UInventoryManager>(Owner->GetComponentByClass(UInventoryManager::StaticClass())))
+		if (Character->GetEquipmentManager()->IsItemEquippable(ObjItem) && (UFL_InteractUtility::AreRequirementsMet(ObjItem, Character)))
 		{
-		// If the Inventory Manager exists, try to add the item to the inventory
-			OwnersInventory->TryToAddItemToInventory(ObjItem, true);
+			Character->GetEquipmentManager()->TryToEquip(ObjItem, true);
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("ALSCharacter does not have an UInventoryManager component."));
+			// Attempt to get the Inventory Manager component from the ALSCharacter
+			if (UInventoryManager* OwnersInventory = Cast<UInventoryManager>(Owner->GetComponentByClass(UInventoryManager::StaticClass())))
+			{
+				// If the Inventory Manager exists, try to add the item to the inventory
+				OwnersInventory->TryToAddItemToInventory(ObjItem, true);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("ALSCharacter does not have an UInventoryManager component."));
+			}
 		}
 	}
 	InteractableManager->RemoveInteraction();

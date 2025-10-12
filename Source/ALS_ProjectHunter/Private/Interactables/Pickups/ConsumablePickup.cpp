@@ -14,7 +14,7 @@ void AConsumablePickup::BeginPlay()
 	ConsumableData.GameplayEffectClass = OnUseEffect;
 }
 
-bool AConsumablePickup::HandleInteraction(AActor* Actor, bool WasHeld,  UItemDefinitionAsset*& PassedItemInfo, FConsumableItemData ConsumableItemData) const
+bool AConsumablePickup::HandleInteraction(AActor* Actor, bool WasHeld,  UItemDefinitionAsset*& PassedItemInfo, FConsumableItemData ConsumableItemData) 
 {
 	Super::InteractionHandle(Actor, WasHeld);
 

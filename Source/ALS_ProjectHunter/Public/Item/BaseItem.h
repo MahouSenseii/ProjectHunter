@@ -183,11 +183,11 @@ protected:
 public:
 
 	// Immutable reference
-	UPROPERTY()
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Item|Info")
 	UItemDefinitionAsset* ItemDefinition;
 
 	// Instance-specific state
-	UPROPERTY()
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Item|Info")
 	FItemInstanceData RuntimeData; 
 
 private:

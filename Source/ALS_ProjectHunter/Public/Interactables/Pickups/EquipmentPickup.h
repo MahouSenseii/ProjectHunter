@@ -17,11 +17,7 @@ class ALS_PROJECTHUNTER_API AEquipmentPickup : public AItemPickup
 public:
 
 	AEquipmentPickup();
-
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-	const UItemDefinitionAsset* ItemDefinition;
-
 	
 	UPROPERTY(BlueprintReadOnly, Category = "Item")
 	FItemInstanceData InstanceData;
@@ -33,11 +29,12 @@ public:
 	/** Get the rarity of this item instance */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
 	EItemRarity GetInstanceRarity() const;
-	
+
+
 	virtual void BeginPlay() override;
 	void GenerateRandomAffixes();
 
-	virtual bool HandleInteraction(AActor* Actor, bool WasHeld,  UItemDefinitionAsset*& ItemInfo, FConsumableItemData ConsumableItemData) const override;
+	virtual bool HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*& ItemInfo,FConsumableItemData ConsumableItemData) override;
 	
 	virtual void HandleHeldInteraction(APHBaseCharacter* Character) const override;
 	virtual void HandleSimpleInteraction(APHBaseCharacter* Character) const override;

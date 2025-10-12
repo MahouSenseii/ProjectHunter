@@ -33,12 +33,7 @@ void UCombatManager::TickComponent(float DeltaTime, ELevelTick TickType,
                                   FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	
-	// Update combat status regeneration
-	if (CurrentCombatStatus == ECombatStatus::OutOfCombat && OwnerCharacter)
-	{
-		HandleOutOfCombatRegeneration(DeltaTime);
-	}
+    
 }
 
 /* ========================================== */
@@ -953,12 +948,6 @@ void UCombatManager::OnExitCombat()
     // Clear combat targets
     CombatTargets.Empty();
     
-    // Enable regeneration after delay
-    GetWorld()->GetTimerManager().SetTimer(RegenerationDelayTimer, [this]()
-    {
-        bCanRegenerate = true;
-    }, OutOfCombatRegenDelay, false);
-    
     // Update gameplay tags
     if (UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())
     {
@@ -973,48 +962,6 @@ void UCombatManager::OnExitCombat()
     OnCombatExited.Broadcast();
 }
 
-void UCombatManager::HandleOutOfCombatRegeneration(const float DeltaTime) const
-{
-    if (!bCanRegenerate || !OwnerCharacter) return;
-    
-    UPHAttributeSet* AttSet = Cast<UPHAttributeSet>(OwnerCharacter->GetAttributeSet());
-    UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
-    if (!AttSet || !ASC) return;
-    
-    // Health regeneration
-    if (OutOfCombatHealthRegen > 0.f)
-    {
-        const float CurrentHealth = AttSet->GetHealth();
-        if (const float MaxHealth = AttSet->GetMaxHealth(); CurrentHealth < MaxHealth)
-        {
-            float NewHealth = FMath::Min(CurrentHealth + (OutOfCombatHealthRegen * DeltaTime), MaxHealth);
-            ASC->SetNumericAttributeBase(UPHAttributeSet::GetHealthAttribute(), NewHealth);
-        }
-    }
-    
-    // Mana regeneration
-    if (OutOfCombatManaRegen > 0.f)
-    {
-        const float CurrentMana = AttSet->GetMana();
-        if (const float MaxMana = AttSet->GetMaxMana(); CurrentMana < MaxMana)
-        {
-            float NewMana = FMath::Min(CurrentMana + (OutOfCombatManaRegen * DeltaTime), MaxMana);
-            ASC->SetNumericAttributeBase(UPHAttributeSet::GetManaAttribute(), NewMana);
-        }
-    }
-    
-    // Stamina regeneration
-    if (OutOfCombatStaminaRegen > 0.f)
-    {
-        float CurrentStamina = AttSet->GetStamina();
-        float MaxStamina = AttSet->GetMaxStamina();
-        if (CurrentStamina < MaxStamina)
-        {
-            float NewStamina = FMath::Min(CurrentStamina + (OutOfCombatStaminaRegen * DeltaTime), MaxStamina);
-            ASC->SetNumericAttributeBase(UPHAttributeSet::GetStaminaAttribute(), NewStamina);
-        }
-    }
-}
 
 bool UCombatManager::IsInCombatWith(const APHBaseCharacter* Target) const
 {

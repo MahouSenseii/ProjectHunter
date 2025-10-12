@@ -226,7 +226,6 @@ protected:
     void CheckCombatTimeout();
     void OnEnterCombat();
     void OnExitCombat();
-    void HandleOutOfCombatRegeneration(float DeltaTime) const;
 
 public:
     /* ================================ */
@@ -282,19 +281,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Combat|Status", meta = (EditCondition = "bUseTransitions"))
     float CombatExitTransitionTime = 1.0f;
     
-    /* === Out of Combat Regeneration === */
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Combat|Regeneration")
-    float OutOfCombatRegenDelay = 3.0f; // Delay before regen starts after combat
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Combat|Regeneration")
-    float OutOfCombatHealthRegen = 10.0f; // Health per second
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Combat|Regeneration")
-    float OutOfCombatManaRegen = 5.0f; // Mana per second
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Combat|Regeneration")
-    float OutOfCombatStaminaRegen = 15.0f; // Stamina per second
+
     
     /* === Runtime Properties === */
     

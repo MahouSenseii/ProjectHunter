@@ -58,7 +58,7 @@ bool UItemSot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& I
         return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
     }
 
-    UBaseItem* CastedItem = Cast<UBaseItem>(InOperation->Payload);
+    UBaseItem* CastedItem = ::Cast<UBaseItem>(InOperation->Payload);
     if (!CastedItem)
     {
         return false; // Drop payload is invalid
@@ -82,7 +82,7 @@ bool UItemSot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& I
     	}
     	
             // Try equipping the item
-            Equipment->TryToEquip(CastedItem, true, EquipmentSlot);
+            Equipment->TryToEquip(CastedItem, true);
 
             // Set button color to indicate successful drop
             if (Item_Button)
