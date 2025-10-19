@@ -124,75 +124,61 @@ UBaseItem* AItemPickup::GenerateItem()
 bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld,
 	UItemDefinitionAsset*& PassedItemInfo, FConsumableItemData ConsumableItemData)
 {
-    if (!IsValid(Actor))
-    {
-        return false;
-    }
+	if (!IsValid(Actor))
+	{
+		return false;
+	}
 
-    // NULL CHECK HERE!
-    const APHPlayerController* PlayerController = Cast<APHPlayerController>(Actor);
-    if (!PlayerController)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Actor is not a valid APHPlayerController."));
-        return false;
-    }
+	const APHPlayerController* PlayerController = Cast<APHPlayerController>(Actor);
+	if (!PlayerController)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Actor is not a valid APHPlayerController."));
+		return false;
+	}
     
-    APHBaseCharacter* OwnerCharacter = Cast<APHBaseCharacter>(PlayerController->AcknowledgedPawn);
-    if (!OwnerCharacter)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Owner is not a valid APHBaseCharacter."));
-        return false;
-    }
+	APHBaseCharacter* OwnerCharacter = Cast<APHBaseCharacter>(PlayerController->AcknowledgedPawn);
+	if (!OwnerCharacter)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Owner is not a valid APHBaseCharacter."));
+		return false;
+	}
 
-    // Use the already-created item with generated affixes!
-    if (!ObjItem || !ObjItem->ItemDefinition)
-    {
-        UE_LOG(LogTemp, Error, TEXT("ObjItem or ItemDefinition is null!"));
-        return false;
-    }
+	if (!ObjItem || !ObjItem->ItemDefinition)
+	{
+		UE_LOG(LogTemp, Error, TEXT("ObjItem or ItemDefinition is null!"));
+		return false;
+	}
 
-    // Set the Owner ID for the item
-    ObjItem->RuntimeData.OwnerID = OwnerCharacter->GetInventoryManager()->GetID();
-    
-    // Pass the item definition if needed
-    PassedItemInfo = ObjItem->ItemDefinition;
+	ObjItem->RuntimeData.OwnerID = OwnerCharacter->GetInventoryManager()->GetID();
+	PassedItemInfo = ObjItem->ItemDefinition;
 
-    // If the interaction was held, try to equip the item
-    if (WasHeld)
-    {
-        const UItemDefinitionAsset* ItemInfo = ObjItem->ItemDefinition;
-        
-        if (OwnerCharacter->GetEquipmentManager()->IsItemEquippable(ObjItem))   
-        {
-            HandleHeldInteraction(OwnerCharacter);
-        	
-        }
-        else
-        {
-            HandleSimpleInteraction(OwnerCharacter);
-        }
+	bool bSuccess = false;
 
-        if (InteractableManager)
-        {
-            InteractableManager->RemoveInteraction();
-        }
-        
-        return true; // Success!
-    }
-    else
-    {
-        // Try to add the item to the inventory
-        if (OwnerCharacter->GetInventoryManager()->TryToAddItemToInventory(ObjItem, true))
-        {
-            if (InteractableManager && InteractableManager->DestroyAfterInteract)
-            {
-                InteractableManager->RemoveInteraction();
-            }
-            return true; // Success!
-        }
-    }
+	if (WasHeld)
+	{
+		if (OwnerCharacter->GetEquipmentManager()->IsItemEquippable(ObjItem))   
+		{
+			// For base class, try to add to inventory instead of empty function
+			OwnerCharacter->GetEquipmentManager()->TryToEquip(ObjItem, true);
+			bSuccess = true;
+		}
+		else
+		{
+			bSuccess = OwnerCharacter->GetInventoryManager()->TryToAddItemToInventory(ObjItem, true);
+		}
+	}
+	else
+	{
+		bSuccess = OwnerCharacter->GetInventoryManager()->TryToAddItemToInventory(ObjItem, true);
+	}
 
-    return false; // Failed to add to inventory
+	// Only remove interaction if successful
+	if (bSuccess && InteractableManager && InteractableManager->DestroyAfterInteract)
+	{
+		InteractableManager->RemoveInteraction();
+	}
+
+	return bSuccess;
 }
 
 void AItemPickup::HandleHeldInteraction(APHBaseCharacter* Character) const

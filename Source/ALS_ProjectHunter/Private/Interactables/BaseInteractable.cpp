@@ -91,7 +91,7 @@ void ABaseInteractable::CheckForActors()
 	}
 }
 
-bool ABaseInteractable::	InteractionHandle(AActor* Actor, bool WasHeld) const
+bool ABaseInteractable::InteractionHandle(AActor* Actor, bool WasHeld) const
 {
 	if (WasHeld)
 	{

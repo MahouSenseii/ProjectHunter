@@ -131,24 +131,23 @@ bool AEquipmentPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefin
 	
 	PassedItemInfo = Cast<UItemDefinitionAsset>(ObjItem->ItemDefinition);
 	return Super::HandleInteraction(Actor, WasHeld, PassedItemInfo, FConsumableItemData());
-}
+}	
 
 void AEquipmentPickup::HandleHeldInteraction(APHBaseCharacter* Character) const
 {
-	Super::HandleHeldInteraction(Character);
-
+	
 	if (Character)
 	{
-		if (Character->GetEquipmentManager()->IsItemEquippable(ObjItem) && (UFL_InteractUtility::AreRequirementsMet(ObjItem, Character)))
+		if (Character->GetEquipmentManager()->IsItemEquippable(ObjItem) && UFL_InteractUtility::AreRequirementsMet(ObjItem, Character))
 		{
 			Character->GetEquipmentManager()->TryToEquip(ObjItem, true);
+			UE_LOG(LogTemp, Warning, TEXT("Item Equip"));
 		}
 		else
 		{
-			// Attempt to get the Inventory Manager component from the ALSCharacter
-			if (UInventoryManager* OwnersInventory = Cast<UInventoryManager>(Owner->GetComponentByClass(UInventoryManager::StaticClass())))
+			
+			if (UInventoryManager* OwnersInventory = Character->GetInventoryManager())
 			{
-				// If the Inventory Manager exists, try to add the item to the inventory
 				OwnersInventory->TryToAddItemToInventory(ObjItem, true);
 			}
 			else

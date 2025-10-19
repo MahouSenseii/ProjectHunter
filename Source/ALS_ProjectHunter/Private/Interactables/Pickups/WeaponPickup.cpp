@@ -9,7 +9,7 @@ bool AWeaponPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefiniti
 	FConsumableItemData ConsumableItemData)
 {
 	UItemDefinitionAsset*  PassedItemInformation = ObjItem->ItemDefinition;
-	Super::HandleInteraction(Actor, WasHeld, ItemData, ConsumableItemData);
+	AEquipmentPickup::HandleInteraction(Actor, WasHeld, PassedItemInformation,  FConsumableItemData());
 	return AItemPickup::HandleInteraction(Actor, WasHeld, PassedItemInformation,  FConsumableItemData());
 }
 

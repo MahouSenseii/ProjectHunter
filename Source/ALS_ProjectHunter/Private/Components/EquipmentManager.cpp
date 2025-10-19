@@ -41,6 +41,10 @@ void UEquipmentManager::BeginPlay()
 	if (!OwnerCharacter)
 	{
 		OwnerCharacter = Cast<AALSCharacter>(GetOwner());
+		EquipmentData.Empty();
+		EquipmentItem.Empty();
+		AppliedPassiveEffects.Empty();
+		AppliedItemStats.Empty();
 	}
 }
 
