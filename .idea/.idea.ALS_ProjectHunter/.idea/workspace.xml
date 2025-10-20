@@ -15,13 +15,29 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/ItemData/BP_BaseKatana.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/ItemData/Data_Assest/DA_Empty.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/ItemData/Data_Assest/DA_ItemInstance.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/ItemData/Data_Assest/Katana/DA_BloodKatana.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/ItemData/Data_Assest/Katana/DA_BrokenKatana.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/ItemData/Data_Assest/Katana/DA_GlassKatana.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/ItemData/Data_Assest/Katana/DA_Katana.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/ItemData/Data_Assest/Katana/DA_Raijin’s_Ember.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/BP_BaseKatana.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/BP_BaseKatana.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/Data_Assest/DA_Empty.uasset" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/Data_Assest/DA_ItemInstance.uasset" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/Data_Assest/DA_Katana.uasset" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/Data_Assest/Katana/DA_BloodKatana.uasset" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/Data_Assest/Katana/DA_BrokenKatana.uasset" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/Data_Assest/Katana/DA_GlassKatana.uasset" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/Data_Assest/Katana/DA_Katana.uasset" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/Data_Assest/Katana/DA_Raijin’s_Ember.uasset" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/Items/DT_SpawnableItemsDA.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/Items/DT_SpawnableItemsDA.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Items/Pickups/BP_WeaponPickup.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/Items/Pickups/BP_WeaponPickup.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/EquipmentManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/EquipmentManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/BaseInteractable.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/BaseInteractable.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/EquipmentPickup.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/EquipmentPickup.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/ItemPickup.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/ItemPickup.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/WeaponPickup.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/WeaponPickup.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -106,7 +122,23 @@
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="cidr-memory-view://0" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="cidr-memory-view://4" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.36.32532/include/atomic" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.36.32532/include/cmath" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/include/atomic" root0="SKIP_HIGHLIGHTING" />
@@ -1102,7 +1134,7 @@
       <workItem from="1759967876723" duration="299000" />
       <workItem from="1760150719863" duration="2047000" />
       <workItem from="1760157215390" duration="33965000" />
-      <workItem from="1760881211246" duration="931000" />
+      <workItem from="1760881211246" duration="3551000" />
     </task>
     <servers />
   </component>
@@ -1157,24 +1189,9 @@
           <option name="timeStamp" value="147" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Components/EquipmentManager.cpp</url>
-          <line>129</line>
-          <option name="timeStamp" value="165" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/EquipmentPickup.cpp</url>
           <line>138</line>
           <option name="timeStamp" value="167" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/BaseInteractable.cpp</url>
-          <line>95</line>
-          <option name="timeStamp" value="168" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactables/Pickups/ItemPickup.cpp</url>
-          <line>126</line>
-          <option name="timeStamp" value="170" />
         </line-breakpoint>
         <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
           <properties exception="System.OperationCanceledException" breakIfHandledByOtherCode="false" displayValue="System.OperationCanceledException" />

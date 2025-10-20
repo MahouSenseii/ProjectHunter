@@ -41,10 +41,6 @@ void UEquipmentManager::BeginPlay()
 	if (!OwnerCharacter)
 	{
 		OwnerCharacter = Cast<AALSCharacter>(GetOwner());
-		EquipmentData.Empty();
-		EquipmentItem.Empty();
-		AppliedPassiveEffects.Empty();
-		AppliedItemStats.Empty();
 	}
 }
 
@@ -63,6 +59,8 @@ bool UEquipmentManager::CheckSlot(UBaseItem* Item)
 	const EEquipmentSlot Slot = EquippableItem->GetItemInfo()->Equip.EquipSlot;
 	return EquipmentData.Contains(Slot);
 }
+
+
 
 UEquippableItem* UEquipmentManager::GetItemInSlot(EEquipmentSlot SlotToCheck)
 {
@@ -145,16 +143,18 @@ void UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh)
 
 void UEquipmentManager::HandleHasMesh(UBaseItem* Item, EEquipmentSlot Slot)
 {
-	if (!CheckSlot(Item)) return;
-
-	// If slot occupied, return to inventory or drop, then remove from slot
-	if (UBaseItem** EquippedItemPtr = EquipmentData.Find(Slot))
+	// If slot occupied, return OLD item to inventory or drop, then remove from slot
+	if (CheckSlot(Item))
 	{
-		if (!GetInventoryManager()->TryToAddItemToInventory(*EquippedItemPtr, true))
+		UBaseItem** EquippedItemPtr = EquipmentData.Find(Slot);
+		if (EquippedItemPtr && *EquippedItemPtr)
 		{
-			GetInventoryManager()->DropItemFromInventory(*EquippedItemPtr);
+			if (!GetInventoryManager()->TryToAddItemToInventory(*EquippedItemPtr, true))
+			{
+				GetInventoryManager()->DropItemFromInventory(*EquippedItemPtr);
+			}
+			RemoveEquippedItem(*EquippedItemPtr, Slot);
 		}
-		RemoveEquippedItem(*EquippedItemPtr, Slot);
 	}
 
 	if (!Item)

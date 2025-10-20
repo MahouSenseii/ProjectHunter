@@ -124,7 +124,7 @@ UBaseItem* AItemPickup::GenerateItem()
 bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld,
 	UItemDefinitionAsset*& PassedItemInfo, FConsumableItemData ConsumableItemData)
 {
-	if (!IsValid(Actor))
+ 	if (!IsValid(Actor))
 	{
 		return false;
 	}
