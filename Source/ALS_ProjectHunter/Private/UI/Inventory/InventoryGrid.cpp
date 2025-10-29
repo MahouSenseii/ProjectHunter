@@ -316,7 +316,7 @@ bool UInventoryGrid::HandleOwnedItemInstanceDrop(UItemInstanceObject* Payload, c
 
     // Step 1: Handle ItemInstance stacking
     if (ExistingInstance && 
-        Payload->GetItemInfo()->Base.Stackable &&
+        Payload->GetItemInfo()->Base.bStackable &&
         TryStackItemInstances(ExistingInstance, Payload))
     {
         return true;

@@ -21,6 +21,13 @@ void UPHUserWidget::NativeConstruct()
 	}
 }
 
+
+
+void UPHUserWidget::SetWidgetOwner(APHBaseCharacter* InWidgetOwner)
+{
+	OwnerCharacter = InWidgetOwner;
+}
+
 void UPHUserWidget::SetWidgetController(UObject* InWidgetController)
 {
 	WidgetController = InWidgetController;

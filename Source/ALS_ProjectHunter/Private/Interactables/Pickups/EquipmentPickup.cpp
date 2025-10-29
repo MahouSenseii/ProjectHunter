@@ -23,24 +23,34 @@ void AEquipmentPickup::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!ObjItem && ObjItemClass) // Also check if ObjItemClass is valid
+	UE_LOG(LogItemPickup, Warning, TEXT("=== AEquipmentPickup::BeginPlay ==="));
+	UE_LOG(LogItemPickup, Warning, TEXT("ObjItemClass: %s"), ObjItemClass ? *ObjItemClass->GetName() : TEXT("NULL"));
+	UE_LOG(LogItemPickup, Warning, TEXT("ObjItem before creation: %s"), ObjItem ? *ObjItem->GetClass()->GetName() : TEXT("NULL"));
+
+	if (!ObjItem && ObjItemClass)
 	{
+		UE_LOG(LogItemPickup, Warning, TEXT("Creating new ObjItem with class: %s"), *ObjItemClass->GetName());
 		ObjItem = CreateItemObjectWClass(ObjItemClass, this); 
         
-		// Check if creation succeeded
-		if (!ObjItem)
+		if (ObjItem)
 		{
-			UE_LOG(LogTemp, Error, TEXT("EquipmentPickup: Failed to create item object!"));
-			return;
+			UE_LOG(LogItemPickup, Warning, TEXT("✅ Created ObjItem! Class: %s"), *ObjItem->GetClass()->GetName());
+			UE_LOG(LogItemPickup, Warning, TEXT("Is UEquippableItem: %s"), 
+				ObjItem->IsA(UEquippableItem::StaticClass()) ? TEXT("YES") : TEXT("NO"));
 		}
-        
-		if (!ObjItem->ItemDefinition)
+		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("EquipmentPickup: No ItemDefinition set!"));
-			return;
+			UE_LOG(LogItemPickup, Error, TEXT("❌ Failed to create ObjItem!"));
 		}
 	}
-
+	else
+	{
+		UE_LOG(LogItemPickup, Warning, TEXT("ObjItem already exists or ObjItemClass is null - NOT creating new one"));
+		if (ObjItem)
+		{
+			UE_LOG(LogItemPickup, Warning, TEXT("Existing ObjItem class: %s"), *ObjItem->GetClass()->GetName());
+		}
+	}
 	// Generate unique instance data
 	GenerateRandomAffixes();
 }
@@ -50,7 +60,7 @@ void AEquipmentPickup::GenerateRandomAffixes()
 {
     if (!ObjItem->ItemDefinition || !ObjItem->ItemDefinition->GetStatsDataTable())
     {
-        UE_LOG(LogTemp, Warning, TEXT("EquipmentPickup: Cannot generate affixes - missing definition or stats table"));
+        UE_LOG(LogItemPickup, Warning, TEXT("EquipmentPickup: Cannot generate affixes - missing definition or stats table"));
         return;
     }
 
@@ -97,7 +107,7 @@ void AEquipmentPickup::GenerateRandomAffixes()
     // Copy durability from definition
     InstanceData.Durability = ObjItem->ItemDefinition->Equip.Durability;
 
-    UE_LOG(LogTemp, Log, TEXT("Generated item: %s (Rarity: %d, Affixes: %d)"), 
+    UE_LOG(LogItemPickup, Log, TEXT("Generated item: %s (Rarity: %d, Affixes: %d)"), 
            *InstanceData.DisplayName.ToString(),
            static_cast<int32>(InstanceData.Rarity),
            InstanceData.Prefixes.Num() + InstanceData.Suffixes.Num());
@@ -138,10 +148,10 @@ void AEquipmentPickup::HandleHeldInteraction(APHBaseCharacter* Character) const
 	
 	if (Character)
 	{
-		if (Character->GetEquipmentManager()->IsItemEquippable(ObjItem) && UFL_InteractUtility::AreRequirementsMet(ObjItem, Character))
+		if (Character->GetEquipmentManager()->IsItemEquippable(ObjItem) && ObjItem->ItemDefinition->Equip.MeetsRequirements(Character->GetCurrentStats()))
 		{
 			Character->GetEquipmentManager()->TryToEquip(ObjItem, true);
-			UE_LOG(LogTemp, Warning, TEXT("Item Equip"));
+			UE_LOG(LogItemPickup, Warning, TEXT("Item Equip"));
 		}
 		else
 		{
@@ -152,7 +162,7 @@ void AEquipmentPickup::HandleHeldInteraction(APHBaseCharacter* Character) const
 			}
 			else
 			{
-				UE_LOG(LogTemp, Warning, TEXT("ALSCharacter does not have an UInventoryManager component."));
+				UE_LOG(LogItemPickup, Warning, TEXT("ALSCharacter does not have an UInventoryManager component."));
 			}
 		}
 	}

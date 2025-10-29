@@ -84,10 +84,7 @@ protected:
     
     UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
     UTextBlock* ItemTypeText;
-    
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
-    UImage* ItemIcon;
-    
+        
     // Rarity color configuration
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Rarity Colors")
     TMap<EItemRarity, FLinearColor> RarityColorMap;

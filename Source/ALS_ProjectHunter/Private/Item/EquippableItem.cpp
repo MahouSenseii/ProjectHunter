@@ -7,7 +7,7 @@
 #include "Character/PHBaseCharacter.h"
 #include "Library/PHItemFunctionLibrary.h"
 
-UEquippableItem::UEquippableItem(): StatsDataTable(nullptr)
+UEquippableItem::UEquippableItem()
 {
 }
 
@@ -62,7 +62,7 @@ const FItemStatRequirement& UEquippableItem::GetStatRequirements() const
 
 void UEquippableItem::RerollAllMods()
 {
-	UPHItemFunctionLibrary::RerollModifiers(this, StatsDataTable, true, true, {});
+	UPHItemFunctionLibrary::RerollModifiers(this, ItemDefinition->StatsDataTableTable, true, true, {});
 	UPHItemFunctionLibrary::GenerateItemName(ItemDefinition->Equip.Affixes, GetItemInfo());
 }
 

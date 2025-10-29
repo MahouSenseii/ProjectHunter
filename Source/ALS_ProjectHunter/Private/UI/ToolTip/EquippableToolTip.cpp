@@ -20,11 +20,12 @@ void UEquippableToolTip::InitializeToolTip()
         UE_LOG(LogTemp, Warning, TEXT("EquippableToolTip: No item definition"));
         return;
     }
-
-    // Set lore text from definition
+    
     if (LoreText)
     {
         LoreText->SetText(ItemDefinition->Base.ItemDescription);
+        const FSlateFontInfo FontInfo = FCoreStyle::GetDefaultFontStyle("Regular", 32);
+        LoreText->SetFont(FontInfo);
     }
 
     // Update stats display
@@ -41,12 +42,12 @@ void UEquippableToolTip::SetItemInfo( UItemDefinitionAsset* Definition,  FItemIn
 
     // Set equippable-specific data
     if (StatsBox && ItemDefinition)
-    {
+    { 
         StatsBox->SetItemData(ItemDefinition, InInstanceData);
     }
 }
 
-void UEquippableToolTip::UpdateStatsDisplay()
+void UEquippableToolTip::UpdateStatsDisplay() const
 {
     if (!StatsBox || !ItemDefinition) return;
 

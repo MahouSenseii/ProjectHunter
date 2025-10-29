@@ -66,7 +66,7 @@ public:
 
 	/** Attempts to equip an item in the designated slot */
 	UFUNCTION(BlueprintCallable)
-	void TryToEquip(UBaseItem* Item, bool HasMesh);
+	bool TryToEquip(UBaseItem* Item, bool HasMesh);
 
 	/** Handles equipping an item that has a mesh */
 	UFUNCTION(BlueprintCallable)

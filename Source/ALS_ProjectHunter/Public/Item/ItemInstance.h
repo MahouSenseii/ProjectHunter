@@ -58,7 +58,7 @@ public:
 
     // Override inline methods from BaseItem
     virtual bool IsRotated() override { return RuntimeData.bRotated; }
-    virtual bool IsStackable()  override { return GetItemInfo()->Base.Stackable; }
+    virtual bool IsStackable()  override { return GetItemInfo()->Base.bStackable; }
     virtual int32 GetMaxStackSize()  override { return GetItemInfo()->Base.MaxStackSize; }
 
     /* ============================= */

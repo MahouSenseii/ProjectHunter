@@ -18,7 +18,7 @@ UBaseItem::UBaseItem()
 
 void UBaseItem::Initialize(UItemDefinitionAsset* ItemInfo)
 {
-	ItemDefinition = ItemInfo;  // Store reference (const)
+	ItemDefinition = ItemInfo;  
 	bIsInitialized = true;
     
 	if (RuntimeData.UniqueID.IsEmpty())
@@ -27,16 +27,13 @@ void UBaseItem::Initialize(UItemDefinitionAsset* ItemInfo)
 	}
     
 	
-	if (!RuntimeData.bHasNameBeenGenerated)
+	if (!RuntimeData.bHasNameBeenGenerated && !ItemDefinition->Base.ItemName.IsEmpty())
 	{
 		FPHItemStats CombinedStats;
 		CombinedStats.Prefixes = RuntimeData.Prefixes;
 		CombinedStats.Suffixes = RuntimeData.Suffixes;
         
-		RuntimeData.DisplayName = UPHItemFunctionLibrary::GenerateItemName(
-			CombinedStats,
-			ItemDefinition
-		);
+		RuntimeData.DisplayName = UPHItemFunctionLibrary::GenerateItemName(CombinedStats,ItemDefinition);
 		RuntimeData.bHasNameBeenGenerated = true;
 	}
 }

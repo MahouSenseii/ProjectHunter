@@ -45,12 +45,5 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	TArray<FPHAttributeData> GetItemStatsByAffixType(EAffixes Type) const;
-
-
-protected:
-
-	// Set in BP will be all stats that the item can generate
-	UPROPERTY(EditAnywhere, Category = "ItemInfo|Stats")
-	UDataTable* StatsDataTable;
 	
 };

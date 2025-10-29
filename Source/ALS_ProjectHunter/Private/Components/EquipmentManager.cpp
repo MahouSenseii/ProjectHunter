@@ -121,24 +121,68 @@ bool UEquipmentManager::AddItemInSlotToInventory(UBaseItem* Item)
 /* === Equipping Items === */
 /* ============================= */
 
-void UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh)
+bool UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh)
 {
-	if (!IsValid(Item)) return;
-
-	HasMesh ? HandleHasMesh(Item, Item->ItemDefinition->Base.EquipmentSlot) : HandleNoMesh(Item, Item->ItemDefinition->Base.EquipmentSlot);
-	if (UEquippableItem* EquipItem = ::Cast<UEquippableItem>(Item))
+	if (!IsValid(Item))
 	{
-		if (APHBaseCharacter* Character = ::Cast<APHBaseCharacter>(GetOwner()))
+		UE_LOG(LogEquipmentManager, Error, TEXT("TryToEquip: Item is NULL!"));
+		return false;
+	}
+
+	if (Item->ItemDefinition->Equip.MeetsRequirements(Cast<APHBaseCharacter>(OwnerCharacter)->GetCurrentStats()))
+	{
+		// Debug: Print what class the item actually is
+		UE_LOG(LogEquipmentManager, Warning, TEXT("=== TryToEquip Debug ==="));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("Item Class: %s"), *Item->GetClass()->GetName());
+		UE_LOG(LogEquipmentManager, Warning, TEXT("Item is UBaseItem: %s"), Item->IsA(UBaseItem::StaticClass()) ? TEXT("YES") : TEXT("NO"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("Item is UEquippableItem: %s"), Item->IsA(UEquippableItem::StaticClass()) ? TEXT("YES") : TEXT("NO"));
+    
+		if (Item->ItemDefinition)
+		{
+			UE_LOG(LogEquipmentManager, Warning, TEXT("Item Name: %s"), *Item->ItemDefinition->Base.ItemName.ToString());
+			UE_LOG(LogEquipmentManager, Warning, TEXT("Item Type: %d"), static_cast<int32>(Item->ItemDefinition->Base.ItemType));
+		}
+
+	
+		HasMesh ? HandleHasMesh(Item, Item->ItemDefinition->Base.EquipmentSlot) : HandleNoMesh(Item, Item->ItemDefinition->Base.EquipmentSlot);
+    
+		UEquippableItem* EquipItem = Cast<UEquippableItem>(Item);
+		if (!EquipItem)
+		{
+			UE_LOG(LogEquipmentManager, Error, TEXT("Cast to UEquippableItem FAILED!"));
+			UE_LOG(LogEquipmentManager, Error, TEXT("This means Item was created as UBaseItem, not UEquippableItem"));
+			OnEquipmentChangedSimple.Broadcast();
+			return false;
+		}
+    
+		UE_LOG(LogEquipmentManager, Log, TEXT("Cast successful! Applying weapon stats..."));
+    
+		if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(GetOwner()))
 		{
 			ApplyWeaponBaseDamage(EquipItem, Character);
 			ApplyItemStatBonuses(EquipItem, Character);
 		}
+    
+		OnEquipmentChangedSimple.Broadcast();
 	}
-
-	
-	OnEquipmentChangedSimple.Broadcast();
+	else
+	{
+		UE_LOG(LogEquipmentManager, Warning, TEXT("=== TryToEquip Failed Requirements not met ==="));
+		bool WasAddedToInventoy = false;
+		 WasAddedToInventoy =  GetInventoryManager()->TryToAddItemToInventory(Item, false);
+		UE_LOG(LogEquipmentManager, Warning, TEXT("=== Trying to add to Inventory ==="));
+		if (WasAddedToInventoy)
+		{
+			UE_LOG(LogEquipmentManager, Warning, TEXT("=== Item added to Inventory ==="));
+		}
+		else
+		{
+			UE_LOG(LogEquipmentManager, Warning, TEXT("=== TryToAddItemToInventory Failed Inventory Full ==="));
+		}
+	}
+	UE_LOG(LogEquipmentManager, Warning, TEXT("=== Try to Equip Had an Error should have never reached here please check   ==="));
+	return false;
 }
-
 
 
 void UEquipmentManager::HandleHasMesh(UBaseItem* Item, EEquipmentSlot Slot)
@@ -193,7 +237,7 @@ void UEquipmentManager::RemoveEquippedItem(UBaseItem* Item, EEquipmentSlot Slot)
 
 	if (OwnerCharacter)
 	{
-		// Back to default overlay when item leaves the slot
+		// Back to default overlay when an item leaves the slot
 		OwnerCharacter->SetOverlayState(EALSOverlayState::Default);
 
 		if (UEquippableItem* Equip = Cast<UEquippableItem>(Item))
@@ -497,7 +541,9 @@ void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, const
 	// === Apply the min/max damage stats ===
 	for (const TPair<EDamageTypes, FDamageRange>& Pair : BaseDamageMap)
 	{
-		const FString TypeName = StaticEnum<EDamageTypes>()->GetNameByValue((int64)Pair.Key).ToString().RightChop(17);
+		FString TypeName = StaticEnum<EDamageTypes>()->GetNameByValue(static_cast<int64>(Pair.Key)).ToString();
+		TypeName.RemoveFromStart(TEXT("EDamageTypes::"));
+		TypeName.RemoveFromStart(TEXT("DT_"));
 
 
 		const FString MinKey = FString::Printf(TEXT("Min %s"), *TypeName);

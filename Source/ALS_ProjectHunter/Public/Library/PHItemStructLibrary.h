@@ -860,204 +860,155 @@ struct FItemBase : public FTableRowBase
 {
 	GENERATED_BODY()
 
-	// Pointers (8 bytes each on 64-bit)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<AItemPickup> PickupClass;
+	// =========================
+	// Visuals / Pickup (Pointers first)
+	// =========================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Pickup")
+	TSubclassOf<AItemPickup> PickupClass = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	mutable UStaticMesh* StaticMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Visual")
+	TObjectPtr<UStaticMesh> StaticMesh = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	USkeletalMesh* SkeletalMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Visual")
+	TObjectPtr<USkeletalMesh> SkeletalMesh = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UMaterialInstance* ItemImage;
+	// If you're using a material as an item icon; Texture2D might be more typical for UI
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Visual")
+	UMaterialInstance* ItemImage = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UMaterialInstance* ItemImageRotated;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Visual")
+	UMaterialInstance* ItemImageRotated = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<UGameplayEffect> GameplayEffectClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Gameplay")
+	TSubclassOf<UGameplayEffect> GameplayEffectClass = nullptr;
 
-	// 4-byte types
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trade")
-	int32 Value;
+	// =========================
+	// Identity / Display
+	// =========================
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Item|Identity", meta=(AssetRegistrySearchable="true"))
+	FName ItemID = NAME_None;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 MaxStackSize;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Display",  meta=(EditCondition="bIsItemUnique", EditConditionHides))
+	FText ItemName = FText::GetEmpty();
 
-	// Floats (4 bytes)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base")
-	float BaseGradeValue;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Display", meta=(MultiLine="true"))
+	FText ItemDescription = FText::GetEmpty();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trade")
-	float ValueModifier;
+	// Dimensions in inventory grid (X by Y)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Inventory", meta=(ClampMin="1", ClampMax="10"))
+	FIntPoint Dimensions = FIntPoint::ZeroValue;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Weight")
-	float BaseWeight;
+	// =========================
+	// Classification
+	// =========================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Class")
+	EItemType ItemType = EItemType::IT_None;
 
-	// Enums (typically 1 byte)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EItemType ItemType;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Class")
+	EItemSubType ItemSubType = EItemSubType::IST_None;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EItemSubType ItemSubType;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Class")
+	EItemRarity ItemRarity = EItemRarity::IR_None;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EItemRarity ItemRarity;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Class")
+	EEquipmentSlot EquipmentSlot = EEquipmentSlot::ES_None;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EEquipmentSlot EquipmentSlot;
+	// =========================
+	// Value / Weight
+	// =========================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Trade", meta=(ClampMin="0"))
+	int32 Value = 0;
 
-	// Bools (1 byte each but padded)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trade")
-	bool IsTradeable;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Stacking", meta=(EditCondition="bStackable", EditConditionHides, ClampMin="1"))
+	int32 MaxStackSize = 1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool Stackable;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Base")
+	float BaseGradeValue = 0.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Weight")
-	bool bScaleWeightWithQuantity;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Trade")
+	float ValueModifier = 0.0f;
 
-	// Larger types last
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FIntPoint Dimensions;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Weight", meta=(ClampMin="0.0"))
+	float BaseWeight = 0.1f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName ItemID;
+	// =========================
+	// Attachment
+	// =========================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Attachment")
+	FName AttachmentSocket = NAME_None;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName ItemTag;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Attachment")
-	FName AttachmentSocket;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FText ItemName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FText Description;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FText BaseTypeName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FText ItemDescription;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Attachment")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Attachment")
 	TMap<FName, FName> ContextualSockets;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Attachment")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Attachment")
 	FItemAttachmentRules AttachmentRules;
 
-	FItemBase()
-		: PickupClass(nullptr)
-		, StaticMesh(nullptr)
-		, SkeletalMesh(nullptr)
-		, ItemImage(nullptr)
-		, ItemImageRotated(nullptr)
-		, GameplayEffectClass(nullptr)
-		, Value(0)
-		, MaxStackSize(1)
-		, BaseGradeValue(0.0f)
-		, ValueModifier(0.0f)
-		, BaseWeight(0.1f)
-		, ItemType(EItemType::IT_None)
-		, ItemSubType(EItemSubType::IST_None)
-		, ItemRarity(EItemRarity::IR_None)
-		, EquipmentSlot(EEquipmentSlot::ES_None)
-		, IsTradeable(false)
-		, Stackable(false)
-		, bScaleWeightWithQuantity(true)
-		, Dimensions(FIntPoint::ZeroValue)
-		, ItemID(NAME_None)
-		, ItemTag(NAME_None)
-		, AttachmentSocket(NAME_None)
-		, ItemName(FText::GetEmpty())
-		, Description(FText::GetEmpty())
-		, BaseTypeName(FText::GetEmpty())
-		, ItemDescription(FText::GetEmpty())
-	{}
+	// =========================
+	// Flags (packed as bitfields to reduce padding)
+	// =========================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Flags")
+	uint8 bIsItemUnique : 1 = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Trade")
+	uint8 bIsTradeable : 1 = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Stacking")
+	uint8 bStackable : 1 = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Weight", meta=(EditCondition="bStackable", EditConditionHides))
+	uint8 bScaleWeightWithQuantity : 1 = true;
+
+	// =========================
+	// Ctor
+	// =========================
+	FItemBase() = default;
+
+	// =========================
+	// Helpers
+	// =========================
 	FORCEINLINE bool IsValid() const
 	{
 		const bool bHasAnyMesh = (StaticMesh != nullptr) || (SkeletalMesh != nullptr);
 		return !ItemName.IsEmpty() && ItemType != EItemType::IT_None && bHasAnyMesh;
 	}
 
-	bool HasValidAttachment() const
+	FORCEINLINE bool IsValidForInventory() const
+	{
+		if (!IsValid()) { return false; }
+
+		if (Dimensions.X <= 0 || Dimensions.Y <= 0 || Dimensions.X > 10 || Dimensions.Y > 10)
+		{
+			return false;
+		}
+
+		if (bStackable && MaxStackSize <= 0) { return false; }
+		if (!bStackable && MaxStackSize > 1) { return false; }
+
+		if (BaseWeight < 0.0f || BaseWeight > 10000.0f) { return false; }
+
+		return true;
+	}
+
+	FORCEINLINE bool HasValidAttachment() const
 	{
 		return !AttachmentSocket.IsNone() || ContextualSockets.Num() > 0;
 	}
 
-	float GetTotalWeight(int32 Quantity = 1) const
+	FORCEINLINE float GetWeightPerUnit() const
 	{
-		if (Stackable && bScaleWeightWithQuantity)
+		return BaseWeight;
+	}
+
+	FORCEINLINE float GetTotalWeight(int32 Quantity = 1) const
+	{
+		if (bStackable && bScaleWeightWithQuantity)
 		{
 			return BaseWeight * FMath::Max(1, Quantity);
 		}
 		return BaseWeight;
 	}
 
-	float GetWeightPerUnit() const { return BaseWeight; }
-
-	float GetCalculatedValue(int32 Quantity = 1, EItemRarity InstanceRarity = EItemRarity::IR_None) const
-	{
-		float BaseValue = static_cast<float>(Value);
-		BaseValue *= (1.0f + ValueModifier);
-
-		EItemRarity RarityToUse = (InstanceRarity != EItemRarity::IR_None) ? InstanceRarity : ItemRarity;
-
-		float RarityMultiplier = 1.0f;
-		switch (RarityToUse)
-		{
-		case EItemRarity::IR_GradeS: RarityMultiplier = 10.0f; break;
-		case EItemRarity::IR_GradeA: RarityMultiplier = 5.0f; break;
-		case EItemRarity::IR_GradeB: RarityMultiplier = 4.5f; break;
-		case EItemRarity::IR_GradeC: RarityMultiplier = 3.5f; break;
-		case EItemRarity::IR_GradeD: RarityMultiplier = 2.0f; break;
-		case EItemRarity::IR_GradeF: RarityMultiplier = 1.0f; break;
-		default: break;
-		}
-		BaseValue *= RarityMultiplier;
-
-		if (Stackable)
-		{
-			BaseValue *= FMath::Max(1, Quantity);
-		}
-
-		return FMath::Max(0.0f, BaseValue);
-	}
-
-	bool IsValidForInventory() const
-	{
-		if (!IsValid()) return false;
-
-		if (Dimensions.X <= 0 || Dimensions.Y <= 0 || 
-			Dimensions.X > 10 || Dimensions.Y > 10)
-		{
-			return false;
-		}
-
-		if (Stackable && MaxStackSize <= 0)
-		{
-			return false;
-		}
-
-		if (!Stackable && MaxStackSize > 1)
-		{
-			return false;
-		}
-
-		if (BaseWeight < 0.0f || BaseWeight > 10000.0f)
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	static int32 GetRarityScore(EItemRarity R)
+	FORCEINLINE static int32 GetRarityScore(EItemRarity R)
 	{
 		switch (R)
 		{
@@ -1071,37 +1022,61 @@ struct FItemBase : public FTableRowBase
 		}
 	}
 
-	EItemComparisonResult CompareTo(const FItemBase& Other, EItemRarity ThisInstanceRarity = EItemRarity::IR_None, EItemRarity OtherInstanceRarity = EItemRarity::IR_None) const
+	FORCEINLINE float GetCalculatedValue(int32 Quantity = 1, EItemRarity InstanceRarity = EItemRarity::IR_None) const
+	{
+		float CalcValue = static_cast<float>(Value) * (1.0f + ValueModifier);
+
+		const EItemRarity RarityToUse = (InstanceRarity != EItemRarity::IR_None) ? InstanceRarity : ItemRarity;
+		float RarityMult = 1.0f;
+		switch (RarityToUse)
+		{
+		case EItemRarity::IR_GradeS: RarityMult = 10.0f; break;
+		case EItemRarity::IR_GradeA: RarityMult = 5.0f;  break;
+		case EItemRarity::IR_GradeB: RarityMult = 4.5f;  break;
+		case EItemRarity::IR_GradeC: RarityMult = 3.5f;  break;
+		case EItemRarity::IR_GradeD: RarityMult = 2.0f;  break;
+		case EItemRarity::IR_GradeF: RarityMult = 1.0f;  break;
+		default: break;
+		}
+		CalcValue *= RarityMult;
+
+		if (bStackable)
+		{
+			CalcValue *= FMath::Max(1, Quantity);
+		}
+
+		return FMath::Max(0.0f, CalcValue);
+	}
+
+	FORCEINLINE EItemComparisonResult CompareTo(
+		const FItemBase& Other,
+		EItemRarity ThisInstanceRarity  = EItemRarity::IR_None,
+		EItemRarity OtherInstanceRarity = EItemRarity::IR_None) const
 	{
 		if (ItemType != Other.ItemType)
 		{
 			return EItemComparisonResult::Incomparable;
 		}
 
-		EItemRarity ThisRarity = (ThisInstanceRarity != EItemRarity::IR_None) ? ThisInstanceRarity : ItemRarity;
-		EItemRarity OtherRarity = (OtherInstanceRarity != EItemRarity::IR_None) ? OtherInstanceRarity : Other.ItemRarity;
+		const EItemRarity ThisRarity  = (ThisInstanceRarity  != EItemRarity::IR_None) ? ThisInstanceRarity  : ItemRarity;
+		const EItemRarity OtherRarity = (OtherInstanceRarity != EItemRarity::IR_None) ? OtherInstanceRarity : Other.ItemRarity;
 
-		int32 ThisRarityScore = GetRarityScore(ThisRarity);
-		int32 OtherRarityScore = GetRarityScore(OtherRarity);
+		const int32 ThisScore  = GetRarityScore(ThisRarity);
+		const int32 OtherScore = GetRarityScore(OtherRarity);
 
-		if (ThisRarityScore != OtherRarityScore)
+		if (ThisScore != OtherScore)
 		{
-			return ThisRarityScore > OtherRarityScore ? 
-				   EItemComparisonResult::Better : 
-				   EItemComparisonResult::Worse;
+			return (ThisScore > OtherScore) ? EItemComparisonResult::Better : EItemComparisonResult::Worse;
 		}
 
-		float ThisValue = GetCalculatedValue(1, ThisRarity);
-		float OtherValue = Other.GetCalculatedValue(1, OtherRarity);
+		const float ThisValue  = GetCalculatedValue(1, ThisRarity);
+		const float OtherValue = Other.GetCalculatedValue(1, OtherRarity);
 
 		if (FMath::IsNearlyEqual(ThisValue, OtherValue))
 		{
 			return EItemComparisonResult::Equal;
 		}
-
-		return ThisValue > OtherValue ? 
-			   EItemComparisonResult::Better : 
-			   EItemComparisonResult::Worse;
+		return (ThisValue > OtherValue) ? EItemComparisonResult::Better : EItemComparisonResult::Worse;
 	}
 };
 

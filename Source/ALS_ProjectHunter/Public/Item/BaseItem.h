@@ -81,7 +81,7 @@ public:
 
 	/** Check if this item can be stacked */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")
-	virtual bool IsStackable()  { return ItemDefinition->Base.Stackable; }
+	virtual bool IsStackable()  { return ItemDefinition->Base.bStackable; }
 
 	/** Get the maximum stack size (0 = unlimited) */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item|Stacking")

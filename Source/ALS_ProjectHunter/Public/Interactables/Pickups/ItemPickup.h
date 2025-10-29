@@ -9,6 +9,8 @@
 #include "Library/PHItemStructLibrary.h"
 #include "ItemPickup.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogItemPickup, Log, All);
+
 class URotatingMovementComponent;
 /**
  * AItemPickup is a class representing an item that can be picked up by characters in the game.

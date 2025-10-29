@@ -58,7 +58,7 @@ protected:
 	void CreateAffixBox();
     
 	/** Update stats display */
-	void UpdateStatsDisplay();
+	void UpdateStatsDisplay() const;
 
 public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))

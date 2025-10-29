@@ -25,7 +25,8 @@ public:
 	virtual void NativePreConstruct() override;
 
 	virtual void NativeConstruct() override;
-	
+	void SetWidgetOwner(APHBaseCharacter* InWidgetOwner);
+
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<APHBaseCharacter> OwnerCharacter;
 

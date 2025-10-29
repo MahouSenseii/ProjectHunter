@@ -62,10 +62,7 @@ void UEquippableStatsBox::CreateMinMaxBoxByDamageTypes()
             for (const auto& Stat : Stats)
             {
                 if (!Stat.bAffectsBaseWeaponStatsDirectly) continue;
-
-                // Check if this stat modifies this damage type
-                // You'll need a way to map FGameplayAttribute to EDamageTypes
-                // For now, we'll use attribute name matching
+                
                 const FString AttrName = Stat.ModifiedAttribute.GetName();
                 const FString DamageTypeName = UEnum::GetValueAsString(DamageType);
                 
@@ -96,7 +93,7 @@ void UEquippableStatsBox::CreateMinMaxBoxByDamageTypes()
 
         if (!FMath::IsNearlyZero(FinalMin) || !FMath::IsNearlyZero(FinalMax))
         {
-            const FString FormattedMin = FString::Printf(TEXT("(%d/"), FMath::RoundToInt(FinalMin));
+            const FString FormattedMin = FString::Printf(TEXT("(%d"), FMath::RoundToInt(FinalMin));
             const FString FormattedMax = FString::Printf(TEXT("%d)"), FMath::RoundToInt(FinalMax));
 
             if (PhysicalDamageValueMin) PhysicalDamageValueMin->SetText(FText::FromString(FormattedMin));
@@ -138,7 +135,7 @@ void UEquippableStatsBox::CreateMinMaxBoxByDamageTypes()
         MinMaxBox->Init();
         MinMaxBox->SetMinMaxText(FinalMin, FinalMax);
         MinMaxBox->SetColorBaseOnType(DamageType);
-        MinMaxBox->SetFontSize(10.0f);
+        MinMaxBox->SetFontSize(18.0f);
 
         if (EDBox)
         {

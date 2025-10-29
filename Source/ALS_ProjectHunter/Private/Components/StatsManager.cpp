@@ -2,6 +2,7 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
 #include "PHGameplayTags.h"
+#include "AbilitySystem/PHAttributeSet.h"
 #include "AbilitySystem/Data/AttributeConfigDataAsset.h"
 #include "Character/PHBaseCharacter.h"
 
@@ -23,8 +24,8 @@ void UStatsManager::BeginPlay()
 		if (Owner->FindComponentByClass<UAbilitySystemComponent>())
 		{
 			Initialize();
-			//InitializeAttributes(); 
 			InitializeAttributesFromConfig(AttributeConfig);
+			InitializeCurrentVitalsToMax();
 		}
 	}
 }

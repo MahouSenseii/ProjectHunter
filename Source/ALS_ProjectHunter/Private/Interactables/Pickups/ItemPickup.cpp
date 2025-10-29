@@ -12,19 +12,16 @@
 #include "Particles/ParticleSystemComponent.h"
 #include "UI/InteractableWidget.h"
 
+DEFINE_LOG_CATEGORY(LogItemPickup);
 
 AItemPickup::AItemPickup()
 {
-	// Create RotatingMovementComponent and attach it to RootComponent
+	
 	RotatingMovementComponent = CreateDefaultSubobject<URotatingMovementComponent>(TEXT("RotatingMovementComponent"));
-
-	// Create ParticleComponent and attach it to RootComponent
 	ParticleSystemComponent = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("ParticleSystemComponent"));
-	ParticleSystemComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-
-	// Set rotation rate (can also be changed later during gameplay)
+	ParticleSystemComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);	
 	RotatingMovementComponent->RotationRate = FRotator(0.f, 180.f, 0.f);
-	// Rotate 180 degrees per second around the yaw axis.
+
 
 	if (ObjItem)
 	{
@@ -36,20 +33,20 @@ UBaseItem* AItemPickup::CreateItemObjectWClass(TSubclassOf<UBaseItem> ItemClass,
 {
 	if (!ItemClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("CreateItemObject: ItemClass is null"));
+		UE_LOG(LogItemPickup, Warning, TEXT("CreateItemObject: ItemClass is null"));
 		return nullptr;
 	}
 
 	if (!Outer)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("CreateItemObject: Outer is null"));
+		UE_LOG(LogItemPickup, Warning, TEXT("CreateItemObject: Outer is null"));
 		return nullptr;
 	}
 
 	UBaseItem* Item = NewObject<UBaseItem>(Outer, ItemClass);
 	if (!Item)
 	{
-		UE_LOG(LogTemp, Error, TEXT("CreateItemObject: Failed to create UEquippableItem"));
+		UE_LOG(LogItemPickup, Error, TEXT("CreateItemObject: Failed to create UEquippableItem"));
 		return nullptr;
 	}
 
@@ -61,7 +58,7 @@ UBaseItem* AItemPickup::CreateItemObjectWClass(TSubclassOf<UBaseItem> ItemClass,
 {
 	if (!Outer)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("CreateItemObject: Outer is null"));
+		UE_LOG(LogItemPickup, Warning, TEXT("CreateItemObject: Outer is null"));
 		return nullptr;
 	}
 
@@ -69,7 +66,7 @@ UBaseItem* AItemPickup::CreateItemObjectWClass(TSubclassOf<UBaseItem> ItemClass,
 	 UEquippableItem* Item = NewObject<UEquippableItem>(Outer);
 	if (!Item)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("CreateItemObject: Failed to create UEquippableItem"));
+		UE_LOG(LogItemPickup, Warning, TEXT("CreateItemObject: Failed to create UEquippableItem"));
 		return nullptr;
 	}
 
@@ -114,7 +111,7 @@ UBaseItem* AItemPickup::GenerateItem()
 		if (UBaseItem* NewItem = NewObject<UBaseItem>(GetTransientPackage(), UBaseItem::StaticClass()))
 		{
 			NewItem->SetItemInfo(ObjItem->ItemDefinition);			
-			// Initialize  item's properties here 
+			// Initialize item's properties 
 			return NewItem;
 		}
 	}
@@ -132,20 +129,20 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld,
 	const APHPlayerController* PlayerController = Cast<APHPlayerController>(Actor);
 	if (!PlayerController)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Actor is not a valid APHPlayerController."));
+		UE_LOG(LogItemPickup, Warning, TEXT("Actor is not a valid APHPlayerController."));
 		return false;
 	}
     
 	APHBaseCharacter* OwnerCharacter = Cast<APHBaseCharacter>(PlayerController->AcknowledgedPawn);
 	if (!OwnerCharacter)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Owner is not a valid APHBaseCharacter."));
+		UE_LOG(LogItemPickup, Warning, TEXT("Owner is not a valid APHBaseCharacter."));
 		return false;
 	}
 
 	if (!ObjItem || !ObjItem->ItemDefinition)
 	{
-		UE_LOG(LogTemp, Error, TEXT("ObjItem or ItemDefinition is null!"));
+		UE_LOG(LogItemPickup, Error, TEXT("ObjItem or ItemDefinition is null!"));
 		return false;
 	}
 
@@ -158,9 +155,8 @@ bool AItemPickup::HandleInteraction(AActor* Actor, bool WasHeld,
 	{
 		if (OwnerCharacter->GetEquipmentManager()->IsItemEquippable(ObjItem))   
 		{
-			// For base class, try to add to inventory instead of empty function
-			OwnerCharacter->GetEquipmentManager()->TryToEquip(ObjItem, true);
-			bSuccess = true;
+			
+			bSuccess = OwnerCharacter->GetEquipmentManager()->TryToEquip(ObjItem, true);
 		}
 		else
 		{

@@ -83,16 +83,13 @@ void UPHBaseToolTip::InitializeToolTip()
             ItemDefinition->Base.ItemName;
             
         ItemNameText->SetText(DisplayName);
+        const FSlateFontInfo FontInfo = FCoreStyle::GetDefaultFontStyle("Bold", 24);
+        ItemNameText->SetFont(FontInfo);
     }
 
     if (ItemTypeText)
     {
-        ItemTypeText->SetText(UEnum::GetDisplayValueAsText(ItemDefinition->Base.ItemType));
-    }
-
-    if (ItemIcon && ItemDefinition->Base.ItemImage)
-    {
-        ItemIcon->SetBrushFromMaterial(ItemDefinition->Base.ItemImage);
+         ItemTypeText->SetText(UEnum::GetDisplayValueAsText(ItemDefinition->Base.ItemType));
     }
     
     // Update colors based on rarity
