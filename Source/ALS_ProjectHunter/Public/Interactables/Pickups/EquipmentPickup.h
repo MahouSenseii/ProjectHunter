@@ -30,6 +30,8 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
 	EItemRarity GetInstanceRarity() const;
 
+	UFUNCTION()
+	void SetInstanceRarity();
 
 	virtual void BeginPlay() override;
 	void GenerateRandomAffixes();

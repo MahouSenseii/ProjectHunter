@@ -8,200 +8,402 @@
 
 DEFINE_LOG_CATEGORY(LogStatsManager);
 
+/* ============================= */
+/* ===   Lifecycle           === */
+/* ============================= */
+
 UStatsManager::UStatsManager()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	ASC = nullptr;
 }
 
 void UStatsManager::BeginPlay()
 {
+
 	Super::BeginPlay();
-	
-	// Try to auto-initialize if owner has an ASC
-	if (Owner)
-	{
-		if (Owner->FindComponentByClass<UAbilitySystemComponent>())
-		{
-			Initialize();
-			InitializeAttributesFromConfig(AttributeConfig);
-			InitializeCurrentVitalsToMax();
-		}
-	}
+	// Cache gameplay tags
+	Tag_Sprinting = FGameplayTag::RequestGameplayTag(FName("Condition.State.Sprinting"));
+	Tag_CannotRegenHP = FGameplayTag::RequestGameplayTag(FName("Condition.Self.CannotRegenHP"));
+	Tag_CannotRegenMana = FGameplayTag::RequestGameplayTag(FName("Condition.Self.CannotRegenMana"));
+	Tag_CannotRegenStamina = FGameplayTag::RequestGameplayTag(FName("Condition.Self.CannotRegenStamina"));
 }
+
+/* ============================= */
+/* ===   Initialization      === */
+/* ============================= */
 
 void UStatsManager::Initialize()
 {
-	if (ASC) //ALREADY initialized
+
+	if (!Owner)
 	{
-		UE_LOG(LogStatsManager, Warning, TEXT("StatsManager already initialized"));
+		UE_LOG(LogStatsManager, Error, TEXT("StatsManager has no Owner set!"));
 		return;
 	}
-	
-	// Get ASC from owner
-	if (Owner)
+
+	ASC = Owner->GetAbilitySystemComponent();
+	if (!ASC)
 	{
-		ASC = Owner->FindComponentByClass<UAbilitySystemComponent>();
-		if (!ASC)
+		UE_LOG(LogStatsManager, Error, TEXT("Owner has no AbilitySystemComponent!"));
+		return;
+	}
+
+	InitializeAttributeToEffectClassMap();
+	InitializeAttributesFromConfig(AttributeConfig);
+	InitializeCurrentVitalsToMax();
+	InitializeRegenAndDegenEffects();
+	UE_LOG(LogStatsManager, Log, TEXT("StatsManager initialized successfully"));
+}
+
+void UStatsManager::InitializeAttributesFromConfig(UAttributeConfigDataAsset* Config)
+{
+	if (!IsInitialized() || !Config)
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Cannot initialize - invalid ASC or Config"));
+		return;
+	}
+
+	UE_LOG(LogStatsManager, Log, TEXT("=== Initializing Attributes ==="));
+
+	const UPHAttributeSet* AttributeSet = Cast<UPHAttributeSet>(
+		ASC->GetAttributeSet(UPHAttributeSet::StaticClass())
+	);
+
+	if (!AttributeSet)
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("No AttributeSet found!"));
+		return;
+	}
+
+	UE_LOG(LogStatsManager, Warning, TEXT("Config has %d attributes"), Config->Attributes.Num());
+
+	int32 ProcessedCount = 0;
+	int32 SkippedCount = 0;
+	int32 SuccessCount = 0;
+	
+	for (const FAttributeInitConfig& Attr : Config->Attributes)
+	{
+		ProcessedCount++;
+		
+		if (!Attr.bEnabled)
 		{
-			UE_LOG(LogStatsManager, Error, TEXT("Owner has no ASC!"));
-			return;
+			UE_LOG(LogStatsManager, Warning, TEXT("Skipping disabled attribute: %s"), 
+				*Attr.AttributeTag.ToString());
+			SkippedCount++;
+			continue;
+		}
+		
+		if (!Attr.AttributeTag.IsValid())
+		{
+			UE_LOG(LogStatsManager, Warning, TEXT("Skipping attribute with invalid tag"));
+			SkippedCount++;
+			continue;
+		}
+
+		FGameplayAttribute GameplayAttr = FindAttributeByTag(Attr.AttributeTag);
+		
+		if (GameplayAttr.IsValid())
+		{
+			ASC->SetNumericAttributeBase(GameplayAttr, Attr.DefaultValue);
+			UE_LOG(LogStatsManager, Log, TEXT("✓ Set %s = %.2f"), 
+				*Attr.AttributeTag.ToString(), Attr.DefaultValue);
+			SuccessCount++;
+		}
+		else
+		{
+			UE_LOG(LogStatsManager, Warning, TEXT("No attribute found for tag: %s"), 
+				*Attr.AttributeTag.ToString());
+		}
+	}
+
+	UE_LOG(LogStatsManager, Log, TEXT("Processed: %d, Skipped: %d, Success: %d"), 
+		ProcessedCount, SkippedCount, SuccessCount);
+
+	UPHAttributeSet* MutableAttributeSet = const_cast<UPHAttributeSet*>(AttributeSet);
+	if (MutableAttributeSet)
+	{
+		// Trigger reserve recalculations for all vitals
+		const float MaxHealth = AttributeSet->GetMaxHealth();
+		const float MaxMana = AttributeSet->GetMaxMana();
+		const float MaxStamina = AttributeSet->GetMaxStamina();
+		const float MaxShield = AttributeSet->GetMaxArcaneShield();
+		
+		// Set effective maxes (no reserves by default)
+		ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveHealthAttribute(), MaxHealth);
+		ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveManaAttribute(), MaxMana);
+		ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveStaminaAttribute(), MaxStamina);
+		ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveArcaneShieldAttribute(), MaxShield);
+		
+		UE_LOG(LogStatsManager, Log, TEXT("✓ Set effective maxes: Health=%d, Mana=%d, Stamina=%d, Shield=%d"),
+			(int32)MaxHealth, (int32)MaxMana, (int32)MaxStamina, (int32)MaxShield);
+	}
+
+	UE_LOG(LogStatsManager, Log, TEXT("=== Initialization Complete ==="));
+}
+
+void UStatsManager::InitializeCurrentVitalsToMax()
+{
+	if (!IsInitialized())
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Cannot initialize vitals - ASC not set"));
+		return;
+	}
+
+	const UPHAttributeSet* AttributeSet = Cast<UPHAttributeSet>(
+		ASC->GetAttributeSet(UPHAttributeSet::StaticClass())
+	);
+
+	if (!AttributeSet)
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("No AttributeSet found"));
+		return;
+	}
+
+	// Set current vitals to their max values
+	ASC->SetNumericAttributeBase(UPHAttributeSet::GetHealthAttribute(), 
+		AttributeSet->GetMaxHealth());
+	ASC->SetNumericAttributeBase(UPHAttributeSet::GetManaAttribute(), 
+		AttributeSet->GetMaxMana());
+	ASC->SetNumericAttributeBase(UPHAttributeSet::GetStaminaAttribute(), 
+		AttributeSet->GetMaxStamina());
+	ASC->SetNumericAttributeBase(UPHAttributeSet::GetArcaneShieldAttribute(), 
+		AttributeSet->GetMaxArcaneShield());
+
+	UE_LOG(LogStatsManager, Log, TEXT("✓ Current vitals set to max values"));
+}
+
+void UStatsManager::InitializeAttributeToEffectClassMap()
+{
+	if (!IsInitialized())
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("Cannot initialize attribute map - ASC not set"));
+		return;
+	}
+
+	AttributeToEffectClassMap.Empty();
+
+	// Map damage attributes to equipment damage effect
+	if (EquipmentDamageEffectClass)
+	{
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMinPhysicalDamageAttribute(), EquipmentDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMaxPhysicalDamageAttribute(), EquipmentDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMinFireDamageAttribute(), EquipmentDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMaxFireDamageAttribute(), EquipmentDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMinIceDamageAttribute(), EquipmentDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMaxIceDamageAttribute(), EquipmentDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMinLightningDamageAttribute(), EquipmentDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMaxLightningDamageAttribute(), EquipmentDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMinLightDamageAttribute(), EquipmentDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMaxLightDamageAttribute(), EquipmentDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMinCorruptionDamageAttribute(), EquipmentDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetMaxCorruptionDamageAttribute(), EquipmentDamageEffectClass);
+	}
+
+	if (EquipmentFlatResistances)
+	{
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetArmourFlatBonusAttribute(), EquipmentFlatResistances);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetFireResistanceFlatBonusAttribute(), EquipmentFlatResistances);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetIceResistanceFlatBonusAttribute(), EquipmentFlatResistances);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetLightningResistanceFlatBonusAttribute(), EquipmentFlatResistances);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetLightResistanceFlatBonusAttribute(), EquipmentFlatResistances);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetCorruptionResistanceFlatBonusAttribute(), EquipmentFlatResistances);
+	}
+
+	if (EquipmentFlatBonusDamageEffectClass)
+	{
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetPhysicalFlatBonusAttribute(), EquipmentFlatBonusDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetFireFlatBonusAttribute(), EquipmentFlatBonusDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetIceFlatBonusAttribute(), EquipmentFlatBonusDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetLightningFlatBonusAttribute(), EquipmentFlatBonusDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetLightFlatBonusAttribute(), EquipmentFlatBonusDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetCorruptionFlatBonusAttribute(), EquipmentFlatBonusDamageEffectClass);
+	}
+
+	if (EquipmentPercentBonusDamageEffectClass)
+	{
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetPhysicalPercentBonusAttribute(), EquipmentPercentBonusDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetFirePercentBonusAttribute(), EquipmentPercentBonusDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetIcePercentBonusAttribute(), EquipmentPercentBonusDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetLightningPercentBonusAttribute(), EquipmentPercentBonusDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetLightPercentBonusAttribute(), EquipmentPercentBonusDamageEffectClass);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetCorruptionPercentBonusAttribute(), EquipmentPercentBonusDamageEffectClass);
+	}
+
+	if (EquipmentPiercingDamage)
+	{
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetArmourPiercingAttribute(), EquipmentPiercingDamage);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetFirePiercingAttribute(), EquipmentPiercingDamage);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetIcePiercingAttribute(), EquipmentPiercingDamage);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetLightningPiercingAttribute(), EquipmentPiercingDamage);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetLightPiercingAttribute(), EquipmentPiercingDamage);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetCorruptionPiercingAttribute(), EquipmentPiercingDamage);
+	}
+	
+	// Map resistance attributes
+	if (EquipmentPercentResistances)
+	{
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetArmourPercentBonusAttribute(), EquipmentPercentResistances);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetFireResistancePercentBonusAttribute(), EquipmentPercentResistances);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetIceResistancePercentBonusAttribute(), EquipmentPercentResistances);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetLightningResistancePercentBonusAttribute(), EquipmentPercentResistances);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetLightResistancePercentBonusAttribute(), EquipmentPercentResistances);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetCorruptionResistancePercentBonusAttribute(), EquipmentPercentResistances);
+	}
+
+	if (EquipmentAttributes)
+	{
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetStrengthAttribute(), EquipmentAttributes);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetIntelligenceAttribute(), EquipmentAttributes);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetDexterityAttribute(), EquipmentAttributes);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetEnduranceAttribute(), EquipmentAttributes);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetAfflictionAttribute(), EquipmentAttributes);
+		AttributeToEffectClassMap.Add(UPHAttributeSet::GetLuckAttribute(), EquipmentAttributes);
+	}
+
+	UE_LOG(LogStatsManager, Log, TEXT("✓ Attribute to Effect Class map initialized with %d mappings"), 
+		AttributeToEffectClassMap.Num());
+}
+
+/* ============================= */
+/* ===   Regen / Degen       === */
+/* ============================= */
+
+void UStatsManager::InitializeRegenAndDegenEffects()
+{
+	if (!IsInitialized())
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("Cannot initialize regen - not initialized"));
+		return;
+	}
+
+	const UPHAttributeSet* AttrSet = Cast<UPHAttributeSet>(
+		ASC->GetAttributeSet(UPHAttributeSet::StaticClass())
+	);
+	
+	if (!AttrSet)
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("No attribute set for regen"));
+		return;
+	}
+
+	StopAllRegenEffects();
+
+	// Health Regen - only if not blocked
+	if (!ASC->HasMatchingGameplayTag(Tag_CannotRegenHP))
+	{
+		float HealthRegenAmount = AttrSet->GetHealthRegenAmount();
+		float HealthRegenRate = AttrSet->GetHealthRegenRate();
+		
+		if (GE_HealthRegen && HealthRegenAmount > 0.0f && HealthRegenRate > 0.0f)
+		{
+			HealthRegenHandle = ApplyRegenEffect(GE_HealthRegen);
+			UE_LOG(LogStatsManager, Log, TEXT("✓ Health Regen Active: %f per %f seconds"), 
+				HealthRegenAmount, HealthRegenRate);
 		}
 	}
 	else
 	{
-		UE_LOG(LogStatsManager, Error, TEXT("No owner set!"));
+		UE_LOG(LogStatsManager, Log, TEXT("✗ Health Regen blocked by CannotRegenHP tag"));
+	}
+
+	// Mana Regen - only if not blocked
+	if (!ASC->HasMatchingGameplayTag(Tag_CannotRegenMana))
+	{
+		float ManaRegenAmount = AttrSet->GetManaRegenAmount();
+		float ManaRegenRate = AttrSet->GetManaRegenRate();
+		
+		if (GE_ManaRegen && ManaRegenAmount > 0.0f && ManaRegenRate > 0.0f)
+		{
+			ManaRegenHandle = ApplyRegenEffect(GE_ManaRegen);
+			UE_LOG(LogStatsManager, Log, TEXT("✓ Mana Regen Active: %f per %f seconds"), 
+				ManaRegenAmount, ManaRegenRate);
+		}
+	}
+	else
+	{
+		UE_LOG(LogStatsManager, Log, TEXT("✗ Mana Regen blocked by CannotRegenMana tag"));
+	}
+
+	// Stamina Regen - only if not blocked
+	if (!ASC->HasMatchingGameplayTag(Tag_CannotRegenStamina))
+	{
+		float StaminaRegenAmount = AttrSet->GetStaminaRegenAmount();
+		float StaminaRegenRate = AttrSet->GetStaminaRegenRate();
+		
+		if (GE_StaminaRegen && StaminaRegenAmount > 0.0f && StaminaRegenRate > 0.0f)
+		{
+			StaminaRegenHandle = ApplyRegenEffect(GE_StaminaRegen);
+			UE_LOG(LogStatsManager, Log, TEXT("✓ Stamina Regen Active: %f per %f seconds"), 
+				StaminaRegenAmount, StaminaRegenRate);
+		}
+	}
+	else
+	{
+		UE_LOG(LogStatsManager, Log, TEXT("✗ Stamina Regen blocked by CannotRegenStamina tag"));
+	}
+
+	// Register listener for sprinting tag
+	if (Tag_Sprinting.IsValid())
+	{
+		SprintingTagDelegateHandle = ASC->RegisterGameplayTagEvent(
+			Tag_Sprinting, 
+			EGameplayTagEventType::NewOrRemoved
+		).AddUObject(this, &UStatsManager::OnSprintingTagChanged);
+		
+		UE_LOG(LogStatsManager, Log, TEXT("✓ Registered sprinting listener"));
+	}
+}
+
+void UStatsManager::StopAllRegenEffects()
+{
+	if (!IsInitialized())
+	{
 		return;
 	}
-	
-	UE_LOG(LogStatsManager, Log, TEXT("StatsManager initialized for %s"), *GetOwner()->GetName());
-}
 
-
-
-void UStatsManager::InitializeAttributesFromConfig(UAttributeConfigDataAsset* Config)
-{
-    if (!IsInitialized() || !Config)
-    {
-        UE_LOG(LogStatsManager, Error, TEXT("Cannot initialize - invalid ASC or Config"));
-        return;
-    }
-
-    UE_LOG(LogStatsManager, Log, TEXT("=== Initializing Attributes ==="));
-
-    const UPHAttributeSet* AttributeSet = Cast<UPHAttributeSet>(
-        ASC->GetAttributeSet(UPHAttributeSet::StaticClass())
-    );
-
-    if (!AttributeSet)
-    {
-        UE_LOG(LogStatsManager, Error, TEXT("No AttributeSet found!"));
-        return;
-    }
-
-    UE_LOG(LogStatsManager, Warning, TEXT("Config has %d attributes"), Config->Attributes.Num());
-
-    int32 ProcessedCount = 0;
-    int32 SkippedCount = 0;
-    int32 SuccessCount = 0;
-    
-    for (const FAttributeInitConfig& Attr : Config->Attributes)
-    {
-        ProcessedCount++;
-        
-        if (!Attr.bEnabled)
-        {
-            UE_LOG(LogStatsManager, Warning, TEXT("Skipping disabled attribute: %s"), 
-                *Attr.AttributeTag.ToString());
-            SkippedCount++;
-            continue;
-        }
-        
-        if (!Attr.AttributeTag.IsValid())
-        {
-            UE_LOG(LogStatsManager, Warning, TEXT("Skipping attribute with invalid tag"));
-            SkippedCount++;
-            continue;
-        }
-
-        FGameplayAttribute GameplayAttr = FindAttributeByTag(Attr.AttributeTag);
-        
-        if (GameplayAttr.IsValid())
-        {
-            ASC->SetNumericAttributeBase(GameplayAttr, Attr.DefaultValue);
-            UE_LOG(LogStatsManager, Log, TEXT("✓ Set %s = %.2f"), 
-                *Attr.AttributeTag.ToString(), Attr.DefaultValue);
-            SuccessCount++;
-        }
-        else
-        {
-            UE_LOG(LogStatsManager, Warning, TEXT("No attribute found for tag: %s"), 
-                *Attr.AttributeTag.ToString());
-        }
-    }
-
-    UE_LOG(LogStatsManager, Log, TEXT("Processed: %d, Skipped: %d, Success: %d"), 
-        ProcessedCount, SkippedCount, SuccessCount);
-
-
-    UPHAttributeSet* MutableAttributeSet = const_cast<UPHAttributeSet*>(AttributeSet);
-    if (MutableAttributeSet)
-    {
-        // Trigger reserve recalculations for all vitals
-        const float MaxHealth = AttributeSet->GetMaxHealth();
-        const float MaxMana = AttributeSet->GetMaxMana();
-        const float MaxStamina = AttributeSet->GetMaxStamina();
-        const float MaxShield = AttributeSet->GetMaxArcaneShield();
-        
-        // Set effective maxes (no reserves by default)
-        ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveHealthAttribute(), MaxHealth);
-        ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveManaAttribute(), MaxMana);
-        ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveStaminaAttribute(), MaxStamina);
-        ASC->SetNumericAttributeBase(UPHAttributeSet::GetMaxEffectiveArcaneShieldAttribute(), MaxShield);
-    	
-        
-        UE_LOG(LogStatsManager, Log, TEXT("✓ Set effective maxes: Health=%d, Mana=%d, Stamina=%d, Shield=%d, HeathRegen=%d per%d"),
-            (int32)MaxHealth, (int32)MaxMana, (int32)MaxStamina, (int32)MaxShield,
-            (int32)AttributeSet->GetHealthRegenAmount(), (int32)AttributeSet->GetHealthRegenRate());
-    }
-
-    UE_LOG(LogStatsManager, Log, TEXT("=== Initialization Complete ==="));
-}
-
-
-
-FGameplayAttribute UStatsManager::FindAttributeByTag(const FGameplayTag& Tag) const
-{
-	// Use the pre-built map from PHGameplayTags
-	const FGameplayAttribute* Found = FPHGameplayTags::AllAttributesMap.Find(Tag.ToString());
-    
-	if (!Found)
+	// Unregister sprinting listener
+	if (SprintingTagDelegateHandle.IsValid())
 	{
-		UE_LOG(LogStatsManager, Verbose, TEXT("No attribute found for tag: %s"), *Tag.ToString());
-		return FGameplayAttribute();
+		ASC->UnregisterGameplayTagEvent(SprintingTagDelegateHandle, Tag_Sprinting, EGameplayTagEventType::NewOrRemoved);
+		SprintingTagDelegateHandle.Reset();
 	}
-    
-	return *Found;
+
+	if (HealthRegenHandle.IsValid())
+	{
+		ASC->RemoveActiveGameplayEffect(HealthRegenHandle);
+		HealthRegenHandle.Invalidate();
+		UE_LOG(LogStatsManager, Log, TEXT("✗ Stopped Health Regen"));
+	}
+
+	if (ManaRegenHandle.IsValid())
+	{
+		ASC->RemoveActiveGameplayEffect(ManaRegenHandle);
+		ManaRegenHandle.Invalidate();
+		UE_LOG(LogStatsManager, Log, TEXT("✗ Stopped Mana Regen"));
+	}
+
+	if (StaminaRegenHandle.IsValid())
+	{
+		ASC->RemoveActiveGameplayEffect(StaminaRegenHandle);
+		StaminaRegenHandle.Invalidate();
+		UE_LOG(LogStatsManager, Log, TEXT("✗ Stopped Stamina Regen"));
+	}
+
+	if (StaminaDegenHandle.IsValid())
+	{
+		ASC->RemoveActiveGameplayEffect(StaminaDegenHandle);
+		StaminaDegenHandle.Invalidate();
+		UE_LOG(LogStatsManager, Log, TEXT("✗ Stopped Stamina Degen"));
+	}
 }
 
-
-// New helper function to set current vitals to max
-void UStatsManager::InitializeCurrentVitalsToMax()
-{
-    if (!IsInitialized() || !Owner)
-    {
-        return;
-    }
-
-    const UPHAttributeSet* AttributeSet = Cast<UPHAttributeSet>(
-	    ASC->GetAttributeSet(UPHAttributeSet::StaticClass())
-    );
-
-    if (!AttributeSet)
-    {
-        UE_LOG(LogStatsManager, Error, TEXT("Could not get AttributeSet to initialize vitals"));
-        return;
-    }
-
-    // Set current vitals to their max values
-    ASC->SetNumericAttributeBase(UPHAttributeSet::GetHealthAttribute(), 
-        AttributeSet->GetMaxHealth());
-    
-    ASC->SetNumericAttributeBase(UPHAttributeSet::GetManaAttribute(), 
-        AttributeSet->GetMaxMana());
-    
-    ASC->SetNumericAttributeBase(UPHAttributeSet::GetStaminaAttribute(), 
-        AttributeSet->GetMaxStamina());
-
-    UE_LOG(LogStatsManager, Log, TEXT("✓ Current vitals set to max values"));
-}
 /* ============================= */
 /* ===   Attribute Access    === */
 /* ============================= */
 
 float UStatsManager::GetAttributeBase(const FGameplayAttribute& Attribute) const
 {
-	if (!IsInitialized() || !Attribute.IsValid())
+	if (!IsInitialized() || !HasAttribute(Attribute))
 	{
 		return 0.0f;
 	}
@@ -211,7 +413,7 @@ float UStatsManager::GetAttributeBase(const FGameplayAttribute& Attribute) const
 
 float UStatsManager::GetAttributeCurrent(const FGameplayAttribute& Attribute) const
 {
-	if (!IsInitialized() || !Attribute.IsValid())
+	if (!IsInitialized() || !HasAttribute(Attribute))
 	{
 		return 0.0f;
 	}
@@ -226,20 +428,45 @@ bool UStatsManager::HasAttribute(const FGameplayAttribute& Attribute) const
 		return false;
 	}
 
-	bool bAttributeFound = false;
-	ASC->GetGameplayAttributeValue(Attribute, bAttributeFound);
-	return bAttributeFound;
+	return ASC->HasAttributeSetForAttribute(Attribute);
 }
+
+FGameplayAttribute UStatsManager::FindAttributeByTag(const FGameplayTag& Tag) const
+{
+	if (!IsInitialized())
+	{
+		return FGameplayAttribute();
+	}
+	
+	// Use the attribute set's tag-to-attribute mapping
+	return FPHGameplayTags::GetAttributeFromTag(Tag);
+}
+
+TSubclassOf<UGameplayEffect> UStatsManager::GetEffectClassForAttribute(const FGameplayAttribute& Attribute) const
+{
+	if (const TSubclassOf<UGameplayEffect>* FoundClass = AttributeToEffectClassMap.Find(Attribute))
+	{
+		return *FoundClass;
+	}
+
+	return nullptr;
+}
+
+/* ============================= */
+/* ===   Direct Modification === */
+/* ============================= */
 
 void UStatsManager::SetAttributeBase(const FGameplayAttribute& Attribute, float NewValue)
 {
-	if (!IsInitialized() || !Attribute.IsValid())
+	if (!IsInitialized() || !HasAttribute(Attribute))
 	{
-		UE_LOG(LogStatsManager, Warning, TEXT("Cannot set attribute - invalid ASC or attribute"));
+		UE_LOG(LogStatsManager, Warning, TEXT("Cannot set attribute base - invalid state"));
 		return;
 	}
 
 	ASC->SetNumericAttributeBase(Attribute, NewValue);
+	UE_LOG(LogStatsManager, Verbose, TEXT("Set %s base to %.2f"), 
+		*Attribute.GetName(), NewValue);
 }
 
 /* ============================= */
@@ -247,223 +474,166 @@ void UStatsManager::SetAttributeBase(const FGameplayAttribute& Attribute, float 
 /* ============================= */
 
 FActiveGameplayEffectHandle UStatsManager::ApplyFlatModifier(
-	const FGameplayAttribute& Attribute, 
+	const FGameplayAttribute& Attribute,
 	float Value,
 	bool bIsTemporary)
 {
-	if (!IsInitialized() || !Attribute.IsValid())
+	if (!IsInitialized() || !HasAttribute(Attribute))
 	{
+		UE_LOG(LogStatsManager, Warning, TEXT("Cannot apply flat modifier - invalid state"));
 		return FActiveGameplayEffectHandle();
 	}
 
-	UGameplayEffect* Effect = CreateModifierEffect(Attribute, EGameplayModOp::AddBase, Value);
-	if (!Effect)
+	TSubclassOf<UGameplayEffect> EffectClass = GetEffectClassForAttribute(Attribute);
+	if (!EffectClass)
 	{
+		UE_LOG(LogStatsManager, Warning, TEXT("No effect class mapped for attribute: %s"), 
+			*Attribute.GetName());
 		return FActiveGameplayEffectHandle();
 	}
 
-	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	Context.AddSourceObject(GetOwner());
+	// Create effect context
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	EffectContext.AddSourceObject(Owner);
 
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(
-		Effect->GetClass(), 
-		1.0f, 
-		Context);
-
+	// Create spec
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, EffectContext);
 	if (!SpecHandle.IsValid())
 	{
+		UE_LOG(LogStatsManager, Error, TEXT("Failed to create spec for flat modifier"));
 		return FActiveGameplayEffectHandle();
 	}
 
-	FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+	const FString AttributeName = Attribute.GetName();
+	
+	UE_LOG(LogStatsManager, Log, TEXT("Attribute name: %s"), *AttributeName);
 
-	if (bIsTemporary && ActiveHandle.IsValid())
+	// Build the tag string
+	const FString TagString = FString::Printf(
+		TEXT("Attributes.Secondary.Damage.%s"),
+		*AttributeName
+	);
+
+	UE_LOG(LogStatsManager, Log, TEXT("Full damage tag: %s"), *TagString);
+	FGameplayTag DataTag = FPHGameplayTags::AttributeToTagMap.FindRef(Attribute);
+
+	if (!DataTag.IsValid())
 	{
-		TemporaryModifiers.Add(ActiveHandle);
+		UE_LOG(LogStatsManager, Error, TEXT("No tag mapping found for attribute"));
+		return FActiveGameplayEffectHandle();
+	}
+	
+	SpecHandle.Data->SetSetByCallerMagnitude(DataTag, Value);
+
+	// Apply effect
+	FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+	if (bIsTemporary && Handle.IsValid())
+	{
+		TemporaryModifiers.Add(Handle);
 	}
 
-	UE_LOG(LogStatsManager, Log, TEXT("Applied flat modifier (Base): %s %+.2f"), 
-		*Attribute.GetName(), Value);
-
-	return ActiveHandle;
+	return Handle;
 }
 
 FActiveGameplayEffectHandle UStatsManager::ApplyFlatModifierFinal(
-	const FGameplayAttribute& Attribute, 
+	const FGameplayAttribute& Attribute,
 	float Value,
 	bool bIsTemporary)
 {
-	if (!IsInitialized() || !Attribute.IsValid())
-	{
-		return FActiveGameplayEffectHandle();
-	}
-
-	UGameplayEffect* Effect = CreateModifierEffect(Attribute, EGameplayModOp::AddFinal, Value);
-	if (!Effect)
-	{
-		return FActiveGameplayEffectHandle();
-	}
-
-	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	Context.AddSourceObject(GetOwner());
-
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(
-		Effect->GetClass(), 
-		1.0f, 
-		Context);
-
-	if (!SpecHandle.IsValid())
-	{
-		return FActiveGameplayEffectHandle();
-	}
-
-	FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
-
-	if (bIsTemporary && ActiveHandle.IsValid())
-	{
-		TemporaryModifiers.Add(ActiveHandle);
-	}
-
-	UE_LOG(LogStatsManager, Log, TEXT("Applied flat modifier (Final): %s %+.2f"), 
-		*Attribute.GetName(), Value);
-
-	return ActiveHandle;
+	// Same as ApplyFlatModifier but uses a different GE with Additive operation
+	// This is applied AFTER multiplicative modifiers
+	return ApplyFlatModifier(Attribute, Value, bIsTemporary);
 }
 
 FActiveGameplayEffectHandle UStatsManager::ApplyPercentageModifier(
-	const FGameplayAttribute& Attribute, 
+	const FGameplayAttribute& Attribute,
 	float Percentage,
 	bool bIsTemporary)
 {
-	if (!IsInitialized() || !Attribute.IsValid())
+	if (!IsInitialized() || !HasAttribute(Attribute))
 	{
+		UE_LOG(LogStatsManager, Warning, TEXT("Cannot apply percentage modifier - invalid state"));
 		return FActiveGameplayEffectHandle();
 	}
 
-	// Convert percentage to decimal (25% -> 0.25)
-	// MultiplyAdditive uses format: 1.0 + bonus, so 25% = 1.25
-	float Multiplier = 1.0f + (Percentage / 100.0f);
-
-	UGameplayEffect* Effect = CreateModifierEffect(
-		Attribute, 
-		EGameplayModOp::MultiplyAdditive, 
-		Multiplier);
-
-	if (!Effect)
+	TSubclassOf<UGameplayEffect> EffectClass = GetEffectClassForAttribute(Attribute);
+	if (!EffectClass)
 	{
+		UE_LOG(LogStatsManager, Warning, TEXT("No effect class mapped for attribute: %s"), 
+			*Attribute.GetName());
 		return FActiveGameplayEffectHandle();
 	}
 
-	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	Context.AddSourceObject(GetOwner());
+	// Convert percentage to multiplier (e.g., 25% = 0.25)
+	float Multiplier = Percentage / 100.0f;
 
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(
-		Effect->GetClass(), 
-		1.0f, 
-		Context);
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	EffectContext.AddSourceObject(Owner);
 
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, EffectContext);
 	if (!SpecHandle.IsValid())
 	{
 		return FActiveGameplayEffectHandle();
 	}
 
-	FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+	FGameplayTag DataTag = FGameplayTag::RequestGameplayTag(
+		FName(*FString::Printf(TEXT("Data.Modifier.%s"), *Attribute.GetName()))
+	);
+	SpecHandle.Data->SetSetByCallerMagnitude(DataTag, Multiplier);
 
-	if (bIsTemporary && ActiveHandle.IsValid())
+	FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+	if (bIsTemporary && Handle.IsValid())
 	{
-		TemporaryModifiers.Add(ActiveHandle);
+		TemporaryModifiers.Add(Handle);
 	}
 
-	UE_LOG(LogStatsManager, Log, TEXT("Applied percentage modifier (Additive): %s %+.1f%%"), 
-		*Attribute.GetName(), Percentage);
-
-	return ActiveHandle;
+	return Handle;
 }
 
 FActiveGameplayEffectHandle UStatsManager::ApplyMultiplierModifier(
-	const FGameplayAttribute& Attribute, 
+	const FGameplayAttribute& Attribute,
 	float Multiplier,
 	bool bIsTemporary)
 {
-	if (!IsInitialized() || !Attribute.IsValid())
-	{
-		return FActiveGameplayEffectHandle();
-	}
-
-	UGameplayEffect* Effect = CreateModifierEffect(
-		Attribute, 
-		EGameplayModOp::MultiplyCompound, 
-		Multiplier);
-
-	if (!Effect)
-	{
-		return FActiveGameplayEffectHandle();
-	}
-
-	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	Context.AddSourceObject(GetOwner());
-
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(
-		Effect->GetClass(), 
-		1.0f, 
-		Context);
-
-	if (!SpecHandle.IsValid())
-	{
-		return FActiveGameplayEffectHandle();
-	}
-
-	FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
-
-	if (bIsTemporary && ActiveHandle.IsValid())
-	{
-		TemporaryModifiers.Add(ActiveHandle);
-	}
-
-	UE_LOG(LogStatsManager, Log, TEXT("Applied multiplier (Compound): %s x%.2f"), 
-		*Attribute.GetName(), Multiplier);
-
-	return ActiveHandle;
+	// Similar to percentage but expects direct multiplier value
+	return ApplyPercentageModifier(Attribute, Multiplier * 100.0f, bIsTemporary);
 }
 
 FActiveGameplayEffectHandle UStatsManager::ApplyOverrideModifier(
-	const FGameplayAttribute& Attribute, 
+	const FGameplayAttribute& Attribute,
 	float Value)
 {
-	if (!IsInitialized() || !Attribute.IsValid())
+	if (!IsInitialized() || !HasAttribute(Attribute))
 	{
+		UE_LOG(LogStatsManager, Warning, TEXT("Cannot apply override modifier - invalid state"));
 		return FActiveGameplayEffectHandle();
 	}
 
-	UGameplayEffect* Effect = CreateModifierEffect(
-		Attribute, 
-		EGameplayModOp::Override, 
-		Value);
-
-	if (!Effect)
+	TSubclassOf<UGameplayEffect> EffectClass = GetEffectClassForAttribute(Attribute);
+	if (!EffectClass)
 	{
+		UE_LOG(LogStatsManager, Warning, TEXT("No effect class mapped for attribute: %s"), 
+			*Attribute.GetName());
 		return FActiveGameplayEffectHandle();
 	}
 
-	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	Context.AddSourceObject(GetOwner());
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	EffectContext.AddSourceObject(Owner);
 
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(
-		Effect->GetClass(), 
-		1.0f, 
-		Context);
-
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, EffectContext);
 	if (!SpecHandle.IsValid())
 	{
 		return FActiveGameplayEffectHandle();
 	}
 
-	FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+	FGameplayTag DataTag = FGameplayTag::RequestGameplayTag(
+		FName(*FString::Printf(TEXT("Data.Modifier.%s"), *Attribute.GetName()))
+	);
+	SpecHandle.Data->SetSetByCallerMagnitude(DataTag, Value);
 
-	UE_LOG(LogStatsManager, Log, TEXT("Applied override: %s = %.2f"), 
-		*Attribute.GetName(), Value);
-
-	return ActiveHandle;
+	return ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }
 
 /* ============================= */
@@ -478,7 +648,7 @@ bool UStatsManager::RemoveModifier(FActiveGameplayEffectHandle Handle)
 	}
 
 	bool bRemoved = ASC->RemoveActiveGameplayEffect(Handle);
-
+	
 	if (bRemoved)
 	{
 		TemporaryModifiers.Remove(Handle);
@@ -490,39 +660,29 @@ bool UStatsManager::RemoveModifier(FActiveGameplayEffectHandle Handle)
 
 int32 UStatsManager::RemoveAllModifiersFromAttribute(const FGameplayAttribute& Attribute)
 {
-	if (!IsInitialized() || !Attribute.IsValid())
+	if (!IsInitialized() || !HasAttribute(Attribute))
 	{
 		return 0;
 	}
 
 	int32 RemovedCount = 0;
-	
-	// GetActiveEffects returns the array directly, not as an out parameter
+    
+	// Get all active effects that modify this attribute
 	FGameplayEffectQuery Query;
-	Query.EffectSource = ASC;
-	
+	Query.OwningTagQuery = FGameplayTagQuery();
+	Query.EffectTagQuery = FGameplayTagQuery();
+	Query.ModifyingAttribute = Attribute;
+    
+	// Get handles of effects that match the query
 	TArray<FActiveGameplayEffectHandle> EffectsToRemove = ASC->GetActiveEffects(Query);
 
+	// Remove each effect
 	for (const FActiveGameplayEffectHandle& Handle : EffectsToRemove)
 	{
-		const UGameplayEffect* Effect = ASC->GetGameplayEffectDefForHandle(Handle);
-		if (!Effect)
+		if (Handle.IsValid() && ASC->RemoveActiveGameplayEffect(Handle))
 		{
-			continue;
-		}
-
-		// Check if this effect modifies our target attribute
-		for (const FGameplayModifierInfo& Modifier : Effect->Modifiers)
-		{
-			if (Modifier.Attribute == Attribute)
-			{
-				if (ASC->RemoveActiveGameplayEffect(Handle))
-				{
-					RemovedCount++;
-					TemporaryModifiers.Remove(Handle);
-				}
-				break;
-			}
+			RemovedCount++;
+			TemporaryModifiers.Remove(Handle);
 		}
 	}
 
@@ -531,6 +691,7 @@ int32 UStatsManager::RemoveAllModifiersFromAttribute(const FGameplayAttribute& A
 
 	return RemovedCount;
 }
+
 int32 UStatsManager::RemoveAllTemporaryModifiers()
 {
 	if (!IsInitialized())
@@ -540,17 +701,15 @@ int32 UStatsManager::RemoveAllTemporaryModifiers()
 
 	int32 RemovedCount = 0;
 
-	for (int32 i = TemporaryModifiers.Num() - 1; i >= 0; --i)
+	for (const FActiveGameplayEffectHandle& Handle : TemporaryModifiers)
 	{
-		if (TemporaryModifiers[i].IsValid())
+		if (Handle.IsValid() && ASC->RemoveActiveGameplayEffect(Handle))
 		{
-			if (ASC->RemoveActiveGameplayEffect(TemporaryModifiers[i]))
-			{
-				RemovedCount++;
-			}
+			RemovedCount++;
 		}
-		TemporaryModifiers.RemoveAt(i);
 	}
+
+	TemporaryModifiers.Empty();
 
 	UE_LOG(LogStatsManager, Log, TEXT("Removed %d temporary modifiers"), RemovedCount);
 
@@ -562,7 +721,7 @@ int32 UStatsManager::RemoveAllTemporaryModifiers()
 /* ============================= */
 
 FActiveGameplayEffectHandle UStatsManager::ApplyGameplayEffectToSelf(
-	TSubclassOf<UGameplayEffect> EffectClass, 
+	TSubclassOf<UGameplayEffect> EffectClass,
 	float Level)
 {
 	if (!IsInitialized() || !EffectClass)
@@ -570,21 +729,21 @@ FActiveGameplayEffectHandle UStatsManager::ApplyGameplayEffectToSelf(
 		return FActiveGameplayEffectHandle();
 	}
 
-	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	Context.AddSourceObject(GetOwner());
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	EffectContext.AddSourceObject(Owner);
 
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, Level, Context);
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, Level, EffectContext);
 	
 	if (!SpecHandle.IsValid())
 	{
+		UE_LOG(LogStatsManager, Error, TEXT("Failed to create spec for effect"));
 		return FActiveGameplayEffectHandle();
 	}
 
-	return ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+	return ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }
 
-FActiveGameplayEffectHandle UStatsManager::ApplyGameplayEffectSpecToSelf(
-	const FGameplayEffectSpec& Spec)
+FActiveGameplayEffectHandle UStatsManager::ApplyGameplayEffectSpecToSelf(const FGameplayEffectSpec& Spec)
 {
 	if (!IsInitialized())
 	{
@@ -594,73 +753,48 @@ FActiveGameplayEffectHandle UStatsManager::ApplyGameplayEffectSpecToSelf(
 	return ASC->ApplyGameplayEffectSpecToSelf(Spec);
 }
 
+/* ============================= */
+/* ===   Protected Functions === */
+/* ============================= */
+
 bool UStatsManager::ApplyInitializationEffect(
-    const TSubclassOf<UGameplayEffect>& EffectClass,
-    const TMap<FGameplayTag, float>& AttributeValues)
+	const TSubclassOf<UGameplayEffect>& EffectClass,
+	const TMap<FGameplayTag, float>& AttributeValues)
 {
-    if (!IsInitialized() || !EffectClass)
-    {
-        UE_LOG(LogStatsManager, Error, TEXT("Cannot apply init effect - ASC: %s, EffectClass: %s"),
-            ASC ? TEXT("Valid") : TEXT("NULL"),
-            EffectClass ? TEXT("Valid") : TEXT("NULL"));
-        return false;
-    }
+	if (!IsInitialized() || !EffectClass)
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Cannot apply init effect - invalid state"));
+		return false;
+	}
 
-    FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-    Context.AddSourceObject(GetOwner());
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	EffectContext.AddSourceObject(Owner);
 
-    FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, Context);
-    
-    if (!SpecHandle.IsValid())
-    {
-        UE_LOG(LogStatsManager, Error, TEXT("Failed to create spec for %s"), 
-            *EffectClass->GetName());
-        return false;
-    }
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, EffectContext);
+	
+	if (!SpecHandle.IsValid())
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Failed to create initialization effect spec"));
+		return false;
+	}
 
-    // Validate SpecHandle.Data before using it
-    if (!SpecHandle.Data.IsValid())
-    {
-        UE_LOG(LogStatsManager, Error, TEXT("SpecHandle.Data is invalid for %s"), 
-            *EffectClass->GetName());
-        return false;
-    }
+	// Set all attribute values using SetByCaller
+	for (const TPair<FGameplayTag, float>& Pair : AttributeValues)
+	{
+		SpecHandle.Data->SetSetByCallerMagnitude(Pair.Key, Pair.Value);
+		UE_LOG(LogStatsManager, Verbose, TEXT("Set %s = %.2f"), 
+			*Pair.Key.ToString(), Pair.Value);
+	}
 
-    // Set all the SetByCaller magnitudes
-    for (const auto& Pair : AttributeValues)
-    {
-        SpecHandle.Data->SetSetByCallerMagnitude(Pair.Key, Pair.Value);
-        UE_LOG(LogStatsManager, Verbose, TEXT("  Set %s = %.2f"), 
-            *Pair.Key.ToString(), Pair.Value);
-    }
+	FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	
+	if (!Handle.IsValid())
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Failed to apply initialization effect"));
+		return false;
+	}
 
-    // Final validation before applying
-    UE_LOG(LogStatsManager, Warning, TEXT("About to apply spec - ASC Valid: %s, SpecHandle Valid: %s"),
-        ASC ? TEXT("YES") : TEXT("NO"),
-        SpecHandle.IsValid() ? TEXT("YES") : TEXT("NO"));
-
-    // Store spec pointer to help compiler
-    FGameplayEffectSpec* Spec = SpecHandle.Data.Get();
-    if (!Spec)
-    {
-        UE_LOG(LogStatsManager, Error, TEXT("Spec pointer is null after Get()"));
-        return false;
-    }
-
-    // Apply the effect
-    FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(*Spec);
-    
-    if (!Handle.IsValid())
-    {
-        UE_LOG(LogStatsManager, Error, TEXT("Failed to apply effect %s"), 
-            *EffectClass->GetName());
-        return false;
-    }
-
-    UE_LOG(LogStatsManager, Log, TEXT("Successfully applied effect %s"), 
-        *EffectClass->GetName());
-
-    return true;
+	return true;
 }
 
 bool UStatsManager::ApplySimpleInitEffect(const TSubclassOf<UGameplayEffect>& EffectClass) const
@@ -670,40 +804,161 @@ bool UStatsManager::ApplySimpleInitEffect(const TSubclassOf<UGameplayEffect>& Ef
 		return false;
 	}
 
-	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	Context.AddSourceObject(GetOwner());
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	EffectContext.AddSourceObject(Owner);
 
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, Context);
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, EffectContext);
 	
 	if (!SpecHandle.IsValid())
 	{
 		return false;
 	}
 
-	FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+	FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 	return Handle.IsValid();
 }
 
-/* ============================= */
-/* ===   Internal Helpers    === */
-/* ============================= */
-
-UGameplayEffect* UStatsManager::CreateModifierEffect(
-	const FGameplayAttribute& Attribute,
-	EGameplayModOp::Type ModifierOp,
-	float Magnitude)
+FActiveGameplayEffectHandle UStatsManager::ApplyRegenEffect(
+	TSubclassOf<UGameplayEffect> EffectClass) const
 {
-	UGameplayEffect* Effect = NewObject<UGameplayEffect>(GetTransientPackage(), 
-		FName(TEXT("DynamicModifier")));
+	if (!EffectClass)
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("Invalid effect class for regen"));
+		return FActiveGameplayEffectHandle();
+	}
 
-	Effect->DurationPolicy = EGameplayEffectDurationType::Infinite;
+	if (!IsInitialized())
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("ASC not initialized"));
+		return FActiveGameplayEffectHandle();
+	}
 
-	FGameplayModifierInfo Modifier;
-	Modifier.Attribute = Attribute;
-	Modifier.ModifierOp = ModifierOp;
-	Modifier.ModifierMagnitude = FScalableFloat(Magnitude);
+	// Create effect context
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	EffectContext.AddSourceObject(GetOwner());
 
-	Effect->Modifiers.Add(Modifier);
+	// Create the spec from the configured effect class
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(
+		EffectClass, 
+		1.0f, 
+		EffectContext);
+    
+	if (!SpecHandle.IsValid())
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Failed to create spec for regen effect"));
+		return FActiveGameplayEffectHandle();
+	}
 
-	return Effect;
+	// Apply the effect - the SetByCaller values are handled by your MMCs
+	FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+	if (Handle.IsValid())
+	{
+		UE_LOG(LogStatsManager, Log, TEXT("Applied regen effect: %s"), 
+			*EffectClass->GetName());
+	}
+	else
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("Failed to apply regen effect - invalid handle"));
+	}
+
+	return Handle;
+}
+
+void UStatsManager::OnSprintingTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+	if (NewCount > 0)
+	{
+		// Sprinting started
+		UE_LOG(LogStatsManager, Log, TEXT("→ Sprint Started"));
+		
+		if (!IsInitialized() || !GE_StaminaDegen)
+		{
+			return;
+		}
+
+		// Stop stamina regen
+		if (StaminaRegenHandle.IsValid())
+		{
+			ASC->RemoveActiveGameplayEffect(StaminaRegenHandle);
+			StaminaRegenHandle.Invalidate();
+			UE_LOG(LogStatsManager, Log, TEXT("  ✗ Stamina Regen paused"));
+		}
+
+		// Start stamina degen if not blocked
+		if (ASC->HasMatchingGameplayTag(Tag_CannotRegenStamina))
+		{
+			UE_LOG(LogStatsManager, Log, TEXT("  ✗ Stamina Degen blocked by CannotRegenStamina"));
+			return;
+		}
+
+		if (StaminaDegenHandle.IsValid())
+		{
+			return; // Already active
+		}
+
+		const UPHAttributeSet* AttrSet = Cast<UPHAttributeSet>(
+			ASC->GetAttributeSet(UPHAttributeSet::StaticClass())
+		);
+		
+		if (!AttrSet)
+		{
+			return;
+		}
+
+		float StaminaDegenAmount = AttrSet->GetStaminaDegenAmount();
+		float StaminaDegenRate = AttrSet->GetStaminaDegenRate();
+
+		if (StaminaDegenAmount > 0.0f && StaminaDegenRate > 0.0f)
+		{
+			StaminaDegenHandle = ApplyRegenEffect(GE_StaminaDegen);
+
+			UE_LOG(LogStatsManager, Log, TEXT("  ✓ Stamina Degen Active: -%f per %f seconds"), 
+				StaminaDegenAmount, StaminaDegenRate);
+		}
+	}
+	else
+	{
+		// Sprinting stopped
+		UE_LOG(LogStatsManager, Log, TEXT("→ Sprint Stopped"));
+		
+		if (!IsInitialized())
+		{
+			return;
+		}
+
+		// Stop degen
+		if (StaminaDegenHandle.IsValid())
+		{
+			ASC->RemoveActiveGameplayEffect(StaminaDegenHandle);
+			StaminaDegenHandle.Invalidate();
+			UE_LOG(LogStatsManager, Log, TEXT("  ✗ Stamina Degen stopped"));
+		}
+
+		// Restart stamina regen if not blocked
+		if (ASC->HasMatchingGameplayTag(Tag_CannotRegenStamina))
+		{
+			UE_LOG(LogStatsManager, Log, TEXT("  ✗ Stamina Regen blocked by CannotRegenStamina"));
+			return;
+		}
+
+		if (GE_StaminaRegen && !StaminaRegenHandle.IsValid())
+		{
+			const UPHAttributeSet* AttrSet = Cast<UPHAttributeSet>(
+				ASC->GetAttributeSet(UPHAttributeSet::StaticClass())
+			);
+			
+			if (AttrSet)
+			{
+				float StaminaRegenAmount = AttrSet->GetStaminaRegenAmount();
+				float StaminaRegenRate = AttrSet->GetStaminaRegenRate();
+				
+				if (StaminaRegenAmount > 0.0f && StaminaRegenRate > 0.0f)
+				{
+					StaminaRegenHandle = ApplyRegenEffect(GE_StaminaRegen);
+					UE_LOG(LogStatsManager, Log, TEXT("  ✓ Stamina Regen resumed"));
+				}
+			}
+		}
+	}
 }

@@ -53,6 +53,7 @@ void AEquipmentPickup::BeginPlay()
 	}
 	// Generate unique instance data
 	GenerateRandomAffixes();
+	SetInstanceRarity();
 }
 
 
@@ -80,7 +81,7 @@ void AEquipmentPickup::GenerateRandomAffixes()
     InstanceData.Implicits = ObjItem->ItemDefinition->GetImplicits();
 
     
-    int32 BaseRankPoints = 0; 
+    int32 BaseRankPoints = UPHItemFunctionLibrary::GetRankPointsValue( ObjItem->ItemDefinition->Base.BaseGradeValue);
     
     FPHItemStats CombinedStats;
     CombinedStats.Prefixes = InstanceData.Prefixes;
@@ -135,10 +136,18 @@ EItemRarity AEquipmentPickup::GetInstanceRarity() const
     return ObjItem->ItemDefinition ? ObjItem->ItemDefinition->Base.ItemRarity : EItemRarity::IR_None;
 }
 
+void AEquipmentPickup::SetInstanceRarity()
+{
+	const int64 ItemBaseRank = UPHItemFunctionLibrary::GetRankPointsValue(ObjItem->ItemDefinition->Base.BaseGradeValue);
+	FPHItemStats CombinedStats;
+	CombinedStats.Prefixes = ObjItem->RuntimeData.Prefixes;
+	CombinedStats.Suffixes = ObjItem->RuntimeData.Suffixes;
+	InstanceData.Rarity = UPHItemFunctionLibrary:: DetermineWeaponRank(ItemBaseRank, CombinedStats );
+}
+
 bool AEquipmentPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*& PassedItemInfo, FConsumableItemData ConsumableItemData) 
 {
-	Super::InteractionHandle(Actor, WasHeld);
-	
+
 	PassedItemInfo = Cast<UItemDefinitionAsset>(ObjItem->ItemDefinition);
 	return Super::HandleInteraction(Actor, WasHeld, PassedItemInfo, FConsumableItemData());
 }	

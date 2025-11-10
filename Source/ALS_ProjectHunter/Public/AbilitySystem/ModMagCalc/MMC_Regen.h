@@ -30,4 +30,9 @@ private:
 	FGameplayEffectAttributeCaptureDefinition ManaRegenAmountDef;
 	FGameplayEffectAttributeCaptureDefinition StaminaRegenAmountDef;
 	FGameplayEffectAttributeCaptureDefinition ArcaneShieldRegenAmountDef;
+
+	FGameplayEffectAttributeCaptureDefinition HealthRegenRateDef;
+	FGameplayEffectAttributeCaptureDefinition ManaRegenRateDef;
+	FGameplayEffectAttributeCaptureDefinition StaminaRegenRateDef;
+	FGameplayEffectAttributeCaptureDefinition ArcaneShieldRegenRateDef;
 };

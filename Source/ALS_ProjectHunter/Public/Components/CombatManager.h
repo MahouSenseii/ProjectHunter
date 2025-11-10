@@ -23,6 +23,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCombatStatusChanged, ECombatStat
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCombatEntered);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCombatExited);
 
+DECLARE_LOG_CATEGORY_EXTERN(LogCombatManager, Log, All);
+
 /**
  * Combat Manager Component - Path of Exile 2 Style Combat System
  * 

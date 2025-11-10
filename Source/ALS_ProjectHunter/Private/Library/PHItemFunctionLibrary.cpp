@@ -387,6 +387,21 @@ int32 UPHItemFunctionLibrary::GetRankPointsValue(ERankPoints Rank)
 	case ERankPoints::RP_20:    return 20;
 	case ERankPoints::RP_25:    return 25;
 	case ERankPoints::RP_30:    return 30;
+	case ERankPoints::RP_35:     return 35;
+	case ERankPoints::RP_40:     return 40;
+	case ERankPoints::RP_45:    return 45;
+	case ERankPoints::RP_50:    return 50;
+	case ERankPoints::RP_55:    return 55;
+	case ERankPoints::RP_60:    return 60;
+	case ERankPoints::RP_65:    return 65;
+	case ERankPoints::RP_70:    return 70;
+	case ERankPoints::RP_75:    return 75;
+	case ERankPoints::RP_80:    return 80;
+	case ERankPoints::RP_85:    return 85;
+	case ERankPoints::RP_90:    return 90;
+	case ERankPoints::RP_95:    return 95;
+	case ERankPoints::RP_100:   return 100;
+
 	default:                    return 0;
 	}
 }

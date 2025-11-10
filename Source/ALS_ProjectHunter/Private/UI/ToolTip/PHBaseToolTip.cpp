@@ -7,23 +7,18 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 
+
 void UPHBaseToolTip::NativeConstruct()
 {
     Super::NativeConstruct();
     
-    // Initialize rarity colors
-    if (RarityColorMap.Num() == 0)
-    {
-        RarityColorMap.Add(EItemRarity::IR_None,      FLinearColor(0.5f, 0.5f, 0.5f));
-        RarityColorMap.Add(EItemRarity::IR_GradeF,    FLinearColor(0.4f, 0.3f, 0.2f));
-        RarityColorMap.Add(EItemRarity::IR_GradeD,    FLinearColor::White);
-        RarityColorMap.Add(EItemRarity::IR_GradeC,    FLinearColor(0.3f, 1.0f, 0.3f));
-        RarityColorMap.Add(EItemRarity::IR_GradeB,    FLinearColor(0.2f, 0.6f, 1.0f));
-        RarityColorMap.Add(EItemRarity::IR_GradeA,    FLinearColor(0.7f, 0.2f, 1.0f));
-        RarityColorMap.Add(EItemRarity::IR_GradeS,    FLinearColor(1.0f, 0.65f, 0.0f));
-        RarityColorMap.Add(EItemRarity::IR_Unknown,   FLinearColor(1.0f, 0.0f, 1.0f));
-        RarityColorMap.Add(EItemRarity::IR_Corrupted, FLinearColor(0.5f, 0.0f, 0.15f));
-    }
+
+}
+
+void UPHBaseToolTip::NativePreConstruct()
+{
+    Super::NativePreConstruct();
+    
 }
 
 void UPHBaseToolTip::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -92,7 +87,8 @@ void UPHBaseToolTip::InitializeToolTip()
          ItemTypeText->SetText(UEnum::GetDisplayValueAsText(ItemDefinition->Base.ItemType));
     }
     
-    // Update colors based on rarity
+    
+    SetColorMap();
     UpdateRarityColors();
 }
 
@@ -121,6 +117,23 @@ void UPHBaseToolTip::SetItemInfo( UItemDefinitionAsset* Definition,  FItemInstan
     InitializeToolTip();
 }
 
+void UPHBaseToolTip::SetColorMap()
+{
+    // Initialize rarity colors
+    if (RarityColorMap.Num() == 0)
+    {
+        RarityColorMap.Add(EItemRarity::IR_None,      FLinearColor(0.5f, 0.5f, 0.5f));
+        RarityColorMap.Add(EItemRarity::IR_GradeF,    FLinearColor(0.4f, 0.3f, 0.2f));
+        RarityColorMap.Add(EItemRarity::IR_GradeD,    FLinearColor::White);
+        RarityColorMap.Add(EItemRarity::IR_GradeC,    FLinearColor(0.4f, 1.0f, 0.3f));
+        RarityColorMap.Add(EItemRarity::IR_GradeB,    FLinearColor(0.2f, 0.6f, 1.0f));
+        RarityColorMap.Add(EItemRarity::IR_GradeA,    FLinearColor(0.7f, 0.2f, 1.0f));
+        RarityColorMap.Add(EItemRarity::IR_GradeS,    FLinearColor(1.0f, 0.65f, 0.0f));
+        RarityColorMap.Add(EItemRarity::IR_Unknown,   FLinearColor(1.0f, 0.0f, 1.0f));
+        RarityColorMap.Add(EItemRarity::IR_Corrupted, FLinearColor(0.5f, 0.0f, 0.15f));
+    }
+}
+
 void UPHBaseToolTip::UpdateRarityColors()
 {
     // Get rarity
@@ -135,8 +148,9 @@ void UPHBaseToolTip::UpdateRarityColors()
     // Apply subtle tint to background
     if (TooltipBackground)
     {
-        FLinearColor BackgroundTint = RarityColor * 0.15f;
+        FLinearColor BackgroundTint = RarityColor * 0.12f ;
         BackgroundTint.A = 0.95f;
+        
         
         if (Rarity == EItemRarity::IR_Corrupted)
         {
@@ -150,13 +164,28 @@ void UPHBaseToolTip::UpdateRarityColors()
         }
         
         TooltipBackground->SetColorAndOpacity(BackgroundTint);
+        if (TooltipBackgroundFlicker)
+        {
+            // Get the base material (M_SquarFlicker_Inst)
+            UMaterialInterface* BaseMat = TooltipBackgroundFlicker->GetBrush().GetResourceObject()
+                ? Cast<UMaterialInterface>(TooltipBackgroundFlicker->GetBrush().GetResourceObject())
+                : nullptr;
+
+            if (BaseMat)
+            {
+                // Create a dynamic instance from it
+                UMaterialInstanceDynamic* MatInst = UMaterialInstanceDynamic::Create(BaseMat, this);
+
+                // Assign it back to the image brush
+                TooltipBackgroundFlicker->SetBrushFromMaterial(MatInst);
+                float Intensity = 1.0f;
+                FLinearColor StrongColor = RarityColor * Intensity;
+                // Now you can set the color parameter
+                MatInst->SetVectorParameterValue(FName("ImageTint"), StrongColor);
+            }
+        }
     }
-    
-    // Apply color to item name
-    if (ItemNameText)
-    {
-        ItemNameText->SetColorAndOpacity(FSlateColor(RarityColor));
-    }
+
 }
 
 FLinearColor UPHBaseToolTip::GetRarityColor(EItemRarity Rarity) const

@@ -923,7 +923,7 @@ struct FItemBase : public FTableRowBase
 	int32 MaxStackSize = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Base")
-	float BaseGradeValue = 0.0f;
+	ERankPoints BaseGradeValue = ERankPoints::RP_0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item|Trade")
 	float ValueModifier = 0.0f;
@@ -1435,3 +1435,13 @@ struct FItemInstance
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 Seed = 0;
 };
+
+USTRUCT()
+struct FWeaponEffectHandles
+{
+	GENERATED_BODY()
+    
+	UPROPERTY()
+	TArray<FActiveGameplayEffectHandle> Handles;
+};
+

@@ -14,9 +14,12 @@ public:
 	/** Singleton accessor */
 	static const FPHGameplayTags& Get() { return GameplayTags; }
 
+
 	/** Initialization entry points */
 	static void InitializeNativeGameplayTags();
 	static void InitRegister();
+
+	
 
 	/** Registration helpers (public for clarity; keep signatures to avoid breaking .cpp) */
 	static void RegisterPrimaryAttributes();
@@ -29,8 +32,10 @@ public:
 	static void RegisterStatusEffectDurations();
 	static void RegisterConditions();
 	static void RegisterConditionTriggers();
-	static void EnsureStatusEffectAttributesRegistered();
-
+	static void RegisterAttributeToTagMappings();
+	static void RegisterTagToAttributeMappings();
+	static FGameplayAttribute GetAttributeFromTag(const FGameplayTag& Tag);
+	
 	// Extra registrars used by your map/automation build
 	static void RegisterStatusEffectAttributes();
 	static void RegisterMinMaxTagMap();
@@ -42,6 +47,7 @@ public:
 	static void RegisterReflectionTags();
 	static void RegisterDamageConversionTags();
 	static void RegisterStatusEffectAliases();
+	
 
 	// Keep both to preserve ABI/use-sites (you can deprecate one later)
 	static void RegisterAllAttribute();
@@ -454,6 +460,8 @@ public:
 	static FGameplayTag Effect_Health_DegenActive;
 	static FGameplayTag Effect_Mana_DegenActive;
 
+	
+
 	/* ===================================== */
 	/* === Tag → Attribute / Helper Maps === */
 	/* ===================================== */
@@ -463,7 +471,10 @@ public:
 	static TMap<FString, FGameplayAttribute>       FlatDamageToAttributesMap;
 	static TMap<FString, FGameplayAttribute>       PercentDamageToAttributesMap;
 	static TMap<FString, FGameplayAttribute>       AllAttributesMap;
+	static TMap<FGameplayAttribute, FGameplayTag> AttributeToTagMap;
+	static TMap<FGameplayTag, FGameplayAttribute>  TagToAttributeMap;
 
 private:
 	static FPHGameplayTags GameplayTags;
+	
 };

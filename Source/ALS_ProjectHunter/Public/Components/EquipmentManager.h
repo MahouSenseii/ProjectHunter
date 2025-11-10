@@ -79,7 +79,7 @@ public:
 	/** Removes a specific equipped item */
 	UFUNCTION(BlueprintCallable)
 	void RemoveEquippedItem(UBaseItem* Item, EEquipmentSlot Slot);
-	static void RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHBaseCharacter* Character);
+	void RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHBaseCharacter* Character);
 
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void RemoveItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character);
@@ -97,7 +97,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void ApplyItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character);
-	static void ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, const APHBaseCharacter* Character);
+	void ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, const APHBaseCharacter* Character);
 	
 	
 	void HandleItemEquipped(AEquippedObject* EquippedObject, AActor* Owner);
@@ -145,6 +145,7 @@ protected:
 	/* ============================= */
 
 public:
+	
 
 	UPROPERTY(BlueprintAssignable, Category = "Equipment|Events")
 	FOnItemEquippedSignature OnItemEquipped;
@@ -178,4 +179,7 @@ protected:
 
 	UPROPERTY()
 	TMap<const UEquippableItem*, FAppliedItemStats> AppliedItemStats;
+
+	UPROPERTY()
+	TMap<UEquippableItem*, FWeaponEffectHandles> AppliedWeaponEffect;
 };

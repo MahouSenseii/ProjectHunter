@@ -15,6 +15,8 @@ TMap<FString, FGameplayAttribute>       FPHGameplayTags::FlatDamageToAttributesM
 TMap<FString, FGameplayAttribute>       FPHGameplayTags::PercentDamageToAttributesMap;
 TMap<FString, FGameplayAttribute>       FPHGameplayTags::BaseDamageToAttributesMap;
 TMap<FString, FGameplayAttribute>       FPHGameplayTags::AllAttributesMap;
+TMap<FGameplayAttribute, FGameplayTag>  FPHGameplayTags::AttributeToTagMap;
+TMap<FGameplayTag, FGameplayAttribute>  FPHGameplayTags::TagToAttributeMap;
 
 FPHGameplayTags FPHGameplayTags::GameplayTags;
 
@@ -363,6 +365,11 @@ void FPHGameplayTags::InitializeNativeGameplayTags()
 {
 	UGameplayTagsManager& TagsManager = UGameplayTagsManager::Get();
 
+	InitRegister();
+}
+
+void FPHGameplayTags::InitRegister()
+{
 	RegisterPrimaryAttributes();
 	RegisterSecondaryVitals();
 	RegisterDamageTags();
@@ -373,14 +380,14 @@ void FPHGameplayTags::InitializeNativeGameplayTags()
 	RegisterStatusEffectDurations();
 	RegisterConditions();
 	RegisterConditionTriggers();
-
-	// Newly added groups
+	RegisterAttributeToTagMappings();
 	RegisterOffensiveTags();
 	RegisterPiercingTags();
 	RegisterReflectionTags();
 	RegisterDamageConversionTags();
 	RegisterStatusEffectAliases();
 	RegisterAllAttribute();
+	RegisterTagToAttributeMappings();
 }
 
 // ==============================
@@ -831,6 +838,155 @@ void FPHGameplayTags::RegisterStatusEffectAliases()
 	Attributes_Secondary_Duration_Corruption      = T.AddNativeGameplayTag("Attributes.Secondary.Duration.Corruption",      TEXT(""));
 	Attributes_Secondary_Duration_PetrifyBuildUp  = T.AddNativeGameplayTag("Attributes.Secondary.Duration.PetrifyBuildUp",  TEXT(""));
 	Attributes_Secondary_Duration_Purify          = T.AddNativeGameplayTag("Attributes.Secondary.Duration.Purify",          TEXT(""));
+}
+
+void FPHGameplayTags::RegisterAttributeToTagMappings()
+{
+	// Map attributes to their corresponding gameplay tags
+	AttributeToTagMap.Add(UPHAttributeSet::GetMinPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MinPhysicalDamage);
+	AttributeToTagMap.Add(UPHAttributeSet::GetMaxPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MaxPhysicalDamage);
+	AttributeToTagMap.Add(UPHAttributeSet::GetMinFireDamageAttribute(),       Attributes_Secondary_Damages_MinFireDamage);
+	AttributeToTagMap.Add(UPHAttributeSet::GetMaxFireDamageAttribute(),       Attributes_Secondary_Damages_MaxFireDamage);
+	AttributeToTagMap.Add(UPHAttributeSet::GetMinIceDamageAttribute(),        Attributes_Secondary_Damages_MinIceDamage);
+	AttributeToTagMap.Add(UPHAttributeSet::GetMaxIceDamageAttribute(),        Attributes_Secondary_Damages_MaxIceDamage);
+	AttributeToTagMap.Add(UPHAttributeSet::GetMinLightningDamageAttribute(),  Attributes_Secondary_Damages_MinLightningDamage);
+	AttributeToTagMap.Add(UPHAttributeSet::GetMaxLightningDamageAttribute(),  Attributes_Secondary_Damages_MaxLightningDamage);
+	AttributeToTagMap.Add(UPHAttributeSet::GetMinLightDamageAttribute(),      Attributes_Secondary_Damages_MinLightDamage);
+	AttributeToTagMap.Add(UPHAttributeSet::GetMaxLightDamageAttribute(),      Attributes_Secondary_Damages_MaxLightDamage);
+	AttributeToTagMap.Add(UPHAttributeSet::GetMinCorruptionDamageAttribute(), Attributes_Secondary_Damages_MinCorruptionDamage);
+	AttributeToTagMap.Add(UPHAttributeSet::GetMaxCorruptionDamageAttribute(), Attributes_Secondary_Damages_MaxCorruptionDamage);
+}
+
+
+void FPHGameplayTags::RegisterTagToAttributeMappings()
+{
+    TagToAttributeMap.Empty();
+
+    // Safety check - ensure AttributeSet is ready
+    if (!UPHAttributeSet::GetHealthAttribute().IsValid())
+    {
+        UE_LOG(LogTemp, Error, TEXT("❌ AttributeSet not ready - skipping tag mappings"));
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("=== Registering Tag-to-Attribute Mappings ==="));
+
+    // ===========================
+    // Vitals - Current Values 
+    // ===========================
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Health")), UPHAttributeSet::GetHealthAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Mana")), UPHAttributeSet::GetManaAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Stamina")), UPHAttributeSet::GetStaminaAttribute());
+
+    // ===========================
+    // Vitals - Max Values 
+    // ===========================
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxHealth")), UPHAttributeSet::GetMaxHealthAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxMana")), UPHAttributeSet::GetMaxManaAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxStamina")), UPHAttributeSet::GetMaxStaminaAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ArcaneShield")), UPHAttributeSet::GetArcaneShieldAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxArcaneShield")), UPHAttributeSet::GetMaxArcaneShieldAttribute());
+
+    // ===========================
+    // Damage Types
+    // ===========================
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.GlobalBonus")), UPHAttributeSet::GetGlobalDamagesAttribute());
+    
+    // Max Damage
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Physical")), UPHAttributeSet::GetMaxPhysicalDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Fire")), UPHAttributeSet::GetMaxFireDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Ice")), UPHAttributeSet::GetMaxIceDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Lightning")), UPHAttributeSet::GetMaxLightningDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Light")), UPHAttributeSet::GetMaxLightDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Corruption")), UPHAttributeSet::GetMaxCorruptionDamageAttribute());
+
+    // Min Damage
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Physical")), UPHAttributeSet::GetMinPhysicalDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Fire")), UPHAttributeSet::GetMinFireDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Ice")), UPHAttributeSet::GetMinIceDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Lightning")), UPHAttributeSet::GetMinLightningDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Light")), UPHAttributeSet::GetMinLightDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Corruption")), UPHAttributeSet::GetMinCorruptionDamageAttribute());
+
+    // ===========================
+    // Damage Bonuses
+    // ===========================
+    
+    // Flat Damage Bonuses
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Physical")), UPHAttributeSet::GetPhysicalFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Fire")), UPHAttributeSet::GetFireFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Ice")), UPHAttributeSet::GetIceFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Lightning")), UPHAttributeSet::GetLightningFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Light")), UPHAttributeSet::GetLightFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Corruption")), UPHAttributeSet::GetCorruptionFlatBonusAttribute());
+
+    // Percent Damage Bonuses
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Physical")), UPHAttributeSet::GetPhysicalPercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Fire")), UPHAttributeSet::GetFirePercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Ice")), UPHAttributeSet::GetIcePercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Lightning")), UPHAttributeSet::GetLightningPercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Light")), UPHAttributeSet::GetLightPercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Corruption")), UPHAttributeSet::GetCorruptionPercentBonusAttribute());
+
+    // ===========================
+    // Resistances
+    // ===========================
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.GlobalDefenses")), UPHAttributeSet::GetGlobalDefensesAttribute());
+    
+    // Flat Resistances
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour.Flat")), UPHAttributeSet::GetArmourFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Fire.Flat")), UPHAttributeSet::GetFireResistanceFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Ice.Flat")), UPHAttributeSet::GetIceResistanceFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Lightning.Flat")), UPHAttributeSet::GetLightningResistanceFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Light.Flat")), UPHAttributeSet::GetLightResistanceFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Corruption.Flat")), UPHAttributeSet::GetCorruptionResistanceFlatBonusAttribute());
+
+    // Percent Resistances
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour.Percent")), UPHAttributeSet::GetArmourPercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Fire.Percent")), UPHAttributeSet::GetFireResistancePercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Ice.Percent")), UPHAttributeSet::GetIceResistancePercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Lightning.Percent")), UPHAttributeSet::GetLightningResistancePercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Light.Percent")), UPHAttributeSet::GetLightResistancePercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Corruption.Percent")), UPHAttributeSet::GetCorruptionResistancePercentBonusAttribute());
+
+    // ===========================
+    // Primary Stats
+    // ===========================
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Strength")), UPHAttributeSet::GetStrengthAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Intelligence")), UPHAttributeSet::GetIntelligenceAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Dexterity")), UPHAttributeSet::GetDexterityAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Endurance")), UPHAttributeSet::GetEnduranceAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Affliction")), UPHAttributeSet::GetAfflictionAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Luck")), UPHAttributeSet::GetLuckAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Covenant")), UPHAttributeSet::GetCovenantAttribute());
+
+    // ===========================
+    // Regeneration
+    // ===========================
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.HealthRegenAmount")), UPHAttributeSet::GetHealthRegenAmountAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.HealthRegenRate")), UPHAttributeSet::GetHealthRegenRateAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ManaRegenAmount")), UPHAttributeSet::GetManaRegenAmountAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ManaRegenRate")), UPHAttributeSet::GetManaRegenRateAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaRegenAmount")), UPHAttributeSet::GetStaminaRegenAmountAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaRegenRate")), UPHAttributeSet::GetStaminaRegenRateAttribute());
+
+    // ===========================
+    // Degeneration
+    // ===========================
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaDegenAmount")), UPHAttributeSet::GetStaminaDegenAmountAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaDegenRate")), UPHAttributeSet::GetStaminaDegenRateAttribute());
+
+    UE_LOG(LogTemp, Log, TEXT("✓ Tag-to-Attribute mappings initialized with %d entries"), TagToAttributeMap.Num());
+}
+
+FGameplayAttribute FPHGameplayTags::GetAttributeFromTag(const FGameplayTag& Tag)
+{
+	if (const FGameplayAttribute* Attr = TagToAttributeMap.Find(Tag))
+	{
+		return *Attr;
+	}
+
+	return FGameplayAttribute();
 }
 
 // ==============================

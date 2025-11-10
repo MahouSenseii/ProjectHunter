@@ -21,6 +21,7 @@ class ALS_PROJECTHUNTER_API UPHBaseToolTip : public UUserWidget
 
 public:
     virtual void NativeConstruct() override;
+    virtual void NativePreConstruct() override;
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
     
     /** Initialize the tooltip with item data */
@@ -54,6 +55,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Tooltip")
     void SetOwnerCharacter(APHBaseCharacter* Character) { OwnerCharacter = Character; }
 
+    /** Set the owner character for requirement checks */
+    UFUNCTION(BlueprintCallable, Category = "Tooltip")
+    void SetColorMap();
+
 protected:
     /** Update tooltip colors based on item rarity */
     UFUNCTION(BlueprintCallable, Category = "Tooltip")
@@ -78,6 +83,9 @@ protected:
     // Tooltip visual elements
     UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
     UImage* TooltipBackground;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
+    UImage* TooltipBackgroundFlicker;
     
     UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (BindWidget))
     UTextBlock* ItemNameText;
@@ -88,7 +96,6 @@ protected:
     // Rarity color configuration
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Rarity Colors")
     TMap<EItemRarity, FLinearColor> RarityColorMap;
-    
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Positioning")
     bool bAutoPositionBottomRight = true;

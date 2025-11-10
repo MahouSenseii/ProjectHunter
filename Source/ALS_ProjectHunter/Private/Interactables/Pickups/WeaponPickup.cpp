@@ -8,9 +8,7 @@
 bool AWeaponPickup::HandleInteraction(AActor* Actor, bool WasHeld, UItemDefinitionAsset*& ItemData,
 	FConsumableItemData ConsumableItemData)
 {
-	Super::HandleInteraction(Actor, WasHeld, ItemData, ConsumableItemData);
-	UItemDefinitionAsset*  PassedItemInformation = ObjItem->ItemDefinition;
-	
-	return AItemPickup::HandleInteraction(Actor, WasHeld, PassedItemInformation,  FConsumableItemData());
+	// Just call the parent once and return its result
+	ItemData = ObjItem->ItemDefinition;
+	return Super::HandleInteraction(Actor, WasHeld, ItemData, ConsumableItemData);
 }
-

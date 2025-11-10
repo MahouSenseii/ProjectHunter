@@ -12,7 +12,6 @@
 
 UPHAttributeSet::UPHAttributeSet()
 {
-	
 }
 
 

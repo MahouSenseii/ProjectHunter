@@ -9,6 +9,9 @@
 #include "Library/PHGameplayTagLibrary.h"
 #include "UI/Widgets/DamagePopup.h"
 
+
+DEFINE_LOG_CATEGORY(LogCombatManager);
+
 /* =========================== */
 /* === Constructor & Setup === */
 /* =========================== */
@@ -89,6 +92,19 @@ FDamageHitResultByType UCombatManager::CalculateDamage(const APHBaseCharacter* A
 
 FDamageByType UCombatManager::GetBaseDamage(const UPHAttributeSet* AttAtt)
 {
+    if (!AttAtt)
+    {
+        UE_LOG(LogCombatManager, Error, TEXT("GetBaseDamage: AttributeSet is NULL!"));
+        return FDamageByType();
+    }
+    
+    // Log the character/owner for debugging
+    if (AActor* Owner = AttAtt->GetOwningActor())
+    {
+        UE_LOG(LogCombatManager, Warning, TEXT("Getting base damage for: %s"), *Owner->GetName());
+    }
+
+    
     FDamageByType BaseDamage;
     BaseDamage.PhysicalDamage   = {AttAtt->GetMinPhysicalDamage(),   AttAtt->GetMaxPhysicalDamage()};
     BaseDamage.FireDamage       = {AttAtt->GetMinFireDamage(),       AttAtt->GetMaxFireDamage()};
@@ -96,6 +112,22 @@ FDamageByType UCombatManager::GetBaseDamage(const UPHAttributeSet* AttAtt)
     BaseDamage.LightningDamage  = {AttAtt->GetMinLightningDamage(),  AttAtt->GetMaxLightningDamage()};
     BaseDamage.LightDamage      = {AttAtt->GetMinLightDamage(),      AttAtt->GetMaxLightDamage()};
     BaseDamage.CorruptionDamage = {AttAtt->GetMinCorruptionDamage(), AttAtt->GetMaxCorruptionDamage()};
+    
+    // Log all damage values
+    UE_LOG(LogCombatManager, Warning, TEXT("=== Base Damage Retrieved ==="));
+    UE_LOG(LogCombatManager, Warning, TEXT("Physical:   Min=%.2f, Max=%.2f"), 
+        BaseDamage.PhysicalDamage.Min, BaseDamage.PhysicalDamage.Max);
+    UE_LOG(LogCombatManager, Warning, TEXT("Fire:       Min=%.2f, Max=%.2f"), 
+        BaseDamage.FireDamage.Min, BaseDamage.FireDamage.Max);
+    UE_LOG(LogCombatManager, Warning, TEXT("Ice:        Min=%.2f, Max=%.2f"), 
+        BaseDamage.IceDamage.Min, BaseDamage.IceDamage.Max);
+    UE_LOG(LogCombatManager, Warning, TEXT("Lightning:  Min=%.2f, Max=%.2f"), 
+        BaseDamage.LightningDamage.Min, BaseDamage.LightningDamage.Max);
+    UE_LOG(LogCombatManager, Warning, TEXT("Light:      Min=%.2f, Max=%.2f"), 
+        BaseDamage.LightDamage.Min, BaseDamage.LightDamage.Max);
+    UE_LOG(LogCombatManager, Warning, TEXT("Corruption: Min=%.2f, Max=%.2f"), 
+        BaseDamage.CorruptionDamage.Min, BaseDamage.CorruptionDamage.Max);
+    UE_LOG(LogCombatManager, Warning, TEXT("============================"));
     
     return BaseDamage;
 }

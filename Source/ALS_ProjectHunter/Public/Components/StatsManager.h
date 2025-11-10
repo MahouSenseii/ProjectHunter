@@ -22,8 +22,11 @@ class ALS_PROJECTHUNTER_API UStatsManager : public UActorComponent
 	GENERATED_BODY()
 
 public:
+	/* ============================= */
+	/* ===   Lifecycle           === */
+	/* ============================= */
+	
 	UStatsManager();
-
 	virtual void BeginPlay() override;
 
 	/* ============================= */
@@ -34,44 +37,49 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void Initialize();
 
-	/* ============================= */
-	/* ===   Attribute Init      === */
-	/* ============================= */
-
-	/**
-	 * Initialize attributes from a data asset configuration.
-	 * More flexible than using default effects directly.
-	 */
+	/** Initialize attributes from a data asset configuration */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Initialization")
 	void InitializeAttributesFromConfig(UAttributeConfigDataAsset* Config);
 
-	UFUNCTION(BlueprintCallable, Category = "Stats|Helper")
-	FGameplayAttribute FindAttributeByTag(const FGameplayTag& Tag) const;
-
-
+	/** Initialize current vitals (Health, Mana, Stamina) to their max values */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Initialization")
 	void InitializeCurrentVitalsToMax();
 
+	/** Initialize attribute-to-effect-class mapping */
+	void InitializeAttributeToEffectClassMap();
+
+	/* ============================= */
+	/* ===   Regen / Degen       === */
+	/* ============================= */
+
+	/** Initialize and start regeneration effects for health, mana, and stamina */
+	UFUNCTION(BlueprintCallable, Category = "Stats|Regeneration")
+	void InitializeRegenAndDegenEffects();
+
+	/** Stop all regeneration effects */
+	UFUNCTION(BlueprintCallable, Category = "Stats|Regeneration")
+	void StopAllRegenEffects();
+
+	/* ============================= */
+	/* ===   Setup / Access      === */
+	/* ============================= */
+
 	/** Set the ability system component */
 	UFUNCTION(BlueprintCallable, Category = "Stats")
-	void SetASC (UAbilitySystemComponent* InASC) { ASC = InASC; }
+	void SetASC(UAbilitySystemComponent* InASC) { ASC = InASC; }
 
-	/* ============================= */
-	/* =======   Setup      ======== */
-	/* ============================= */
+	/** Get the ability system component */
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	UAbilitySystemComponent* GetASC() { return ASC; }
+
+	/** Get the owner character */
 	UFUNCTION(BlueprintCallable, Category = "Setup")
-	APHBaseCharacter* GetOwnerCharacter() {return  Owner;}
+	APHBaseCharacter* GetOwnerCharacter() { return Owner; }
 
+	/** Set the owner character */
 	UFUNCTION(BlueprintCallable, Category = "Setup")
-	void SetOwnerCharacter(APHBaseCharacter* InOwner) {Owner = InOwner;}
-	
-	/** Optional: Data asset for more complex initialization */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Initialization")
-	TObjectPtr<UAttributeConfigDataAsset> AttributeConfig;
+	void SetOwnerCharacter(APHBaseCharacter* InOwner) { Owner = InOwner; }
 
-	
-
-	
 	/* ============================= */
 	/* ===   Attribute Access    === */
 	/* ============================= */
@@ -87,6 +95,13 @@ public:
 	/** Check if an attribute exists on this component's attribute set */
 	UFUNCTION(BlueprintPure, Category = "Stats|Attributes")
 	bool HasAttribute(const FGameplayAttribute& Attribute) const;
+
+	/** Find gameplay attribute by gameplay tag */
+	UFUNCTION(BlueprintCallable, Category = "Stats|Helper")
+	FGameplayAttribute FindAttributeByTag(const FGameplayTag& Tag) const;
+
+	/** Get the effect class mapped to a specific attribute */
+	TSubclassOf<UGameplayEffect> GetEffectClassForAttribute(const FGameplayAttribute& Attribute) const;
 
 	/* ============================= */
 	/* ===   Direct Modification === */
@@ -206,7 +221,9 @@ public:
 		const FGameplayEffectSpec& Spec);
 
 protected:
-
+	/* ============================= */
+	/* ===   Protected Functions === */
+	/* ============================= */
 
 	/**
 	 * Apply an initialization effect with SetByCaller values.
@@ -216,7 +233,7 @@ protected:
 	 */
 	bool ApplyInitializationEffect(
 		const TSubclassOf<UGameplayEffect>& EffectClass,
-		const TMap<FGameplayTag, float>& AttributeValues) ;
+		const TMap<FGameplayTag, float>& AttributeValues);
 
 	/**
 	 * Simple initialization - just applies the effect without SetByCaller.
@@ -224,36 +241,111 @@ protected:
 	 */
 	bool ApplySimpleInitEffect(const TSubclassOf<UGameplayEffect>& EffectClass) const;
 
-	
+	/** Helper to apply a regeneration/degeneration effect with SetByCaller values */
+	FActiveGameplayEffectHandle ApplyRegenEffect(TSubclassOf<UGameplayEffect> EffectClass) const;
+
+	/** Callback for when sprinting state changes */
+	void OnSprintingTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	/** Validate that ASC is ready */
+	bool IsInitialized() const { return ASC != nullptr; }
+
+	/* ============================= */
+	/* ===   Properties          === */
+	/* ============================= */
+
 	/** Reference to the Ability System Component */
 	UPROPERTY(BlueprintReadOnly, Category = "Stats")
 	TObjectPtr<UAbilitySystemComponent> ASC;
+
+	/** Reference to the character that owns this stats manager */
+	UPROPERTY(BlueprintReadOnly, Category = "Setup")
+	TObjectPtr<APHBaseCharacter> Owner;
+
+	/** Optional: Data asset for attribute initialization */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Initialization")
+	TObjectPtr<UAttributeConfigDataAsset> AttributeConfig;
+
+	/** Maps attributes to their corresponding effect classes */
+	UPROPERTY()
+	TMap<FGameplayAttribute, TSubclassOf<UGameplayEffect>> AttributeToEffectClassMap;
 
 	/** Tracks all active temporary modifiers for bulk removal */
 	UPROPERTY()
 	TArray<FActiveGameplayEffectHandle> TemporaryModifiers;
 
 	/* ============================= */
-	/* ===   Internal Helpers    === */
+	/* ===   GameplayEffect Classes === */
 	/* ============================= */
 
+	// Equipment Effects
+	UPROPERTY(EditDefaultsOnly, Category = "Classes|GameplayEffect|Equipment")
+	TSubclassOf<UGameplayEffect> EquipmentDamageEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Classes|GameplayEffect|Equipment")
+	TSubclassOf<UGameplayEffect> EquipmentPercentBonusDamageEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Classes|GameplayEffect|Equipment")
+	TSubclassOf<UGameplayEffect> EquipmentFlatBonusDamageEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Classes|GameplayEffect|Equipment")
+	TSubclassOf<UGameplayEffect> EquipmentPercentResistances;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Classes|GameplayEffect|Equipment")
+	TSubclassOf<UGameplayEffect> EquipmentFlatResistances;
 	
-
-	/** Create a dynamic instant gameplay effect for modifying attributes */
-	static UGameplayEffect* CreateModifierEffect(
-		const FGameplayAttribute& Attribute,
-		EGameplayModOp::Type ModifierOp,
-		float Magnitude);
-
-	/** Validate that ASC is ready */
-	bool IsInitialized() const { return ASC != nullptr; }
-
+	UPROPERTY(EditDefaultsOnly, Category = "Classes|GameplayEffect|Equipment")
+	TSubclassOf<UGameplayEffect> EquipmentAttributes;
 	
+	UPROPERTY(EditDefaultsOnly, Category = "Classes|GameplayEffect|Equipment")
+	TSubclassOf<UGameplayEffect> EquipmentPiercingDamage;
 
-	/**
-	 * Maintains a reference to the character that owns this stats manager.
-	 * Used to link the stats manager's functionality to the associated character.
-	 */
-	UPROPERTY(BlueprintReadOnly, Category = "Setup")
-	TObjectPtr<APHBaseCharacter> Owner;
+	// Regeneration Effects
+	UPROPERTY(EditDefaultsOnly, Category = "Classes|GameplayEffect|Regeneration")
+	TSubclassOf<UGameplayEffect> GE_HealthRegen;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Classes|GameplayEffect|Regeneration")
+	TSubclassOf<UGameplayEffect> GE_ManaRegen;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Classes|GameplayEffect|Regeneration")
+	TSubclassOf<UGameplayEffect> GE_StaminaRegen;
+
+	// Degeneration Effects
+	UPROPERTY(EditDefaultsOnly, Category = "Classes|GameplayEffect|Degeneration")
+	TSubclassOf<UGameplayEffect> GE_StaminaDegen;
+
+	/* ============================= */
+	/* ===   Active Effect Handles === */
+	/* ============================= */
+
+	UPROPERTY()
+	FActiveGameplayEffectHandle HealthRegenHandle;
+
+	UPROPERTY()
+	FActiveGameplayEffectHandle ManaRegenHandle;
+
+	UPROPERTY()
+	FActiveGameplayEffectHandle StaminaRegenHandle;
+
+	UPROPERTY()
+	FActiveGameplayEffectHandle StaminaDegenHandle;
+
+	/* ============================= */
+	/* ===   Gameplay Tags       === */
+	/* ============================= */
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stats|Tags")
+	FGameplayTag Tag_Sprinting;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stats|Tags")
+	FGameplayTag Tag_CannotRegenHP;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stats|Tags")
+	FGameplayTag Tag_CannotRegenMana;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stats|Tags")
+	FGameplayTag Tag_CannotRegenStamina;
+
+	/** Delegate handle for sprinting tag listener */
+	FDelegateHandle SprintingTagDelegateHandle;
 };

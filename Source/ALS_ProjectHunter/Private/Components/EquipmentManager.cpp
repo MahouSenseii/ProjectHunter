@@ -139,8 +139,8 @@ bool UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh)
     
 		if (Item->ItemDefinition)
 		{
-			UE_LOG(LogEquipmentManager, Warning, TEXT("Item Name: %s"), *Item->ItemDefinition->Base.ItemName.ToString());
-			UE_LOG(LogEquipmentManager, Warning, TEXT("Item Type: %d"), static_cast<int32>(Item->ItemDefinition->Base.ItemType));
+			UE_LOG(LogEquipmentManager, Warning, TEXT("Item Name: %s"), *Item->RuntimeData.DisplayName.ToString());
+			UE_LOG(LogEquipmentManager, Warning, TEXT("Item Type: %s"), *UEnum::GetValueAsString(Item->ItemDefinition->Base.ItemType));
 		}
 
 	
@@ -164,6 +164,7 @@ bool UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh)
 		}
     
 		OnEquipmentChangedSimple.Broadcast();
+		return true;
 	}
 	else
 	{
@@ -254,61 +255,45 @@ void UEquipmentManager::RemoveEquippedItem(UBaseItem* Item, EEquipmentSlot Slot)
 
 void UEquipmentManager::RemoveWeaponBaseDamage(UEquippableItem* WeaponItem, APHBaseCharacter* Character)
 {
-	if (!WeaponItem)
+	if (!WeaponItem || !Character)
 	{
-		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveWeaponBaseDamage failed: WeaponItem is nullptr"));
-		return;
-	}
-
-	if (!Character)
-	{
-		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveWeaponBaseDamage failed: Character is nullptr"));
 		return;
 	}
 
 	UStatsManager* StatsManager = Character->GetStatsManager();
-	if (!StatsManager)
+	if (!StatsManager || !StatsManager->GetASC())
 	{
-		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveWeaponBaseDamage failed: Character has no StatsManager"));
+		UE_LOG(LogEquipmentManager, Warning, TEXT("RemoveWeaponBaseDamage: No StatsManager or ASC"));
 		return;
 	}
 
-	const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = WeaponItem->GetItemInfo()->Equip.WeaponBaseStats.BaseDamage;
-	if (BaseDamageMap.Num() == 0)
+	// Find and remove all weapon effects
+	if (FWeaponEffectHandles* WeaponHandles = AppliedWeaponEffect.Find(WeaponItem))
 	{
-		UE_LOG(LogEquipmentManager, Warning, TEXT("Weapon has no base damage defined, nothing to remove."));
-		return;
+		int32 RemovedCount = 0;
+		for (const FActiveGameplayEffectHandle& Handle : WeaponHandles->Handles)
+		{
+			if (Handle.IsValid())
+			{
+				if (StatsManager->GetASC()->RemoveActiveGameplayEffect(Handle))
+				{
+					RemovedCount++;
+				}
+			}
+		}
+        
+		UE_LOG(LogEquipmentManager, Log, TEXT("Removed %d weapon effects for %s"), 
+			RemovedCount, *WeaponItem->GetItemInfo()->Base.ItemName.ToString());
+        
+		// Remove from tracking map
+		AppliedWeaponEffect.Remove(WeaponItem);
 	}
-
-	for (const TPair<EDamageTypes, FDamageRange>& Pair : BaseDamageMap)
+	else
 	{
-		const FString TypeName = StaticEnum<EDamageTypes>()->GetNameByValue((int64)Pair.Key).ToString().RightChop(17);
-
-		const FString MinKey = FString::Printf(TEXT("Min %s"), *TypeName);
-		const FString MaxKey = FString::Printf(TEXT("Max %s"), *TypeName);
-
-		if (const FGameplayAttribute* MinAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MinKey))
-		{
-			StatsManager->ApplyFlatModifier(*MinAttr, -Pair.Value.Min);
-			UE_LOG(LogEquipmentManager, Log, TEXT("Removed weapon base damage MIN: %s = %.2f"), *MinAttr->GetName(), -Pair.Value.Min);
-		}
-		else
-		{
-			UE_LOG(LogEquipmentManager, Warning, TEXT("No Min attribute found to remove for key: %s"), *MinKey);
-		}
-
-		if (const FGameplayAttribute* MaxAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MaxKey))
-		{
-			StatsManager->ApplyFlatModifier(*MaxAttr, -Pair.Value.Max);
-			UE_LOG(LogEquipmentManager, Log, TEXT("Removed weapon base damage MAX: %s = %.2f"), *MaxAttr->GetName(), -Pair.Value.Max);
-		}
-		else
-		{
-			UE_LOG(LogEquipmentManager, Warning, TEXT("No Max attribute found to remove for key: %s"), *MaxKey);
-		}
+		UE_LOG(LogEquipmentManager, Warning, TEXT("No applied effects found for weapon %s"), 
+			*WeaponItem->GetItemInfo()->Base.ItemName.ToString());
 	}
 }
-
 void UEquipmentManager::RemoveItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character)
 {
 	if (!Item || !Character)
@@ -511,64 +496,91 @@ void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseChara
 
 void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, const APHBaseCharacter* Character)
 {
-	if (!WeaponItem)
-	{
-		UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyWeaponBaseDamage failed: WeaponItem is nullptr"));
-		return;
-	}
+    if (!WeaponItem)
+    {
+        UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyWeaponBaseDamage failed: WeaponItem is nullptr"));
+        return;
+    }
 
-	if (!Character)
-	{
-		UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyWeaponBaseDamage failed: Character is nullptr"));
-		return;
-	}
+    if (!Character)
+    {
+        UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyWeaponBaseDamage failed: Character is nullptr"));
+        return;
+    }
 
-	// Example: if your stat manager does the applying
-	UStatsManager* StatsManager = Character->GetStatsManager();
-	if (!StatsManager)
-	{
-		UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyWeaponBaseDamage failed: Character has no StatsManager"));
-		return;
-	}
+    UStatsManager* StatsManager = Character->GetStatsManager();
+    if (!StatsManager)
+    {
+        UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyWeaponBaseDamage failed: Character has no StatsManager"));
+        return;
+    }
 
-	const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = WeaponItem->GetItemInfo()->Equip.WeaponBaseStats.BaseDamage;
-	if (BaseDamageMap.Num() == 0)
-	{
-		UE_LOG(LogEquipmentManager, Warning, TEXT("Weapon has no base damage defined."));
-		return;
-	}
+    const TMap<EDamageTypes, FDamageRange>& BaseDamageMap = WeaponItem->GetItemInfo()->Equip.WeaponBaseStats.BaseDamage;
+    if (BaseDamageMap.Num() == 0)
+    {
+        UE_LOG(LogEquipmentManager, Warning, TEXT("Weapon has no base damage defined."));
+        return;
+    }
 
-	// === Apply the min/max damage stats ===
-	for (const TPair<EDamageTypes, FDamageRange>& Pair : BaseDamageMap)
-	{
-		FString TypeName = StaticEnum<EDamageTypes>()->GetNameByValue(static_cast<int64>(Pair.Key)).ToString();
-		TypeName.RemoveFromStart(TEXT("EDamageTypes::"));
-		TypeName.RemoveFromStart(TEXT("DT_"));
+    // Get or create the weapon effect handles struct
+    FWeaponEffectHandles& WeaponHandles = AppliedWeaponEffect.FindOrAdd(WeaponItem);
+    WeaponHandles.Handles.Empty(); // Clear any existing handles first
 
+    // === Apply the min/max damage stats ===
+    for (const TPair<EDamageTypes, FDamageRange>& Pair : BaseDamageMap)
+    {
+        FString TypeName = StaticEnum<EDamageTypes>()->GetNameByValue(static_cast<int64>(Pair.Key)).ToString();
+        TypeName.RemoveFromStart(TEXT("EDamageTypes::"));
+        TypeName.RemoveFromStart(TEXT("DT_"));
 
-		const FString MinKey = FString::Printf(TEXT("Min %s"), *TypeName);
-		const FString MaxKey = FString::Printf(TEXT("Max %s"), *TypeName);
+    	UE_LOG(LogEquipmentManager, Log, TEXT("Type name used is : %s"), *TypeName);
+        const FString MinKey = FString::Printf(TEXT("Min %s"), *TypeName);
+        const FString MaxKey = FString::Printf(TEXT("Max %s"), *TypeName);
+    	UE_LOG(LogEquipmentManager, Log, TEXT("Type name used for min is : %s"), *MinKey);
+    	UE_LOG(LogEquipmentManager, Log, TEXT("Type name used for max is : %s"), *MaxKey);
+        // Apply MIN damage
+        if (const FGameplayAttribute* MinAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MinKey))
+        {
+            FActiveGameplayEffectHandle MinHandle = StatsManager->ApplyFlatModifier(*MinAttr, Pair.Value.Min, false);
+            
+            if (MinHandle.IsValid())
+            {
+                WeaponHandles.Handles.Add(MinHandle);
+                UE_LOG(LogEquipmentManager, Log, TEXT("Applied weapon base damage MIN: %s = %.2f"), *MinAttr->GetName(), Pair.Value.Min);
+            }
+            else
+            {
+                UE_LOG(LogEquipmentManager, Error, TEXT("Failed to apply MIN damage modifier for %s"), *MinKey);
+            }
+        }
+        else
+        {
+            UE_LOG(LogEquipmentManager, Warning, TEXT("No Min attribute found for damage type key: %s"), *MinKey);
+        }
 
-		if (const FGameplayAttribute* MinAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MinKey))
-		{
-			StatsManager->ApplyFlatModifier(*MinAttr, Pair.Value.Min);
-			UE_LOG(LogEquipmentManager, Log, TEXT("Applied weapon base damage MIN: %s = %.2f"), *MinAttr->GetName(), Pair.Value.Min);
-		}
-		else
-		{
-			UE_LOG(LogEquipmentManager, Warning, TEXT("No Min attribute found for damage type key: %s"), *MinKey);
-		}
+        // Apply MAX damage
+        if (const FGameplayAttribute* MaxAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MaxKey))
+        {
+            FActiveGameplayEffectHandle MaxHandle = StatsManager->ApplyFlatModifier(*MaxAttr, Pair.Value.Max, false);
+            
+            if (MaxHandle.IsValid())
+            {
+                WeaponHandles.Handles.Add(MaxHandle);
+                UE_LOG(LogEquipmentManager, Log, TEXT("Applied weapon base damage MAX: %s = %.2f"), *MaxAttr->GetName(), Pair.Value.Max);
+            }
+            else
+            {
+                UE_LOG(LogEquipmentManager, Error, TEXT("Failed to apply MAX damage modifier for %s"), *MaxKey);
+            }
+        }
+        else
+        {
+            UE_LOG(LogEquipmentManager, Warning, TEXT("No Max attribute found for damage type key: %s"), *MaxKey);
+        }
+    }
 
-		if (const FGameplayAttribute* MaxAttr = FPHGameplayTags::BaseDamageToAttributesMap.Find(MaxKey))
-		{
-			StatsManager->ApplyFlatModifier(*MaxAttr, Pair.Value.Max);
-			UE_LOG(LogEquipmentManager, Log, TEXT("Applied weapon base damage MAX: %s = %.2f"), *MaxAttr->GetName(), Pair.Value.Max);
-		}
-		else
-		{
-			UE_LOG(LogEquipmentManager, Warning, TEXT("No Max attribute found for damage type key: %s"), *MaxKey);
-		}
-	}
+    // Verify the effects were applied
+    UE_LOG(LogEquipmentManager, Log, TEXT("Total weapon effects applied: %d"), WeaponHandles.Handles.Num());
 }
 
 // EquipmentManager.cpp
