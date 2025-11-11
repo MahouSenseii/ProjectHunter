@@ -53,9 +53,7 @@ float UMMC_ReserveHealth::CalculateBaseMagnitude_Implementation(const FGameplayE
 	GetCapturedAttributeMagnitude(HealthPercentageDef, Spec, EvaluateParameters, PercentageValue);
 	PercentageValue = FMath::Max(PercentageValue, 0.0f);
 
-	// Calculate the total reserved health, combining both flat and percentage values relative to max health
-	// Get max current health and add current reserved health so i can get the true max hp
-	// then times by percentageValue  and add flat value 
-	const float ReservedHealth = ((MaxValue * PercentageValue) + FlatValue);
+
+	const float ReservedHealth = ((MaxValue * (PercentageValue / 100.0f)) + FlatValue);
 	return FMath::RoundHalfToEven(ReservedHealth);
 }
