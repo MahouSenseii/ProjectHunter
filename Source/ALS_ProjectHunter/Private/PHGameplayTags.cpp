@@ -842,19 +842,88 @@ void FPHGameplayTags::RegisterStatusEffectAliases()
 
 void FPHGameplayTags::RegisterAttributeToTagMappings()
 {
-	// Map attributes to their corresponding gameplay tags
-	AttributeToTagMap.Add(UPHAttributeSet::GetMinPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MinPhysicalDamage);
-	AttributeToTagMap.Add(UPHAttributeSet::GetMaxPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MaxPhysicalDamage);
-	AttributeToTagMap.Add(UPHAttributeSet::GetMinFireDamageAttribute(),       Attributes_Secondary_Damages_MinFireDamage);
-	AttributeToTagMap.Add(UPHAttributeSet::GetMaxFireDamageAttribute(),       Attributes_Secondary_Damages_MaxFireDamage);
-	AttributeToTagMap.Add(UPHAttributeSet::GetMinIceDamageAttribute(),        Attributes_Secondary_Damages_MinIceDamage);
-	AttributeToTagMap.Add(UPHAttributeSet::GetMaxIceDamageAttribute(),        Attributes_Secondary_Damages_MaxIceDamage);
-	AttributeToTagMap.Add(UPHAttributeSet::GetMinLightningDamageAttribute(),  Attributes_Secondary_Damages_MinLightningDamage);
-	AttributeToTagMap.Add(UPHAttributeSet::GetMaxLightningDamageAttribute(),  Attributes_Secondary_Damages_MaxLightningDamage);
-	AttributeToTagMap.Add(UPHAttributeSet::GetMinLightDamageAttribute(),      Attributes_Secondary_Damages_MinLightDamage);
-	AttributeToTagMap.Add(UPHAttributeSet::GetMaxLightDamageAttribute(),      Attributes_Secondary_Damages_MaxLightDamage);
-	AttributeToTagMap.Add(UPHAttributeSet::GetMinCorruptionDamageAttribute(), Attributes_Secondary_Damages_MinCorruptionDamage);
-	AttributeToTagMap.Add(UPHAttributeSet::GetMaxCorruptionDamageAttribute(), Attributes_Secondary_Damages_MaxCorruptionDamage);
+    // ===========================
+    // Base Damage Attributes
+    // ===========================
+    AttributeToTagMap.Add(UPHAttributeSet::GetMinPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MinPhysicalDamage);
+    AttributeToTagMap.Add(UPHAttributeSet::GetMaxPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MaxPhysicalDamage);
+    AttributeToTagMap.Add(UPHAttributeSet::GetMinFireDamageAttribute(),       Attributes_Secondary_Damages_MinFireDamage);
+    AttributeToTagMap.Add(UPHAttributeSet::GetMaxFireDamageAttribute(),       Attributes_Secondary_Damages_MaxFireDamage);
+    AttributeToTagMap.Add(UPHAttributeSet::GetMinIceDamageAttribute(),        Attributes_Secondary_Damages_MinIceDamage);
+    AttributeToTagMap.Add(UPHAttributeSet::GetMaxIceDamageAttribute(),        Attributes_Secondary_Damages_MaxIceDamage);
+    AttributeToTagMap.Add(UPHAttributeSet::GetMinLightningDamageAttribute(),  Attributes_Secondary_Damages_MinLightningDamage);
+    AttributeToTagMap.Add(UPHAttributeSet::GetMaxLightningDamageAttribute(),  Attributes_Secondary_Damages_MaxLightningDamage);
+    AttributeToTagMap.Add(UPHAttributeSet::GetMinLightDamageAttribute(),      Attributes_Secondary_Damages_MinLightDamage);
+    AttributeToTagMap.Add(UPHAttributeSet::GetMaxLightDamageAttribute(),      Attributes_Secondary_Damages_MaxLightDamage);
+    AttributeToTagMap.Add(UPHAttributeSet::GetMinCorruptionDamageAttribute(), Attributes_Secondary_Damages_MinCorruptionDamage);
+    AttributeToTagMap.Add(UPHAttributeSet::GetMaxCorruptionDamageAttribute(), Attributes_Secondary_Damages_MaxCorruptionDamage);
+    
+    // ===========================
+    // Primary Attributes
+    // ===========================
+    AttributeToTagMap.Add(UPHAttributeSet::GetStrengthAttribute(),     Attributes_Primary_Strength);
+    AttributeToTagMap.Add(UPHAttributeSet::GetIntelligenceAttribute(), Attributes_Primary_Intelligence);
+    AttributeToTagMap.Add(UPHAttributeSet::GetDexterityAttribute(),    Attributes_Primary_Dexterity);
+    AttributeToTagMap.Add(UPHAttributeSet::GetEnduranceAttribute(),    Attributes_Primary_Endurance);
+    AttributeToTagMap.Add(UPHAttributeSet::GetAfflictionAttribute(),   Attributes_Primary_Affliction);
+    AttributeToTagMap.Add(UPHAttributeSet::GetLuckAttribute(),         Attributes_Primary_Luck);
+    AttributeToTagMap.Add(UPHAttributeSet::GetCovenantAttribute(),     Attributes_Primary_Covenant);
+    
+    // ===========================
+    // Defense Attributes
+    // ===========================
+    AttributeToTagMap.Add(UPHAttributeSet::GetArmourAttribute(),    Attributes_Secondary_Resistances_Armour);
+    AttributeToTagMap.Add(UPHAttributeSet::GetPoiseAttribute(),     Attributes_Secondary_Misc_Poise);
+    
+    // ===========================
+    // Resistance Attributes (Flat Bonus)
+    // ===========================
+    AttributeToTagMap.Add(UPHAttributeSet::GetFireResistanceFlatBonusAttribute(),       Attributes_Secondary_Resistances_FireResistanceFlat);
+    AttributeToTagMap.Add(UPHAttributeSet::GetIceResistanceFlatBonusAttribute(),        Attributes_Secondary_Resistances_IceResistanceFlat);
+    AttributeToTagMap.Add(UPHAttributeSet::GetLightningResistanceFlatBonusAttribute(),  Attributes_Secondary_Resistances_LightningResistanceFlat);
+    AttributeToTagMap.Add(UPHAttributeSet::GetLightResistanceFlatBonusAttribute(),      Attributes_Secondary_Resistances_LightResistanceFlat);
+    AttributeToTagMap.Add(UPHAttributeSet::GetCorruptionResistanceFlatBonusAttribute(), Attributes_Secondary_Resistances_CorruptionResistanceFlat);
+    
+    // ===========================
+    // Combat Attributes
+    // ===========================
+    AttributeToTagMap.Add(UPHAttributeSet::GetCritChanceAttribute(),    Attributes_Secondary_Misc_CritChance);
+    AttributeToTagMap.Add(UPHAttributeSet::GetAttackSpeedAttribute(),   Attributes_Secondary_Offensive_AttackSpeed);
+    AttributeToTagMap.Add(UPHAttributeSet::GetCastSpeedAttribute(),     Attributes_Secondary_Offensive_CastSpeed);
+    AttributeToTagMap.Add(UPHAttributeSet::GetAttackRangeAttribute(),   Attributes_Secondary_Offensive_AttackRange);
+    
+    // ===========================
+    // Resource Cost Attributes
+    // ===========================
+    AttributeToTagMap.Add(UPHAttributeSet::GetManaCostChangesAttribute(),    Attributes_Secondary_Misc_ManaCostChanges);
+    AttributeToTagMap.Add(UPHAttributeSet::GetStaminaCostChangesAttribute(), Attributes_Secondary_Misc_StaminaCostChanges);
+    
+    // ===========================
+    // Flat Damage Bonus Attributes
+    // ===========================
+    AttributeToTagMap.Add(UPHAttributeSet::GetPhysicalFlatBonusAttribute(),   Attributes_Secondary_BonusDamage_PhysicalFlatBonus);
+    AttributeToTagMap.Add(UPHAttributeSet::GetFireFlatBonusAttribute(),       Attributes_Secondary_BonusDamage_FireFlatBonus);
+    AttributeToTagMap.Add(UPHAttributeSet::GetIceFlatBonusAttribute(),        Attributes_Secondary_BonusDamage_IceFlatBonus);
+    AttributeToTagMap.Add(UPHAttributeSet::GetLightningFlatBonusAttribute(),  Attributes_Secondary_BonusDamage_LightningFlatBonus);
+    AttributeToTagMap.Add(UPHAttributeSet::GetLightFlatBonusAttribute(),      Attributes_Secondary_BonusDamage_LightFlatBonus);
+    AttributeToTagMap.Add(UPHAttributeSet::GetCorruptionFlatBonusAttribute(), Attributes_Secondary_BonusDamage_CorruptionFlatBonus);
+    
+    // ===========================
+    // Percent Damage Bonus Attributes
+    // ===========================
+    AttributeToTagMap.Add(UPHAttributeSet::GetPhysicalPercentBonusAttribute(),   Attributes_Secondary_BonusDamage_PhysicalFlatBonus);
+    AttributeToTagMap.Add(UPHAttributeSet::GetFirePercentBonusAttribute(),       Attributes_Secondary_BonusDamage_FirePercentBonus);
+    AttributeToTagMap.Add(UPHAttributeSet::GetIcePercentBonusAttribute(),        Attributes_Secondary_BonusDamage_IcePercentBonus);
+    AttributeToTagMap.Add(UPHAttributeSet::GetLightningPercentBonusAttribute(),  Attributes_Secondary_BonusDamage_LightningPercentBonus);
+    AttributeToTagMap.Add(UPHAttributeSet::GetLightPercentBonusAttribute(),      Attributes_Secondary_BonusDamage_LightPercentBonus);
+    AttributeToTagMap.Add(UPHAttributeSet::GetCorruptionPercentBonusAttribute(), Attributes_Secondary_BonusDamage_CorruptionPercentBonus);
+    
+
+    AttributeToTagMap.Add(UPHAttributeSet::GetCritChanceAttribute(), Attributes_Secondary_Misc_CritChance);
+    AttributeToTagMap.Add(UPHAttributeSet::GetStrengthAttribute(),   Attributes_Primary_Strength);
+    AttributeToTagMap.Add(UPHAttributeSet::GetIntelligenceAttribute(), Attributes_Primary_Intelligence);
+    AttributeToTagMap.Add(UPHAttributeSet::GetDexterityAttribute(),  Attributes_Primary_Dexterity);
+    AttributeToTagMap.Add(UPHAttributeSet::GetArmourAttribute(),     Attributes_Secondary_Resistances_Armour);
 }
 
 

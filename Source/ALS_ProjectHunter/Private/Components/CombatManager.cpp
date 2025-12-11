@@ -18,8 +18,8 @@ DEFINE_LOG_CATEGORY(LogCombatManager);
 
 UCombatManager::UCombatManager(): OwnerCharacter(nullptr), StaggerMontage(nullptr)
 {
-    PrimaryComponentTick.bCanEverTick = true; // Enable tick for combat status updates
-    PrimaryComponentTick.TickInterval = 0.1f; // Check every 100 ms
+    PrimaryComponentTick.bCanEverTick = true; 
+    PrimaryComponentTick.TickInterval = 0.1f;
 }
 
 void UCombatManager::BeginPlay()
@@ -417,7 +417,9 @@ TMap<EDamageTypes, float> UCombatManager::ApplyDefenses(const TMap<EDamageTypes,
 
 bool UCombatManager::RollCriticalStrike(const UPHAttributeSet* AttAtt)
 {
-    return FMath::FRand() <= AttAtt->GetCritChance();
+    const float RandomNumber = FMath::FRand();
+    const float CritChance = AttAtt->GetCritChance() / 100.0f;
+    return RandomNumber <= CritChance;
 }
 
 TMap<EDamageTypes, bool> UCombatManager::RollStatusEffects(const UPHAttributeSet* AttAtt,
@@ -757,12 +759,15 @@ void UCombatManager::InitPopup(const float DamageAmount, const EDamageTypes Dama
     PopupComp->SetWidgetClass(DamagePopupClass);
     PopupComp->SetTwoSided(true);
 
-    if (APlayerCameraManager* CamManager = GetWorld()->GetFirstPlayerController()->PlayerCameraManager)
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
     {
-        FVector CamLocation = CamManager->GetCameraLocation();
-        FVector ToCamera = (CamLocation - PopupComp->GetComponentLocation()).GetSafeNormal();
-        FRotator LookAtRotation = ToCamera.Rotation();
-        PopupComp->SetWorldRotation(LookAtRotation);
+        if (APlayerCameraManager* CamManager = PC->PlayerCameraManager)
+        {
+            FVector CamLocation = CamManager->GetCameraLocation();
+            FVector ToCamera = (CamLocation - PopupComp->GetComponentLocation()).GetSafeNormal();
+            FRotator LookAtRotation = ToCamera.Rotation();
+            PopupComp->SetWorldRotation(LookAtRotation);
+        }
     }
 
     if (UDamagePopup* Popup = Cast<UDamagePopup>(PopupComp->GetUserWidgetObject()))
@@ -792,10 +797,12 @@ void UCombatManager::IncreaseComboCounter(float Amount)
 
     const float CurrentValue = Attributes->GetComboCounter();
     ASC->SetNumericAttributeBase(UPHAttributeSet::GetComboCounterAttribute(), CurrentValue + Amount);
-
-    GetWorld()->GetTimerManager().ClearTimer(ComboResetTimerHandle);
-    GetWorld()->GetTimerManager().SetTimer(ComboResetTimerHandle, this, 
-        &UCombatManager::ResetComboCounter, ComboResetTime, false);
+    if (UWorld* World = GetWorld())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(ComboResetTimerHandle);
+        GetWorld()->GetTimerManager().SetTimer(ComboResetTimerHandle, this, 
+            &UCombatManager::ResetComboCounter, ComboResetTime, false);
+    }
 }
 
 void UCombatManager::ResetComboCounter() const
@@ -844,20 +851,24 @@ void UCombatManager::SetCombatStatus(ECombatStatus NewStatus)
             break;
             
         case ECombatStatus::EnteringCombat:
-            // Optional: Play entering combat animation or effects
+        if (UWorld* World = GetWorld())
+        {
             GetWorld()->GetTimerManager().SetTimer(CombatTransitionTimer, [this]()
             {
                 SetCombatStatus(ECombatStatus::InCombat);
             }, CombatEnterTransitionTime, false);
             break;
+        }
             
         case ECombatStatus::LeavingCombat:
-            // Optional: Play leaving combat animation or effects
+        if (UWorld* World = GetWorld())
+        {
             GetWorld()->GetTimerManager().SetTimer(CombatTransitionTimer, [this]()
             {
                 SetCombatStatus(ECombatStatus::OutOfCombat);
             }, CombatExitTransitionTime, false);
             break;
+        }
     }
     
     // Broadcast the change
@@ -906,13 +917,15 @@ void UCombatManager::ExitCombat()
 void UCombatManager::RefreshCombatTimer()
 {
     LastCombatActivityTime = GetWorld()->GetTimeSeconds();
+    if (UWorld* World = GetWorld())
+    {
+        // Clear existing timer
+        GetWorld()->GetTimerManager().ClearTimer(CombatExitTimer);
     
-    // Clear existing timer
-    GetWorld()->GetTimerManager().ClearTimer(CombatExitTimer);
-    
-    // Set new timer
-    GetWorld()->GetTimerManager().SetTimer(CombatExitTimer, this, 
-        &UCombatManager::CheckCombatTimeout, 1.0f, true);
+        // Set new timer
+        GetWorld()->GetTimerManager().SetTimer(CombatExitTimer, this, 
+            &UCombatManager::CheckCombatTimeout, 1.0f, true);
+    }
 }
 
 void UCombatManager::CheckCombatTimeout()
@@ -953,17 +966,17 @@ void UCombatManager::CheckCombatTimeout()
 
 void UCombatManager::ForceCombatExit()
 {
-    CombatTargets.Empty();
-    GetWorld()->GetTimerManager().ClearTimer(CombatExitTimer);
-    GetWorld()->GetTimerManager().ClearTimer(CombatTransitionTimer);
-    SetCombatStatus(ECombatStatus::OutOfCombat);
+    if (UWorld* World = GetWorld())
+    {
+        CombatTargets.Empty();
+        GetWorld()->GetTimerManager().ClearTimer(CombatExitTimer);
+        GetWorld()->GetTimerManager().ClearTimer(CombatTransitionTimer);
+        SetCombatStatus(ECombatStatus::OutOfCombat);
+    }
 }
 
 void UCombatManager::OnEnterCombat()
 {
-    // Stop any out-of-combat regeneration
-    bCanRegenerate = false;
-    
     // Apply combat-related gameplay tags
     if (UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())
     {

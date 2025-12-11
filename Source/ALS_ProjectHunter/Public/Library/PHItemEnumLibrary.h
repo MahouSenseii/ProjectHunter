@@ -215,7 +215,7 @@ enum class EDefenseTypes : uint8
 	DFT_LightResistance     UMETA(DisplayName = "Light Resistance"),
 	DFT_LightningResistance UMETA(DisplayName = "Lightning Resistance"),
 	DFT_PhysicalResistance  UMETA(DisplayName = "Physical Resistance"),
-	DFT_PoisonResistance    UMETA(DisplayName = "Poison Resistance"),
+	DFT_CorruptionResistance    UMETA(DisplayName = "Corruption Resistance"),
 };
 
 UENUM(BlueprintType)

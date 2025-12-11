@@ -227,7 +227,6 @@ bool UInventoryManager::TryPlaceItemAtFirstAvailable(UBaseItem* Item, bool Check
 	{
 		return TryToAddItemRotated(Item);
 	}
-
 	return false;
 }
 

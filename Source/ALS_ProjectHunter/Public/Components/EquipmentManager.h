@@ -97,8 +97,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void ApplyItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character);
+
+	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, const APHBaseCharacter* Character);
-	
+
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void ApplyAffixesEffects(const UEquippableItem* Item, APHBaseCharacter* Character);
 	
 	void HandleItemEquipped(AEquippedObject* EquippedObject, AActor* Owner);
 	void HandleItemUnequipped(AEquippedObject* EquippedObject);

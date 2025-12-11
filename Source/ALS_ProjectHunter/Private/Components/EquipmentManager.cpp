@@ -9,6 +9,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Library/PHItemFunctionLibrary.h"
 #include "PHGameplayTags.h"
+#include "AbilitySystem/PHAttributeSet.h"
 #include "Library/PHDamageTypeUtils.h"
 
 UEquipmentManager::UEquipmentManager() { }
@@ -169,12 +170,14 @@ bool UEquipmentManager::TryToEquip(UBaseItem* Item, bool HasMesh)
 	else
 	{
 		UE_LOG(LogEquipmentManager, Warning, TEXT("=== TryToEquip Failed Requirements not met ==="));
-		bool WasAddedToInventoy = false;
-		 WasAddedToInventoy =  GetInventoryManager()->TryToAddItemToInventory(Item, false);
+
+		bool WasAddedToInventoy = GetInventoryManager()->TryToAddItemToInventory(Item, false);
+		
 		UE_LOG(LogEquipmentManager, Warning, TEXT("=== Trying to add to Inventory ==="));
 		if (WasAddedToInventoy)
 		{
 			UE_LOG(LogEquipmentManager, Warning, TEXT("=== Item added to Inventory ==="));
+			return true;
 		}
 		else
 		{
@@ -444,8 +447,7 @@ void UEquipmentManager::AttachItem(TSubclassOf<AEquippedObject> Class, UBaseItem
 		SpawnedActor->SetOwningCharacter(OwnerCharacter);
 		EquipmentData.Add(Slot, Item);
 		EquipmentItem.Add(Slot, SpawnedActor);
-
-		// Drive overlay from the item's equip data (DA-backed)
+		
 		if (Equip.OverlayState != EALSOverlayState::Default)
 		{
 			OwnerCharacter->SetOverlayState(Equip.OverlayState);
@@ -491,8 +493,160 @@ void UEquipmentManager::ApplyAllEquipmentStatsToAttributes(APHBaseCharacter* Cha
 
 void UEquipmentManager::ApplyItemStatBonuses(UEquippableItem* Item, APHBaseCharacter* Character)
 {
-}
+    if (!Item || !Character)
+    {
+        UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyItemStatBonuses: Invalid parameters"));
+        return;
+    }
 
+    UStatsManager* StatsManager = Character->GetStatsManager();
+    if (!StatsManager)
+    {
+        UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyItemStatBonuses: No StatsManager"));
+        return;
+    }
+
+    const UItemDefinitionAsset* ItemDefinition = Item->GetItemInfo();
+    if (!ItemDefinition)
+    {
+        UE_LOG(LogEquipmentManager, Warning, TEXT("ApplyItemStatBonuses: No ItemDefinition"));
+        return;
+    }
+
+    
+    FAppliedItemStats& AppliedStats = AppliedItemStats.FindOrAdd(Item);
+    AppliedStats.Stats.Empty();
+    AppliedStats.Values.Empty();
+	
+    auto ApplyStatWithFallback = [&](const FGameplayAttribute& Attribute, float Value, const FString& StatName)
+    {
+        if (FMath::IsNearlyZero(Value))
+        {
+            return;
+        }
+
+        // Try to get the effect class for this attribute
+        TSubclassOf<UGameplayEffect> EffectClass = StatsManager->GetEffectClassForAttribute(Attribute);
+        
+        if (EffectClass)
+        {
+           
+            FActiveGameplayEffectHandle Handle = StatsManager->ApplyFlatModifier(Attribute, Value, false);
+            
+            if (Handle.IsValid())
+            {
+                AppliedStats.Stats.Add(Attribute);
+                AppliedStats.Values.Add(Value);
+                UE_LOG(LogEquipmentManager, Log, TEXT("Applied %s via GE: %.2f"), *StatName, Value);
+            }
+            else
+            {
+                UE_LOG(LogEquipmentManager, Warning, TEXT("Failed to apply %s GE modifier"), *StatName);
+            }
+        }
+        else
+        {
+            // Fallback: Direct attribute modification (not recommended for multiplayer)
+            UE_LOG(LogEquipmentManager, Warning, TEXT("No effect class mapped for %s, using direct modification"), *StatName);
+            
+            float CurrentValue = StatsManager->GetAttributeBase(Attribute);
+            StatsManager->SetAttributeBase(Attribute, CurrentValue + Value);
+            
+            AppliedStats.Stats.Add(Attribute);
+            AppliedStats.Values.Add(Value);
+            UE_LOG(LogEquipmentManager, Log, TEXT("Applied %s directly: %.2f"), *StatName, Value);
+        }
+    };
+
+    // === Apply Base Armor/Weapon Stats ===
+    ApplyStatWithFallback(UPHAttributeSet::GetArmourAttribute(), 
+        ItemDefinition->Equip.ArmorBaseStats.Armor, TEXT("Armor"));
+    
+    ApplyStatWithFallback(UPHAttributeSet::GetPoiseAttribute(), 
+        ItemDefinition->Equip.ArmorBaseStats.Poise, TEXT("Poise"));
+    
+    ApplyStatWithFallback(UPHAttributeSet::GetCritChanceAttribute(), 
+        ItemDefinition->Equip.WeaponBaseStats.CritChance, TEXT("CritChance"));
+    
+    ApplyStatWithFallback(UPHAttributeSet::GetAttackSpeedAttribute(), 
+        ItemDefinition->Equip.WeaponBaseStats.AttackSpeed, TEXT("AttackSpeed"));
+    
+    ApplyStatWithFallback(UPHAttributeSet::GetAttackRangeAttribute(), 
+        ItemDefinition->Equip.WeaponBaseStats.WeaponRange, TEXT("WeaponRange"));
+
+    // === Apply Base Resistances ===
+    for (const TPair<EDefenseTypes, float>& Resistance : ItemDefinition->Equip.ArmorBaseStats.Resistances)
+    {
+        if (FMath::IsNearlyZero(Resistance.Value))
+        {
+            continue;
+        }
+
+        FGameplayAttribute ResistanceAttr;
+        FString ResistanceName;
+
+        switch (Resistance.Key)
+        {
+        case EDefenseTypes::DFT_FireResistance:
+            ResistanceAttr = UPHAttributeSet::GetFireResistanceFlatBonusAttribute();
+            ResistanceName = TEXT("FireResistance");
+            break;
+        case EDefenseTypes::DFT_IceResistance:
+            ResistanceAttr = UPHAttributeSet::GetIceResistanceFlatBonusAttribute();
+            ResistanceName = TEXT("IceResistance");
+            break;
+        case EDefenseTypes::DFT_LightningResistance:
+            ResistanceAttr = UPHAttributeSet::GetLightningResistanceFlatBonusAttribute();
+            ResistanceName = TEXT("LightningResistance");
+            break;
+        case EDefenseTypes::DFT_LightResistance:
+            ResistanceAttr = UPHAttributeSet::GetLightResistanceFlatBonusAttribute();
+            ResistanceName = TEXT("LightResistance");
+            break;
+        case EDefenseTypes::DFT_CorruptionResistance:
+            ResistanceAttr = UPHAttributeSet::GetCorruptionResistanceFlatBonusAttribute();
+            ResistanceName = TEXT("CorruptionResistance");
+            break;
+        default:
+            continue;
+        }
+
+        ApplyStatWithFallback(ResistanceAttr, Resistance.Value, ResistanceName);
+    }
+
+    // === Apply ALL Affix Stats (Generic) ===
+    const FPHItemStats& Stats = Item->GetFullItemStats();
+    const TArray<FPHAttributeData> AllStats = Stats.GetAllStats();
+
+    for (const FPHAttributeData& Attr : AllStats)
+    {
+      
+        if (Attr.bAffectsBaseWeaponStatsDirectly)
+        {
+            UE_LOG(LogEquipmentManager, Verbose, TEXT("Skipping weapon-local stat: %s"), 
+                *Attr.ModifiedAttribute.GetName());
+            continue;
+        }
+
+        const FGameplayAttribute& TargetAttr = Attr.ModifiedAttribute;
+        if (!TargetAttr.IsValid())
+        {
+            UE_LOG(LogEquipmentManager, Warning, TEXT("Invalid attribute in affix"));
+            continue;
+        }
+
+        const float RolledValue = Attr.RolledStatValue;
+        if (FMath::IsNearlyZero(RolledValue))
+        {
+            continue;
+        }
+
+        ApplyStatWithFallback(TargetAttr, RolledValue, TargetAttr.GetName());
+    }
+
+    UE_LOG(LogEquipmentManager, Log, TEXT("=== Applied %d stat bonuses for item: %s ==="), 
+        AppliedStats.Stats.Num(), *ItemDefinition->Base.ItemName.ToString());
+}
 
 void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, const APHBaseCharacter* Character)
 {
@@ -581,6 +735,10 @@ void UEquipmentManager::ApplyWeaponBaseDamage(UEquippableItem* WeaponItem, const
 
     // Verify the effects were applied
     UE_LOG(LogEquipmentManager, Log, TEXT("Total weapon effects applied: %d"), WeaponHandles.Handles.Num());
+}
+
+void UEquipmentManager::ApplyAffixesEffects(const UEquippableItem* Item, APHBaseCharacter* Character)
+{
 }
 
 // EquipmentManager.cpp

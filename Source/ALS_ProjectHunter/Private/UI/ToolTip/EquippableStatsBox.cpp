@@ -183,7 +183,7 @@ void UEquippableStatsBox::SetMinMaxForOtherStats()
             Box->SetVisibility(ESlateVisibility::Visible);
             if (bAsPercent)
             {
-                const int32 RoundedPercent = FMath::RoundToInt(Value * 100.f);
+                const int32 RoundedPercent = FMath::RoundToInt(Value);
                 TextBlock->SetText(FText::FromString(FString::Printf(TEXT("%d%%"), RoundedPercent)));
             }
             else
