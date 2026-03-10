@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 using UnrealBuildTool;
 
 public class ALS_ProjectHunter : ModuleRules
@@ -8,7 +6,8 @@ public class ALS_ProjectHunter : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { 
+		PublicDependencyModuleNames.AddRange(new string[]
+		{ 
 			"Core",
 			"CoreUObject",
 			"Engine",
@@ -20,38 +19,28 @@ public class ALS_ProjectHunter : ModuleRules
 			"Niagara",
 			"EnhancedInput",
 			"ALSV4_CPP",
-			"Paper2D" 
+			"Paper2D",
+			"UMG"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"Slate", 
-			"SlateCore", 
+			"Slate",
+			"SlateCore",
 			"GameplayTags",
-			"GameplayTasks",
-			"EditorFramework"
+			"GameplayTasks"
 		});
-		
 		
 		if (Target.bBuildEditor)
 		{
 			PrivateDependencyModuleNames.AddRange(new string[]
 			{
+				"EditorFramework",
 				"UnrealEd",
 				"EditorSubsystem",
 				"EditorWidgets",
-				"ToolMenus",
-				"EditorStyle", // For UE4
-				"EditorFramework" // For UE5
+				"ToolMenus"
 			});
 		}
-
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
-		
-		// Uncomment if you are using online features
-		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
-
-		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
 	}
 }

@@ -1,6 +1,8 @@
 // InventoryGrid.h
 #pragma once
 
+#include <functional>
+
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Border.h"

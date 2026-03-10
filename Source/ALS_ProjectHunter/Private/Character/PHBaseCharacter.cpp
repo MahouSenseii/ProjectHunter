@@ -54,17 +54,22 @@ void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 void APHBaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-	StatsManager->SetOwnerCharacter(this); 
+
+	if (IsValid(StatsManager))
+	{
+		StatsManager->SetOwnerCharacter(this);
+	}
+
 	InitAbilityActorInfo();
 	
 	CurrentController = Cast<APHPlayerController>(NewController);
-	if (CurrentController)
+	if (CurrentController && IsValid(CurrentController->InteractionManager))
 	{
 		CurrentController->InteractionManager->OnRemoveCurrentInteractable.AddDynamic(this, &APHBaseCharacter::CloseToolTip);
 		CurrentController->InteractionManager->OnNewInteractableAssigned.AddDynamic(this, &APHBaseCharacter::OpenToolTip);
 	}
 }
-
+    
 UAbilitySystemComponent* APHBaseCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
@@ -170,28 +175,57 @@ void APHBaseCharacter::InitAbilityActorInfo()
 {
 	if (!bIsPlayer)
 	{
+		if (!IsValid(AbilitySystemComponent))
+		{
+			UE_LOG(LogTemp, Error, TEXT("InitAbilityActorInfo failed: AbilitySystemComponent is null for NPC %s"), *GetName());
+			return;
+		}
+
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-		Cast<UPHAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
-		UPHAbilitySystemComponent* ASC =  Cast<UPHAbilitySystemComponent>(AbilitySystemComponent);
-		StatsManager->SetASC(Cast<UPHAbilitySystemComponent>(AbilitySystemComponent));
-		StatsManager->Initialize(); 
+
+		if (UPHAbilitySystemComponent* ASC = Cast<UPHAbilitySystemComponent>(AbilitySystemComponent))
+		{
+			ASC->AbilityActorInfoSet();
+
+			if (IsValid(StatsManager))
+			{
+				StatsManager->SetASC(ASC);
+				StatsManager->Initialize();
+			}
+		}
 	}
 	else
 	{
 		APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
-		check(LocalPlayerState);
+		if (!IsValid(LocalPlayerState))
+		{
+			UE_LOG(LogTemp, Error, TEXT("InitAbilityActorInfo failed: PlayerState is null for %s"), *GetName());
+			return;
+		}
 
-		
 		AbilitySystemComponent = LocalPlayerState->GetAbilitySystemComponent();
+		if (!IsValid(AbilitySystemComponent))
+		{
+			UE_LOG(LogTemp, Error, TEXT("InitAbilityActorInfo failed: PlayerState ASC is null for %s"), *GetName());
+			return;
+		}
+
 		AbilitySystemComponent->InitAbilityActorInfo(LocalPlayerState, this);
-		Cast<UPHAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
-		UPHAbilitySystemComponent* ASC =  Cast<UPHAbilitySystemComponent>(AbilitySystemComponent);
-		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-		Context.AddSourceObject(this);
-		StatsManager->SetASC(ASC);
-		
-		StatsManager->Initialize();
-		
+
+		if (UPHAbilitySystemComponent* ASC = Cast<UPHAbilitySystemComponent>(AbilitySystemComponent))
+		{
+			ASC->AbilityActorInfoSet();
+
+			FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+			Context.AddSourceObject(this);
+
+			if (IsValid(StatsManager))
+			{
+				StatsManager->SetASC(ASC);
+				StatsManager->Initialize();
+			}
+		}
+
 		AttributeSet = LocalPlayerState->GetAttributeSet();
 
 		if (AALSPlayerController* PHPlayerController = Cast<AALSPlayerController>(GetController()))
@@ -250,7 +284,6 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 	AItemPickup* PickupItem = Cast<AItemPickup>(InteractableManager->GetOwner());
 	if (!PickupItem) return;
 
-	// Close existing tooltip
 	if (CurrentToolTip)
 	{
 		CurrentToolTip->RemoveFromParent();
@@ -271,13 +304,23 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 	if (!ToolTipWidget) return;
 
 	UBaseItem* ItemObject = PickupItem->CreateItemObject(GetTransientPackage());
-	if(PickupItem->ObjItem)
+	if (!IsValid(ItemObject))
+	{
+		UE_LOG(LogTemp, Error, TEXT("OpenToolTip failed: CreateItemObject returned null for pickup %s"), *GetNameSafe(PickupItem));
+		return;
+	}
+
+	if (PickupItem->ObjItem)
 	{
 		ItemObject->ItemDefinition = PickupItem->ObjItem->ItemDefinition;
 	}
-	if (!ItemObject) return;
 
-    
+	if (!IsValid(ItemObject->ItemDefinition))
+	{
+		UE_LOG(LogTemp, Error, TEXT("OpenToolTip failed: ItemDefinition is null for pickup %s"), *GetNameSafe(PickupItem));
+		return;
+	}
+
 	if (AEquipmentPickup* EquipPickup = Cast<AEquipmentPickup>(PickupItem))
 	{
 		ItemObject->RuntimeData = EquipPickup->InstanceData;
@@ -292,39 +335,31 @@ void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
 			EquipToolTip->SetOwnerCharacter(this);
 		}
         
-		//  Get the player controller
 		APHPlayerController* PC = Cast<APHPlayerController>(GetController());
 		if (!PC)
 		{
-			UE_LOG(LogTemp, Error, TEXT("❌ Controller is not APHPlayerController"));
+			UE_LOG(LogTemp, Error, TEXT("Controller is not APHPlayerController"));
 			return;
 		}
 
-		//  Get the HUD
 		APHHUD* HUD = Cast<APHHUD>(PC->GetHUD());
 		if (!HUD)
 		{
-			UE_LOG(LogTemp, Error, TEXT("❌ HUD is null! Make sure BP_PHHUD is set in your GameMode"));
+			UE_LOG(LogTemp, Error, TEXT("HUD is null. Make sure BP_PHHUD is set in your GameMode"));
 			return;
 		}
 
-		// ✅ Get or create the tooltip canvas (lazy initialization)
 		UCanvasPanel* Canvas = HUD->GetOrCreateTooltipCanvas();
 		if (Canvas)
 		{
-			// Add to the HUD's canvas panel
 			Canvas->AddChildToCanvas(ToolTip);
-			
-			// Now position it (Slot will be valid!)
 			ToolTip->PositionAtBottomRight(FVector2D(20.0f, 20.0f));
-			
 			CurrentToolTip = ToolTip;
-			UE_LOG(LogTemp, Log, TEXT("✅ Tooltip added to HUD canvas successfully"));
+			UE_LOG(LogTemp, Log, TEXT("Tooltip added to HUD canvas successfully"));
 		}
 		else
 		{
-			// Fallback: Add directly to viewport
-			UE_LOG(LogTemp, Warning, TEXT("⚠️ Canvas is null, falling back to AddToViewport"));
+			UE_LOG(LogTemp, Warning, TEXT("Canvas is null, falling back to AddToViewport"));
 			ToolTip->AddToViewport(100);
 			ToolTip->PositionAtBottomRight(FVector2D(20.0f, 20.0f));
 			CurrentToolTip = ToolTip;

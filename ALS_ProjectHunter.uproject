@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.5",
+	"EngineAssociation": "5.7",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -14,8 +14,7 @@
 				"GameplayAbilities",
 				"UMG",
 				"CoreUObject",
-				"EnhancedInput",
-				"Blutility"
+				"EnhancedInput"
 			]
 		}
 	],
@@ -32,13 +31,12 @@
 			"Enabled": true
 		},
 		{
-			"Name": "SkeletalMeshModelingTools",
+			"Name": "Paper2D",
 			"Enabled": true
 		},
 		{
-			"Name": "DungeonArchitect",
-			"Enabled": true,
-			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/1a4ad2a06f174a26af8a29728241ce42"
+			"Name": "SkeletalMeshModelingTools",
+			"Enabled": true
 		}
 	]
 }

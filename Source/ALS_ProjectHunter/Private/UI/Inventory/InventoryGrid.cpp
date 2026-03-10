@@ -1,5 +1,8 @@
 // InventoryGrid.cpp
 #include "UI/Inventory/InventoryGrid.h"
+
+#include <functional>
+
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/DragDropOperation.h"
 #include "Layout/Geometry.h"
