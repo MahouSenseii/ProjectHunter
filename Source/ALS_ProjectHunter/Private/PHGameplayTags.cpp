@@ -2,7 +2,7 @@
 
 #include "PHGameplayTags.h"
 #include "GameplayTagsManager.h"
-#include "AbilitySystem/PHAttributeSet.h"
+#include "AbilitySystem/HunterAttributeSet.h"
 
 
 
@@ -845,85 +845,85 @@ void FPHGameplayTags::RegisterAttributeToTagMappings()
     // ===========================
     // Base Damage Attributes
     // ===========================
-    AttributeToTagMap.Add(UPHAttributeSet::GetMinPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MinPhysicalDamage);
-    AttributeToTagMap.Add(UPHAttributeSet::GetMaxPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MaxPhysicalDamage);
-    AttributeToTagMap.Add(UPHAttributeSet::GetMinFireDamageAttribute(),       Attributes_Secondary_Damages_MinFireDamage);
-    AttributeToTagMap.Add(UPHAttributeSet::GetMaxFireDamageAttribute(),       Attributes_Secondary_Damages_MaxFireDamage);
-    AttributeToTagMap.Add(UPHAttributeSet::GetMinIceDamageAttribute(),        Attributes_Secondary_Damages_MinIceDamage);
-    AttributeToTagMap.Add(UPHAttributeSet::GetMaxIceDamageAttribute(),        Attributes_Secondary_Damages_MaxIceDamage);
-    AttributeToTagMap.Add(UPHAttributeSet::GetMinLightningDamageAttribute(),  Attributes_Secondary_Damages_MinLightningDamage);
-    AttributeToTagMap.Add(UPHAttributeSet::GetMaxLightningDamageAttribute(),  Attributes_Secondary_Damages_MaxLightningDamage);
-    AttributeToTagMap.Add(UPHAttributeSet::GetMinLightDamageAttribute(),      Attributes_Secondary_Damages_MinLightDamage);
-    AttributeToTagMap.Add(UPHAttributeSet::GetMaxLightDamageAttribute(),      Attributes_Secondary_Damages_MaxLightDamage);
-    AttributeToTagMap.Add(UPHAttributeSet::GetMinCorruptionDamageAttribute(), Attributes_Secondary_Damages_MinCorruptionDamage);
-    AttributeToTagMap.Add(UPHAttributeSet::GetMaxCorruptionDamageAttribute(), Attributes_Secondary_Damages_MaxCorruptionDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMinPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MinPhysicalDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MaxPhysicalDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMinFireDamageAttribute(),       Attributes_Secondary_Damages_MinFireDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxFireDamageAttribute(),       Attributes_Secondary_Damages_MaxFireDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMinIceDamageAttribute(),        Attributes_Secondary_Damages_MinIceDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxIceDamageAttribute(),        Attributes_Secondary_Damages_MaxIceDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMinLightningDamageAttribute(),  Attributes_Secondary_Damages_MinLightningDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxLightningDamageAttribute(),  Attributes_Secondary_Damages_MaxLightningDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMinLightDamageAttribute(),      Attributes_Secondary_Damages_MinLightDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxLightDamageAttribute(),      Attributes_Secondary_Damages_MaxLightDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMinCorruptionDamageAttribute(), Attributes_Secondary_Damages_MinCorruptionDamage);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxCorruptionDamageAttribute(), Attributes_Secondary_Damages_MaxCorruptionDamage);
     
     // ===========================
     // Primary Attributes
     // ===========================
-    AttributeToTagMap.Add(UPHAttributeSet::GetStrengthAttribute(),     Attributes_Primary_Strength);
-    AttributeToTagMap.Add(UPHAttributeSet::GetIntelligenceAttribute(), Attributes_Primary_Intelligence);
-    AttributeToTagMap.Add(UPHAttributeSet::GetDexterityAttribute(),    Attributes_Primary_Dexterity);
-    AttributeToTagMap.Add(UPHAttributeSet::GetEnduranceAttribute(),    Attributes_Primary_Endurance);
-    AttributeToTagMap.Add(UPHAttributeSet::GetAfflictionAttribute(),   Attributes_Primary_Affliction);
-    AttributeToTagMap.Add(UPHAttributeSet::GetLuckAttribute(),         Attributes_Primary_Luck);
-    AttributeToTagMap.Add(UPHAttributeSet::GetCovenantAttribute(),     Attributes_Primary_Covenant);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetStrengthAttribute(),     Attributes_Primary_Strength);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetIntelligenceAttribute(), Attributes_Primary_Intelligence);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetDexterityAttribute(),    Attributes_Primary_Dexterity);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetEnduranceAttribute(),    Attributes_Primary_Endurance);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetAfflictionAttribute(),   Attributes_Primary_Affliction);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetLuckAttribute(),         Attributes_Primary_Luck);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetCovenantAttribute(),     Attributes_Primary_Covenant);
     
     // ===========================
     // Defense Attributes
     // ===========================
-    AttributeToTagMap.Add(UPHAttributeSet::GetArmourAttribute(),    Attributes_Secondary_Resistances_Armour);
-    AttributeToTagMap.Add(UPHAttributeSet::GetPoiseAttribute(),     Attributes_Secondary_Misc_Poise);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetArmourAttribute(),    Attributes_Secondary_Resistances_Armour);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetPoiseAttribute(),     Attributes_Secondary_Misc_Poise);
     
     // ===========================
     // Resistance Attributes (Flat Bonus)
     // ===========================
-    AttributeToTagMap.Add(UPHAttributeSet::GetFireResistanceFlatBonusAttribute(),       Attributes_Secondary_Resistances_FireResistanceFlat);
-    AttributeToTagMap.Add(UPHAttributeSet::GetIceResistanceFlatBonusAttribute(),        Attributes_Secondary_Resistances_IceResistanceFlat);
-    AttributeToTagMap.Add(UPHAttributeSet::GetLightningResistanceFlatBonusAttribute(),  Attributes_Secondary_Resistances_LightningResistanceFlat);
-    AttributeToTagMap.Add(UPHAttributeSet::GetLightResistanceFlatBonusAttribute(),      Attributes_Secondary_Resistances_LightResistanceFlat);
-    AttributeToTagMap.Add(UPHAttributeSet::GetCorruptionResistanceFlatBonusAttribute(), Attributes_Secondary_Resistances_CorruptionResistanceFlat);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetFireResistanceFlatBonusAttribute(),       Attributes_Secondary_Resistances_FireResistanceFlat);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetIceResistanceFlatBonusAttribute(),        Attributes_Secondary_Resistances_IceResistanceFlat);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetLightningResistanceFlatBonusAttribute(),  Attributes_Secondary_Resistances_LightningResistanceFlat);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetLightResistanceFlatBonusAttribute(),      Attributes_Secondary_Resistances_LightResistanceFlat);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetCorruptionResistanceFlatBonusAttribute(), Attributes_Secondary_Resistances_CorruptionResistanceFlat);
     
     // ===========================
     // Combat Attributes
     // ===========================
-    AttributeToTagMap.Add(UPHAttributeSet::GetCritChanceAttribute(),    Attributes_Secondary_Misc_CritChance);
-    AttributeToTagMap.Add(UPHAttributeSet::GetAttackSpeedAttribute(),   Attributes_Secondary_Offensive_AttackSpeed);
-    AttributeToTagMap.Add(UPHAttributeSet::GetCastSpeedAttribute(),     Attributes_Secondary_Offensive_CastSpeed);
-    AttributeToTagMap.Add(UPHAttributeSet::GetAttackRangeAttribute(),   Attributes_Secondary_Offensive_AttackRange);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetCritChanceAttribute(),    Attributes_Secondary_Misc_CritChance);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetAttackSpeedAttribute(),   Attributes_Secondary_Offensive_AttackSpeed);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetCastSpeedAttribute(),     Attributes_Secondary_Offensive_CastSpeed);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetAttackRangeAttribute(),   Attributes_Secondary_Offensive_AttackRange);
     
     // ===========================
     // Resource Cost Attributes
     // ===========================
-    AttributeToTagMap.Add(UPHAttributeSet::GetManaCostChangesAttribute(),    Attributes_Secondary_Misc_ManaCostChanges);
-    AttributeToTagMap.Add(UPHAttributeSet::GetStaminaCostChangesAttribute(), Attributes_Secondary_Misc_StaminaCostChanges);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetManaCostChangesAttribute(),    Attributes_Secondary_Misc_ManaCostChanges);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetStaminaCostChangesAttribute(), Attributes_Secondary_Misc_StaminaCostChanges);
     
     // ===========================
     // Flat Damage Bonus Attributes
     // ===========================
-    AttributeToTagMap.Add(UPHAttributeSet::GetPhysicalFlatBonusAttribute(),   Attributes_Secondary_BonusDamage_PhysicalFlatBonus);
-    AttributeToTagMap.Add(UPHAttributeSet::GetFireFlatBonusAttribute(),       Attributes_Secondary_BonusDamage_FireFlatBonus);
-    AttributeToTagMap.Add(UPHAttributeSet::GetIceFlatBonusAttribute(),        Attributes_Secondary_BonusDamage_IceFlatBonus);
-    AttributeToTagMap.Add(UPHAttributeSet::GetLightningFlatBonusAttribute(),  Attributes_Secondary_BonusDamage_LightningFlatBonus);
-    AttributeToTagMap.Add(UPHAttributeSet::GetLightFlatBonusAttribute(),      Attributes_Secondary_BonusDamage_LightFlatBonus);
-    AttributeToTagMap.Add(UPHAttributeSet::GetCorruptionFlatBonusAttribute(), Attributes_Secondary_BonusDamage_CorruptionFlatBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetPhysicalFlatDamageAttribute(),   Attributes_Secondary_BonusDamage_PhysicalFlatBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetFireFlatDamageAttribute(),       Attributes_Secondary_BonusDamage_FireFlatBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetIceFlatDamageAttribute(),        Attributes_Secondary_BonusDamage_IceFlatBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetLightningFlatDamageAttribute(),  Attributes_Secondary_BonusDamage_LightningFlatBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetLightFlatDamageAttribute(),      Attributes_Secondary_BonusDamage_LightFlatBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetCorruptionFlatDamageAttribute(), Attributes_Secondary_BonusDamage_CorruptionFlatBonus);
     
     // ===========================
     // Percent Damage Bonus Attributes
     // ===========================
-    AttributeToTagMap.Add(UPHAttributeSet::GetPhysicalPercentBonusAttribute(),   Attributes_Secondary_BonusDamage_PhysicalFlatBonus);
-    AttributeToTagMap.Add(UPHAttributeSet::GetFirePercentBonusAttribute(),       Attributes_Secondary_BonusDamage_FirePercentBonus);
-    AttributeToTagMap.Add(UPHAttributeSet::GetIcePercentBonusAttribute(),        Attributes_Secondary_BonusDamage_IcePercentBonus);
-    AttributeToTagMap.Add(UPHAttributeSet::GetLightningPercentBonusAttribute(),  Attributes_Secondary_BonusDamage_LightningPercentBonus);
-    AttributeToTagMap.Add(UPHAttributeSet::GetLightPercentBonusAttribute(),      Attributes_Secondary_BonusDamage_LightPercentBonus);
-    AttributeToTagMap.Add(UPHAttributeSet::GetCorruptionPercentBonusAttribute(), Attributes_Secondary_BonusDamage_CorruptionPercentBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetPhysicalPercentDamageAttribute(),   Attributes_Secondary_BonusDamage_PhysicalFlatBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetFirePercentDamageAttribute(),       Attributes_Secondary_BonusDamage_FirePercentBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetIcePercentDamageAttribute(),        Attributes_Secondary_BonusDamage_IcePercentBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetLightningPercentDamageAttribute(),  Attributes_Secondary_BonusDamage_LightningPercentBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetLightPercentDamageAttribute(),      Attributes_Secondary_BonusDamage_LightPercentBonus);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetCorruptionPercentDamageAttribute(), Attributes_Secondary_BonusDamage_CorruptionPercentBonus);
     
 
-    AttributeToTagMap.Add(UPHAttributeSet::GetCritChanceAttribute(), Attributes_Secondary_Misc_CritChance);
-    AttributeToTagMap.Add(UPHAttributeSet::GetStrengthAttribute(),   Attributes_Primary_Strength);
-    AttributeToTagMap.Add(UPHAttributeSet::GetIntelligenceAttribute(), Attributes_Primary_Intelligence);
-    AttributeToTagMap.Add(UPHAttributeSet::GetDexterityAttribute(),  Attributes_Primary_Dexterity);
-    AttributeToTagMap.Add(UPHAttributeSet::GetArmourAttribute(),     Attributes_Secondary_Resistances_Armour);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetCritChanceAttribute(), Attributes_Secondary_Misc_CritChance);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetStrengthAttribute(),   Attributes_Primary_Strength);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetIntelligenceAttribute(), Attributes_Primary_Intelligence);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetDexterityAttribute(),  Attributes_Primary_Dexterity);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetArmourAttribute(),     Attributes_Secondary_Resistances_Armour);
 }
 
 
@@ -932,7 +932,7 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Empty();
 
     // Safety check - ensure AttributeSet is ready
-    if (!UPHAttributeSet::GetHealthAttribute().IsValid())
+    if (!UHunterAttributeSet::GetHealthAttribute().IsValid())
     {
         UE_LOG(LogTemp, Error, TEXT("❌ AttributeSet not ready - skipping tag mappings"));
         return;
@@ -943,107 +943,107 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     // ===========================
     // Vitals - Current Values 
     // ===========================
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Health")), UPHAttributeSet::GetHealthAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Mana")), UPHAttributeSet::GetManaAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Stamina")), UPHAttributeSet::GetStaminaAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Health")), UHunterAttributeSet::GetHealthAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Mana")), UHunterAttributeSet::GetManaAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Stamina")), UHunterAttributeSet::GetStaminaAttribute());
 
     // ===========================
     // Vitals - Max Values 
     // ===========================
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxHealth")), UPHAttributeSet::GetMaxHealthAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxMana")), UPHAttributeSet::GetMaxManaAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxStamina")), UPHAttributeSet::GetMaxStaminaAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ArcaneShield")), UPHAttributeSet::GetArcaneShieldAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxArcaneShield")), UPHAttributeSet::GetMaxArcaneShieldAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxHealth")), UHunterAttributeSet::GetMaxHealthAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxMana")), UHunterAttributeSet::GetMaxManaAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxStamina")), UHunterAttributeSet::GetMaxStaminaAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ArcaneShield")), UHunterAttributeSet::GetArcaneShieldAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxArcaneShield")), UHunterAttributeSet::GetMaxArcaneShieldAttribute());
 
     // ===========================
     // Damage Types
     // ===========================
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.GlobalBonus")), UPHAttributeSet::GetGlobalDamagesAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.GlobalBonus")), UHunterAttributeSet::GetGlobalDamagesAttribute());
     
     // Max Damage
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Physical")), UPHAttributeSet::GetMaxPhysicalDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Fire")), UPHAttributeSet::GetMaxFireDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Ice")), UPHAttributeSet::GetMaxIceDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Lightning")), UPHAttributeSet::GetMaxLightningDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Light")), UPHAttributeSet::GetMaxLightDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Corruption")), UPHAttributeSet::GetMaxCorruptionDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Physical")), UHunterAttributeSet::GetMaxPhysicalDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Fire")), UHunterAttributeSet::GetMaxFireDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Ice")), UHunterAttributeSet::GetMaxIceDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Lightning")), UHunterAttributeSet::GetMaxLightningDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Light")), UHunterAttributeSet::GetMaxLightDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Corruption")), UHunterAttributeSet::GetMaxCorruptionDamageAttribute());
 
     // Min Damage
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Physical")), UPHAttributeSet::GetMinPhysicalDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Fire")), UPHAttributeSet::GetMinFireDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Ice")), UPHAttributeSet::GetMinIceDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Lightning")), UPHAttributeSet::GetMinLightningDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Light")), UPHAttributeSet::GetMinLightDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Corruption")), UPHAttributeSet::GetMinCorruptionDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Physical")), UHunterAttributeSet::GetMinPhysicalDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Fire")), UHunterAttributeSet::GetMinFireDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Ice")), UHunterAttributeSet::GetMinIceDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Lightning")), UHunterAttributeSet::GetMinLightningDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Light")), UHunterAttributeSet::GetMinLightDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Corruption")), UHunterAttributeSet::GetMinCorruptionDamageAttribute());
 
     // ===========================
     // Damage Bonuses
     // ===========================
     
     // Flat Damage Bonuses
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Physical")), UPHAttributeSet::GetPhysicalFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Fire")), UPHAttributeSet::GetFireFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Ice")), UPHAttributeSet::GetIceFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Lightning")), UPHAttributeSet::GetLightningFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Light")), UPHAttributeSet::GetLightFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Corruption")), UPHAttributeSet::GetCorruptionFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Physical")), UHunterAttributeSet::GetPhysicalFlatDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Fire")), UHunterAttributeSet::GetFireFlatDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Ice")), UHunterAttributeSet::GetIceFlatDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Lightning")), UHunterAttributeSet::GetLightningFlatDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Light")), UHunterAttributeSet::GetLightFlatDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Corruption")), UHunterAttributeSet::GetCorruptionFlatDamageAttribute());
 
     // Percent Damage Bonuses
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Physical")), UPHAttributeSet::GetPhysicalPercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Fire")), UPHAttributeSet::GetFirePercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Ice")), UPHAttributeSet::GetIcePercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Lightning")), UPHAttributeSet::GetLightningPercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Light")), UPHAttributeSet::GetLightPercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Corruption")), UPHAttributeSet::GetCorruptionPercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Physical")), UHunterAttributeSet::GetPhysicalPercentDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Fire")), UHunterAttributeSet::GetFirePercentDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Ice")), UHunterAttributeSet::GetIcePercentDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Lightning")), UHunterAttributeSet::GetLightningPercentDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Light")), UHunterAttributeSet::GetLightPercentDamageAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Corruption")), UHunterAttributeSet::GetCorruptionPercentDamageAttribute());
 
     // ===========================
     // Resistances
     // ===========================
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.GlobalDefenses")), UPHAttributeSet::GetGlobalDefensesAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.GlobalDefenses")), UHunterAttributeSet::GetGlobalDefensesAttribute());
     
     // Flat Resistances
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour.Flat")), UPHAttributeSet::GetArmourFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Fire.Flat")), UPHAttributeSet::GetFireResistanceFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Ice.Flat")), UPHAttributeSet::GetIceResistanceFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Lightning.Flat")), UPHAttributeSet::GetLightningResistanceFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Light.Flat")), UPHAttributeSet::GetLightResistanceFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Corruption.Flat")), UPHAttributeSet::GetCorruptionResistanceFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour.Flat")), UHunterAttributeSet::GetArmourFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Fire.Flat")), UHunterAttributeSet::GetFireResistanceFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Ice.Flat")), UHunterAttributeSet::GetIceResistanceFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Lightning.Flat")), UHunterAttributeSet::GetLightningResistanceFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Light.Flat")), UHunterAttributeSet::GetLightResistanceFlatBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Corruption.Flat")), UHunterAttributeSet::GetCorruptionResistanceFlatBonusAttribute());
 
     // Percent Resistances
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour.Percent")), UPHAttributeSet::GetArmourPercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Fire.Percent")), UPHAttributeSet::GetFireResistancePercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Ice.Percent")), UPHAttributeSet::GetIceResistancePercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Lightning.Percent")), UPHAttributeSet::GetLightningResistancePercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Light.Percent")), UPHAttributeSet::GetLightResistancePercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Corruption.Percent")), UPHAttributeSet::GetCorruptionResistancePercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour.Percent")), UHunterAttributeSet::GetArmourPercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Fire.Percent")), UHunterAttributeSet::GetFireResistancePercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Ice.Percent")), UHunterAttributeSet::GetIceResistancePercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Lightning.Percent")), UHunterAttributeSet::GetLightningResistancePercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Light.Percent")), UHunterAttributeSet::GetLightResistancePercentBonusAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Corruption.Percent")), UHunterAttributeSet::GetCorruptionResistancePercentBonusAttribute());
 
     // ===========================
     // Primary Stats
     // ===========================
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Strength")), UPHAttributeSet::GetStrengthAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Intelligence")), UPHAttributeSet::GetIntelligenceAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Dexterity")), UPHAttributeSet::GetDexterityAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Endurance")), UPHAttributeSet::GetEnduranceAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Affliction")), UPHAttributeSet::GetAfflictionAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Luck")), UPHAttributeSet::GetLuckAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Covenant")), UPHAttributeSet::GetCovenantAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Strength")), UHunterAttributeSet::GetStrengthAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Intelligence")), UHunterAttributeSet::GetIntelligenceAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Dexterity")), UHunterAttributeSet::GetDexterityAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Endurance")), UHunterAttributeSet::GetEnduranceAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Affliction")), UHunterAttributeSet::GetAfflictionAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Luck")), UHunterAttributeSet::GetLuckAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Covenant")), UHunterAttributeSet::GetCovenantAttribute());
 
     // ===========================
     // Regeneration
     // ===========================
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.HealthRegenAmount")), UPHAttributeSet::GetHealthRegenAmountAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.HealthRegenRate")), UPHAttributeSet::GetHealthRegenRateAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ManaRegenAmount")), UPHAttributeSet::GetManaRegenAmountAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ManaRegenRate")), UPHAttributeSet::GetManaRegenRateAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaRegenAmount")), UPHAttributeSet::GetStaminaRegenAmountAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaRegenRate")), UPHAttributeSet::GetStaminaRegenRateAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.HealthRegenAmount")), UHunterAttributeSet::GetHealthRegenAmountAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.HealthRegenRate")), UHunterAttributeSet::GetHealthRegenRateAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ManaRegenAmount")), UHunterAttributeSet::GetManaRegenAmountAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ManaRegenRate")), UHunterAttributeSet::GetManaRegenRateAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaRegenAmount")), UHunterAttributeSet::GetStaminaRegenAmountAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaRegenRate")), UHunterAttributeSet::GetStaminaRegenRateAttribute());
 
     // ===========================
     // Degeneration
     // ===========================
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaDegenAmount")), UPHAttributeSet::GetStaminaDegenAmountAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaDegenRate")), UPHAttributeSet::GetStaminaDegenRateAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaDegenAmount")), UHunterAttributeSet::GetStaminaDegenAmountAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaDegenRate")), UHunterAttributeSet::GetStaminaDegenRateAttribute());
 
     UE_LOG(LogTemp, Log, TEXT("✓ Tag-to-Attribute mappings initialized with %d entries"), TagToAttributeMap.Num());
 }
@@ -1064,24 +1064,24 @@ FGameplayAttribute FPHGameplayTags::GetAttributeFromTag(const FGameplayTag& Tag)
 void FPHGameplayTags::RegisterStatusEffectAttributes()
 {
 	// Chances → FGameplayAttribute
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToBleed,     UPHAttributeSet::GetChanceToBleedAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToIgnite,    UPHAttributeSet::GetChanceToIgniteAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToFreeze,    UPHAttributeSet::GetChanceToFreezeAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToShock,     UPHAttributeSet::GetChanceToShockAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToStun,      UPHAttributeSet::GetChanceToStunAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToKnockBack, UPHAttributeSet::GetChanceToKnockBackAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToPetrify,   UPHAttributeSet::GetChanceToPetrifyAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToPurify,    UPHAttributeSet::GetChanceToPurifyAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToCorrupt,   UPHAttributeSet::GetChanceToCorruptAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToBleed,     UHunterAttributeSet::GetChanceToBleedAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToIgnite,    UHunterAttributeSet::GetChanceToIgniteAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToFreeze,    UHunterAttributeSet::GetChanceToFreezeAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToShock,     UHunterAttributeSet::GetChanceToShockAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToStun,      UHunterAttributeSet::GetChanceToStunAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToKnockBack, UHunterAttributeSet::GetChanceToKnockBackAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToPetrify,   UHunterAttributeSet::GetChanceToPetrifyAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToPurify,    UHunterAttributeSet::GetChanceToPurifyAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToCorrupt,   UHunterAttributeSet::GetChanceToCorruptAttribute());
 
 	// Durations → FGameplayAttribute
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Bleed,          UPHAttributeSet::GetBleedDurationAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Burn,           UPHAttributeSet::GetBurnDurationAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Freeze,         UPHAttributeSet::GetFreezeDurationAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Shock,          UPHAttributeSet::GetShockDurationAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Corruption,     UPHAttributeSet::GetCorruptionDurationAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_PetrifyBuildUp, UPHAttributeSet::GetPetrifyBuildUpDurationAttribute());
-	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Purify,         UPHAttributeSet::GetPurifyDurationAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Bleed,          UHunterAttributeSet::GetBleedDurationAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Burn,           UHunterAttributeSet::GetBurnDurationAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Freeze,         UHunterAttributeSet::GetFreezeDurationAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Shock,          UHunterAttributeSet::GetShockDurationAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Corruption,     UHunterAttributeSet::GetCorruptionDurationAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_PetrifyBuildUp, UHunterAttributeSet::GetPetrifyBuildUpDurationAttribute());
+	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Purify,         UHunterAttributeSet::GetPurifyDurationAttribute());
 }
 
 void FPHGameplayTags::RegisterMinMaxTagMap()
@@ -1115,39 +1115,39 @@ void FPHGameplayTags::RegisterMinMaxTagMap()
 
 void FPHGameplayTags::RegisterFlatDamageAttributes()
 {
-	FlatDamageToAttributesMap.Add("Physical",   UPHAttributeSet::GetPhysicalFlatBonusAttribute());
-	FlatDamageToAttributesMap.Add("Fire",       UPHAttributeSet::GetFireFlatBonusAttribute());
-	FlatDamageToAttributesMap.Add("Ice",        UPHAttributeSet::GetIceFlatBonusAttribute());
-	FlatDamageToAttributesMap.Add("Lightning",  UPHAttributeSet::GetLightningFlatBonusAttribute());
-	FlatDamageToAttributesMap.Add("Light",      UPHAttributeSet::GetLightFlatBonusAttribute());
-	FlatDamageToAttributesMap.Add("Corruption", UPHAttributeSet::GetCorruptionFlatBonusAttribute());
+	FlatDamageToAttributesMap.Add("Physical",   UHunterAttributeSet::GetPhysicalFlatDamageAttribute());
+	FlatDamageToAttributesMap.Add("Fire",       UHunterAttributeSet::GetFireFlatDamageAttribute());
+	FlatDamageToAttributesMap.Add("Ice",        UHunterAttributeSet::GetIceFlatDamageAttribute());
+	FlatDamageToAttributesMap.Add("Lightning",  UHunterAttributeSet::GetLightningFlatDamageAttribute());
+	FlatDamageToAttributesMap.Add("Light",      UHunterAttributeSet::GetLightFlatDamageAttribute());
+	FlatDamageToAttributesMap.Add("Corruption", UHunterAttributeSet::GetCorruptionFlatDamageAttribute());
 }
 
 void FPHGameplayTags::RegisterPercentDamageAttributes()
 {
-	PercentDamageToAttributesMap.Add("Physical",   UPHAttributeSet::GetPhysicalPercentBonusAttribute());
-	PercentDamageToAttributesMap.Add("Fire",       UPHAttributeSet::GetFirePercentBonusAttribute());
-	PercentDamageToAttributesMap.Add("Ice",        UPHAttributeSet::GetIcePercentBonusAttribute());
-	PercentDamageToAttributesMap.Add("Lightning",  UPHAttributeSet::GetLightningPercentBonusAttribute());
-	PercentDamageToAttributesMap.Add("Light",      UPHAttributeSet::GetLightPercentBonusAttribute());
-	PercentDamageToAttributesMap.Add("Corruption", UPHAttributeSet::GetCorruptionPercentBonusAttribute());
+	PercentDamageToAttributesMap.Add("Physical",   UHunterAttributeSet::GetPhysicalPercentDamageAttribute());
+	PercentDamageToAttributesMap.Add("Fire",       UHunterAttributeSet::GetFirePercentDamageAttribute());
+	PercentDamageToAttributesMap.Add("Ice",        UHunterAttributeSet::GetIcePercentDamageAttribute());
+	PercentDamageToAttributesMap.Add("Lightning",  UHunterAttributeSet::GetLightningPercentDamageAttribute());
+	PercentDamageToAttributesMap.Add("Light",      UHunterAttributeSet::GetLightPercentDamageAttribute());
+	PercentDamageToAttributesMap.Add("Corruption", UHunterAttributeSet::GetCorruptionPercentDamageAttribute());
 }
 
 void FPHGameplayTags::RegisterBaseDamageAttributes()
 {
-	BaseDamageToAttributesMap.Add("Min Physical",   UPHAttributeSet::GetMinPhysicalDamageAttribute());
-	BaseDamageToAttributesMap.Add("Min Fire",       UPHAttributeSet::GetMinFireDamageAttribute());
-	BaseDamageToAttributesMap.Add("Min Ice",        UPHAttributeSet::GetMinIceDamageAttribute());
-	BaseDamageToAttributesMap.Add("Min Lightning",  UPHAttributeSet::GetMinLightningDamageAttribute());
-	BaseDamageToAttributesMap.Add("Min Light",      UPHAttributeSet::GetMinLightDamageAttribute());
-	BaseDamageToAttributesMap.Add("Min Corruption", UPHAttributeSet::GetMinCorruptionDamageAttribute());
+	BaseDamageToAttributesMap.Add("Min Physical",   UHunterAttributeSet::GetMinPhysicalDamageAttribute());
+	BaseDamageToAttributesMap.Add("Min Fire",       UHunterAttributeSet::GetMinFireDamageAttribute());
+	BaseDamageToAttributesMap.Add("Min Ice",        UHunterAttributeSet::GetMinIceDamageAttribute());
+	BaseDamageToAttributesMap.Add("Min Lightning",  UHunterAttributeSet::GetMinLightningDamageAttribute());
+	BaseDamageToAttributesMap.Add("Min Light",      UHunterAttributeSet::GetMinLightDamageAttribute());
+	BaseDamageToAttributesMap.Add("Min Corruption", UHunterAttributeSet::GetMinCorruptionDamageAttribute());
 
-	BaseDamageToAttributesMap.Add("Max Physical",   UPHAttributeSet::GetMaxPhysicalDamageAttribute());
-	BaseDamageToAttributesMap.Add("Max Fire",       UPHAttributeSet::GetMaxFireDamageAttribute());
-	BaseDamageToAttributesMap.Add("Max Ice",        UPHAttributeSet::GetMaxIceDamageAttribute());
-	BaseDamageToAttributesMap.Add("Max Lightning",  UPHAttributeSet::GetMaxLightningDamageAttribute());
-	BaseDamageToAttributesMap.Add("Max Light",      UPHAttributeSet::GetMaxLightDamageAttribute());
-	BaseDamageToAttributesMap.Add("Max Corruption", UPHAttributeSet::GetMaxCorruptionDamageAttribute());
+	BaseDamageToAttributesMap.Add("Max Physical",   UHunterAttributeSet::GetMaxPhysicalDamageAttribute());
+	BaseDamageToAttributesMap.Add("Max Fire",       UHunterAttributeSet::GetMaxFireDamageAttribute());
+	BaseDamageToAttributesMap.Add("Max Ice",        UHunterAttributeSet::GetMaxIceDamageAttribute());
+	BaseDamageToAttributesMap.Add("Max Lightning",  UHunterAttributeSet::GetMaxLightningDamageAttribute());
+	BaseDamageToAttributesMap.Add("Max Light",      UHunterAttributeSet::GetMaxLightDamageAttribute());
+	BaseDamageToAttributesMap.Add("Max Corruption", UHunterAttributeSet::GetMaxCorruptionDamageAttribute());
 }
 
 void FPHGameplayTags::RegisterAllAttribute()
@@ -1180,261 +1180,261 @@ void FPHGameplayTags::RegisterAllAttribute()
 	// ===========================
 	// Primary
 	// ===========================
-	Add(TEXT("Attributes.Primary.Strength"),      UPHAttributeSet::GetStrengthAttribute());
-	Add(TEXT("Attributes.Primary.Intelligence"),  UPHAttributeSet::GetIntelligenceAttribute());
-	Add(TEXT("Attributes.Primary.Dexterity"),     UPHAttributeSet::GetDexterityAttribute());
-	Add(TEXT("Attributes.Primary.Endurance"),     UPHAttributeSet::GetEnduranceAttribute());
-	Add(TEXT("Attributes.Primary.Affliction"),    UPHAttributeSet::GetAfflictionAttribute());
-	Add(TEXT("Attributes.Primary.Luck"),          UPHAttributeSet::GetLuckAttribute());
-	Add(TEXT("Attributes.Primary.Covenant"),      UPHAttributeSet::GetCovenantAttribute());
+	Add(TEXT("Attributes.Primary.Strength"),      UHunterAttributeSet::GetStrengthAttribute());
+	Add(TEXT("Attributes.Primary.Intelligence"),  UHunterAttributeSet::GetIntelligenceAttribute());
+	Add(TEXT("Attributes.Primary.Dexterity"),     UHunterAttributeSet::GetDexterityAttribute());
+	Add(TEXT("Attributes.Primary.Endurance"),     UHunterAttributeSet::GetEnduranceAttribute());
+	Add(TEXT("Attributes.Primary.Affliction"),    UHunterAttributeSet::GetAfflictionAttribute());
+	Add(TEXT("Attributes.Primary.Luck"),          UHunterAttributeSet::GetLuckAttribute());
+	Add(TEXT("Attributes.Primary.Covenant"),      UHunterAttributeSet::GetCovenantAttribute());
 
 	// ===========================
 	// Vitals (current values)
 	// ===========================
-	Add(TEXT("Attributes.Vital.Health"),   UPHAttributeSet::GetHealthAttribute());
-	Add(TEXT("Attributes.Vital.Mana"),     UPHAttributeSet::GetManaAttribute());
-	Add(TEXT("Attributes.Vital.Stamina"),  UPHAttributeSet::GetStaminaAttribute());
+	Add(TEXT("Attributes.Vital.Health"),   UHunterAttributeSet::GetHealthAttribute());
+	Add(TEXT("Attributes.Vital.Mana"),     UHunterAttributeSet::GetManaAttribute());
+	Add(TEXT("Attributes.Vital.Stamina"),  UHunterAttributeSet::GetStaminaAttribute());
 
 	// ===========================
 	// Secondary → Vitals: Health
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Vital.MaxHealth"),               UPHAttributeSet::GetMaxHealthAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveHealth"),      UPHAttributeSet::GetMaxEffectiveHealthAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.HealthRegenRate"),         UPHAttributeSet::GetHealthRegenRateAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.HealthRegenAmount"),       UPHAttributeSet::GetHealthRegenAmountAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxHealthRegenRate"),      UPHAttributeSet::GetMaxHealthRegenRateAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxHealthRegenAmount"),    UPHAttributeSet::GetMaxHealthRegenAmountAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.HealthReservedAmount"),    UPHAttributeSet::GetReservedHealthAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxHealthReservedAmount"), UPHAttributeSet::GetMaxReservedHealthAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.HealthFlatReservedAmount"),UPHAttributeSet::GetFlatReservedHealthAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.HealthPercentageReserved"),UPHAttributeSet::GetPercentageReservedHealthAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxHealth"),               UHunterAttributeSet::GetMaxHealthAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveHealth"),      UHunterAttributeSet::GetMaxEffectiveHealthAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.HealthRegenRate"),         UHunterAttributeSet::GetHealthRegenRateAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.HealthRegenAmount"),       UHunterAttributeSet::GetHealthRegenAmountAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxHealthRegenRate"),      UHunterAttributeSet::GetMaxHealthRegenRateAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxHealthRegenAmount"),    UHunterAttributeSet::GetMaxHealthRegenAmountAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.HealthReservedAmount"),    UHunterAttributeSet::GetReservedHealthAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxHealthReservedAmount"), UHunterAttributeSet::GetMaxReservedHealthAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.HealthFlatReservedAmount"),UHunterAttributeSet::GetFlatReservedHealthAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.HealthPercentageReserved"),UHunterAttributeSet::GetPercentageReservedHealthAttribute());
 
 	// ===========================
 	// Secondary → Vitals: Mana
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Vital.MaxMana"),               UPHAttributeSet::GetMaxManaAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveMana"),      UPHAttributeSet::GetMaxEffectiveManaAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.ManaRegenRate"),         UPHAttributeSet::GetManaRegenRateAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.ManaRegenAmount"),       UPHAttributeSet::GetManaRegenAmountAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxManaRegenRate"),      UPHAttributeSet::GetMaxManaRegenRateAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxManaRegenAmount"),    UPHAttributeSet::GetMaxManaRegenAmountAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.ManaReservedAmount"),    UPHAttributeSet::GetReservedManaAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxManaReservedAmount"), UPHAttributeSet::GetMaxReservedManaAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.ManaFlatReservedAmount"),UPHAttributeSet::GetFlatReservedManaAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.ManaPercentageReserved"),UPHAttributeSet::GetPercentageReservedManaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxMana"),               UHunterAttributeSet::GetMaxManaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveMana"),      UHunterAttributeSet::GetMaxEffectiveManaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.ManaRegenRate"),         UHunterAttributeSet::GetManaRegenRateAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.ManaRegenAmount"),       UHunterAttributeSet::GetManaRegenAmountAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxManaRegenRate"),      UHunterAttributeSet::GetMaxManaRegenRateAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxManaRegenAmount"),    UHunterAttributeSet::GetMaxManaRegenAmountAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.ManaReservedAmount"),    UHunterAttributeSet::GetReservedManaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxManaReservedAmount"), UHunterAttributeSet::GetMaxReservedManaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.ManaFlatReservedAmount"),UHunterAttributeSet::GetFlatReservedManaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.ManaPercentageReserved"),UHunterAttributeSet::GetPercentageReservedManaAttribute());
 
 	// ===========================
 	// Secondary → Vitals: Stamina
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Vital.MaxStamina"),               UPHAttributeSet::GetMaxStaminaAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveStamina"),      UPHAttributeSet::GetMaxEffectiveStaminaAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.StaminaRegenRate"),         UPHAttributeSet::GetStaminaRegenRateAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.StaminaRegenAmount"),       UPHAttributeSet::GetStaminaRegenAmountAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxStaminaRegenRate"),      UPHAttributeSet::GetMaxStaminaRegenRateAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxStaminaRegenAmount"),    UPHAttributeSet::GetMaxStaminaRegenAmountAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.StaminaReservedAmount"),    UPHAttributeSet::GetReservedStaminaAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxStaminaReservedAmount"), UPHAttributeSet::GetMaxReservedStaminaAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.StaminaFlatReservedAmount"),UPHAttributeSet::GetFlatReservedStaminaAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.StaminaPercentageReserved"),UPHAttributeSet::GetPercentageReservedStaminaAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.StaminaDegenRate"),         UPHAttributeSet::GetStaminaDegenRateAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.StaminaDegenAmount"),       UPHAttributeSet::GetStaminaDegenAmountAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxStamina"),               UHunterAttributeSet::GetMaxStaminaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveStamina"),      UHunterAttributeSet::GetMaxEffectiveStaminaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.StaminaRegenRate"),         UHunterAttributeSet::GetStaminaRegenRateAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.StaminaRegenAmount"),       UHunterAttributeSet::GetStaminaRegenAmountAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxStaminaRegenRate"),      UHunterAttributeSet::GetMaxStaminaRegenRateAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxStaminaRegenAmount"),    UHunterAttributeSet::GetMaxStaminaRegenAmountAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.StaminaReservedAmount"),    UHunterAttributeSet::GetReservedStaminaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxStaminaReservedAmount"), UHunterAttributeSet::GetMaxReservedStaminaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.StaminaFlatReservedAmount"),UHunterAttributeSet::GetFlatReservedStaminaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.StaminaPercentageReserved"),UHunterAttributeSet::GetPercentageReservedStaminaAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.StaminaDegenRate"),         UHunterAttributeSet::GetStaminaDegenRateAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.StaminaDegenAmount"),       UHunterAttributeSet::GetStaminaDegenAmountAttribute());
 
 	// ===========================
 	// Secondary → Vitals: Arcane Shield
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Vital.ArcaneShield"),                 UPHAttributeSet::GetArcaneShieldAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxArcaneShield"),              UPHAttributeSet::GetMaxArcaneShieldAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveArcaneShield"),     UPHAttributeSet::GetMaxEffectiveArcaneShieldAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldRegenRate"),        UPHAttributeSet::GetArcaneShieldRegenRateAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldRegenAmount"),      UPHAttributeSet::GetArcaneShieldRegenAmountAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxArcaneShieldRegenRate"),     UPHAttributeSet::GetMaxArcaneShieldRegenRateAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxArcaneShieldRegenAmount"),   UPHAttributeSet::GetMaxArcaneShieldRegenAmountAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldReservedAmount"),   UPHAttributeSet::GetReservedArcaneShieldAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.MaxArcaneShieldReservedAmount"),UPHAttributeSet::GetMaxReservedArcaneShieldAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldFlatReservedAmount"),UPHAttributeSet::GetFlatReservedArcaneShieldAttribute());
-	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldPercentageReserved"),UPHAttributeSet::GetPercentageReservedArcaneShieldAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.ArcaneShield"),                 UHunterAttributeSet::GetArcaneShieldAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxArcaneShield"),              UHunterAttributeSet::GetMaxArcaneShieldAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveArcaneShield"),     UHunterAttributeSet::GetMaxEffectiveArcaneShieldAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldRegenRate"),        UHunterAttributeSet::GetArcaneShieldRegenRateAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldRegenAmount"),      UHunterAttributeSet::GetArcaneShieldRegenAmountAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxArcaneShieldRegenRate"),     UHunterAttributeSet::GetMaxArcaneShieldRegenRateAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxArcaneShieldRegenAmount"),   UHunterAttributeSet::GetMaxArcaneShieldRegenAmountAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldReservedAmount"),   UHunterAttributeSet::GetReservedArcaneShieldAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.MaxArcaneShieldReservedAmount"),UHunterAttributeSet::GetMaxReservedArcaneShieldAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldFlatReservedAmount"),UHunterAttributeSet::GetFlatReservedArcaneShieldAttribute());
+	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldPercentageReserved"),UHunterAttributeSet::GetPercentageReservedArcaneShieldAttribute());
 
 	// ===========================
 	// Damage (min/max)
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Damage.Min.Physical"),   UPHAttributeSet::GetMinPhysicalDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Max.Physical"),   UPHAttributeSet::GetMaxPhysicalDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Min.Fire"),       UPHAttributeSet::GetMinFireDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Max.Fire"),       UPHAttributeSet::GetMaxFireDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Min.Ice"),        UPHAttributeSet::GetMinIceDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Max.Ice"),        UPHAttributeSet::GetMaxIceDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Min.Light"),      UPHAttributeSet::GetMinLightDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Max.Light"),      UPHAttributeSet::GetMaxLightDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Min.Lightning"),  UPHAttributeSet::GetMinLightningDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Max.Lightning"),  UPHAttributeSet::GetMaxLightningDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Min.Corruption"), UPHAttributeSet::GetMinCorruptionDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Max.Corruption"), UPHAttributeSet::GetMaxCorruptionDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Min.Physical"),   UHunterAttributeSet::GetMinPhysicalDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Max.Physical"),   UHunterAttributeSet::GetMaxPhysicalDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Min.Fire"),       UHunterAttributeSet::GetMinFireDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Max.Fire"),       UHunterAttributeSet::GetMaxFireDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Min.Ice"),        UHunterAttributeSet::GetMinIceDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Max.Ice"),        UHunterAttributeSet::GetMaxIceDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Min.Light"),      UHunterAttributeSet::GetMinLightDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Max.Light"),      UHunterAttributeSet::GetMaxLightDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Min.Lightning"),  UHunterAttributeSet::GetMinLightningDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Max.Lightning"),  UHunterAttributeSet::GetMaxLightningDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Min.Corruption"), UHunterAttributeSet::GetMinCorruptionDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Max.Corruption"), UHunterAttributeSet::GetMaxCorruptionDamageAttribute());
 
 	// Damage (flat/percent + global)
-	Add(TEXT("Attributes.Secondary.Damage.GlobalBonus"),       UPHAttributeSet::GetGlobalDamagesAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Flat.Physical"),     UPHAttributeSet::GetPhysicalFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Percent.Physical"),  UPHAttributeSet::GetPhysicalPercentBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Flat.Fire"),         UPHAttributeSet::GetFireFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Percent.Fire"),      UPHAttributeSet::GetFirePercentBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Flat.Ice"),          UPHAttributeSet::GetIceFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Percent.Ice"),       UPHAttributeSet::GetIcePercentBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Flat.Light"),        UPHAttributeSet::GetLightFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Percent.Light"),     UPHAttributeSet::GetLightPercentBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Flat.Lightning"),    UPHAttributeSet::GetLightningFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Percent.Lightning"), UPHAttributeSet::GetLightningPercentBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Flat.Corruption"),   UPHAttributeSet::GetCorruptionFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Damage.Percent.Corruption"),UPHAttributeSet::GetCorruptionPercentBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.GlobalBonus"),       UHunterAttributeSet::GetGlobalDamagesAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Flat.Physical"),     UHunterAttributeSet::GetPhysicalFlatDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Percent.Physical"),  UHunterAttributeSet::GetPhysicalPercentDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Flat.Fire"),         UHunterAttributeSet::GetFireFlatDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Percent.Fire"),      UHunterAttributeSet::GetFirePercentDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Flat.Ice"),          UHunterAttributeSet::GetIceFlatDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Percent.Ice"),       UHunterAttributeSet::GetIcePercentDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Flat.Light"),        UHunterAttributeSet::GetLightFlatDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Percent.Light"),     UHunterAttributeSet::GetLightPercentDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Flat.Lightning"),    UHunterAttributeSet::GetLightningFlatDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Percent.Lightning"), UHunterAttributeSet::GetLightningPercentDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Flat.Corruption"),   UHunterAttributeSet::GetCorruptionFlatDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Damage.Percent.Corruption"),UHunterAttributeSet::GetCorruptionPercentDamageAttribute());
 
 	// ===========================
 	// Resistances
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Resistance.GlobalDefenses"),   UPHAttributeSet::GetGlobalDefensesAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.BlockStrength"),    UPHAttributeSet::GetBlockStrengthAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Armour"),           UPHAttributeSet::GetArmourAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Armour.Flat"),      UPHAttributeSet::GetArmourFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Armour.Percent"),   UPHAttributeSet::GetArmourPercentBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.GlobalDefenses"),   UHunterAttributeSet::GetGlobalDefensesAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.BlockStrength"),    UHunterAttributeSet::GetBlockStrengthAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Armour"),           UHunterAttributeSet::GetArmourAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Armour.Flat"),      UHunterAttributeSet::GetArmourFlatBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Armour.Percent"),   UHunterAttributeSet::GetArmourPercentBonusAttribute());
 
-	Add(TEXT("Attributes.Secondary.Resistance.Fire.Flat"),        UPHAttributeSet::GetFireResistanceFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Fire.Percent"),     UPHAttributeSet::GetFireResistancePercentBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Fire.Max"),         UPHAttributeSet::GetMaxFireResistanceAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Fire.Flat"),        UHunterAttributeSet::GetFireResistanceFlatBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Fire.Percent"),     UHunterAttributeSet::GetFireResistancePercentBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Fire.Max"),         UHunterAttributeSet::GetMaxFireResistanceAttribute());
 
-	Add(TEXT("Attributes.Secondary.Resistance.Ice.Flat"),         UPHAttributeSet::GetIceResistanceFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Ice.Percent"),      UPHAttributeSet::GetIceResistancePercentBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Ice.Max"),          UPHAttributeSet::GetMaxIceResistanceAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Ice.Flat"),         UHunterAttributeSet::GetIceResistanceFlatBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Ice.Percent"),      UHunterAttributeSet::GetIceResistancePercentBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Ice.Max"),          UHunterAttributeSet::GetMaxIceResistanceAttribute());
 
-	Add(TEXT("Attributes.Secondary.Resistance.Light.Flat"),       UPHAttributeSet::GetLightResistanceFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Light.Percent"),    UPHAttributeSet::GetLightResistancePercentBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Light.Max"),        UPHAttributeSet::GetMaxLightResistanceAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Light.Flat"),       UHunterAttributeSet::GetLightResistanceFlatBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Light.Percent"),    UHunterAttributeSet::GetLightResistancePercentBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Light.Max"),        UHunterAttributeSet::GetMaxLightResistanceAttribute());
 
-	Add(TEXT("Attributes.Secondary.Resistance.Lightning.Flat"),   UPHAttributeSet::GetLightningResistanceFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Lightning.Percent"),UPHAttributeSet::GetLightningResistancePercentBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Lightning.Max"),    UPHAttributeSet::GetMaxLightningResistanceAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Lightning.Flat"),   UHunterAttributeSet::GetLightningResistanceFlatBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Lightning.Percent"),UHunterAttributeSet::GetLightningResistancePercentBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Lightning.Max"),    UHunterAttributeSet::GetMaxLightningResistanceAttribute());
 
-	Add(TEXT("Attributes.Secondary.Resistance.Corruption.Flat"),  UPHAttributeSet::GetCorruptionResistanceFlatBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Corruption.Percent"),UPHAttributeSet::GetCorruptionResistancePercentBonusAttribute());
-	Add(TEXT("Attributes.Secondary.Resistance.Corruption.Max"),   UPHAttributeSet::GetMaxCorruptionResistanceAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Corruption.Flat"),  UHunterAttributeSet::GetCorruptionResistanceFlatBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Corruption.Percent"),UHunterAttributeSet::GetCorruptionResistancePercentBonusAttribute());
+	Add(TEXT("Attributes.Secondary.Resistance.Corruption.Max"),   UHunterAttributeSet::GetMaxCorruptionResistanceAttribute());
 
 	// ===========================
 	// Offensive
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Offensive.AreaDamage"),                 UPHAttributeSet::GetAreaDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.AreaOfEffect"),               UPHAttributeSet::GetAreaOfEffectAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.AttackRange"),                UPHAttributeSet::GetAttackRangeAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.AttackSpeed"),                UPHAttributeSet::GetAttackSpeedAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.CastSpeed"),                  UPHAttributeSet::GetCastSpeedAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.CritChance"),                 UPHAttributeSet::GetCritChanceAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.CritMultiplier"),             UPHAttributeSet::GetCritMultiplierAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.DamageOverTime"),             UPHAttributeSet::GetDamageOverTimeAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.ElementalDamage"),            UPHAttributeSet::GetElementalDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.MeleeDamage"),                UPHAttributeSet::GetMeleeDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.Spelldamage"),                UPHAttributeSet::GetSpellDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.ProjectileCount"),            UPHAttributeSet::GetProjectileCountAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.ProjectileSpeed"),            UPHAttributeSet::GetProjectileSpeedAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.RangedDamage"),               UPHAttributeSet::GetRangedDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.SpellsCritChance"),           UPHAttributeSet::GetSpellsCritChanceAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.SpellsCritMultiplier"),       UPHAttributeSet::GetSpellsCritMultiplierAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.ChainCount"),                 UPHAttributeSet::GetChainCountAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.ForkCount"),                  UPHAttributeSet::GetForkCountAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.ChainDamage"),                UPHAttributeSet::GetChainDamageAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.DamageBonusWhileAtFullHP"),   UPHAttributeSet::GetDamageBonusWhileAtFullHPAttribute());
-	Add(TEXT("Attributes.Secondary.Offensive.DamageBonusWhileAtLowHP"),    UPHAttributeSet::GetDamageBonusWhileAtLowHPAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.AreaDamage"),                 UHunterAttributeSet::GetAreaDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.AreaOfEffect"),               UHunterAttributeSet::GetAreaOfEffectAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.AttackRange"),                UHunterAttributeSet::GetAttackRangeAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.AttackSpeed"),                UHunterAttributeSet::GetAttackSpeedAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.CastSpeed"),                  UHunterAttributeSet::GetCastSpeedAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.CritChance"),                 UHunterAttributeSet::GetCritChanceAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.CritMultiplier"),             UHunterAttributeSet::GetCritMultiplierAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.DamageOverTime"),             UHunterAttributeSet::GetDamageOverTimeAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.ElementalDamage"),            UHunterAttributeSet::GetElementalDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.MeleeDamage"),                UHunterAttributeSet::GetMeleeDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.Spelldamage"),                UHunterAttributeSet::GetSpellDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.ProjectileCount"),            UHunterAttributeSet::GetProjectileCountAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.ProjectileSpeed"),            UHunterAttributeSet::GetProjectileSpeedAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.RangedDamage"),               UHunterAttributeSet::GetRangedDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.SpellsCritChance"),           UHunterAttributeSet::GetSpellsCritChanceAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.SpellsCritMultiplier"),       UHunterAttributeSet::GetSpellsCritMultiplierAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.ChainCount"),                 UHunterAttributeSet::GetChainCountAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.ForkCount"),                  UHunterAttributeSet::GetForkCountAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.ChainDamage"),                UHunterAttributeSet::GetChainDamageAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.DamageBonusWhileAtFullHP"),   UHunterAttributeSet::GetDamageBonusWhileAtFullHPAttribute());
+	Add(TEXT("Attributes.Secondary.Offensive.DamageBonusWhileAtLowHP"),    UHunterAttributeSet::GetDamageBonusWhileAtLowHPAttribute());
 
 	// ===========================
 	// Piercing
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Piercing.Armour"),     UPHAttributeSet::GetArmourPiercingAttribute());
-	Add(TEXT("Attributes.Secondary.Piercing.Fire"),       UPHAttributeSet::GetFirePiercingAttribute());
-	Add(TEXT("Attributes.Secondary.Piercing.Ice"),        UPHAttributeSet::GetIcePiercingAttribute());
-	Add(TEXT("Attributes.Secondary.Piercing.Light"),      UPHAttributeSet::GetLightPiercingAttribute());
-	Add(TEXT("Attributes.Secondary.Piercing.Lightning"),  UPHAttributeSet::GetLightningPiercingAttribute());
-	Add(TEXT("Attributes.Secondary.Piercing.Corruption"), UPHAttributeSet::GetCorruptionPiercingAttribute());
+	Add(TEXT("Attributes.Secondary.Piercing.Armour"),     UHunterAttributeSet::GetArmourPiercingAttribute());
+	Add(TEXT("Attributes.Secondary.Piercing.Fire"),       UHunterAttributeSet::GetFirePiercingAttribute());
+	Add(TEXT("Attributes.Secondary.Piercing.Ice"),        UHunterAttributeSet::GetIcePiercingAttribute());
+	Add(TEXT("Attributes.Secondary.Piercing.Light"),      UHunterAttributeSet::GetLightPiercingAttribute());
+	Add(TEXT("Attributes.Secondary.Piercing.Lightning"),  UHunterAttributeSet::GetLightningPiercingAttribute());
+	Add(TEXT("Attributes.Secondary.Piercing.Corruption"), UHunterAttributeSet::GetCorruptionPiercingAttribute());
 
 	// ===========================
 	// Reflection
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Reflection.Physical"),       UPHAttributeSet::GetReflectPhysicalAttribute());
-	Add(TEXT("Attributes.Secondary.Reflection.Elemental"),      UPHAttributeSet::GetReflectElementalAttribute());
-	Add(TEXT("Attributes.Secondary.Reflection.ChancePhysical"), UPHAttributeSet::GetReflectChancePhysicalAttribute());
-	Add(TEXT("Attributes.Secondary.Reflection.ChanceElemental"),UPHAttributeSet::GetReflectChanceElementalAttribute());
+	Add(TEXT("Attributes.Secondary.Reflection.Physical"),       UHunterAttributeSet::GetReflectPhysicalAttribute());
+	Add(TEXT("Attributes.Secondary.Reflection.Elemental"),      UHunterAttributeSet::GetReflectElementalAttribute());
+	Add(TEXT("Attributes.Secondary.Reflection.ChancePhysical"), UHunterAttributeSet::GetReflectChancePhysicalAttribute());
+	Add(TEXT("Attributes.Secondary.Reflection.ChanceElemental"),UHunterAttributeSet::GetReflectChanceElementalAttribute());
 
 	// ===========================
 	// Damage Conversions
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToFire"),        UPHAttributeSet::GetPhysicalToFireAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToIce"),         UPHAttributeSet::GetPhysicalToIceAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToLightning"),   UPHAttributeSet::GetPhysicalToLightningAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToLight"),       UPHAttributeSet::GetPhysicalToLightAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToCorruption"),  UPHAttributeSet::GetPhysicalToCorruptionAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToFire"),        UHunterAttributeSet::GetPhysicalToFireAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToIce"),         UHunterAttributeSet::GetPhysicalToIceAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToLightning"),   UHunterAttributeSet::GetPhysicalToLightningAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToLight"),       UHunterAttributeSet::GetPhysicalToLightAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToCorruption"),  UHunterAttributeSet::GetPhysicalToCorruptionAttribute());
 
-	Add(TEXT("Attributes.Secondary.Conversion.FireToPhysical"),        UPHAttributeSet::GetFireToPhysicalAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.FireToIce"),             UPHAttributeSet::GetFireToIceAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.FireToLightning"),       UPHAttributeSet::GetFireToLightningAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.FireToLight"),           UPHAttributeSet::GetFireToLightAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.FireToCorruption"),      UPHAttributeSet::GetFireToCorruptionAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.FireToPhysical"),        UHunterAttributeSet::GetFireToPhysicalAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.FireToIce"),             UHunterAttributeSet::GetFireToIceAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.FireToLightning"),       UHunterAttributeSet::GetFireToLightningAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.FireToLight"),           UHunterAttributeSet::GetFireToLightAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.FireToCorruption"),      UHunterAttributeSet::GetFireToCorruptionAttribute());
 
-	Add(TEXT("Attributes.Secondary.Conversion.IceToPhysical"),         UPHAttributeSet::GetIceToPhysicalAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.IceToFire"),             UPHAttributeSet::GetIceToFireAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.IceToLightning"),        UPHAttributeSet::GetIceToLightningAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.IceToLight"),            UPHAttributeSet::GetIceToLightAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.IceToCorruption"),       UPHAttributeSet::GetIceToCorruptionAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.IceToPhysical"),         UHunterAttributeSet::GetIceToPhysicalAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.IceToFire"),             UHunterAttributeSet::GetIceToFireAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.IceToLightning"),        UHunterAttributeSet::GetIceToLightningAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.IceToLight"),            UHunterAttributeSet::GetIceToLightAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.IceToCorruption"),       UHunterAttributeSet::GetIceToCorruptionAttribute());
 
-	Add(TEXT("Attributes.Secondary.Conversion.LightningToPhysical"),   UPHAttributeSet::GetLightningToPhysicalAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.LightningToFire"),       UPHAttributeSet::GetLightningToFireAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.LightningToIce"),        UPHAttributeSet::GetLightningToIceAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.LightningToLight"),      UPHAttributeSet::GetLightningToLightAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.LightningToCorruption"), UPHAttributeSet::GetLightningToCorruptionAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.LightningToPhysical"),   UHunterAttributeSet::GetLightningToPhysicalAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.LightningToFire"),       UHunterAttributeSet::GetLightningToFireAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.LightningToIce"),        UHunterAttributeSet::GetLightningToIceAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.LightningToLight"),      UHunterAttributeSet::GetLightningToLightAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.LightningToCorruption"), UHunterAttributeSet::GetLightningToCorruptionAttribute());
 
-	Add(TEXT("Attributes.Secondary.Conversion.LightToPhysical"),       UPHAttributeSet::GetLightToPhysicalAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.LightToFire"),           UPHAttributeSet::GetLightToFireAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.LightToIce"),            UPHAttributeSet::GetLightToIceAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.LightToLightning"),      UPHAttributeSet::GetLightToLightningAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.LightToCorruption"),     UPHAttributeSet::GetLightToCorruptionAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.LightToPhysical"),       UHunterAttributeSet::GetLightToPhysicalAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.LightToFire"),           UHunterAttributeSet::GetLightToFireAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.LightToIce"),            UHunterAttributeSet::GetLightToIceAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.LightToLightning"),      UHunterAttributeSet::GetLightToLightningAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.LightToCorruption"),     UHunterAttributeSet::GetLightToCorruptionAttribute());
 
-	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToPhysical"),  UPHAttributeSet::GetCorruptionToPhysicalAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToFire"),      UPHAttributeSet::GetCorruptionToFireAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToIce"),       UPHAttributeSet::GetCorruptionToIceAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToLightning"), UPHAttributeSet::GetCorruptionToLightningAttribute());
-	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToLight"),     UPHAttributeSet::GetCorruptionToLightAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToPhysical"),  UHunterAttributeSet::GetCorruptionToPhysicalAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToFire"),      UHunterAttributeSet::GetCorruptionToFireAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToIce"),       UHunterAttributeSet::GetCorruptionToIceAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToLightning"), UHunterAttributeSet::GetCorruptionToLightningAttribute());
+	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToLight"),     UHunterAttributeSet::GetCorruptionToLightAttribute());
 
 	// ===========================
 	// Misc
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Money.Gems"),           UPHAttributeSet::GetGemsAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.Poise"),           UPHAttributeSet::GetPoiseAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.Weight"),          UPHAttributeSet::GetWeightAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.StunRecovery"),    UPHAttributeSet::GetStunRecoveryAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.MovementSpeed"),   UPHAttributeSet::GetMovementSpeedAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.CoolDown"),        UPHAttributeSet::GetCoolDownAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.ManaCostChanges"), UPHAttributeSet::GetManaCostChangesAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.LifeLeech"),       UPHAttributeSet::GetLifeLeechAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.ManaLeech"),       UPHAttributeSet::GetManaLeechAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.LifeOnHit"),       UPHAttributeSet::GetLifeOnHitAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.ManaOnHit"),       UPHAttributeSet::GetManaOnHitAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.StaminaOnHit"),    UPHAttributeSet::GetStaminaOnHitAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.StaminaCostChanges"),UPHAttributeSet::GetStaminaCostChangesAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.CritChance"),      UPHAttributeSet::GetCritChanceAttribute());     // mirrors Misc tag
-	Add(TEXT("Attributes.Secondary.Misc.CritMultiplier"),  UPHAttributeSet::GetCritMultiplierAttribute()); // mirrors Misc tag
+	Add(TEXT("Attributes.Secondary.Money.Gems"),           UHunterAttributeSet::GetGemsAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.Poise"),           UHunterAttributeSet::GetPoiseAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.Weight"),          UHunterAttributeSet::GetWeightAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.StunRecovery"),    UHunterAttributeSet::GetStunRecoveryAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.MovementSpeed"),   UHunterAttributeSet::GetMovementSpeedAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.CoolDown"),        UHunterAttributeSet::GetCooldownAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.ManaCostChanges"), UHunterAttributeSet::GetManaCostChangesAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.LifeLeech"),       UHunterAttributeSet::GetLifeLeechAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.ManaLeech"),       UHunterAttributeSet::GetManaLeechAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.LifeOnHit"),       UHunterAttributeSet::GetLifeOnHitAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.ManaOnHit"),       UHunterAttributeSet::GetManaOnHitAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.StaminaOnHit"),    UHunterAttributeSet::GetStaminaOnHitAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.StaminaCostChanges"),UHunterAttributeSet::GetStaminaCostChangesAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.CritChance"),      UHunterAttributeSet::GetCritChanceAttribute());     // mirrors Misc tag
+	Add(TEXT("Attributes.Secondary.Misc.CritMultiplier"),  UHunterAttributeSet::GetCritMultiplierAttribute()); // mirrors Misc tag
 
 	// ===========================
 	// Status Effects (aliases)
 	// ===========================
-	Add(TEXT("Attributes.Secondary.Ailments.ChanceToBleed"),     UPHAttributeSet::GetChanceToBleedAttribute());
-	Add(TEXT("Attributes.Secondary.Ailments.ChanceToIgnite"),    UPHAttributeSet::GetChanceToIgniteAttribute());
-	Add(TEXT("Attributes.Secondary.Ailments.ChanceToFreeze"),    UPHAttributeSet::GetChanceToFreezeAttribute());
-	Add(TEXT("Attributes.Secondary.Ailments.ChanceToShock"),     UPHAttributeSet::GetChanceToShockAttribute());
-	Add(TEXT("Attributes.Secondary.Ailments.ChanceToStun"),      UPHAttributeSet::GetChanceToStunAttribute());
-	Add(TEXT("Attributes.Secondary.Ailments.ChanceToKnockBack"), UPHAttributeSet::GetChanceToKnockBackAttribute());
-	Add(TEXT("Attributes.Secondary.Ailments.ChanceToPetrify"),   UPHAttributeSet::GetChanceToPetrifyAttribute());
-	Add(TEXT("Attributes.Secondary.Ailments.ChanceToPurify"),    UPHAttributeSet::GetChanceToPurifyAttribute());
-	Add(TEXT("Attributes.Secondary.Ailments.ChanceToCorrupt"),   UPHAttributeSet::GetChanceToCorruptAttribute());
+	Add(TEXT("Attributes.Secondary.Ailments.ChanceToBleed"),     UHunterAttributeSet::GetChanceToBleedAttribute());
+	Add(TEXT("Attributes.Secondary.Ailments.ChanceToIgnite"),    UHunterAttributeSet::GetChanceToIgniteAttribute());
+	Add(TEXT("Attributes.Secondary.Ailments.ChanceToFreeze"),    UHunterAttributeSet::GetChanceToFreezeAttribute());
+	Add(TEXT("Attributes.Secondary.Ailments.ChanceToShock"),     UHunterAttributeSet::GetChanceToShockAttribute());
+	Add(TEXT("Attributes.Secondary.Ailments.ChanceToStun"),      UHunterAttributeSet::GetChanceToStunAttribute());
+	Add(TEXT("Attributes.Secondary.Ailments.ChanceToKnockBack"), UHunterAttributeSet::GetChanceToKnockBackAttribute());
+	Add(TEXT("Attributes.Secondary.Ailments.ChanceToPetrify"),   UHunterAttributeSet::GetChanceToPetrifyAttribute());
+	Add(TEXT("Attributes.Secondary.Ailments.ChanceToPurify"),    UHunterAttributeSet::GetChanceToPurifyAttribute());
+	Add(TEXT("Attributes.Secondary.Ailments.ChanceToCorrupt"),   UHunterAttributeSet::GetChanceToCorruptAttribute());
 
-	Add(TEXT("Attributes.Secondary.Duration.Bleed"),          UPHAttributeSet::GetBleedDurationAttribute());
-	Add(TEXT("Attributes.Secondary.Duration.Burn"),           UPHAttributeSet::GetBurnDurationAttribute());
-	Add(TEXT("Attributes.Secondary.Duration.Freeze"),         UPHAttributeSet::GetFreezeDurationAttribute());
-	Add(TEXT("Attributes.Secondary.Duration.Shock"),          UPHAttributeSet::GetShockDurationAttribute());
-	Add(TEXT("Attributes.Secondary.Duration.Corruption"),     UPHAttributeSet::GetCorruptionDurationAttribute());
-	Add(TEXT("Attributes.Secondary.Duration.PetrifyBuildUp"), UPHAttributeSet::GetPetrifyBuildUpDurationAttribute());
-	Add(TEXT("Attributes.Secondary.Duration.Purify"),         UPHAttributeSet::GetPurifyDurationAttribute());
+	Add(TEXT("Attributes.Secondary.Duration.Bleed"),          UHunterAttributeSet::GetBleedDurationAttribute());
+	Add(TEXT("Attributes.Secondary.Duration.Burn"),           UHunterAttributeSet::GetBurnDurationAttribute());
+	Add(TEXT("Attributes.Secondary.Duration.Freeze"),         UHunterAttributeSet::GetFreezeDurationAttribute());
+	Add(TEXT("Attributes.Secondary.Duration.Shock"),          UHunterAttributeSet::GetShockDurationAttribute());
+	Add(TEXT("Attributes.Secondary.Duration.Corruption"),     UHunterAttributeSet::GetCorruptionDurationAttribute());
+	Add(TEXT("Attributes.Secondary.Duration.PetrifyBuildUp"), UHunterAttributeSet::GetPetrifyBuildUpDurationAttribute());
+	Add(TEXT("Attributes.Secondary.Duration.Purify"),         UHunterAttributeSet::GetPurifyDurationAttribute());
 
 	// (Optional) Log summary for sanity
 	UE_LOG(LogTemp, Log, TEXT("[PHGameplayTags] RegisterAllAttribute(): %d attributes in AllAttributesMap, %d status tags, %d min/max pairs."),

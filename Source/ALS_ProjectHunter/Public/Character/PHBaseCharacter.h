@@ -1,172 +1,269 @@
-// Copyright@2024 Quentin Davis 
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
 #include "Character/ALSCharacter.h"
-#include "Components/EquipmentManager.h"
-#include "Components/StatsManager.h"
-#include "Interfaces/CombatSubInterface.h"
-#include "PaperSpriteComponent.h"
-#include "Player/PHPlayerController.h"
-#include "UI/ToolTip/EquippableToolTip.h"
-#include "AbilitySystemComponent.h"
-#include "Containers/Map.h"
-#include "GameplayTagContainer.h" 
-#include "GameplayEffectTypes.h" 
+#include "Combat/Library/CombatStruct.h"
 #include "PHBaseCharacter.generated.h"
 
-
-class UInteractableManager;
-class UCombatManager;
-class USpringArmComponent;
-class UWidgetManager;
-class AEquipmentPickup;
+struct FGameplayAbilitySpecHandle;
+// Forward declarations
 class UAbilitySystemComponent;
-class UAttributeSet;
-class UConsumableToolTip;
+class UHunterAttributeSet;
+class UCharacterProgressionManager;
+class UEquipmentManager;
+class UStatsManager;
+class UBaseStatsData;
+class UGameplayEffect;
+class UGameplayAbility;
+struct FOnAttributeChangeData; // Add this forward declaration
 
 /**
- *  APHBaseCharacter inherits from AALSCharacter and adds properties for the Gameplay Ability System.
+ * Base character class shared by players and NPCs
+ * Contains all core combat systems, attributes, and progression
  */
-UCLASS()
-class ALS_PROJECTHUNTER_API APHBaseCharacter : public AALSCharacter, public IAbilitySystemInterface, public ICombatSubInterface
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatAffiliationChanged, const FCombatAffiliation&, NewAffiliation);
+
+// If APHBaseCharacter please cass for information 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDeath, APHBaseCharacter*, DeadCharacter,AActor*, KillerActor); 
+
+UCLASS(Abstract)
+class ALS_PROJECTHUNTER_API APHBaseCharacter : public AALSCharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
 public:
-	/** Constructor */
 	APHBaseCharacter(const FObjectInitializer& ObjectInitializer);
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
-	/** Called when possessed by a new controller */
-	virtual void PossessedBy(AController* NewController) override;
-
-	/** Ability System */
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
-
-	/** Get current character stats for item requirement checks */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Stats")
-	FItemStatRequirement GetCurrentStats() const;
-
-	/** Equipment & Inventory */
-	UFUNCTION(BlueprintCallable, Category = "Manager")
-	UEquipmentManager* GetEquipmentManager() const { return EquipmentManager; }
-
-	UFUNCTION(BlueprintCallable, Category = "Manager")
-	UInventoryManager* GetInventoryManager() { return InventoryManager; }
-
-	UFUNCTION(BlueprintCallable, Category = "Manager")
-	UCombatManager* GetCombatManager() const { return CombatManager; }
-
-	UFUNCTION(BlueprintCallable, Category = "Manager")
-	UStatsManager* GetStatsManager() const { return StatsManager; }
-
-	/** Player Level */
-	UFUNCTION(BlueprintCallable, Category = "Character")
-	virtual int32 GetPlayerLevel() override;
-
-	UFUNCTION(BlueprintCallable, Category = "Character")
-	virtual  int32 GetCurrentXP() override;
-
-	UFUNCTION(BlueprintCallable, Category = "Character")
-	virtual  int32 GetXPFNeededForNextLevel() override;
-
-	/** Tooltip UI */
-	UFUNCTION(BlueprintCallable, Category = "UI")
-	void OpenToolTip(UInteractableManager* InteractableManager);
-
-	UFUNCTION(BlueprintCallable, Category = "UI")
-	void CloseToolTip(UInteractableManager* InteractableManager) ;
-
-	UFUNCTION()
-	void OnGameplayTagChanged(FGameplayTag Tag, int NewCount);
-
-
-	/** Regeneration & Tick */
-	virtual void Tick(float DeltaSeconds) override;
-	virtual bool CanSprint() const override;
-
-	//Changed Handle
-	virtual void OnGaitChanged(EALSGait PreviousGait) override;
-
-	
-
-protected:
-	/** Begin Play */
 	virtual void BeginPlay() override;
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_PlayerState() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	UPROPERTY(BlueprintAssignable, Category="Combat")
+	FOnCombatAffiliationChanged OnCombatAffiliationChanged;
 	
-
-	/** Ability System Initialization */
-	virtual void InitAbilityActorInfo();
-
-	/** Death Handling */
-	UFUNCTION(BlueprintCallable, Category = "Death")
-	void HandleDeathState();
-
-	UFUNCTION(BlueprintCallable, Category = "Death")
-	void DestroyAllComponents();
-
-
-
-protected:
+	UPROPERTY(BlueprintAssignable, Category="Combat")
+	FOnDeath OnDeathEvent;
 	
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Controller")
-	APHPlayerController* CurrentController;
+	/* ═══════════════════════════════════════════════════════════════════════ */
+	/* CORE COMPONENTS (Shared by Players and NPCs) */
+	/* ═══════════════════════════════════════════════════════════════════════ */
 
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UEquippableToolTip> EquippableToolTipClass;
-
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UConsumableToolTip> ConsumableToolTipClass;
-
-	
-private:
-	/** Gameplay Ability System */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GAS", meta = (AllowPrivateAccess = "true"))
+	/** Ability System Component - Handles all GAS functionality */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GAS", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UAttributeSet> AttributeSet;
-	
-	/** Managers */
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager", meta = (AllowPrivateAccess = "true"))
+	/** Main attribute set - All combat stats (Health, Damage, Resistances, etc.) */
+	UPROPERTY()
+	TObjectPtr<UHunterAttributeSet> AttributeSet;
+
+	/** Progression Manager - XP, Level, Stat Points */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Progression")
+	TObjectPtr<UCharacterProgressionManager> ProgressionManager;
+
+	/** Equipment Component - Items, gear, inventory */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UEquipmentManager> EquipmentManager;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInventoryManager> InventoryManager;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UCombatManager> CombatManager;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Manager", meta = (AllowPrivateAccess = "true"))
+	/** Stats Manager - All stat queries and calculations */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
 	TObjectPtr<UStatsManager> StatsManager;
+
+	/**
+	 * Base stats data asset
+	 * Defines starting attribute values for this character
+	 * Set in subclasses or Blueprint (e.g., DA_WarriorBaseStats, DA_GoblinBaseStats)
+	 */
+	/*UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats")
+	TObjectPtr<UBaseStatsData> BaseStatsData;*/
+
+	/* ═══════════════════════════════════════════════════════════════════════ */
+	/* ABILITY SYSTEM INTERFACE */
+	/* ═══════════════════════════════════════════════════════════════════════ */
+
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
+	{
+		return AbilitySystemComponent;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Abilities")
+	UHunterAttributeSet* GetAttributeSet() const
+	{
+		return AttributeSet;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Progression")
+	UCharacterProgressionManager* GetProgressionManager() const
+	{
+		return ProgressionManager;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	UEquipmentManager* GetEquipmentManager() const
+	{
+		return EquipmentManager;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	UStatsManager* GetStatsManager() const
+	{
+		return StatsManager;
+	}
+
+	/* ═══════════════════════════════════════════════════════════════════════ */
+	/* CHARACTER INFO */
+	/* ═══════════════════════════════════════════════════════════════════════ */
+
+	/** Character display name */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Character")
+	FText CharacterName;
+
+	/** Character level (cached from ProgressionManager for convenience) */
+	UPROPERTY(BlueprintReadOnly, Category = "Character")
+	int32 CachedLevel = 1;
+
+	/** Is this character a player? */
+	UFUNCTION(BlueprintPure, Category = "Character")
+	virtual bool IsPlayer() const { return false; }
+
+	/** Is this character an NPC? */
+	UFUNCTION(BlueprintPure, Category = "Character")
+	virtual bool IsNPC() const { return false; }
 	
+	UFUNCTION(BlueprintPure, Category = "Character")
+	FCombatAffiliation GetCombatAffiliation() const { return CombatAffiliation; }
 
-	/** UI - ToolTips */
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "ToolTip", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UPHBaseToolTip> CurrentToolTip;
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Character")
+	void SetCombatAffiliation(const FCombatAffiliation& NewAffiliation);
+
+	/* ═══════════════════════════════════════════════════════════════════════ */
+	/* PROGRESSION (Shared System) */
+	/* ═══════════════════════════════════════════════════════════════════════ */
+
+	/** Get current level */
+	UFUNCTION(BlueprintPure, Category = "Progression")
+	int32 GetCharacterLevel() const;
+
+	/** Get base XP reward (for when this character is killed) */
+	UFUNCTION(BlueprintPure, Category = "Progression")
+	virtual int64 GetXPReward() const;
+
+	/** Award XP to this character from killing another character */
+	UFUNCTION(BlueprintCallable, Category = "Progression", BlueprintAuthorityOnly)
+	void AwardExperienceFromKill(APHBaseCharacter* KilledCharacter);
+
+	/* ═══════════════════════════════════════════════════════════════════════ */
+	/* COMBAT & HEALTH */
+	/* ═══════════════════════════════════════════════════════════════════════ */
+
+	UPROPERTY(ReplicatedUsing=OnRep_IsDead, BlueprintReadOnly, Category="Combat")
+	bool bIsDead = false;
+
+	UFUNCTION()
+	void OnRep_IsDead();
+
+	/** Get current health (delegates to StatsManager) */
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	float GetHealth() const;
+
+	/** Get max health (delegates to StatsManager) */
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	float GetMaxHealth() const;
+
+	/** Get health percent (delegates to StatsManager) */
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	float GetHealthPercent() const;
+
+	/** Called when this character dies */
+	UFUNCTION(BlueprintNativeEvent, Category = "Combat")
+	void OnDeath(AController* Killer, AActor* DamageCauser);
+	virtual void OnDeath_Implementation(AController* Killer, AActor* DamageCauser);
+
+	/** 
+	 * Called when health changes
+	 */
+	virtual void HandleHealthChanged(const FOnAttributeChangeData& Data);
+
+	/* ═══════════════════════════════════════════════════════════════════════ */
+	/* ABILITIES */
+	/* ═══════════════════════════════════════════════════════════════════════ */
+
+	/** Abilities granted to this character on spawn */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
+	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
+
+	/** Startup effects applied on spawn */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
+	TArray<TSubclassOf<UGameplayEffect>> StartupEffects;
+
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+	void GiveDefaultAbilities();
+
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+	void ApplyStartupEffects();
+
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+	void RemoveAllAbilities();
+
+	/* ═══════════════════════════════════════════════════════════════════════ */
+	/* TEAM & TARGETING */
+	/* ═══════════════════════════════════════════════════════════════════════ */
+
+	/** Team ID (for friendly fire, targeting, etc.) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Team")
+	uint8 TeamID = 0;
+
+	UFUNCTION(BlueprintPure, Category = "Team")
+	uint8 GetTeamID() const { return TeamID; }
+
+	UFUNCTION(BlueprintPure, Category = "Team")
+	bool IsSameTeam(const APHBaseCharacter* OtherCharacter) const;
+
+	UFUNCTION(BlueprintPure, Category = "Team")
+	bool IsHostile(const APHBaseCharacter* OtherCharacter) const;
+
+	/* ═══════════════════════════════════════════════════════════════════════ */
+	/* VISUAL & ANIMATION */
+	/* ═══════════════════════════════════════════════════════════════════════ */
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> DeathMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> HitReactMontage;
+
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void PlayDeathAnimation();
+
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void PlayHitReactAnimation();
+
+protected:
+	/* ═══════════════════════════════════════════════════════════════════════ */
+	/* INITIALIZATION */
+	/* ═══════════════════════════════════════════════════════════════════════ */
+
+	virtual void InitializeAbilitySystem();
+	virtual void InitializeAttributes();
+	virtual void BindAttributeDelegates();
+	virtual void OnAbilitySystemInitialized();
 	
+	UPROPERTY(Replicated)
+	TObjectPtr<AActor> LastKillerActor = nullptr;
+
+	UPROPERTY()
+	bool bAbilitySystemInitialized = false;
 	
-
-	/** Internal State */
-	/** If true, this character is controlled by a real player and expects ASC/Attributes from the PlayerState */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Defaults", meta = (AllowPrivateAccess = "true"))
-	bool bIsPlayer = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Defaults", meta = (AllowPrivateAccess = "true"))
-	int32 Level = 1;
+	UPROPERTY(ReplicatedUsing=OnRep_CombatAffiliation)
+	FCombatAffiliation CombatAffiliation;
 	
-	bool bIsInRecovery = false;
-	bool bHasHandledDeath = false;
+	UFUNCTION()
+	void OnRep_CombatAffiliation(FCombatAffiliation OldAffiliation);
 
-
+	UPROPERTY()
+	TArray<FGameplayAbilitySpecHandle> GrantedAbilityHandles;
 };

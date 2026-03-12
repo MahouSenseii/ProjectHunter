@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Pt9 Settings.
 
 
 #include "PHAssetManager.h"

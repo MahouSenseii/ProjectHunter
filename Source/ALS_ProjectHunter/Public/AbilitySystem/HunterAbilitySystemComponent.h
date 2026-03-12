@@ -1,0 +1,47 @@
+// Copyright © 2025 MahouSensei
+// Author: Quentin Davis
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "AbilitySystemComponent.h"
+#include "HunterAbilitySystemComponent.generated.h"
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FEffectAssetTags, const FGameplayTagContainer& /*Asset Tags*/)
+
+// Declare log category
+DECLARE_LOG_CATEGORY_EXTERN(LogHunterGAS, Log, All);
+
+/**
+ * Minimal custom ASC for Project Hunter
+ * Only handles core GAS initialization and effect application broadcasting
+ */
+UCLASS()
+class ALS_PROJECTHUNTER_API UHunterAbilitySystemComponent : public UAbilitySystemComponent
+{
+	GENERATED_BODY()
+
+	// ========================================
+	// FUNCTIONS
+	// ========================================
+public:
+	UHunterAbilitySystemComponent();
+	
+	virtual void AbilityActorInfoSet();
+
+protected:
+	void EffectApplied(UAbilitySystemComponent* AbilitySystemComponent,
+		const FGameplayEffectSpec& EffectSpec, 
+		FActiveGameplayEffectHandle ActiveEffectHandle);
+
+#if !UE_BUILD_SHIPPING
+	void ShowEffectDebug(const FGameplayEffectSpec& EffectSpec, 
+		const FGameplayTagContainer& TagContainer) const;
+#endif
+	
+	// ========================================
+	// VARIABLES
+	// ========================================
+public:
+	FEffectAssetTags EffectAssetTags;
+};

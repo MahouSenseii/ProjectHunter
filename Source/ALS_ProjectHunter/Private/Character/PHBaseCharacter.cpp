@@ -1,468 +1,391 @@
-// Copyright@2024 Quentin Davis 
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Character/PHBaseCharacter.h"
-
-#include "PHGameplayTags.h"
-#include "AbilitySystem/PHAbilitySystemComponent.h"
-#include "AbilitySystem/PHAttributeSet.h"
-#include "Character/ALSPlayerController.h"
-#include "Character/Player/PHPlayerController.h"
-#include "Character/Player/State/PHPlayerState.h"
-#include "Components/CanvasPanel.h"
-#include "Components/EquipmentManager.h"
-#include "Components/InventoryManager.h"
-#include "Components/CombatManager.h"
-#include "Interactables/Pickups/ConsumablePickup.h"
-#include "Interactables/Pickups/EquipmentPickup.h"
-#include "UI/ToolTip/ConsumableToolTip.h"
-#include "UI/HUD/PHHUD.h"
-
-class APHPlayerState;
-
-/* =========================== */
-/* === Constructor & Setup === */
-/* =========================== */
+#include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystemComponent.h"
+#include "Character/Component/CharacterProgressionManager.h"
+#include "Character/Component/StatsManager.h"
+#include "GameplayEffect.h"
+#include "GameplayEffectTypes.h"
+#include "AbilitySystem/HunterAttributeSet.h"
+#include "Character/Component/EquipmentManager.h"
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Net/UnrealNetwork.h"
 
 
 
 APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-	EquipmentManager = CreateDefaultSubobject<UEquipmentManager>(TEXT("EquipmentManager"));
-	InventoryManager = CreateDefaultSubobject<UInventoryManager>(TEXT("InventoryManager"));
-	CombatManager = CreateDefaultSubobject<UCombatManager>(TEXT("Combat Manager"));
-	StatsManager = CreateDefaultSubobject<UStatsManager>(TEXT("Stats Manager"));
-	
+	PrimaryActorTick.bCanEverTick = true;
 
-	// GAS Setup
-	if (!bIsPlayer)
-	{
-		AbilitySystemComponent = CreateDefaultSubobject<UPHAbilitySystemComponent>("Ability System Component");
-		AbilitySystemComponent->SetIsReplicated(true);
-		AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
-		AttributeSet = CreateDefaultSubobject<UPHAttributeSet>("Attribute Set");
-		
-	}
-	
+	// Create Ability System Component
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
+	// Create Attribute Set
+	AttributeSet = CreateDefaultSubobject<UHunterAttributeSet>(TEXT("AttributeSet"));
+
+	// Create Progression Manager
+	ProgressionManager = CreateDefaultSubobject<UCharacterProgressionManager>(TEXT("ProgressionManager"));
+
+	// Create Equipment Component
+	EquipmentManager = CreateDefaultSubobject<UEquipmentManager>(TEXT("EquipmentComponent"));
+
+	// Create Stats Manager
+	StatsManager = CreateDefaultSubobject<UStatsManager>(TEXT("StatsManager"));
 }
 
 void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(APHBaseCharacter, CharacterName);
+	DOREPLIFETIME(APHBaseCharacter, bIsDead);
+	DOREPLIFETIME(APHBaseCharacter, TeamID);
+	DOREPLIFETIME(APHBaseCharacter, CombatAffiliation);
 }
 
+
+void APHBaseCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	
+}
 
 void APHBaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	if (IsValid(StatsManager))
+	// Initialize ASC on server
+	if (AbilitySystemComponent && !bAbilitySystemInitialized)
 	{
-		StatsManager->SetOwnerCharacter(this);
+		InitializeAbilitySystem();
+	}
+}
+
+void APHBaseCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	// Initialize ASC on client
+	if (AbilitySystemComponent && !bAbilitySystemInitialized)
+	{
+		InitializeAbilitySystem();
+	}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* INITIALIZATION */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+void APHBaseCharacter::InitializeAbilitySystem()
+{
+	if (bAbilitySystemInitialized)
+	{
+		return;
 	}
 
-	InitAbilityActorInfo();
+	if (!AbilitySystemComponent)
+	{
+		UE_LOG(LogTemp, Error, TEXT("InitializeAbilitySystem: AbilitySystemComponent is null!"));
+		return;
+	}
+
+	// Initialize ASC with self as owner and avatar
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+
+	// Initialize attributes with base values
+	InitializeAttributes();
+
+	// Grant default abilities
+	if (HasAuthority())
+	{
+		GiveDefaultAbilities();
+		ApplyStartupEffects();
+	}
+
+	// Bind to attribute changes
+	BindAttributeDelegates();
+
+	bAbilitySystemInitialized = true;
+
+	// Call virtual function for subclass initialization
+	OnAbilitySystemInitialized();
+
+	UE_LOG(LogTemp, Log, TEXT("Ability System initialized for %s"), *GetName());
+}
+
+void APHBaseCharacter::InitializeAttributes()
+{
+	if (!AttributeSet)
+	{
+		return;
+	}
 	
-	CurrentController = Cast<APHPlayerController>(NewController);
-	if (CurrentController && IsValid(CurrentController->InteractionManager))
+	// Base attributes will be set by:
+	// 1. StartupEffects (for base values)
+	// 2. ProgressionManager (for stat points)
+	// 3. EquipmentComponent (for item stats)
+}
+
+void APHBaseCharacter::BindAttributeDelegates()
+{
+	if (!AbilitySystemComponent || !AttributeSet)
 	{
-		CurrentController->InteractionManager->OnRemoveCurrentInteractable.AddDynamic(this, &APHBaseCharacter::CloseToolTip);
-		CurrentController->InteractionManager->OnNewInteractableAssigned.AddDynamic(this, &APHBaseCharacter::OpenToolTip);
+		return;
+	}
+
+	// Bind to health changes
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
+		AttributeSet->GetHealthAttribute()).AddUObject(this, &APHBaseCharacter::HandleHealthChanged);
+}
+
+void APHBaseCharacter::OnAbilitySystemInitialized()
+
+{
+	// Override in subclasses for custom initialization
+}
+
+void APHBaseCharacter::OnRep_CombatAffiliation(FCombatAffiliation OldAffiliation)
+{
+	if (OldAffiliation != CombatAffiliation)
+	{
+		OnCombatAffiliationChanged.Broadcast(CombatAffiliation);
 	}
 }
-    
-UAbilitySystemComponent* APHBaseCharacter::GetAbilitySystemComponent() const
-{
-	return AbilitySystemComponent;
-}
 
-FItemStatRequirement APHBaseCharacter::GetCurrentStats() const
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* PROGRESSION */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+void APHBaseCharacter::SetCombatAffiliation(const FCombatAffiliation& NewAffiliation)
 {
-	FItemStatRequirement Stats;
-    
-	if (const UPHAttributeSet* AttrSet = Cast<UPHAttributeSet>(GetAttributeSet()))
+	if (!HasAuthority())
 	{
-		Stats.RequiredStrength = AttrSet->GetStrength();
-		Stats.RequiredDexterity = AttrSet->GetDexterity();
-		Stats.RequiredIntelligence = AttrSet->GetIntelligence();
-		Stats.RequiredEndurance = AttrSet->GetEndurance();
-		Stats.RequiredAffliction = AttrSet->GetAffliction();
-		Stats.RequiredLuck = AttrSet->GetLuck();
-		Stats.RequiredCovenant = 0.0f;  // Or get from somewhere
+		return;
 	}
-    
-	return Stats;
-}
 
-void APHBaseCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
-void APHBaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-}
-
-
-void APHBaseCharacter::Tick(float DeltaSeconds)
-{
-	Super::Tick(DeltaSeconds);
-
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+	if (CombatAffiliation == NewAffiliation)
 	{
-		const bool bHasMovingTag = ASC->HasMatchingGameplayTag(FPHGameplayTags::Get().Condition_WhileMoving);
-
-		if (bIsMoving && !bHasMovingTag)
-			ASC->AddLooseGameplayTag(FPHGameplayTags::Get().Condition_WhileMoving);
-		else if (!bIsMoving && bHasMovingTag)
-			ASC->RemoveLooseGameplayTag(FPHGameplayTags::Get().Condition_WhileMoving);
-
-		const bool bHasStationaryTag = ASC->HasMatchingGameplayTag(FPHGameplayTags::Get().Condition_WhileStationary);
-
-		if (!bIsMoving && !bHasStationaryTag)
-			ASC->AddLooseGameplayTag(FPHGameplayTags::Get().Condition_WhileStationary);
-		else if (bIsMoving && bHasStationaryTag)
-			ASC->RemoveLooseGameplayTag(FPHGameplayTags::Get().Condition_WhileStationary);
-	}	
+		return;
+	}
+	CombatAffiliation = NewAffiliation;
+	OnCombatAffiliationChanged.Broadcast(CombatAffiliation);
 }
 
-bool APHBaseCharacter::CanSprint() const
+int32 APHBaseCharacter::GetCharacterLevel() const
 {
-	const bool bReturnValue =  Super::CanSprint();
+	if (ProgressionManager)
+	{
+		return ProgressionManager->Level;
+	}
+	return 1;
+}
+
+int64 APHBaseCharacter::GetXPReward() const
+{
+	return GetCharacterLevel() * 100;
+}
+
+void APHBaseCharacter::AwardExperienceFromKill(APHBaseCharacter* KilledCharacter)
+{
+	if (!ProgressionManager || !KilledCharacter)
+	{
+		return;
+	}
+
+	// Delegate to ProgressionManager
+	ProgressionManager->AwardExperienceFromKill(KilledCharacter);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* COMBAT & HEALTH */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+void APHBaseCharacter::OnRep_IsDead()
+{
+	if (!bIsDead)
+	{
+		return;
+	}
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->DisableMovement();
+	}
+
+	PlayDeathAnimation();
+	OnDeathEvent.Broadcast(this, LastKillerActor);
+}
+
+float APHBaseCharacter::GetHealth() const
+{
+	if (StatsManager)
+	{
+		return StatsManager->GetHealth();
+	}
+	return 0.0f;
+}
+
+float APHBaseCharacter::GetMaxHealth() const
+{
+	if (StatsManager)
+	{
+		return StatsManager->GetMaxHealth();
+	}
+	return 1.0f;
+}
+
+float APHBaseCharacter::GetHealthPercent() const
+{
+	if (StatsManager)
+	{
+		return StatsManager->GetHealthPercent();
+	}
+	return 0.0f;
+}
+
+
+
+
+void APHBaseCharacter::OnDeath_Implementation(AController* Killer, AActor* DamageCauser)
+{
+	if (bIsDead)
+	{
+		return;
+	}
+
+	bIsDead = true;
+	LastKillerActor = DamageCauser;
+
+	UE_LOG(LogTemp, Log, TEXT("%s died"), *GetName());
+
+	PlayDeathAnimation();
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCharacterMovement()->DisableMovement();
 	
-	if(bIsInRecovery)
+	OnDeathEvent.Broadcast(this, DamageCauser);
+}
+
+void APHBaseCharacter::HandleHealthChanged(const FOnAttributeChangeData& Data)
+{
+}
+
+void APHBaseCharacter::PlayDeathAnimation()
+{
+	if (DeathMontage)
+	{
+		PlayAnimMontage(DeathMontage);
+	}
+}
+
+void APHBaseCharacter::PlayHitReactAnimation()
+{
+	if (HitReactMontage)
+	{
+		PlayAnimMontage(HitReactMontage);
+	}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* ABILITIES */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+void APHBaseCharacter::GiveDefaultAbilities()
+{
+	if (!HasAuthority() || !AbilitySystemComponent)
+	{
+		return;
+	}
+
+	// Grant all default abilities
+	for (TSubclassOf<UGameplayAbility>& AbilityClass : DefaultAbilities)
+	{
+		if (AbilityClass)
+		{
+			FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE, this);
+			FGameplayAbilitySpecHandle Handle = AbilitySystemComponent->GiveAbility(AbilitySpec);
+			GrantedAbilityHandles.Add(Handle);
+		}
+	}
+}
+
+void APHBaseCharacter::ApplyStartupEffects()
+{
+	if (!HasAuthority() || !AbilitySystemComponent)
+	{
+		return;
+	}
+
+	FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+	EffectContext.AddSourceObject(this);
+
+	// Apply all startup effects
+	for (TSubclassOf<UGameplayEffect>& EffectClass : StartupEffects)
+	{
+		if (EffectClass)
+		{
+			FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(
+				EffectClass, 1, EffectContext);
+			
+			if (SpecHandle.IsValid())
+			{
+				AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+			}
+		}
+	}
+}
+
+void APHBaseCharacter::RemoveAllAbilities()
+{
+	if (!HasAuthority() || !AbilitySystemComponent)
+	{
+		return;
+	}
+
+	// Remove all granted abilities
+	for (FGameplayAbilitySpecHandle& Handle : GrantedAbilityHandles)
+	{
+		AbilitySystemComponent->ClearAbility(Handle);
+	}
+
+	GrantedAbilityHandles.Empty();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* TEAM & TARGETING */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+bool APHBaseCharacter::IsSameTeam(const APHBaseCharacter* OtherCharacter) const
+{
+	if (!OtherCharacter)
 	{
 		return false;
 	}
-	return bReturnValue;
+
+	return TeamID == OtherCharacter->TeamID;
 }
 
-void APHBaseCharacter::OnGaitChanged(EALSGait PreviousGait)
+bool APHBaseCharacter::IsHostile(const APHBaseCharacter* OtherCharacter) const
 {
-	
-	Super::OnGaitChanged(PreviousGait);
-	
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-	if (!ASC) return;
-
-	const FGameplayTag& StaminaDegenTag = FPHGameplayTags::Get().Effect_Stamina_DegenActive;
-
-	if (Gait == EALSGait::Sprinting)
+	if (!OtherCharacter || OtherCharacter == this)
 	{
-		ASC->AddLooseGameplayTag(StaminaDegenTag);
-	}
-	else
-	{
-		ASC->RemoveLooseGameplayTag(StaminaDegenTag);
+		return false;
 	}
 
-	if (Gait == EALSGait::Sprinting && PreviousGait != EALSGait::Sprinting)
+	// Example override
+	if (CombatAffiliation.Faction == EFaction::PlayerKillers ||
+		OtherCharacter->GetCombatAffiliation().Faction == EFaction::PlayerKillers)
 	{
-		//StatsManager->StartSprintStaminaDrain();
-	}
-	else if (Gait != EALSGait::Sprinting && PreviousGait == EALSGait::Sprinting)
-	{
-		//StatsManager->StopSprintStaminaDrain();
-	}
-}
-
-
-/* =========================== */
-/* === Ability System (GAS) === */
-/* =========================== */
-
-void APHBaseCharacter::InitAbilityActorInfo()
-{
-	if (!bIsPlayer)
-	{
-		if (!IsValid(AbilitySystemComponent))
-		{
-			UE_LOG(LogTemp, Error, TEXT("InitAbilityActorInfo failed: AbilitySystemComponent is null for NPC %s"), *GetName());
-			return;
-		}
-
-		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-
-		if (UPHAbilitySystemComponent* ASC = Cast<UPHAbilitySystemComponent>(AbilitySystemComponent))
-		{
-			ASC->AbilityActorInfoSet();
-
-			if (IsValid(StatsManager))
-			{
-				StatsManager->SetASC(ASC);
-				StatsManager->Initialize();
-			}
-		}
-	}
-	else
-	{
-		APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
-		if (!IsValid(LocalPlayerState))
-		{
-			UE_LOG(LogTemp, Error, TEXT("InitAbilityActorInfo failed: PlayerState is null for %s"), *GetName());
-			return;
-		}
-
-		AbilitySystemComponent = LocalPlayerState->GetAbilitySystemComponent();
-		if (!IsValid(AbilitySystemComponent))
-		{
-			UE_LOG(LogTemp, Error, TEXT("InitAbilityActorInfo failed: PlayerState ASC is null for %s"), *GetName());
-			return;
-		}
-
-		AbilitySystemComponent->InitAbilityActorInfo(LocalPlayerState, this);
-
-		if (UPHAbilitySystemComponent* ASC = Cast<UPHAbilitySystemComponent>(AbilitySystemComponent))
-		{
-			ASC->AbilityActorInfoSet();
-
-			FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-			Context.AddSourceObject(this);
-
-			if (IsValid(StatsManager))
-			{
-				StatsManager->SetASC(ASC);
-				StatsManager->Initialize();
-			}
-		}
-
-		AttributeSet = LocalPlayerState->GetAttributeSet();
-
-		if (AALSPlayerController* PHPlayerController = Cast<AALSPlayerController>(GetController()))
-		{
-			if (APHHUD* LocalPHHUD = Cast<APHHUD>(PHPlayerController->GetHUD()))
-			{
-				LocalPHHUD->InitOverlay(PHPlayerController, GetPlayerState<APHPlayerState>(), AbilitySystemComponent, AttributeSet);
-			}
-		}
+		return true;
 	}
 
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->RegisterGameplayTagEvent(
-			FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Dead")),
-			EGameplayTagEventType::NewOrRemoved
-		).AddUObject(this, &APHBaseCharacter::OnGameplayTagChanged);
-	}
-}
+	// TODO: temporary hostility / guard aggro checks here
 
-/* =========================== */
-/* === UI & MiniMap === */
-/* =========================== */
-
-int32 APHBaseCharacter::GetPlayerLevel()
-{
-	if(bIsPlayer)
-	{
-		const APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
-		check(LocalPlayerState)
-		return  LocalPlayerState->GetPlayerLevel();
-	}
-
-	return Level;
-}
-
-int32 APHBaseCharacter::GetCurrentXP()
-{
-		const APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
-		check(LocalPlayerState)
-		return  LocalPlayerState->GetXP();
-}
-
-int32 APHBaseCharacter::GetXPFNeededForNextLevel()
-{
-	const APHPlayerState* LocalPlayerState = GetPlayerState<APHPlayerState>();
-	check(LocalPlayerState)
-	return  LocalPlayerState->GetXPForNextLevel();
-}
-
-void APHBaseCharacter::OpenToolTip(UInteractableManager* InteractableManager)
-{
-	if (!InteractableManager) return;
-	check(EquippableToolTipClass);
-    
-	AItemPickup* PickupItem = Cast<AItemPickup>(InteractableManager->GetOwner());
-	if (!PickupItem) return;
-
-	if (CurrentToolTip)
-	{
-		CurrentToolTip->RemoveFromParent();
-		CurrentToolTip = nullptr;
-	}
-
-	UUserWidget* ToolTipWidget = nullptr;
-
-	if (Cast<AEquipmentPickup>(PickupItem) && EquippableToolTipClass)
-	{
-		ToolTipWidget = CreateWidget<UEquippableToolTip>(GetWorld(), EquippableToolTipClass);
-	}
-	else if (Cast<AConsumablePickup>(PickupItem) && ConsumableToolTipClass)
-	{
-		ToolTipWidget = CreateWidget<UConsumableToolTip>(GetWorld(), ConsumableToolTipClass);
-	}
-
-	if (!ToolTipWidget) return;
-
-	UBaseItem* ItemObject = PickupItem->CreateItemObject(GetTransientPackage());
-	if (!IsValid(ItemObject))
-	{
-		UE_LOG(LogTemp, Error, TEXT("OpenToolTip failed: CreateItemObject returned null for pickup %s"), *GetNameSafe(PickupItem));
-		return;
-	}
-
-	if (PickupItem->ObjItem)
-	{
-		ItemObject->ItemDefinition = PickupItem->ObjItem->ItemDefinition;
-	}
-
-	if (!IsValid(ItemObject->ItemDefinition))
-	{
-		UE_LOG(LogTemp, Error, TEXT("OpenToolTip failed: ItemDefinition is null for pickup %s"), *GetNameSafe(PickupItem));
-		return;
-	}
-
-	if (AEquipmentPickup* EquipPickup = Cast<AEquipmentPickup>(PickupItem))
-	{
-		ItemObject->RuntimeData = EquipPickup->InstanceData;
-	}
-
-	if (UPHBaseToolTip* ToolTip = Cast<UPHBaseToolTip>(ToolTipWidget))
-	{
-		ToolTip->SetItemInfo(ItemObject->ItemDefinition, ItemObject->RuntimeData);
-        
-		if (UEquippableToolTip* EquipToolTip = Cast<UEquippableToolTip>(ToolTip))
-		{
-			EquipToolTip->SetOwnerCharacter(this);
-		}
-        
-		APHPlayerController* PC = Cast<APHPlayerController>(GetController());
-		if (!PC)
-		{
-			UE_LOG(LogTemp, Error, TEXT("Controller is not APHPlayerController"));
-			return;
-		}
-
-		APHHUD* HUD = Cast<APHHUD>(PC->GetHUD());
-		if (!HUD)
-		{
-			UE_LOG(LogTemp, Error, TEXT("HUD is null. Make sure BP_PHHUD is set in your GameMode"));
-			return;
-		}
-
-		UCanvasPanel* Canvas = HUD->GetOrCreateTooltipCanvas();
-		if (Canvas)
-		{
-			Canvas->AddChildToCanvas(ToolTip);
-			ToolTip->PositionAtBottomRight(FVector2D(20.0f, 20.0f));
-			CurrentToolTip = ToolTip;
-			UE_LOG(LogTemp, Log, TEXT("Tooltip added to HUD canvas successfully"));
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Canvas is null, falling back to AddToViewport"));
-			ToolTip->AddToViewport(100);
-			ToolTip->PositionAtBottomRight(FVector2D(20.0f, 20.0f));
-			CurrentToolTip = ToolTip;
-		}
-	}
-}
-
-void APHBaseCharacter::CloseToolTip(UInteractableManager* InteractableManager) 
-{
-	if (IsValid(CurrentToolTip) )
-	{
-		CurrentToolTip->RemoveFromParent();
-	}
-}
-
-void APHBaseCharacter::OnGameplayTagChanged(FGameplayTag Tag, int NewCount)
-{
-	// Check if the dead tag was added (NewCount > 0 means the tag was added)
-	if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Condition.State.Dead"))) && NewCount > 0)
-	{
-		if (!bHasHandledDeath)
-		{
-			HandleDeathState();
-		}
-	}
-}
-void APHBaseCharacter::HandleDeathState()
-{
-	if (bHasHandledDeath)
-	{
-		return;
-	}
-
-	bHasHandledDeath = true;
-
-	UE_LOG(LogTemp, Warning, TEXT("%s: Handling death state - destroying all components"), *GetName());
-
-	// Call the component destruction
-	DestroyAllComponents();
-
-	// Add any additional death handling logic here,
-	// For example, play death animation, disable collision, etc.
-}
-
-void APHBaseCharacter::DestroyAllComponents()
-{
-
-	// Check for and destroy the InteractableManager component
-	if (UInteractableManager* InteractableManager = GetComponentByClass<UInteractableManager>())
-	{
-		InteractableManager->ToggleInteractionWidget(false);
-		InteractableManager->DestroyComponent();
-		UE_LOG(LogTemp, Log, TEXT("InteractableManager destroyed"));
-	}
-	
-	// Destroy Equipment Manager
-	if (IsValid(EquipmentManager))
-	{
-		EquipmentManager->DestroyComponent();
-		EquipmentManager = nullptr;
-		UE_LOG(LogTemp, Log, TEXT("EquipmentManager destroyed"));
-	}
-
-	// Destroy Inventory Manager
-	if (IsValid(InventoryManager))
-	{
-		InventoryManager->DestroyComponent();
-		InventoryManager = nullptr;
-		UE_LOG(LogTemp, Log, TEXT("InventoryManager destroyed"));
-	}
-
-	// Destroy Combat Manager
-	if (IsValid(CombatManager))
-	{
-		CombatManager->DestroyComponent();
-		CombatManager = nullptr;
-		UE_LOG(LogTemp, Log, TEXT("CombatManager destroyed"));
-	}
-
-	// Destroy Stats Manager
-	if (IsValid(StatsManager))
-	{
-		StatsManager->DestroyComponent();
-		StatsManager = nullptr;
-		UE_LOG(LogTemp, Log, TEXT("StatsManager destroyed"));
-	}
-
-	// Close any open tooltips
-	if (IsValid(CurrentToolTip))
-	{
-		CurrentToolTip->RemoveFromParent();
-		CurrentToolTip = nullptr;
-	}
-
-	/*// Clear any active timers
-	GetWorldTimerManager().ClearTimer(	StatsManager->StaminaCheckTimer);
-
-	// Remove any active gameplay effects
-	if (StatsManager->ActiveSprintDrainHandle.IsValid() && AbilitySystemComponent)
-	{
-		AbilitySystemComponent->RemoveActiveGameplayEffect(StatsManager->ActiveSprintDrainHandle);
-		StatsManager->ActiveSprintDrainHandle.Invalidate();
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("%s: All components destroyed due to death"), *GetName());*/
+	return TeamID != OtherCharacter->TeamID;
 }
