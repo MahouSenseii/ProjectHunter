@@ -120,7 +120,7 @@ void UInteractableManager::CreateWidgetComponent()
 	// CRITICAL: Initialize widget to apply all settings
 	WidgetComponent->InitWidget();
 	
-	// Force redraw to ensure quality settings are applied
+	// Fworce redraw to ensure quality settings are applied
 	WidgetComponent->RequestRedraw();
 	
 	// ═══════════════════════════════════════════════════════════

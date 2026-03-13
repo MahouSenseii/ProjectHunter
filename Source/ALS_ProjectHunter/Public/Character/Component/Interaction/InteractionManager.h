@@ -181,10 +181,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void OnInteractReleased();
 
-	/** Pickup all items in radius around player */
-	UFUNCTION(BlueprintCallable, Category = "Interaction")
-	void PickupAllNearbyItems();
-
 	/** Check for interactables (called on timer) */
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void CheckForInteractables();

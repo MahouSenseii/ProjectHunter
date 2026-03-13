@@ -6,22 +6,6 @@
 #include "InteractionEnumLibrary.generated.h"
 
 // ═══════════════════════════════════════════════════════════════════════
-// LEGACY ENUMS (For backwards compatibility)
-// ═══════════════════════════════════════════════════════════════════════
-
-/**
- * Legacy Interact Type (kept for backwards compatibility with existing code)
- * Used by CheckInputType() in HunterController
- */
-UENUM(BlueprintType)
-enum class EInteractType : uint8
-{
-	Single      UMETA(DisplayName = "Single"),
-	Holding     UMETA(DisplayName = "Holding"),
-	Mashing     UMETA(DisplayName = "Mashing")
-};
-
-// ═══════════════════════════════════════════════════════════════════════
 // INTERACTION ENUMS - Single Responsibility: Define Interaction Types
 // ═══════════════════════════════════════════════════════════════════════
 

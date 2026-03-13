@@ -45,17 +45,6 @@ void AHunterController::Interact(const FInputActionValue& Value)
 	}
 }
 
-void AHunterController::PickupAllNearby(const FInputActionValue& Value)
-{
-	if (!InteractionManager || !Value.Get<bool>())
-	{
-		return;
-	}
-
-	// Route to InteractionManager
-	InteractionManager->PickupAllNearbyItems();
-}
-
 void AHunterController::Menu(const FInputActionValue& Value) const
 {
 	// TODO: Implement menu logic
@@ -130,7 +119,7 @@ bool AHunterController::DoOnce(FDoOnceState& State, bool bReset, bool bStartClos
 		return true;
 	}
 
-	return false; // Already done once, do nothing
+	return false; 
 }
 // ═══════════════════════════════════════════════════════════════════════
 // INTERNAL METHODS

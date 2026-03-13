@@ -38,12 +38,7 @@ public:
 	 */
 	UFUNCTION()
 	void Interact(const FInputActionValue& Value);
-
-	/**
-	 * Pick up all nearby items
-	 */
-	void PickupAllNearby(const FInputActionValue& Value);
-
+	
 	/**
 	 * Menu input handler
 	 */

@@ -18,9 +18,8 @@
   <component name="ChangeListManager">
     <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Imports/Loot_Anim_Set/Props/TreasureChest/Animations/Loot_TreasureChest_Open_Only.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Imports/Loot_Anim_Set/Props/TreasureChest/Animations/Loot_TreasureChest_Open_Only.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Interactables/Chest/BP_BasicChest.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/Interactables/Chest/BP_BasicChest.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Actors/LootChest/LootChest.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Actors/LootChest/LootChest.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" beforeDir="false" afterPath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/Interaction/InteractionManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/Interaction/InteractionManager.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,6 +38,9 @@
   </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Programs/UnrealBuildTool/System/GraphVisualization.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Delegates/DelegateInstancesImpl.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Templates/Invoke.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Templates/Tuple.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/GameplayTags/Classes/GameplayTagContainer.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/ThirdParty/asio/1.30.2/asio/execution/any_executor.hpp" root0="FORCE_HIGHLIGHTING" />
@@ -1008,6 +1010,7 @@
       <workItem from="1773299674914" duration="6968000" />
       <workItem from="1773328922210" duration="114000" />
       <workItem from="1773329079864" duration="1906000" />
+      <workItem from="1773401673967" duration="18000" />
     </task>
     <servers />
   </component>

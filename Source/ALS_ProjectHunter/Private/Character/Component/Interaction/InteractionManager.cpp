@@ -285,21 +285,6 @@ void UInteractionManager::OnInteractReleased()
 	ResetActiveInteractionState(true);
 }
 
-void UInteractionManager::PickupAllNearbyItems()
-{
-	// Get camera location
-	FVector CameraLocation;
-	FRotator CameraRotation;
-	if (!TraceManager.GetCameraViewPoint(CameraLocation, CameraRotation))
-	{
-		return;
-	}
-
-	// Pickup all in radius
-	int32 PickedUpCount = PickupManager.PickupAllNearby(CameraLocation);
-
-	UE_LOG(LogInteractionManager, Log, TEXT("InteractionManager: Picked up %d items from area"), PickedUpCount);
-}
 
 void UInteractionManager::CheckForInteractables()
 {
