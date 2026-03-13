@@ -164,7 +164,7 @@ public:
 	 * Set interaction data using FKey directly (manual override)
 	 * Use this if you already know the specific key to show
 	 * @param Key - The key to display (e.g., EKeys::E, EKeys::Gamepad_FaceButton_Bottom)
-	 * @param Description - Display text shown to player
+	 * @param Description - Display text shown to player.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void SetInteractionDataWithKey(const FKey& Key, const FText& Description);

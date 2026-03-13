@@ -38,7 +38,7 @@ ALootChest::ALootChest()
 	Static_ChestMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// Create skeletal chest mesh (will be configured in OnConstruction)
-	Skeletal_ChestMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalChestMesh"));
+	Skeletal_ChestMesh =CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalChestMesh"));
 	Skeletal_ChestMesh->SetupAttachment(RootComponent);
 	Skeletal_ChestMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	
@@ -308,9 +308,9 @@ void ALootChest::SetupInteraction()
 	}
 
 	// Bind interaction event
-	if (!InteractableManager->OnTapInteracted.IsAlreadyBound(this, &ALootChest::OnInteracted))
+	if (!InteractableManager->OnHoldCompleted.IsAlreadyBound(this, &ALootChest::OnInteracted))
 	{
-		InteractableManager->OnTapInteracted.AddDynamic(this, &ALootChest::OnInteracted);
+		InteractableManager->OnHoldCompleted.AddDynamic(this, &ALootChest::OnInteracted);
 	}
 
 	UE_LOG(LogLootChest, Log, TEXT("%s: Interaction setup complete"), *GetName());
