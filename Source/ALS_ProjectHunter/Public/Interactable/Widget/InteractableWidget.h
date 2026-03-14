@@ -240,6 +240,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Interaction|State")
 	bool bIsUsingGamepad = false;
 
+	UPROPERTY()
+	float InputCheckAccumulator = 0.0f;
+	
 	/** 
 	 * Current input key to display
 	 * REFACTORED: Changed from FName to FKey for direct key lookup

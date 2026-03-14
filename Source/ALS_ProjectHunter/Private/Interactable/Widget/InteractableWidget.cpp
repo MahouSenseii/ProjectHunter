@@ -55,30 +55,23 @@ void UInteractableWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
 
-	// ═══════════════════════════════════════════════
-	// INPUT MODE DETECTION (Only check periodically, not every frame)
-	// ═══════════════════════════════════════════════
-	static float InputCheckAccumulator = 0.0f;
 	InputCheckAccumulator += InDeltaTime;
-	
-	if (InputCheckAccumulator >= 0.25f)  // Check every 250ms
+
+	if (InputCheckAccumulator >= 0.15f)
 	{
 		InputCheckAccumulator = 0.0f;
-		
-		bool bCurrentlyGamepad = DetectGamepadMode();
+
+		const bool bCurrentlyGamepad = DetectGamepadMode();
 		if (bCurrentlyGamepad != bIsUsingGamepad)
 		{
 			bIsUsingGamepad = bCurrentlyGamepad;
 			RefreshInputMode();
-			
+
 			UE_LOG(LogInteractableWidget, Verbose, TEXT("Input mode changed to: %s"),
 				bIsUsingGamepad ? TEXT("Gamepad") : TEXT("Keyboard"));
 		}
 	}
-
-	// ═══════════════════════════════════════════════
-	// STATE-SPECIFIC TICK
-	// ═══════════════════════════════════════════════
+	
 	TickState(InDeltaTime);
 }
 
