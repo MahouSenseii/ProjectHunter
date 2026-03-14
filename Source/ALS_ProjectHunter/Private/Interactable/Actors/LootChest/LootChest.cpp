@@ -290,9 +290,7 @@ void ALootChest::SetupInteraction()
 		return;
 	}
 
-	// Configure interaction
-	InteractableManager->Config.bCanInteract = true;
-	InteractableManager->Config.InteractionType = EInteractionType::IT_Tap;
+
 	InteractableManager->Config.InteractionText = FText::FromString(TEXT("Open Chest"));
 
 	// Setup highlight meshes (only add the visible one)

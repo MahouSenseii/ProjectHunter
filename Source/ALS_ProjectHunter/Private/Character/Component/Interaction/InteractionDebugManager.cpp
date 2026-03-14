@@ -212,6 +212,16 @@ void FInteractionDebugManager::DrawInteractableInfo(UInteractableManager* Intera
 			Distance,
 			*UEnum::GetValueAsString(Interactable->Config.InteractionType)
 		);
+		
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(
+				-1,          // key (-1 = new message every time)
+				2.0f,        // time on screen
+				FColor::Green,
+				DebugInfo
+			);
+		}
 
 		DrawDebugString(
 			WorldContext,

@@ -34,6 +34,8 @@ void UInteractableManager::BeginPlay()
 	{
 		CreateWidgetComponent();
 	}
+	
+
 }
 
 void UInteractableManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
