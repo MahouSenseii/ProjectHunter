@@ -120,7 +120,7 @@ void UInteractableManager::CreateWidgetComponent()
 	// CRITICAL: Initialize widget to apply all settings
 	WidgetComponent->InitWidget();
 	
-	// Fworce redraw to ensure quality settings are applied
+	// Force redraw to ensure quality settings are applied
 	WidgetComponent->RequestRedraw();
 	
 	// ═══════════════════════════════════════════════════════════
@@ -218,6 +218,8 @@ void UInteractableManager::OnBeginFocus_Implementation(AActor* Interactor)
 		if (UInteractableWidget* Widget = Cast<UInteractableWidget>(WidgetComponent->GetWidget()))
 		{
 			UpdateWidgetText();
+			Widget->SetWidgetState(EInteractionWidgetState::IWS_Idle);
+			Widget->SetProgressBarVisible(false);
 			
 			// CRITICAL: Force widget update to ensure crisp rendering
 			WidgetComponent->RequestRedraw();
@@ -260,6 +262,13 @@ void UInteractableManager::OnEndFocus_Implementation(AActor* Interactor)
 	// Hide widget
 	if (WidgetComponent)
 	{
+		if (UInteractableWidget* Widget = Cast<UInteractableWidget>(WidgetComponent->GetWidget()))
+		{
+			Widget->SetWidgetState(EInteractionWidgetState::IWS_Idle);
+			Widget->SetProgressBarVisible(false);
+			Widget->SetProgress(0.0f);
+		}
+
 		WidgetComponent->SetVisibility(false);
 	}
 
@@ -321,7 +330,7 @@ FInteractableHighlightStyle UInteractableManager::GetHighlightStyle_Implementati
 
 float UInteractableManager::GetTapHoldThreshold_Implementation() const
 {
-	return Config.TapHoldThreshold;
+	return Config.InteractionType == EInteractionType::IT_Hold ? 0.0f : Config.TapHoldThreshold;
 }
 
 float UInteractableManager::GetHoldDuration_Implementation() const
@@ -331,6 +340,12 @@ float UInteractableManager::GetHoldDuration_Implementation() const
 
 void UInteractableManager::OnHoldInteractionStart_Implementation(AActor* Interactor)
 {
+	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
+	{
+		Widget->SetWidgetState(EInteractionWidgetState::IWS_Holding);
+		Widget->SetProgress(0.0f);
+	}
+
 	SetProgressBarVisible(true);
 	
 	// Update camera facing for progress bar visibility
@@ -355,14 +370,25 @@ void UInteractableManager::OnHoldInteractionUpdate_Implementation(AActor* Intera
 
 void UInteractableManager::OnHoldInteractionComplete_Implementation(AActor* Interactor)
 {
-	SetProgressBarVisible(false);
+	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
+	{
+		Widget->SetWidgetState(EInteractionWidgetState::IWS_Completed);
+		Widget->SetProgressBarVisible(true);
+		Widget->SetProgress(1.0f);
+	}
+
 	OnHoldCompleted.Broadcast(Interactor);
 	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Hold completed on %s"), *GetOwner()->GetName());
 }
 
 void UInteractableManager::OnHoldInteractionCancelled_Implementation(AActor* Interactor)
 {
-	SetProgressBarVisible(false);
+	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
+	{
+		Widget->SetWidgetState(EInteractionWidgetState::IWS_Cancelled);
+		Widget->SetProgressBarVisible(true);
+	}
+
 	OnHoldCancelled.Broadcast(Interactor);
 	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Hold cancelled on %s"), *GetOwner()->GetName());
 }
@@ -388,6 +414,12 @@ float UInteractableManager::GetMashDecayRate_Implementation() const
 
 void UInteractableManager::OnMashInteractionStart_Implementation(AActor* Interactor)
 {
+	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
+	{
+		Widget->SetWidgetState(EInteractionWidgetState::IWS_Mashing);
+		Widget->SetProgress(0.0f);
+	}
+
 	SetProgressBarVisible(true);
 	OnMashProgress.Broadcast(Interactor, 0, Config.RequiredMashCount);
 	
@@ -417,14 +449,25 @@ void UInteractableManager::OnMashInteractionUpdate_Implementation(AActor* Intera
 
 void UInteractableManager::OnMashInteractionComplete_Implementation(AActor* Interactor)
 {
-	SetProgressBarVisible(false);
+	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
+	{
+		Widget->SetWidgetState(EInteractionWidgetState::IWS_Completed);
+		Widget->SetProgressBarVisible(true);
+		Widget->SetProgress(1.0f);
+	}
+
 	OnMashCompleted.Broadcast(Interactor);
 	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Mash completed on %s"), *GetOwner()->GetName());
 }
 
 void UInteractableManager::OnMashInteractionFailed_Implementation(AActor* Interactor)
 {
-	SetProgressBarVisible(false);
+	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
+	{
+		Widget->SetWidgetState(EInteractionWidgetState::IWS_Cancelled);
+		Widget->SetProgressBarVisible(true);
+	}
+
 	OnMashFailed.Broadcast(Interactor);
 	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Mash failed on %s"), *GetOwner()->GetName());
 }
@@ -432,6 +475,35 @@ void UInteractableManager::OnMashInteractionFailed_Implementation(AActor* Intera
 FText UInteractableManager::GetMashInteractionText_Implementation() const
 {
 	return Config.MashText;
+}
+
+void UInteractableManager::OnContinuousInteractionStart_Implementation(AActor* Interactor)
+{
+	SetProgressBarVisible(false);
+
+	if (bAlwaysFaceCamera && Interactor)
+	{
+		UpdateWidgetRotationToFaceCamera(Interactor, 0.0f);
+	}
+
+	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Continuous interaction started on %s"), *GetOwner()->GetName());
+}
+
+void UInteractableManager::OnContinuousInteractionUpdate_Implementation(AActor* Interactor, float HeldSeconds)
+{
+	if (bAlwaysFaceCamera && CameraFacingUpdateRate <= 0.0f && Interactor)
+	{
+		UpdateWidgetRotationToFaceCamera(Interactor, 0.0f);
+	}
+
+	UE_LOG(LogInteractable, Verbose, TEXT("InteractableManager: Continuous interaction update on %s (Held: %.2fs)"),
+		*GetOwner()->GetName(), HeldSeconds);
+}
+
+void UInteractableManager::OnContinuousInteractionEnd_Implementation(AActor* Interactor)
+{
+	SetProgressBarVisible(false);
+	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Continuous interaction ended on %s"), *GetOwner()->GetName());
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -468,7 +540,24 @@ void UInteractableManager::UpdateProgress(float Progress, bool bIsDepleting)
 
 	if (UInteractableWidget* Widget = Cast<UInteractableWidget>(WidgetComponent->GetWidget()))
 	{
-		Widget->SetProgress(Progress);
+		if (!SupportsProgressBar())
+		{
+			Widget->SetProgressBarVisible(false);
+			return;
+		}
+
+		const float ClampedProgress = FMath::Clamp(Progress, 0.0f, 1.0f);
+		const EInteractionWidgetState DesiredState =
+			Config.InteractionType == EInteractionType::IT_Mash
+				? EInteractionWidgetState::IWS_Mashing
+				: EInteractionWidgetState::IWS_Holding;
+
+		if (Widget->GetWidgetState() != DesiredState)
+		{
+			Widget->SetWidgetState(DesiredState);
+		}
+
+		Widget->SetProgress(ClampedProgress);
 	}
 }
 
@@ -481,7 +570,17 @@ void UInteractableManager::SetProgressBarVisible(bool bVisible)
 
 	if (UInteractableWidget* Widget = Cast<UInteractableWidget>(WidgetComponent->GetWidget()))
 	{
-		Widget->SetProgressBarVisible(bVisible);
+		const bool bShouldShow = bVisible && SupportsProgressBar();
+
+		if (!bShouldShow)
+		{
+			Widget->SetWidgetState(EInteractionWidgetState::IWS_Idle);
+			Widget->SetProgressBarVisible(false);
+			Widget->SetProgress(0.0f);
+			return;
+		}
+
+		Widget->SetProgressBarVisible(true);
 	}
 }
 
@@ -707,6 +806,13 @@ FText UInteractableManager::GetDisplayTextForCurrentType() const
 	default:
 		return Config.InteractionText;
 	}
+}
+
+bool UInteractableManager::SupportsProgressBar() const
+{
+	return Config.InteractionType == EInteractionType::IT_Hold
+		|| Config.InteractionType == EInteractionType::IT_TapOrHold
+		|| Config.InteractionType == EInteractionType::IT_Mash;
 }
 
 // ═══════════════════════════════════════════════════════════════════════

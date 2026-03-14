@@ -132,6 +132,17 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction|Mash")
 	FText GetMashInteractionText() const;
 
+	// CONTINUOUS INTERACTION
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction|Continuous")
+	void OnContinuousInteractionStart(AActor* Interactor);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction|Continuous")
+	void OnContinuousInteractionUpdate(AActor* Interactor, float HeldSeconds);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction|Continuous")
+	void OnContinuousInteractionEnd(AActor* Interactor);
+
 	// ═══════════════════════════════════════════════
 	// TOOLTIP SUPPORT
 	// ═══════════════════════════════════════════════

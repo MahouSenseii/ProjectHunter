@@ -51,7 +51,7 @@ public:
 
 	/** 
 	 * Fill border image - THIS IS THE PROGRESS INDICATOR
-	 * Uses material with "Progress" parameter (0.0-1.0)
+	 * Uses the border material progress scalar (0.0-1.0)
 	 * Fills clockwise around the border like reference image
 	 */
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
@@ -73,11 +73,11 @@ public:
 	// MATERIALS
 	// ═══════════════════════════════════════════════
 	
-	/** Material for square border (keyboard mode) - needs "Progress" parameter */
+	/** Material for square border (keyboard mode) - needs a "progress" scalar parameter */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Materials")
 	TObjectPtr<UMaterialInterface> SquareBorderMaterial;
 
-	/** Material for circle border (gamepad mode) - needs "Progress" parameter */
+	/** Material for circle border (gamepad mode) - needs a "progress" scalar parameter */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Materials")
 	TObjectPtr<UMaterialInterface> CircleBorderMaterial;
 
@@ -279,6 +279,9 @@ protected:
 
 	/** Update material parameters (progress, color, animation) */
 	void UpdateMaterialParameters();
+
+	/** Apply the current progress value to whichever border material is active. */
+	void ApplyBorderProgress(float ProgressValue);
 
 	/** Get current fill color based on state */
 	FLinearColor GetCurrentFillColor() const;

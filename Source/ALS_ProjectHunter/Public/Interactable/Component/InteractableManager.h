@@ -184,6 +184,11 @@ public:
 	virtual void OnMashInteractionFailed_Implementation(AActor* Interactor) override;
 	virtual FText GetMashInteractionText_Implementation() const override;
 
+	// Continuous interaction interface
+	virtual void OnContinuousInteractionStart_Implementation(AActor* Interactor) override;
+	virtual void OnContinuousInteractionUpdate_Implementation(AActor* Interactor, float HeldSeconds) override;
+	virtual void OnContinuousInteractionEnd_Implementation(AActor* Interactor) override;
+
 	// Tooltip interface
 	virtual bool HasTooltip_Implementation() const override;
 	virtual UObject* GetTooltipData_Implementation() const override;
@@ -256,6 +261,8 @@ private:
 
 	/** Get Display Text For Current Interaction Type*/ 
 	FText GetDisplayTextForCurrentType() const;
+
+	bool SupportsProgressBar() const;
 
 	// ═══════════════════════════════════════════════════════════════════════
 	// CAMERA-FACING LOGIC (SINGLE RESPONSIBILITY: Widget rotation)

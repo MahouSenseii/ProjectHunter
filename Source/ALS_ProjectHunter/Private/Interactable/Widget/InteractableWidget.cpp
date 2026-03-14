@@ -14,6 +14,15 @@
 
 DEFINE_LOG_CATEGORY(LogInteractableWidget);
 
+namespace InteractableWidgetMaterialParams
+{
+	const FName Progress(TEXT("Progress"));
+	const FName ProgressLower(TEXT("progress"));
+	const FName AnimationPhase(TEXT("AnimationPhase"));
+	const FName FillColor(TEXT("FillColor"));
+	const FName BackgroundColor(TEXT("BackgroundColor"));
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // LIFECYCLE
 // ═══════════════════════════════════════════════════════════════════════
@@ -233,11 +242,11 @@ void UInteractableWidget::TickState(float DeltaTime)
 				AnimationTime += DeltaTime * IdleAnimationSpeed;
 				
 				// Set animation phase parameter for material
-				BorderMID->SetScalarParameterValue(FName("AnimationPhase"), AnimationTime);
+				BorderMID->SetScalarParameterValue(InteractableWidgetMaterialParams::AnimationPhase, AnimationTime);
 				
 				// Optional: Subtle progress pulse (0.0 to ~0.1 range)
-				float IdlePulse = (FMath::Sin(AnimationTime * 2.0f) * 0.5f + 0.5f) * 0.05f;
-				BorderMID->SetScalarParameterValue(FName("Progress"), IdlePulse);
+				const float IdlePulse = (FMath::Sin(AnimationTime * 2.0f) * 0.5f + 0.5f) * 0.05f;
+				ApplyBorderProgress(IdlePulse);
 			}
 			break;
 		}
@@ -331,14 +340,26 @@ void UInteractableWidget::UpdateMaterialParameters()
 	}
 
 	// Set progress (0.0 to 1.0 - controls border fill amount)
-	BorderMID->SetScalarParameterValue(FName("Progress"), CurrentProgress);
+	ApplyBorderProgress(CurrentProgress);
 
 	// Set fill color based on current state
-	FLinearColor FillColor = GetCurrentFillColor();
-	BorderMID->SetVectorParameterValue(FName("FillColor"), FillColor);
+	const FLinearColor FillColor = GetCurrentFillColor();
+	BorderMID->SetVectorParameterValue(InteractableWidgetMaterialParams::FillColor, FillColor);
 
 	// Set background color (unfilled portion)
-	BorderMID->SetVectorParameterValue(FName("BackgroundColor"), BorderBackgroundColor);
+	BorderMID->SetVectorParameterValue(InteractableWidgetMaterialParams::BackgroundColor, BorderBackgroundColor);
+}
+
+void UInteractableWidget::ApplyBorderProgress(float ProgressValue)
+{
+	if (!BorderMID)
+	{
+		return;
+	}
+
+	const float ClampedProgress = FMath::Clamp(ProgressValue, 0.0f, 1.0f);
+	BorderMID->SetScalarParameterValue(InteractableWidgetMaterialParams::Progress, ClampedProgress);
+	BorderMID->SetScalarParameterValue(InteractableWidgetMaterialParams::ProgressLower, ClampedProgress);
 }
 
 FLinearColor UInteractableWidget::GetCurrentFillColor() const

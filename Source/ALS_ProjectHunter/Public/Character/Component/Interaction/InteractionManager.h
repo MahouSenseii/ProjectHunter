@@ -34,7 +34,8 @@ enum class EManagedInteractionMode : uint8
 	GroundTapOrHold,
 	ActorHold,
 	ActorTapOrHold,
-	ActorMash
+	ActorMash,
+	ActorContinuous
 };
 
 /**
@@ -149,9 +150,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Interaction|State")
 	TScriptInterface<IInteractable> CurrentInteractable;
 
-	/** Current ground item ID (-1 if none) */
+	/** Current ground item ID (INDEX_NONE if none) */
 	UPROPERTY(BlueprintReadOnly, Category = "Interaction|State")
-	int32 CurrentGroundItemID = -1;
+	int32 CurrentGroundItemID = INDEX_NONE;
 
 	// ═══════════════════════════════════════════════
 	// EVENTS
@@ -253,23 +254,38 @@ protected:
 	// INTERNAL LOGIC
 	// ═══════════════════════════════════════════════
 
-	void InteractWithActor(AActor* TargetActor);
-	void PickupGroundItemToInventory(int32 ItemID);
-	void PickupGroundItemAndEquip(int32 ItemID);
+	bool InteractWithActor(AActor* TargetActor);
+	bool PickupGroundItemToInventory(int32 ItemID);
+	bool PickupGroundItemAndEquip(int32 ItemID);
 	void UpdateFocusState(TScriptInterface<IInteractable> NewInteractable);
 	void UpdateGroundItemFocus(int32 NewGroundItemID);
-	void UpdateHoldProgress(float DeltaTime);
+	void UpdateActiveInteraction(float DeltaTime);
 	void BeginGroundTapOrHoldInteraction(int32 GroundItemID);
 	void BeginActorHoldInteraction(const TScriptInterface<IInteractable>& Interactable, bool bAllowTapOnRelease);
+	void BeginActorContinuousInteraction(const TScriptInterface<IInteractable>& Interactable);
 	void BeginOrAdvanceActorMashInteraction(const TScriptInterface<IInteractable>& Interactable);
 	void ResetActiveInteractionState(bool bForceCancelHoldOnPickupManager = false);
+	void StartHoldPhaseIfNeeded();
+	void PushActiveProgress(float NewProgress, bool bForce = false);
+	void CompleteActiveHoldInteraction();
+	void CancelActiveHoldInteraction(bool bShowCancelledState);
+	void EndActorContinuousInteraction();
+	void RefreshFocusedWidget();
+	AActor* ResolveInteractionActor(const TScriptInterface<IInteractable>& Interactable) const;
+	float GetRequiredHoldSeconds() const;
+	bool HasActiveInteraction() const;
+	bool UsesHoldLifecycle(EManagedInteractionMode Mode) const;
+	bool UsesTapThreshold(EManagedInteractionMode Mode) const;
+	bool UsesActorTarget(EManagedInteractionMode Mode) const;
+	bool ShouldUpdatePromptWidgetFromFocus() const;
+	void SyncHeldInputSecondsFromController();
 
 	// ═══════════════════════════════════════════════
 	// WIDGET MANAGEMENT
 	// ═══════════════════════════════════════════════
 
 	/** Update widget for actor interactable focus */
-	void UpdateWidgetForActorInteractable(UInteractableManager* Interactable);
+	void UpdateWidgetForActorInteractable(const TScriptInterface<IInteractable>& Interactable);
 
 	/** Update widget for ground item focus */
 	void UpdateWidgetForGroundItem(int32 GroundItemID);
@@ -308,9 +324,6 @@ private:
 	/** Is currently in hold interaction? */
 	bool bIsHolding = false;
 
-	/** Last progress value (to avoid redundant updates) */
-	float LastInteractionProgress = -1.0f;
-
 	/** Current managed interaction mode */
 	EManagedInteractionMode ActiveInteractionMode = EManagedInteractionMode::None;
 
@@ -318,22 +331,16 @@ private:
 	TScriptInterface<IInteractable> ActiveInteractable;
 
 	/** Active ground item being interacted with */
-	int32 ActiveGroundItemID = -1;
+	int32 ActiveGroundItemID = INDEX_NONE;
 
 	/** Is interact input currently held down */
 	bool bInteractInputHeld = false;
 
-	/** Has interaction crossed tap-hold threshold and started filling */
-	bool bHoldPhaseStarted = false;
-
-	/** Time held since press started */
-	float PressElapsedSeconds = 0.0f;
-
-	/** Time held since hold phase started */
-	float HoldElapsedSeconds = 0.0f;
+	/** Primary held time source of truth for active hold-style interactions */
+	float HeldInputSeconds = 0.0f;
 
 	/** Per-interaction threshold before hold starts */
-	float ActiveHoldThresholdSeconds = 0.0f;
+	float ActiveTapThresholdSeconds = 0.0f;
 
 	/** Duration required to complete hold after threshold */
 	float ActiveHoldDurationSeconds = 0.0f;
@@ -341,23 +348,31 @@ private:
 	/** Current normalized progress [0..1] */
 	float ActiveProgress = 0.0f;
 
+	/** Has the hold lifecycle started for the active interaction */
+	bool bHoldStarted = false;
+
+	/** Has the hold lifecycle already completed */
+	bool bHoldCompleted = false;
+
+	/** Last progress value sent to the presentation layer */
+	float LastInteractionProgress = -1.0f;
+
 	/** Mash count progress (can decay as float) */
-	float ActiveMashCountProgress = 0.0f;
+	float MashProgressUnits = 0.0f;
 
 	/** Required mash presses */
-	int32 ActiveMashRequiredCount = 0;
+	int32 MashRequiredCount = 0;
 
 	/** Current integer mash press count (display/events) */
-	int32 ActiveMashCount = 0;
+	int32 MashCurrentCount = 0;
 
 	/** Mash decay rate per second */
-	float ActiveMashDecayRate = 0.0f;
+	float MashDecayRate = 0.0f;
 
 	// ═══════════════════════════════════════════════
 	// TIMERS
 	// ═══════════════════════════════════════════════
 
 	FTimerHandle InteractionCheckTimer;
-	FTimerHandle HoldProgressTimer;
 	FTimerHandle PossessionCheckTimer;
 };
