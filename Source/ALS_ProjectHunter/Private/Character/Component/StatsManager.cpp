@@ -4,6 +4,7 @@
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
+#include "Data/BaseStatsData.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "Item/ItemInstance.h"
@@ -12,7 +13,7 @@
 DEFINE_LOG_CATEGORY(LogStatsManager);
 UStatsManager::UStatsManager()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 	SetIsReplicatedByDefault(false); // Stats are replicated through AttributeSet
 }
 
@@ -42,6 +43,13 @@ void UStatsManager::BeginPlay()
 	{
 		UE_LOG(LogStatsManager, Warning, TEXT("StatsManager: No StatsData found on %s"), *GetOwner()->GetName());
 	}
+}
+
+void UStatsManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	DebugManager.DrawDebug(this, this);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -534,7 +542,7 @@ float UStatsManager::GetExperienceBonus() const
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
-/* VITAL ATTRIBUTES                                                        */
+/* C ATTRIBUTES                                                        */
 /* ═══════════════════════════════════════════════════════════════════════ */
 
 float UStatsManager::GetHealth() const
@@ -598,19 +606,13 @@ float UStatsManager::GetStaminaPercent() const
 
 float UStatsManager::GetAttributeByName(FName AttributeName) const
 {
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-	if (!ASC)
-	{
-		return 0.0f;
-	}
-
 	FGameplayAttribute Attribute = UHunterAttributeSet::FindAttributeByName(AttributeName);
 	if (!Attribute.IsValid())
 	{
 		return 0.0f;
 	}
 
-	return ASC->GetNumericAttribute(Attribute);
+	return GetAttributeValue(Attribute);
 }
 
 bool UStatsManager::MeetsStatRequirements(const TMap<FName, float>& Requirements) const
@@ -626,6 +628,17 @@ bool UStatsManager::MeetsStatRequirements(const TMap<FName, float>& Requirements
 	}
 
 	return true;
+}
+
+float UStatsManager::GetAttributeValue(const FGameplayAttribute& Attribute) const
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC || !Attribute.IsValid())
+	{
+		return 0.0f;
+	}
+
+	return ASC->GetNumericAttribute(Attribute);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -673,11 +686,13 @@ float UStatsManager::GetPowerRatioAgainst(AActor* OtherActor) const
 
 void UStatsManager::InitializeFromDataAsset(UBaseStatsData* InStatsData)
 {
-	if (!StatsData)
+	if (!InStatsData)
 	{
 		UE_LOG(LogStatsManager, Warning, TEXT("InitializeFromDataAsset: StatsData is null"));
 		return;
 	}
+
+	StatsData = InStatsData;
 
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
 	if (!ASC)
@@ -692,7 +707,7 @@ void UStatsManager::InitializeFromDataAsset(UBaseStatsData* InStatsData)
 		return;
 	}
 
-	TMap<FName, float> StatsMap = StatsData->GetAllStatsAsMap();
+	const TMap<FName, float> StatsMap = StatsData->GetAllStatsAsMap();
 
 	for (const TPair<FName, float>& Pair : StatsMap)
 	{

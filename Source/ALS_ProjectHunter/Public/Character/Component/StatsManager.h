@@ -3,7 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Data/BaseStatsData.h"
+#include "Character/Component/StatsDebug.h"
 #include "GameplayEffectTypes.h"
 #include "StatsManager.generated.h"
 
@@ -12,6 +12,7 @@ class UAbilitySystemComponent;
 class UHunterAttributeSet;
 class UItemInstance;
 class UGameplayEffect;
+class UBaseStatsData;
 struct FPHAttributeData;
 struct FGameplayAttribute;
 
@@ -29,6 +30,7 @@ public:
 	UStatsManager();
 
 	virtual void BeginPlay() override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* EQUIPMENT INTEGRATION (Required by EquipmentManager)                    */
@@ -182,6 +184,11 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	bool MeetsStatRequirements(const TMap<FName, float>& Requirements) const;
+
+	float GetAttributeValue(const FGameplayAttribute& Attribute) const;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Debug")
+	FStatsDebugManager DebugManager;
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* POWER CALCULATIONS                                                      */

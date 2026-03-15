@@ -9,6 +9,8 @@
 
 // Forward declarations
 class UGameplayEffect;
+struct FHunterStatDefinition;
+struct FPropertyChangedEvent;
 
 /**
  * Enum for all 187 attributes
@@ -256,57 +258,56 @@ enum class EHunterAttribute : uint8
 	// You can add them if needed: PhysicalToFire, FireToIce, etc.
 };
 
-/**
- * Helper to convert enum to attribute name
- */
 class FHunterAttributeHelper
 {
 public:
 	static FName GetAttributeName(EHunterAttribute Attribute);
 };
 
-/**
- * Individual stat initialization entry with DROPDOWN!
- */
 USTRUCT(BlueprintType)
-struct FStatInitializationEntry
+struct ALS_PROJECTHUNTER_API FStatInitializationEntry
 {
 	GENERATED_BODY()
 
-	/** Attribute (DROPDOWN MENU!) */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	FStatInitializationEntry();
+
+	/** Legacy serialized dropdown value kept for backward compatibility with older assets. */
+	UPROPERTY()
 	EHunterAttribute Attribute = EHunterAttribute::Strength;
 
-	/** Base value for this attribute */
+	/** Shared stat name resolved from the central definition registry. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	FName StatName = NAME_None;
+
+	/** Shared display name resolved from the central definition registry. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	FText DisplayName;
+
+	/** Shared category resolved from the central definition registry. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	FName Category = NAME_None;
+
+	/** Whether this entry should contribute a runtime override value. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	bool bOverrideValue = false;
+
+	/** Asset-authored value for this stat. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats", meta = (EditCondition = "bOverrideValue", EditConditionHides))
 	float BaseValue = 0.0f;
 
-	FStatInitializationEntry()
-		: Attribute(EHunterAttribute::Strength)
-		, BaseValue(0.0f)
-	{}
-
-	FStatInitializationEntry(EHunterAttribute InAttribute, float InValue)
-		: Attribute(InAttribute)
-		, BaseValue(InValue)
-	{}
-
-	/** Get attribute name */
-	FName GetAttributeName() const
-	{
-		return FHunterAttributeHelper::GetAttributeName(Attribute);
-	}
+	FName GetAttributeName() const;
+	bool HasRuntimeValue() const;
+	void ApplyDefinition(const FHunterStatDefinition& Definition);
 };
 
-/**
- * Base Stats Data Asset with DROPDOWN attribute selection!
- */
 UCLASS(BlueprintType)
 class ALS_PROJECTHUNTER_API UBaseStatsData : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
 public:
+	UBaseStatsData();
+
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* IDENTITY */
 	/* ═══════════════════════════════════════════════════════════════════════ */
@@ -321,7 +322,7 @@ public:
 	FGameplayTagContainer Tags;
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* QUICK SETUP (Same as before) */
+	/* QUICK SETUP */
 	/* ═══════════════════════════════════════════════════════════════════════ */
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Quick Setup|Primary Attributes", meta = (ClampMin = "0"))
@@ -378,21 +379,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Quick Setup|Defense", meta = (ClampMin = "0"))
 	float Armour = 0.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Quick Setup|Defense", meta = (ClampMin = "0"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Quick Setup|Movement", meta = (ClampMin = "0"))
 	float MovementSpeed = 100.0f;
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* ALL ATTRIBUTES - WITH DROPDOWN! ⭐ */
+	/* ALL ATTRIBUTES */
 	/* ═══════════════════════════════════════════════════════════════════════ */
 
 	/**
-	 * BASE ATTRIBUTES - Now with DROPDOWN selection! ⭐
-	 * 
-	 * Click "+" to add entry
-	 * Select attribute from dropdown (187 options!)
-	 * Set value
+	 * Synchronized stat entries sourced from the shared UHunterAttributeSet registry.
+	 * The array size is fixed by the registry; edit the per-entry override flag/value only.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "All Attributes")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "All Attributes", meta = (TitleProperty = "DisplayName", EditFixedSize))
 	TArray<FStatInitializationEntry> BaseAttributes;
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
@@ -410,10 +408,46 @@ public:
 	TMap<FName, float> GetAllStatsAsMap() const;
 
 	UFUNCTION(BlueprintPure, Category = "Stats")
+	TMap<FName, float> GetStatsByCategory(FName CategoryName) const;
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	TArray<FName> GetSupportedCategories() const;
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	TArray<FName> GetSupportedStatNames() const;
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	TArray<FStatInitializationEntry> GetStatEntriesByCategory(FName CategoryName) const;
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
 	bool GetStatValue(FName AttributeName, float& OutValue) const;
 
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	bool HasAttribute(FName AttributeName) const;
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	bool HasCategory(FName CategoryName) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void SortStatsByCategoryThenName();
+
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void RefreshCategoriesFromDefinitions();
+
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Stats|Editor")
+	void RefreshFromAttributeSetDefinition();
+
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Stats|Editor")
+	void SortStats();
+
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Stats|Editor")
+	void ValidateStats();
+
+	virtual void PostLoad() override;
+
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override
 	{
