@@ -36,7 +36,22 @@ UHunterAbilitySystemComponent::UHunterAbilitySystemComponent()
 
 void UHunterAbilitySystemComponent::AbilityActorInfoSet()
 {
+	if (bEffectAppliedDelegateBound)
+	{
+		UE_LOG(LogHunterGAS, VeryVerbose, TEXT("AbilityActorInfoSet: Delegate already bound for ASC=%s"), *GetName());
+		return;
+	}
+
 	OnGameplayEffectAppliedDelegateToSelf.AddUObject(this, &UHunterAbilitySystemComponent::EffectApplied);
+	bEffectAppliedDelegateBound = true;
+
+	UE_LOG(
+		LogHunterGAS,
+		Verbose,
+		TEXT("AbilityActorInfoSet: Bound gameplay effect delegate for ASC=%s Owner=%s Avatar=%s"),
+		*GetName(),
+		*GetNameSafe(GetOwner()),
+		AbilityActorInfo.IsValid() ? *GetNameSafe(AbilityActorInfo->AvatarActor.Get()) : TEXT("None"));
 }
 
 void UHunterAbilitySystemComponent::EffectApplied(UAbilitySystemComponent* AbilitySystemComponent,

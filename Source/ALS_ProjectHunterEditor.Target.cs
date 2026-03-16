@@ -10,6 +10,6 @@ public class ALS_ProjectHunterEditorTarget : TargetRules
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V6;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_7;
-		ExtraModuleNames.Add("ALS_ProjectHunter");
+		ExtraModuleNames.AddRange(new string[] { "ALS_ProjectHunter", "ALS_ProjectHunterEditor" });
 	}
 }

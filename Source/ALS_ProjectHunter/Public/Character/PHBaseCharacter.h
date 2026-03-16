@@ -13,6 +13,7 @@ struct FGameplayAbilitySpecHandle;
 // Forward declarations
 class UAbilitySystemComponent;
 class UHunterAttributeSet;
+class UHunterAbilitySystemComponent;
 class UCharacterProgressionManager;
 class UEquipmentManager;
 class UStatsManager;
@@ -41,6 +42,7 @@ public:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
+	virtual void OnRep_Controller() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UPROPERTY(BlueprintAssignable, Category="Combat")
@@ -62,15 +64,15 @@ public:
 	TObjectPtr<UHunterAttributeSet> AttributeSet;
 
 	/** Progression Manager - XP, Level, Stat Points */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Progression")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Progression", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCharacterProgressionManager> ProgressionManager;
 
 	/** Equipment Component - Items, gear, inventory */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UEquipmentManager> EquipmentManager;
 
 	/** Stats Manager - All stat queries and calculations */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStatsManager> StatsManager;
 
 	/**
@@ -251,6 +253,7 @@ protected:
 	virtual void InitializeAttributes();
 	virtual void BindAttributeDelegates();
 	virtual void OnAbilitySystemInitialized();
+	bool EnsureAttributeSetRegisteredWithAbilitySystem();
 	
 	UPROPERTY(Replicated)
 	TObjectPtr<AActor> LastKillerActor = nullptr;

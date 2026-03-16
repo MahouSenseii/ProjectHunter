@@ -44,4 +44,9 @@ protected:
 	// ========================================
 public:
 	FEffectAssetTags EffectAssetTags;
+
+private:
+	// AbilityActorInfoSet can be called more than once as possession/controller state changes.
+	// Keep the effect delegate bound exactly once so runtime refreshes do not stack callbacks.
+	bool bEffectAppliedDelegateBound = false;
 };

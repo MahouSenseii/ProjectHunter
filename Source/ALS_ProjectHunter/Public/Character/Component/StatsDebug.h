@@ -24,6 +24,18 @@ struct ALS_PROJECTHUNTER_API FStatDebugEntry
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats|Debug|Entry")
 	FName Category;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats|Debug|Entry")
+	int32 SortOrder;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats|Debug|Entry")
+	FText Tooltip;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats|Debug|Entry")
+	FName IconName;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats|Debug|Entry")
+	FName StatType;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Debug|Entry")
 	bool bEnabled;
 
@@ -90,14 +102,17 @@ struct ALS_PROJECTHUNTER_API FStatsDebugManager
 	bool bShowLoot;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Debug|Categories")
+	bool bShowSpecial;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Debug|Categories")
 	bool bShowCustom;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Debug", meta = (TitleProperty = "DisplayName", EditFixedSize))
 	TArray<FStatDebugEntry> StatEntries;
 
 	void InitializeDefaults();
-	void RegisterStat(const FName StatName, const FText& DisplayName, const FName Category, const FColor& DisplayColor = FColor::White, bool bEnabled = true);
-	void RegisterStats();
+	void RegisterStat(const FStatDebugEntry& Entry);
+	void RegisterStats(UStatsManager* StatsManager);
 	bool IsStatEnabled(const FStatDebugEntry& Entry) const;
 	bool IsCategoryEnabled(FName Category) const;
 	void BuildDisplayLines(UStatsManager* StatsManager, TArray<FString>& OutLines);

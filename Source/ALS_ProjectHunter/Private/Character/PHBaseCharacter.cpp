@@ -1,18 +1,19 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Character/PHBaseCharacter.h"
+#include "AbilitySystem/HunterAbilitySystemComponent.h"
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "Character/Component/CharacterProgressionManager.h"
 #include "Character/Component/StatsManager.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
-#include "AbilitySystem/HunterAttributeSet.h"
 #include "Character/Component/EquipmentManager.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogPHBaseCharacterAbilitySystem, Log, All);
 
 
 APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -20,7 +21,7 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Create Ability System Component
-	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent = CreateDefaultSubobject<UHunterAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
@@ -34,7 +35,7 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 	EquipmentManager = CreateDefaultSubobject<UEquipmentManager>(TEXT("EquipmentComponent"));
 
 	// Create Stats Manager
-	StatsManager = CreateDefaultSubobject<UStatsManager>(TEXT("StatsManager"));
+	StatsManager = CreateDefaultSubobject<UStatsManager>(TEXT("Stats Manager"));
 }
 
 void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -52,15 +53,20 @@ void APHBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	
+	// This character owns the ASC directly, so we can safely initialize actor info here
+	// before component BeginPlay. That guarantees StatsManager sees a live ASC-backed
+	// AttributeSet instead of only class metadata.
+	if (AbilitySystemComponent)
+	{
+		InitializeAbilitySystem();
+	}
 }
 
 void APHBaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	// Initialize ASC on server
-	if (AbilitySystemComponent && !bAbilitySystemInitialized)
+	if (AbilitySystemComponent)
 	{
 		InitializeAbilitySystem();
 	}
@@ -70,8 +76,17 @@ void APHBaseCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 
-	// Initialize ASC on client
-	if (AbilitySystemComponent && !bAbilitySystemInitialized)
+	if (AbilitySystemComponent)
+	{
+		InitializeAbilitySystem();
+	}
+}
+
+void APHBaseCharacter::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+
+	if (AbilitySystemComponent)
 	{
 		InitializeAbilitySystem();
 	}
@@ -81,21 +96,121 @@ void APHBaseCharacter::OnRep_PlayerState()
 /* INITIALIZATION */
 /* ═══════════════════════════════════════════════════════════════════════ */
 
-void APHBaseCharacter::InitializeAbilitySystem()
+bool APHBaseCharacter::EnsureAttributeSetRegisteredWithAbilitySystem()
 {
-	if (bAbilitySystemInitialized)
-	{
-		return;
-	}
-
 	if (!AbilitySystemComponent)
 	{
-		UE_LOG(LogTemp, Error, TEXT("InitializeAbilitySystem: AbilitySystemComponent is null!"));
+		UE_LOG(LogPHBaseCharacterAbilitySystem, Error, TEXT("EnsureAttributeSetRegisteredWithAbilitySystem: %s has no ASC"), *GetName());
+		return false;
+	}
+
+	if (!AttributeSet)
+	{
+		UE_LOG(LogPHBaseCharacterAbilitySystem, Error, TEXT("EnsureAttributeSetRegisteredWithAbilitySystem: %s has no AttributeSet"), *GetName());
+		return false;
+	}
+
+	const UAttributeSet* RegisteredAttributeSet = nullptr;
+	for (const UAttributeSet* Candidate : AbilitySystemComponent->GetSpawnedAttributes())
+	{
+		if (Candidate && Candidate->IsA(AttributeSet->GetClass()))
+		{
+			RegisteredAttributeSet = Candidate;
+			break;
+		}
+	}
+
+	if (RegisteredAttributeSet && RegisteredAttributeSet != AttributeSet)
+	{
+		UE_LOG(
+			LogPHBaseCharacterAbilitySystem,
+			Warning,
+			TEXT("EnsureAttributeSetRegisteredWithAbilitySystem: %s already has live AttributeSet %s on ASC %s. Adopting that live instance instead of stale pointer %s."),
+			*GetName(),
+			*GetNameSafe(RegisteredAttributeSet),
+			*GetNameSafe(AbilitySystemComponent),
+			*GetNameSafe(AttributeSet));
+
+		AttributeSet = Cast<UHunterAttributeSet>(const_cast<UAttributeSet*>(RegisteredAttributeSet));
+	}
+	else if (!RegisteredAttributeSet)
+	{
+		// Explicitly register the actor-owned default subobject with the ASC so runtime
+		// attribute queries always resolve against a live ASC-owned instance.
+		AbilitySystemComponent->AddAttributeSetSubobject(AttributeSet.Get());
+
+		for (const UAttributeSet* Candidate : AbilitySystemComponent->GetSpawnedAttributes())
+		{
+			if (Candidate && Candidate->IsA(AttributeSet->GetClass()))
+			{
+				RegisteredAttributeSet = Candidate;
+				break;
+			}
+		}
+	}
+
+	const bool bRegisteredCorrectly = (RegisteredAttributeSet == AttributeSet);
+	if (!bRegisteredCorrectly)
+	{
+		UE_LOG(
+			LogPHBaseCharacterAbilitySystem,
+			Error,
+			TEXT("EnsureAttributeSetRegisteredWithAbilitySystem: Failed to register AttributeSet for %s. ASC=%s AttributeSet=%s LiveAttributeSet=%s"),
+			*GetName(),
+			*GetNameSafe(AbilitySystemComponent),
+			*GetNameSafe(AttributeSet),
+			*GetNameSafe(RegisteredAttributeSet));
+	}
+
+	return bRegisteredCorrectly;
+}
+
+void APHBaseCharacter::InitializeAbilitySystem()
+{
+	if (!AbilitySystemComponent)
+	{
+		UE_LOG(LogPHBaseCharacterAbilitySystem, Error, TEXT("InitializeAbilitySystem: %s has no ASC"), *GetName());
 		return;
 	}
 
-	// Initialize ASC with self as owner and avatar
+	const bool bHasLiveAttributeSet = EnsureAttributeSetRegisteredWithAbilitySystem();
+
+	// Refresh actor info every time possession/controller state changes. The owned
+	// AttributeSet registration above keeps the ASC wired to the same live stat object.
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+
+	if (UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(AbilitySystemComponent))
+	{
+		HunterASC->AbilityActorInfoSet();
+	}
+
+	if (bAbilitySystemInitialized)
+	{
+		if (StatsManager)
+		{
+			StatsManager->NotifyAbilitySystemReady();
+		}
+
+		UE_LOG(
+			LogPHBaseCharacterAbilitySystem,
+			Verbose,
+			TEXT("InitializeAbilitySystem: Refreshed actor info for %s. ASC=%s LiveAttributeSet=%s"),
+			*GetName(),
+			*GetNameSafe(AbilitySystemComponent),
+			*GetNameSafe(AttributeSet));
+		return;
+	}
+
+	if (!bHasLiveAttributeSet)
+	{
+		UE_LOG(
+			LogPHBaseCharacterAbilitySystem,
+			Error,
+			TEXT("InitializeAbilitySystem: %s cannot finish GAS setup because the live AttributeSet is missing. ASC=%s"),
+			*GetName(),
+			*GetNameSafe(AbilitySystemComponent));
+		return;
+	}
 
 	// Initialize attributes with base values
 	InitializeAttributes();
@@ -115,7 +230,18 @@ void APHBaseCharacter::InitializeAbilitySystem()
 	// Call virtual function for subclass initialization
 	OnAbilitySystemInitialized();
 
-	UE_LOG(LogTemp, Log, TEXT("Ability System initialized for %s"), *GetName());
+	if (StatsManager)
+	{
+		StatsManager->NotifyAbilitySystemReady();
+	}
+
+	UE_LOG(
+		LogPHBaseCharacterAbilitySystem,
+		Log,
+		TEXT("Ability System initialized for %s. ASC=%s LiveAttributeSet=%s"),
+		*GetName(),
+		*GetNameSafe(AbilitySystemComponent),
+		*GetNameSafe(AttributeSet));
 }
 
 void APHBaseCharacter::InitializeAttributes()
@@ -144,7 +270,6 @@ void APHBaseCharacter::BindAttributeDelegates()
 }
 
 void APHBaseCharacter::OnAbilitySystemInitialized()
-
 {
 	// Override in subclasses for custom initialization
 }

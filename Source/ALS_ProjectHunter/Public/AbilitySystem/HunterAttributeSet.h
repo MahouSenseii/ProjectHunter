@@ -51,7 +51,11 @@ public:
 	/* ============================= */
 
 	float GetAttributeValue(const FGameplayAttribute& Attribute) const;	
+	void SetIsInitializingStats(bool bInInitializing);
+	bool IsInitializingStats() const;
+	void RecalculateAllDerivedVitals();
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
+	virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 	static bool ShouldUpdateThresholdTags(const FGameplayAttribute& Attribute);
 	TMap<FGameplayTag, TStaticFuncPtr<FGameplayAttribute()>> TagsToAttributes;
@@ -140,7 +144,7 @@ public:
 	 * Increases all forms of damage globally. 
 	 * Applied as a multiplier to all damage types.
 	 */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_GlobalDamages, Category = "Secondary Attribute|Damage", meta = (DisplayName = "GlobalDamages"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_GlobalDamages, Category = "Secondary Attribute | Damage", meta = (DisplayName = "GlobalDamages"))
 	FGameplayAttributeData GlobalDamages;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, GlobalDamages);
 
@@ -149,113 +153,113 @@ public:
 	/* ========================= */
 
 	/** Physical Damage */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinPhysicalDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Min Physical Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinPhysicalDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Min Physical Damage"))
 	FGameplayAttributeData MinPhysicalDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MinPhysicalDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxPhysicalDamage, Category = "Secondary Attribute|Damage" , meta = (DisplayName = "Max Physical Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxPhysicalDamage, Category = "Secondary Attribute | Damage" , meta = (DisplayName = "Max Physical Damage"))
 	FGameplayAttributeData MaxPhysicalDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxPhysicalDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalFlatDamage, Category = "Secondary Attribute|Damage" , meta = (DisplayName = "Physical Flat Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalFlatDamage, Category = "Secondary Attribute | Damage" , meta = (DisplayName = "Physical Flat Damage"))
 	FGameplayAttributeData PhysicalFlatDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PhysicalFlatDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalPercentDamage, Category = "Secondary Attribute|Damage" , meta = (DisplayName = "Physical Percent Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalPercentDamage, Category = "Secondary Attribute | Damage" , meta = (DisplayName = "Physical Percent Damage"))
 	FGameplayAttributeData PhysicalPercentDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PhysicalPercentDamage);
 
 	/** Fire Damage */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinFireDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Min Fire Damage "))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinFireDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Min Fire Damage "))
 	FGameplayAttributeData MinFireDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MinFireDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxFireDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Max Fire Damage "))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxFireDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Max Fire Damage "))
 	FGameplayAttributeData MaxFireDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxFireDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireFlatDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Fire Flat Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireFlatDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Fire Flat Damage"))
 	FGameplayAttributeData FireFlatDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FireFlatDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FirePercentDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Fire Percent Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FirePercentDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Fire Percent Damage"))
 	FGameplayAttributeData FirePercentDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FirePercentDamage);
 
 	/** Ice Damage */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinIceDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Min Ice Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinIceDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Min Ice Damage"))
 	FGameplayAttributeData MinIceDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MinIceDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxIceDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Max Ice Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxIceDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Max Ice Damage"))
 	FGameplayAttributeData MaxIceDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxIceDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceFlatDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Ice Flat Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceFlatDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Ice Flat Damage"))
 	FGameplayAttributeData IceFlatDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceFlatDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IcePercentDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Ice Percent Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IcePercentDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Ice Percent Damage"))
 	FGameplayAttributeData IcePercentDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IcePercentDamage);
 
 	/** Light Damage */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinLightDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Min Light Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinLightDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Min Light Damage"))
 	FGameplayAttributeData MinLightDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MinLightDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxLightDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Max Light Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxLightDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Max Light Damage"))
 	FGameplayAttributeData MaxLightDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxLightDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightFlatDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Light Flat Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightFlatDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Light Flat Damage"))
 	FGameplayAttributeData LightFlatDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightFlatDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightPercentDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Light Percent Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightPercentDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Light Percent Damage"))
 	FGameplayAttributeData LightPercentDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightPercentDamage);
 
 	/** Lightning Damage */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinLightningDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Min Lightning Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinLightningDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Min Lightning Damage"))
 	FGameplayAttributeData MinLightningDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MinLightningDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxLightningDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Max Lightning Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxLightningDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Max Lightning Damage"))
 	FGameplayAttributeData MaxLightningDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxLightningDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningFlatDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Max Lightning Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningFlatDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Max Lightning Damage"))
 	FGameplayAttributeData LightningFlatDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningFlatDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningPercentDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Max Percent Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningPercentDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Max Percent Damage"))
 	FGameplayAttributeData LightningPercentDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningPercentDamage);
 
 	/** Corruption Damage */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinCorruptionDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Min Corruption Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinCorruptionDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Min Corruption Damage"))
 	FGameplayAttributeData MinCorruptionDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MinCorruptionDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxCorruptionDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Max Corruption Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxCorruptionDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Max Corruption Damage"))
 	FGameplayAttributeData MaxCorruptionDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxCorruptionDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionFlatDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Corruption Flat Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionFlatDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Corruption Flat Damage"))
 	FGameplayAttributeData CorruptionFlatDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionFlatDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionPercentDamage, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Max Corruption Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionPercentDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Max Corruption Damage"))
 	FGameplayAttributeData CorruptionPercentDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionPercentDamage);
 
 	/** Special Damage Modifiers */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_DamageBonusWhileAtFullHP, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Damage Bonus While At Full HP"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_DamageBonusWhileAtFullHP, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Damage Bonus While At Full HP"))
 	FGameplayAttributeData DamageBonusWhileAtFullHP;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, DamageBonusWhileAtFullHP);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_DamageBonusWhileAtLowHP, Category = "Secondary Attribute|Damage", meta = (DisplayName = "Damage Bonus While At Low HP"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_DamageBonusWhileAtLowHP, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Damage Bonus While At Low HP"))
 	FGameplayAttributeData DamageBonusWhileAtLowHP;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, DamageBonusWhileAtLowHP);
 
@@ -266,95 +270,95 @@ public:
 	/* ============================= */
 
 	/** Increases area-based damage output. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AreaDamage, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Area Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AreaDamage, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Area Damage"))
 	FGameplayAttributeData AreaDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AreaDamage);
 
 	/** Increases the radius of area-based effects (AoE). */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AreaOfEffect, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Area Of Effect"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AreaOfEffect, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Area Of Effect"))
 	FGameplayAttributeData AreaOfEffect;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AreaOfEffect);
 
 	/** Increases mêlée and ranged attack reach. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AttackRange, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Attack Range"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AttackRange, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Attack Range"))
 	FGameplayAttributeData AttackRange;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AttackRange);
 
 	/** Increases the speed of physical mêlée attacks. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AttackSpeed, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Attack Speed"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AttackSpeed, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Attack Speed"))
 	FGameplayAttributeData AttackSpeed;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AttackSpeed);
 
 	/** Increases the speed of spell casting. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CastSpeed, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Cast Speed"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CastSpeed, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Cast Speed"))
 	FGameplayAttributeData CastSpeed;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CastSpeed);
 
 	/** Increases chance for critical hits. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CritChance, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Crit Chance"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CritChance, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Crit Chance"))
 	FGameplayAttributeData CritChance;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CritChance);
 
 	/** Increases the multiplier for critical hits. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CritMultiplier, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Crit Multiplier"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CritMultiplier, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Crit Multiplier"))
 	FGameplayAttributeData CritMultiplier;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CritMultiplier);
 
 	/** Increases damage-over-time effectiveness. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_DamageOverTime, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Damage Over Time"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_DamageOverTime, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Damage Over Time"))
 	FGameplayAttributeData DamageOverTime;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, DamageOverTime);
 
 	/** Increases overall elemental damage. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ElementalDamage, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Elemental Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ElementalDamage, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Elemental Damage"))
 	FGameplayAttributeData ElementalDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ElementalDamage);
 
 	/** Increases mêlée attack damage. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MeleeDamage, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Melee Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MeleeDamage, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Melee Damage"))
 	FGameplayAttributeData MeleeDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MeleeDamage);
 
 	/** Increases Spell attack damage. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_SpellDamage, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Spell Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_SpellDamage, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Spell Damage"))
 	FGameplayAttributeData SpellDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, SpellDamage);
 
 	/** Increases the number of projectiles fired at once. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ProjectileCount, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Projectile Count"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ProjectileCount, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Projectile Count"))
 	FGameplayAttributeData ProjectileCount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ProjectileCount);
 
 	/** Increases projectile speed for ranged attacks and spells. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ProjectileSpeed, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Projectile Speed"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ProjectileSpeed, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Projectile Speed"))
 	FGameplayAttributeData ProjectileSpeed;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ProjectileSpeed);
 
 	/** Increases damage for all ranged attacks. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_RangedDamage, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Ranged Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_RangedDamage, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Ranged Damage"))
 	FGameplayAttributeData RangedDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, RangedDamage);
 
 	/** Increases spell critical chance. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_SpellsCritChance, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Spells Crit Chance"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_SpellsCritChance, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Spells Crit Chance"))
 	FGameplayAttributeData SpellsCritChance;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, SpellsCritChance);
 
 	/** Increases spell critical multiplier. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_SpellsCritMultiplier, Category = "Secondary Attribute|Offensive Stats", meta = (DisplayName = "Spells Crit Multiplier"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_SpellsCritMultiplier, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Spells Crit Multiplier"))
 	FGameplayAttributeData SpellsCritMultiplier;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, SpellsCritMultiplier);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChainCount, Category = "Secondary Attribute|Offensive", meta = (DisplayName = "Chain Count"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChainCount, Category = "Secondary Attribute | Offensive", meta = (DisplayName = "Chain Count"))
 	FGameplayAttributeData ChainCount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChainCount);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ForkCount, Category = "Secondary Attribute|Offensive", meta = (DisplayName = "Fork Count"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ForkCount, Category = "Secondary Attribute | Offensive", meta = (DisplayName = "Fork Count"))
 	FGameplayAttributeData ForkCount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ForkCount);
 
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChainDamage, Category = "Secondary Attribute|Offensive", meta = (DisplayName = "Chain Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChainDamage, Category = "Secondary Attribute | Offensive", meta = (DisplayName = "Chain Damage"))
 	FGameplayAttributeData ChainDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChainDamage);
 
@@ -363,128 +367,128 @@ public:
 	/* ============================= */
 
 	/** Physical Damage Conversions */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToFire, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Physical To Fire"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToFire, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Physical To Fire"))
 	FGameplayAttributeData PhysicalToFire;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PhysicalToFire);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToIce, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Physical To Ice"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToIce, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Physical To Ice"))
 	FGameplayAttributeData PhysicalToIce;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PhysicalToIce);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToLightning, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Physical To Lightning"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToLightning, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Physical To Lightning"))
 	FGameplayAttributeData PhysicalToLightning;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PhysicalToLightning);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToLight, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Physical To Light"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToLight, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Physical To Light"))
 	FGameplayAttributeData PhysicalToLight;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PhysicalToLight);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToCorruption, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Physical To Corruption"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToCorruption, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Physical To Corruption"))
 	FGameplayAttributeData PhysicalToCorruption;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PhysicalToCorruption);
 
 	/** Fire Damage Conversions */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToPhysical, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Fire To Physical"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToPhysical, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Fire To Physical"))
 	FGameplayAttributeData FireToPhysical;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FireToPhysical);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToIce, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Fire To Ice"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToIce, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Fire To Ice"))
 	FGameplayAttributeData FireToIce;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FireToIce);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToLightning, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Fire To Lightning"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToLightning, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Fire To Lightning"))
 	FGameplayAttributeData FireToLightning;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FireToLightning);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToLight, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Fire To Light"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToLight, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Fire To Light"))
 	FGameplayAttributeData FireToLight;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FireToLight);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToCorruption, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Fire To Corruption"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireToCorruption, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Fire To Corruption"))
 	FGameplayAttributeData FireToCorruption;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FireToCorruption);
 
 	/** Ice Damage Conversions */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToPhysical, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Ice To Physical"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToPhysical, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Ice To Physical"))
 	FGameplayAttributeData IceToPhysical;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceToPhysical);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToFire, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Ice To Fire"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToFire, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Ice To Fire"))
 	FGameplayAttributeData IceToFire;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceToFire);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToLightning, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Ice To Fire"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToLightning, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Ice To Fire"))
 	FGameplayAttributeData IceToLightning;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceToLightning);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToLight, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Ice To Light"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToLight, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Ice To Light"))
 	FGameplayAttributeData IceToLight;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceToLight);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToCorruption, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Ice To Corruption"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToCorruption, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Ice To Corruption"))
 	FGameplayAttributeData IceToCorruption;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceToCorruption);
 
 	/** Lightning Damage Conversions */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToPhysical, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Lightning To Physical"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToPhysical, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Lightning To Physical"))
 	FGameplayAttributeData LightningToPhysical;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningToPhysical);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToFire, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Lightning To Fire"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToFire, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Lightning To Fire"))
 	FGameplayAttributeData LightningToFire;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningToFire);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToIce, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Lightning To Ice"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToIce, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Lightning To Ice"))
 	FGameplayAttributeData LightningToIce;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningToIce);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToLight, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Lightning To Light"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToLight, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Lightning To Light"))
 	FGameplayAttributeData LightningToLight;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningToLight);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToCorruption, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Lightning To Corruption"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningToCorruption, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Lightning To Corruption"))
 	FGameplayAttributeData LightningToCorruption;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningToCorruption);
 
 	/** Light Damage Conversions */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToPhysical, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Lightning To Physical"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToPhysical, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Lightning To Physical"))
 	FGameplayAttributeData LightToPhysical;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightToPhysical);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToFire, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Light To Fire"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToFire, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Light To Fire"))
 	FGameplayAttributeData LightToFire;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightToFire);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToIce, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Light To Ice"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToIce, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Light To Ice"))
 	FGameplayAttributeData LightToIce;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightToIce);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToLightning, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Light To Lightning"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToLightning, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Light To Lightning"))
 	FGameplayAttributeData LightToLightning;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightToLightning);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToCorruption, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Light To Corruption"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToCorruption, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Light To Corruption"))
 	FGameplayAttributeData LightToCorruption;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightToCorruption);
 
 	/** Corruption Damage Conversions */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToPhysical, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Corruption To Physical"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToPhysical, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Corruption To Physical"))
 	FGameplayAttributeData CorruptionToPhysical;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionToPhysical);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToFire, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Corruption To Physical"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToFire, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Corruption To Physical"))
 	FGameplayAttributeData CorruptionToFire;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionToFire);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToIce, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Corruption To Ice"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToIce, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Corruption To Ice"))
 	FGameplayAttributeData CorruptionToIce;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionToIce);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToLightning, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Corruption To Lightning"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToLightning, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Corruption To Lightning"))
 	FGameplayAttributeData CorruptionToLightning;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionToLightning);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToLight, Category = "Secondary Attribute|Conversion", meta = (DisplayName = "Corruption To Light"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToLight, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Corruption To Light"))
 	FGameplayAttributeData CorruptionToLight;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionToLight);
 
@@ -493,47 +497,47 @@ public:
 	/* =================================== */
 	
 	/** Increases the chance to apply bleed effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToBleed, Category = "Secondary Attribute|Ailments", meta = (DisplayName = "Chance To Bleed"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToBleed, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Bleed"))
 	FGameplayAttributeData ChanceToBleed;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToBleed);
 	
 	/** Increases the chance to apply corruption effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToCorrupt, Category = "Secondary Attribute|Ailments", meta = (DisplayName = "Chance To Corrupt"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToCorrupt, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Corrupt"))
 	FGameplayAttributeData ChanceToCorrupt;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToCorrupt);
 
 	/** Increases the chance to apply freeze effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToFreeze, Category = "Secondary Attribute|Ailments", meta = (DisplayName = "Chance To Freeze"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToFreeze, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Freeze"))
 	FGameplayAttributeData ChanceToFreeze;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToFreeze);
 
 	/** Increases the chance to apply purification effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToPurify, Category = "Secondary Attribute|Ailments", meta = (DisplayName = "Chance To Purify"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToPurify, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Purify"))
 	FGameplayAttributeData ChanceToPurify;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToPurify);
 
 	/** Increases the chance to apply to ignite effects (burning). */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToIgnite, Category = "Secondary Attribute|Ailments", meta = (DisplayName = "Chance To Ignite"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToIgnite, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Ignite"))
 	FGameplayAttributeData ChanceToIgnite;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToIgnite);
 
 	/** Increases the chance to knock back an enemy. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToKnockBack, Category = "Secondary Attribute|Ailments", meta = (DisplayName = "Chance To Knock Back"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToKnockBack, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Knock Back"))
 	FGameplayAttributeData ChanceToKnockBack;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToKnockBack);
 
 	/** Increases the chance to apply to petrify effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToPetrify, Category = "Secondary Attribute|Ailments", meta = (DisplayName = "Chance To Petrify"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToPetrify, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Petrify"))
 	FGameplayAttributeData ChanceToPetrify;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToPetrify);
 
 	/** Increases the chance to apply shock effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToShock, Category = "Secondary Attribute|Ailments", meta = (DisplayName = "Chance To Shock"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToShock, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Shock"))
 	FGameplayAttributeData ChanceToShock;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToShock);
 
 	/** Increases the chance to apply stun effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToStun, Category = "Secondary Attribute|Ailments", meta = (DisplayName = "Chance To Stun"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToStun, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Stun"))
 	FGameplayAttributeData ChanceToStun;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToStun);
 
@@ -543,37 +547,37 @@ public:
 	/* ============================= */
 
 	/** Duration of burn effects (fire damage over time). */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BurnDuration, Category = "Secondary Attribute|Duration", meta = (DisplayName = "Burn Duration"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BurnDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Burn Duration"))
 	FGameplayAttributeData BurnDuration;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, BurnDuration);
 
 	/** Duration of bleed effects (physical damage over time). */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BleedDuration, Category = "Secondary Attribute|Duration", meta = (DisplayName = "Bleed Duration"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BleedDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Bleed Duration"))
 	FGameplayAttributeData BleedDuration;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, BleedDuration);
 
 	/** Duration of freeze effects (ice immobilization). */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FreezeDuration, Category = "Secondary Attribute|Duration", meta = (DisplayName = "Freeze Duration"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FreezeDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Freeze Duration"))
 	FGameplayAttributeData FreezeDuration;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FreezeDuration);
 
 	/** Duration of corruption effects (dark magic damage over time). */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionDuration, Category = "Secondary Attribute|Duration", meta = (DisplayName = "Corruption Duration"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Corruption Duration"))
 	FGameplayAttributeData CorruptionDuration;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionDuration);
 
 	/** Duration of shock effects (lightning stun and damage over time). */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ShockDuration, Category = "Secondary Attribute|Duration", meta = (DisplayName = "Shock Duration"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ShockDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Shock Duration"))
 	FGameplayAttributeData ShockDuration;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ShockDuration);
 
 	/** Build-up duration for petrification effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PetrifyBuildUpDuration, Category = "Secondary Attribute|Duration", meta = (DisplayName = "Petrify Build Up Duration"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PetrifyBuildUpDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Petrify Build Up Duration"))
 	FGameplayAttributeData PetrifyBuildUpDuration;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PetrifyBuildUpDuration);
 
 	/** Duration of purification effects (removal of debuffs). */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PurifyDuration, Category = "Secondary Attribute|Duration", meta = (DisplayName = "Purify Duration"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PurifyDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Purify Duration"))
 	FGameplayAttributeData PurifyDuration;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PurifyDuration);
 
@@ -582,110 +586,110 @@ public:
 	/* ============================= */
 
 	/** Increases all defensive resistances. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_GlobalDefenses, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Global Defenses"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_GlobalDefenses, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Global Defenses"))
 	FGameplayAttributeData GlobalDefenses;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, GlobalDefenses);
 
 	/** Strength of blocking incoming attacks. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BlockStrength, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Block Strength"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BlockStrength, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Block Strength"))
 	FGameplayAttributeData BlockStrength;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, BlockStrength);
 
 	/** Armor rating for physical damage mitigation. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Armour, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Armour"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Armour, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Armour"))
 	FGameplayAttributeData Armour;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Armour);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArmourFlatBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Armour Flat Bonus"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArmourFlatBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Armour Flat Bonus"))
 	FGameplayAttributeData ArmourFlatBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ArmourFlatBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArmourPercentBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Armour Percent Bonus"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArmourPercentBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Armour Percent Bonus"))
 	FGameplayAttributeData ArmourPercentBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ArmourPercentBonus);
 
 	/** Corruption Resistance - Reduces corruption-based damage and curses. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionResistanceFlatBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Corruption Resistance Flat Bonus"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionResistanceFlatBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Corruption Resistance Flat Bonus"))
 	FGameplayAttributeData CorruptionResistanceFlatBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionResistanceFlatBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionResistancePercentBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Corruption Resistance Percent Bonus"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionResistancePercentBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Corruption Resistance Percent Bonus"))
 	FGameplayAttributeData CorruptionResistancePercentBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionResistancePercentBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxCorruptionResistance, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Max Corruption Resistance"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxCorruptionResistance, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Max Corruption Resistance"))
 	FGameplayAttributeData MaxCorruptionResistance;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxCorruptionResistance);
 
 	/** Fire Resistance - Reduces fire damage and burn effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireResistanceFlatBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Fire Resistance Flat Bonus"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireResistanceFlatBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Fire Resistance Flat Bonus"))
 	FGameplayAttributeData FireResistanceFlatBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FireResistanceFlatBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireResistancePercentBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Fire Resistance Percent Bonus"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireResistancePercentBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Fire Resistance Percent Bonus"))
 	FGameplayAttributeData FireResistancePercentBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FireResistancePercentBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxFireResistance, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Max Fire Resistance"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxFireResistance, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Max Fire Resistance"))
 	FGameplayAttributeData MaxFireResistance;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxFireResistance);
 
 	/** Ice Resistance - Reduces ice damage and freeze effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceResistanceFlatBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Ice Resistance Flat Bonus"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceResistanceFlatBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Ice Resistance Flat Bonus"))
 	FGameplayAttributeData IceResistanceFlatBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceResistanceFlatBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceResistancePercentBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Max Fire Resistance"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceResistancePercentBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Max Fire Resistance"))
 	FGameplayAttributeData IceResistancePercentBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceResistancePercentBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxIceResistance, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Max Ice Resistance"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxIceResistance, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Max Ice Resistance"))
 	FGameplayAttributeData MaxIceResistance;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxIceResistance);
 
 	/** Light Resistance - Reduces light damage and holy-based effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightResistanceFlatBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Light Resistance Flat Bonus"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightResistanceFlatBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Light Resistance Flat Bonus"))
 	FGameplayAttributeData LightResistanceFlatBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightResistanceFlatBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightResistancePercentBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Light Resistance Percent Bonus"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightResistancePercentBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Light Resistance Percent Bonus"))
 	FGameplayAttributeData LightResistancePercentBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightResistancePercentBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxLightResistance, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Max Light Resistance"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxLightResistance, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Max Light Resistance"))
 	FGameplayAttributeData MaxLightResistance;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxLightResistance);
 
 	/** Lightning Resistance - Reduces lightning damage and shock effects. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningResistanceFlatBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Lightning Resistance Flat Bonus"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningResistanceFlatBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Lightning Resistance Flat Bonus"))
 	FGameplayAttributeData LightningResistanceFlatBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningResistanceFlatBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningResistancePercentBonus, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Lightning Resistance Percent Bonus"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningResistancePercentBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Lightning Resistance Percent Bonus"))
 	FGameplayAttributeData LightningResistancePercentBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningResistancePercentBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxLightningResistance, Category = "Secondary Attribute|Resistances", meta = (DisplayName = "Max Lightning Resistance"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxLightningResistance, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Max Lightning Resistance"))
 	FGameplayAttributeData MaxLightningResistance;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxLightningResistance);
 
 
 	/*Reflection*/
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectPhysical, Category = "Secondary Attribute|Reflection", meta = (DisplayName = "Reflect Physical"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectPhysical, Category = "Secondary Attribute | Reflection", meta = (DisplayName = "Reflect Physical"))
 	FGameplayAttributeData ReflectPhysical;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ReflectPhysical);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectElemental, Category = "Secondary Attribute|Reflection", meta = (DisplayName = "Reflect Elemental"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectElemental, Category = "Secondary Attribute | Reflection", meta = (DisplayName = "Reflect Elemental"))
 	FGameplayAttributeData ReflectElemental;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ReflectElemental);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectChancePhysical, Category = "Secondary Attribute|Reflection", meta = (DisplayName = "Reflect Chance Physical"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectChancePhysical, Category = "Secondary Attribute | Reflection", meta = (DisplayName = "Reflect Chance Physical"))
 	FGameplayAttributeData ReflectChancePhysical;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ReflectChancePhysical);
 
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectChanceElemental, Category = "Secondary Attribute|Reflection", meta = (DisplayName = "Reflect Chance Elemental"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectChanceElemental, Category = "Secondary Attribute | Reflection", meta = (DisplayName = "Reflect Chance Elemental"))
 	FGameplayAttributeData ReflectChanceElemental;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ReflectChanceElemental);
 	
@@ -695,32 +699,32 @@ public:
 	/* ============================= */
 
 	/** Ignores a percentage of the target’s armor. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArmourPiercing, Category = "Secondary Attribute|Piercing", meta = (DisplayName = "Armour Piercing"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArmourPiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Armour Piercing"))
 	FGameplayAttributeData ArmourPiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ArmourPiercing);
 
 	/** Ignores a percentage of the target’s fire resistance. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FirePiercing, Category = "Secondary Attribute|Piercing", meta = (DisplayName = "Fire Piercing"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FirePiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Fire Piercing"))
 	FGameplayAttributeData FirePiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FirePiercing);
 
 	/** Ignores a percentage of the target’s light resistance. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightPiercing, Category = "Secondary Attribute|Piercing", meta = (DisplayName = "Light Piercing"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightPiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Light Piercing"))
 	FGameplayAttributeData LightPiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightPiercing);
 
 	/** Ignores a percentage of the target’s lightning resistance. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningPiercing, Category = "Secondary Attribute|Piercing", meta = (DisplayName = "Lightning Piercing"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningPiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Lightning Piercing"))
 	FGameplayAttributeData LightningPiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningPiercing);
 
 	/** Ignores a percentage of the target’s corruption resistance. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionPiercing, Category = "Secondary Attribute|Piercing", meta = (DisplayName = "Corruption Piercing"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionPiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Corruption Piercing"))
 	FGameplayAttributeData CorruptionPiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionPiercing);
 
 	/** Ignores a percentage of the target’s ice resistance. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IcePiercing, Category = "Secondary Attribute|Piercing", meta = (DisplayName = "Ice Piercing"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IcePiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Ice Piercing"))
 	FGameplayAttributeData IcePiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IcePiercing);
 
@@ -729,81 +733,81 @@ public:
 	* Misc Attributes
 	*/
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ComboCounter, Category = "Vital Attribute|Misc", meta = (DisplayName = "Combo Counter"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ComboCounter, Category = "Vital |  Misc", meta = (DisplayName = "Combo Counter"))
 	FGameplayAttributeData ComboCounter;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ComboCounter);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Cooldown, Category = "Vital Attribute|Misc", meta = (DisplayName = "Cooldown"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Cooldown, Category = "Vital |  Misc", meta = (DisplayName = "Cooldown"))
 	FGameplayAttributeData Cooldown;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Cooldown);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Gems, Category = "Vital Attribute|Misc|Gems", meta = (DisplayName = "Gems"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Gems, Category = "Vital |  Misc| Gems", meta = (DisplayName = "Gems"))
 	FGameplayAttributeData Gems;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Gems);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LifeLeech, Category = "Vital Attribute|Misc", meta = (DisplayName = "Life Leech"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LifeLeech, Category = "Vital |  Misc", meta = (DisplayName = "Life Leech"))
 	FGameplayAttributeData LifeLeech;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LifeLeech);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaLeech, Category = "Vital Attribute|Misc", meta = (DisplayName = "Mana Leech"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaLeech, Category = "Vital |  Misc", meta = (DisplayName = "Mana Leech"))
 	FGameplayAttributeData ManaLeech;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ManaLeech);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MovementSpeed, Category = "Vital Attribute|Misc", meta = (DisplayName = "Movement Speed"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MovementSpeed, Category = "Vital |  Misc", meta = (DisplayName = "Movement Speed"))
 	FGameplayAttributeData MovementSpeed;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MovementSpeed);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Poise, Category = "Vital Attribute|Misc", meta = (DisplayName = "Poise"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Poise, Category = "Vital |  Misc", meta = (DisplayName = "Poise"))
 	FGameplayAttributeData Poise;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Poise);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Weight, Category = "Vital Attribute|Misc", meta = (DisplayName = "Weight"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Weight, Category = "Vital |  Misc", meta = (DisplayName = "Weight"))
 	FGameplayAttributeData Weight;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Weight);
 	
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PoiseResistance, Category = "Vital Attribute|Misc", meta = (DisplayName = "Poise Resistance"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PoiseResistance, Category = "Vital |  Misc", meta = (DisplayName = "Poise Resistance"))
 	FGameplayAttributeData PoiseResistance;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PoiseResistance);
 	
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StunRecovery, Category = "Vital Attribute|Misc", meta = (DisplayName = "Stun Recovery"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StunRecovery, Category = "Vital |  Misc", meta = (DisplayName = "Stun Recovery"))
 	FGameplayAttributeData StunRecovery;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StunRecovery);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaCostChanges, Category = "Vital Attribute|Misc", meta = (DisplayName = "Mana Cost Changes"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaCostChanges, Category = "Vital |  Misc", meta = (DisplayName = "Mana Cost Changes"))
 	FGameplayAttributeData ManaCostChanges;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ManaCostChanges);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_HealthCostChanges, Category = "Vital Attribute|Misc", meta = (DisplayName = "Health Cost Changes"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_HealthCostChanges, Category = "Vital |  Misc", meta = (DisplayName = "Health Cost Changes"))
 	FGameplayAttributeData HealthCostChanges;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, HealthCostChanges);
 	
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LifeOnHit, Category = "Vital Attribute|Misc", meta = (DisplayName = "Life OnH it"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LifeOnHit, Category = "Vital |  Misc", meta = (DisplayName = "Life OnH it"))
 	FGameplayAttributeData LifeOnHit;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LifeOnHit);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaOnHit, Category = "Vital Attribute|Misc", meta = (DisplayName = "Mana On Hit"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaOnHit, Category = "Vital |  Misc", meta = (DisplayName = "Mana On Hit"))
 	FGameplayAttributeData ManaOnHit;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ManaOnHit);
 	
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaOnHit, Category = "Vital Attribute|Misc", meta = (DisplayName = "Stamina On Hit"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaOnHit, Category = "Vital |  Misc", meta = (DisplayName = "Stamina On Hit"))
 	FGameplayAttributeData StaminaOnHit;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StaminaOnHit);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaCostChanges, Category = "Vital Attribute|Misc", meta = (DisplayName = "Stamina Cost Changes"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaCostChanges, Category = "Vital |  Misc", meta = (DisplayName = "Stamina Cost Changes"))
 	FGameplayAttributeData StaminaCostChanges;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StaminaCostChanges);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AuraEffect, Category = "Vital Attribute|Misc", meta = (DisplayName = "Aura Effect"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AuraEffect, Category = "Vital |  Misc", meta = (DisplayName = "Aura Effect"))
 	FGameplayAttributeData AuraEffect;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AuraEffect);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AuraRadius, Category = "Vital Attribute|Misc", meta = (DisplayName = "Aura Radius"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AuraRadius, Category = "Vital |  Misc", meta = (DisplayName = "Aura Radius"))
 	FGameplayAttributeData AuraRadius;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AuraRadius);
 	
 
 	/* ============================= */
-	/* === Vital Attributes === */
+	/* === Vitals === */
 	/* ============================= */
 
 	/* ============================= */
@@ -811,57 +815,57 @@ public:
 	/* ============================= */
 
 /** Current health of the character. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Health, Category = "Vital Attribute|Health", meta = (DisplayName = "Health"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Health, Category = "Vital |  Health", meta = (DisplayName = "Health"))
 	FGameplayAttributeData Health;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Health);
 
 	/** Maximum health capacity. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxHealth, Category = "Vital Attribute|Health", meta = (DisplayName = "Max Health"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxHealth, Category = "Vital |  Health", meta = (DisplayName = "Max Health"))
 	FGameplayAttributeData MaxHealth;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxHealth);
 
 	/** Effective max health after considering reserved health. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxEffectiveHealth, Category = "Vital Attribute|Health", meta = (DisplayName = "Max Effective Health"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxEffectiveHealth, Category = "Vital |  Health", meta = (DisplayName = "Max Effective Health"))
 	FGameplayAttributeData MaxEffectiveHealth;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxEffectiveHealth);
 
 	/** Health regeneration rate per second. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_HealthRegenRate, Category = "Vital Attribute|Health", meta = (DisplayName = "Health Regen Rate"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_HealthRegenRate, Category = "Vital |  Health", meta = (DisplayName = "Health Regen Rate"))
 	FGameplayAttributeData HealthRegenRate;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, HealthRegenRate);
 
 	/** Maximum rate at which health can regenerate per second. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxHealthRegenRate, Category = "Vital Attribute|Health", meta = (DisplayName = "Max Health Regen Rate"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxHealthRegenRate, Category = "Vital |  Health", meta = (DisplayName = "Max Health Regen Rate"))
 	FGameplayAttributeData MaxHealthRegenRate;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxHealthRegenRate);
 
 	/** Amount of health restored per tick. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_HealthRegenAmount, Category = "Vital Attribute|Health", meta = (DisplayName = "Health Regen Amount"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_HealthRegenAmount, Category = "Vital |  Health", meta = (DisplayName = "Health Regen Amount"))
 	FGameplayAttributeData HealthRegenAmount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, HealthRegenAmount);
 
 	/** Maximum health regeneration per tick. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxHealthRegenAmount, Category = "Vital Attribute|Health", meta = (DisplayName = "Max Health Regen Amount"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxHealthRegenAmount, Category = "Vital |  Health", meta = (DisplayName = "Max Health Regen Amount"))
 	FGameplayAttributeData MaxHealthRegenAmount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxHealthRegenAmount);
 
 	/** Reserved health, reducing max effective health. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReservedHealth, Category = "Vital Attribute|Health", meta = (DisplayName = "Reserved Health"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReservedHealth, Category = "Vital |  Health", meta = (DisplayName = "Reserved Health"))
 	FGameplayAttributeData ReservedHealth;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ReservedHealth);
 
 	/** Maximum reserved health possible. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxReservedHealth, Category = "Vital Attribute|Health", meta = (DisplayName = "Max Reserved Health"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxReservedHealth, Category = "Vital |  Health", meta = (DisplayName = "Max Reserved Health"))
 	FGameplayAttributeData MaxReservedHealth;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxReservedHealth);
 
 	/** Flat amount of reserved health. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FlatReservedHealth, Category = "Vital Attribute|Health", meta = (DisplayName = "Flat Reserved Health"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FlatReservedHealth, Category = "Vital |  Health", meta = (DisplayName = "Flat Reserved Health"))
 	FGameplayAttributeData FlatReservedHealth;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FlatReservedHealth);
 
 	/** Percentage of max health that is reserved. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PercentageReservedHealth, Category = "Vital Attribute|Health", meta = (DisplayName = "Percentage Reserved Health"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PercentageReservedHealth, Category = "Vital |  Health", meta = (DisplayName = "Percentage Reserved Health"))
 	FGameplayAttributeData PercentageReservedHealth;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PercentageReservedHealth);
 	
@@ -870,65 +874,65 @@ public:
 	/* ============================= */
 
 	/** Current stamina used for sprinting, dodging, and special actions. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Stamina, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Stamina"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Stamina, Category = "Vital | Stamina", meta = (DisplayName = "Stamina"))
 	FGameplayAttributeData Stamina;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Stamina);
 
 	/** Maximum stamina pool available. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxStamina, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Max Stamina"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxStamina, Category = "Vital | Stamina", meta = (DisplayName = "Max Stamina"))
 	FGameplayAttributeData MaxStamina;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxStamina);
 
 	/** Effective maximum stamina after considering reserved stamina. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxEffectiveStamina, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Max Effective Stamina"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxEffectiveStamina, Category = "Vital | Stamina", meta = (DisplayName = "Max Effective Stamina"))
 	FGameplayAttributeData MaxEffectiveStamina;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxEffectiveStamina);
 
 	/** Rate at which stamina regenerates per second. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaRegenRate, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Stamina Regen Rate"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaRegenRate, Category = "Vital | Stamina", meta = (DisplayName = "Stamina Regen Rate"))
 	FGameplayAttributeData StaminaRegenRate;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StaminaRegenRate);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaDegenRate, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Stamina Degen Rate"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaDegenRate, Category = "Vital | Stamina", meta = (DisplayName = "Stamina Degen Rate"))
 	FGameplayAttributeData StaminaDegenRate;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StaminaDegenRate);
 
 	/** Maximum rate at which stamina can regenerate per second. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxStaminaRegenRate, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Max Stamina Regen Rate"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxStaminaRegenRate, Category = "Vital | Stamina", meta = (DisplayName = "Max Stamina Regen Rate"))
 	FGameplayAttributeData MaxStaminaRegenRate;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxStaminaRegenRate);
 
 	/** Amount of stamina restored per tick. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaRegenAmount, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Stamina Regen Amount"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaRegenAmount, Category = "Vital | Stamina", meta = (DisplayName = "Stamina Regen Amount"))
 	FGameplayAttributeData StaminaRegenAmount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StaminaRegenAmount);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaDegenAmount, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Stamina Degen Amount"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaDegenAmount, Category = "Vital | Stamina", meta = (DisplayName = "Stamina Degen Amount"))
 	FGameplayAttributeData StaminaDegenAmount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StaminaDegenAmount);
 
 	/** Maximum stamina regeneration per tick. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxStaminaRegenAmount, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Max Stamina Regen Amount"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxStaminaRegenAmount, Category = "Vital | Stamina", meta = (DisplayName = "Max Stamina Regen Amount"))
 	FGameplayAttributeData MaxStaminaRegenAmount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxStaminaRegenAmount);
 
 	/** Reserved stamina, reducing max effective stamina. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReservedStamina, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Reserved Stamina"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReservedStamina, Category = "Vital | Stamina", meta = (DisplayName = "Reserved Stamina"))
 	FGameplayAttributeData ReservedStamina;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ReservedStamina);
 
 	/** Maximum reserved stamina possible. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxReservedStamina, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Max Reserved Stamina"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxReservedStamina, Category = "Vital |Stamina", meta = (DisplayName = "Max Reserved Stamina"))
 	FGameplayAttributeData MaxReservedStamina;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxReservedStamina);
 
 	/** Flat amount of stamina that is reserved. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FlatReservedStamina, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Flat Reserved Stamina"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FlatReservedStamina, Category = "Vital |Stamina", meta = (DisplayName = "Flat Reserved Stamina"))
 	FGameplayAttributeData FlatReservedStamina;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FlatReservedStamina);
 
 	/** Percentage of max stamina that is reserved. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PercentageReservedStamina, Category = "Vital Attribute|Stamina", meta = (DisplayName = "Percentage Reserved Stamina"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PercentageReservedStamina, Category = "Vital |Stamina", meta = (DisplayName = "Percentage Reserved Stamina"))
 	FGameplayAttributeData PercentageReservedStamina;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PercentageReservedStamina);
 
@@ -938,57 +942,57 @@ public:
 	/* ============================= */
 
 	/** Current mana used for casting spells. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Mana, Category = "Vital Attribute|Mana", meta = (DisplayName = "Mana"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Mana, Category = "Vital |  Mana", meta = (DisplayName = "Mana"))
 	FGameplayAttributeData Mana;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Mana);
 
 	/** Maximum mana pool available. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxMana, Category = "Vital Attribute|Mana", meta = (DisplayName = "Max Mana"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxMana, Category = "Vital |  Mana", meta = (DisplayName = "Max Mana"))
 	FGameplayAttributeData MaxMana;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxMana);
 
 	/** Effective max mana after considering reserved mana. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxEffectiveMana, Category = "Vital Attribute|Mana", meta = (DisplayName = "Max Effective Mana"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxEffectiveMana, Category = "Vital |  Mana", meta = (DisplayName = "Max Effective Mana"))
 	FGameplayAttributeData MaxEffectiveMana;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxEffectiveMana);
 
 	/** Rate at which a mana regenerates per second. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaRegenRate, Category = "Vital Attribute|Mana", meta = (DisplayName = "Mana Regen Rate"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaRegenRate, Category = "Vital |  Mana", meta = (DisplayName = "Mana Regen Rate"))
 	FGameplayAttributeData ManaRegenRate;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ManaRegenRate);
 
 	/** Maximum rate at which a mana can regenerate per second. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxManaRegenRate, Category = "Vital Attribute|Mana", meta = (DisplayName = "Max Mana Regen Rate"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxManaRegenRate, Category = "Vital |  Mana", meta = (DisplayName = "Max Mana Regen Rate"))
 	FGameplayAttributeData MaxManaRegenRate;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxManaRegenRate);
 
 	/** Amount of mana restored per tick. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaRegenAmount, Category = "Vital Attribute|Mana", meta = (DisplayName = "Mana Regen Amount"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaRegenAmount, Category = "Vital |  Mana", meta = (DisplayName = "Mana Regen Amount"))
 	FGameplayAttributeData ManaRegenAmount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ManaRegenAmount);
 
 	/** Maximum mana regeneration per tick. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxManaRegenAmount, Category = "Vital Attribute|Mana", meta = (DisplayName = "Max Mana Regen Amount"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxManaRegenAmount, Category = "Vital |  Mana", meta = (DisplayName = "Max Mana Regen Amount"))
 	FGameplayAttributeData MaxManaRegenAmount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxManaRegenAmount);
 
 	/** Reserved mana, reducing max effective mana. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReservedMana, Category = "Vital Attribute|Mana", meta = (DisplayName = "Reserved Mana"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReservedMana, Category = "Vital |  Mana", meta = (DisplayName = "Reserved Mana"))
 	FGameplayAttributeData ReservedMana;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ReservedMana);
 
 	/** Maximum reserved mana possible. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxReservedMana, Category = "Vital Attribute|Mana", meta = (DisplayName = "Max Reserved Mana"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxReservedMana, Category = "Vital |  Mana", meta = (DisplayName = "Max Reserved Mana"))
 	FGameplayAttributeData MaxReservedMana;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxReservedMana);
 
 	/** Flat amount of reserved mana. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FlatReservedMana, Category = "Vital Attribute|Mana", meta = (DisplayName = "Flat Reserved Mana"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FlatReservedMana, Category = "Vital |  Mana", meta = (DisplayName = "Flat Reserved Mana"))
 	FGameplayAttributeData FlatReservedMana;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FlatReservedMana);
 
 	/** Percentage of max mana that is reserved. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PercentageReservedMana, Category = "Vital Attribute|Mana", meta = (DisplayName = "Percentage Reserved Mana"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PercentageReservedMana, Category = "Vital |  Mana", meta = (DisplayName = "Percentage Reserved Mana"))
 	FGameplayAttributeData PercentageReservedMana;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PercentageReservedMana);
 
@@ -997,57 +1001,57 @@ public:
 	/* ============================= */
 
 	/** Current arcane shield value (absorbs damage before health is affected). */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArcaneShield, Category = "Vital Attribute|Arcane Shield", meta = (DisplayName = "Arcane Shield"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArcaneShield, Category = "Vital |Arcane Shield", meta = (DisplayName = "Arcane Shield"))
 	FGameplayAttributeData ArcaneShield;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ArcaneShield);
 
 	/** Maximum arcane shield capacity. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxArcaneShield, Category = "Vital Attribute|Arcane Shield", meta = (DisplayName = "Max Arcane Shield"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxArcaneShield, Category = "Vital |Arcane Shield", meta = (DisplayName = "Max Arcane Shield"))
 	FGameplayAttributeData MaxArcaneShield;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxArcaneShield);
 
 	/** Effective max arcane shield after considering reserved shield. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxEffectiveArcaneShield, Category = "Vital Attribute|Arcane Shield", meta = (DisplayName = "Max Effective Arcane Shield"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxEffectiveArcaneShield, Category = "Vital |Arcane Shield", meta = (DisplayName = "Max Effective Arcane Shield"))
 	FGameplayAttributeData MaxEffectiveArcaneShield;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxEffectiveArcaneShield);
 
 	/** Arcane shield regeneration rate per second. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArcaneShieldRegenRate, Category = "Vital Attribute|Arcane Shield", meta = (DisplayName = "Arcane Shield Regen Rate"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArcaneShieldRegenRate, Category = "Vital |Arcane Shield", meta = (DisplayName = "Arcane Shield Regen Rate"))
 	FGameplayAttributeData ArcaneShieldRegenRate;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ArcaneShieldRegenRate);
 
 	/** Maximum rate at which arcane shield can regenerate per second. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxArcaneShieldRegenRate, Category = "Vital Attribute|Arcane Shield", meta = (DisplayName = "Max Arcane Shield Regen Rate"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxArcaneShieldRegenRate, Category = "Vital |Arcane Shield", meta = (DisplayName = "Max Arcane Shield Regen Rate"))
 	FGameplayAttributeData MaxArcaneShieldRegenRate;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxArcaneShieldRegenRate);
 
 	/** Amount of arcane shield restored per tick. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArcaneShieldRegenAmount, Category = "Vital Attribute|Arcane Shield", meta = (DisplayName = "Arcane Shield Regen Amount"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArcaneShieldRegenAmount, Category = "Vital |Arcane Shield", meta = (DisplayName = "Arcane Shield Regen Amount"))
 	FGameplayAttributeData ArcaneShieldRegenAmount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ArcaneShieldRegenAmount);
 
 	/** Maximum arcane shield regeneration per tick. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxArcaneShieldRegenAmount, Category = "Vital Attribute|Arcane Shield", meta = (DisplayName = "Max Arcane Shield Regen Amount"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxArcaneShieldRegenAmount, Category = "Vital |Arcane Shield", meta = (DisplayName = "Max Arcane Shield Regen Amount"))
 	FGameplayAttributeData MaxArcaneShieldRegenAmount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxArcaneShieldRegenAmount);
 
 	/** Reserved arcane shield, reducing max effective shield. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReservedArcaneShield, Category = "Vital Attribute|Arcane Shield", meta = (DisplayName = "Reserved Arcane Shield"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReservedArcaneShield, Category = "Vital |Arcane Shield", meta = (DisplayName = "Reserved Arcane Shield"))
 	FGameplayAttributeData ReservedArcaneShield;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ReservedArcaneShield);
 
 	/** Maximum reserved arcane shield possible. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxReservedArcaneShield, Category = "Vital Attribute|Arcane Shield", meta = (DisplayName = "Max Reserved Arcane Shield"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxReservedArcaneShield, Category = "Vital |Arcane Shield", meta = (DisplayName = "Max Reserved Arcane Shield"))
 	FGameplayAttributeData MaxReservedArcaneShield;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxReservedArcaneShield);
 
 	/** Flat amount of reserved arcane shield. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FlatReservedArcaneShield, Category = "Vital Attribute|Arcane Shield", meta = (DisplayName = "Flat Reserved Arcane Shield"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FlatReservedArcaneShield, Category = "Vital |Arcane Shield", meta = (DisplayName = "Flat Reserved Arcane Shield"))
 	FGameplayAttributeData FlatReservedArcaneShield;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FlatReservedArcaneShield);
 
 	/** Percentage of max arcane shield that is reserved. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PercentageReservedArcaneShield, Category = "Vital Attribute|Arcane Shield", meta = (DisplayName = "Percentage Reserved Arcane Shield"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PercentageReservedArcaneShield, Category = "Vital |Arcane Shield", meta = (DisplayName = "Percentage Reserved Arcane Shield"))
 	FGameplayAttributeData PercentageReservedArcaneShield;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PercentageReservedArcaneShield);
 
@@ -1705,7 +1709,23 @@ private:
 	void ClampRateAndAmountAttributes(const FGameplayAttribute& Attribute, float& NewValue) const;
 	void ClampUtilityAttributes(const FGameplayAttribute& Attribute, float& NewValue) const;
 	void ClampSpecialAttributes(const FGameplayAttribute& Attribute, float& NewValue) const;
+
+	// Derived vital relationships are maintained on the live AttributeSet so current pools,
+	// reserved amounts, effective max values, and regen caps stay synchronized at runtime.
+	bool ShouldSkipDerivedVitalUpdate(const TCHAR* Context, const FGameplayAttribute& Attribute) const;
+	void UpdateDerivedVitalAttributes(const FGameplayAttribute& Attribute);
+	void UpdateHealthDerivedAttributes();
+	void UpdateManaDerivedAttributes();
+	void UpdateStaminaDerivedAttributes();
+	void UpdateArcaneShieldDerivedAttributes();
+	bool IsHealthVitalAttribute(const FGameplayAttribute& Attribute) const;
+	bool IsManaVitalAttribute(const FGameplayAttribute& Attribute) const;
+	bool IsStaminaVitalAttribute(const FGameplayAttribute& Attribute) const;
+	bool IsArcaneShieldVitalAttribute(const FGameplayAttribute& Attribute) const;
     
 	// Helper for min/max damage validation
 	void ValidateMinMaxDamage(const FGameplayAttribute& Attribute, float& NewValue) const;
+
+	bool bIsInitializingStats = false;
+	bool bIsUpdatingDerivedVitalAttributes = false;
 };

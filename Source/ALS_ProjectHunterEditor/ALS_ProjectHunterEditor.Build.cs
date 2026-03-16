@@ -1,8 +1,8 @@
 using UnrealBuildTool;
 
-public class ALS_ProjectHunter : ModuleRules
+public class ALS_ProjectHunterEditor : ModuleRules
 {
-	public ALS_ProjectHunter(ReadOnlyTargetRules Target) : base(Target)
+	public ALS_ProjectHunterEditor(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
@@ -11,24 +11,21 @@ public class ALS_ProjectHunter : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
-			"InputCore",
-			"NavigationSystem",
-			"AIModule",
+			"ALS_ProjectHunter",
 			"GameplayAbilities",
-			"PhysicsCore",
-			"Niagara",
-			"EnhancedInput",
-			"ALSV4_CPP",
-			"Paper2D",
-			"UMG"
+			"GameplayTags",
+			"GameplayTasks"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
 			"Slate",
 			"SlateCore",
-			"GameplayTags",
-			"GameplayTasks"
+			"PropertyEditor",
+			"UnrealEd",
+			"EditorFramework",
+			"DetailCustomizations",
+			"InputCore"
 		});
 	}
 }

@@ -10,6 +10,46 @@
 #include "Item/ItemInstance.h"
 #include "Item/Library/ItemStructs.h"
 #include "Item/Library/AffixEnums.h"
+#include "UObject/UnrealType.h"
+
+namespace StatsManagerPrivate
+{
+	bool TryGetFloatPropertyValue(const UObject* Object, FName PropertyName, float& OutValue)
+	{
+		if (!Object)
+		{
+			return false;
+		}
+
+		const FFloatProperty* FloatProperty = FindFProperty<FFloatProperty>(Object->GetClass(), PropertyName);
+		if (!FloatProperty)
+		{
+			return false;
+		}
+
+		OutValue = FloatProperty->GetPropertyValue_InContainer(Object);
+		return true;
+	}
+
+	bool IsHandledByOrderedInitialization(FName StatName)
+	{
+		return StatName == TEXT("MaxHealth") ||
+			StatName == TEXT("MaxMana") ||
+			StatName == TEXT("MaxStamina") ||
+			StatName == TEXT("MaxArcaneShield") ||
+			StatName == TEXT("HealthRegenRate") ||
+			StatName == TEXT("HealthRegenAmount") ||
+			StatName == TEXT("ManaRegenRate") ||
+			StatName == TEXT("ManaRegenAmount") ||
+			StatName == TEXT("StaminaRegenRate") ||
+			StatName == TEXT("StaminaRegenAmount") ||
+			StatName == TEXT("Health") ||
+			StatName == TEXT("Mana") ||
+			StatName == TEXT("Stamina") ||
+			StatName == TEXT("ArcaneShield");
+	}
+}
+
 DEFINE_LOG_CATEGORY(LogStatsManager);
 UStatsManager::UStatsManager()
 {
@@ -21,28 +61,8 @@ void UStatsManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Cache references on begin play
-	CachedASC = GetAbilitySystemComponent();
-	CachedAttributeSet = GetAttributeSet();
-	
-	if (!CachedASC)
-	{
-		UE_LOG(LogStatsManager, Warning, TEXT("StatsManager: No AbilitySystemComponent found on %s"), *GetOwner()->GetName());
-	}
-	
-	if (!CachedAttributeSet)
-	{
-		UE_LOG(LogStatsManager, Warning, TEXT("StatsManager: No HunterAttributeSet found on %s"), *GetOwner()->GetName());
-	}
-
-	if (StatsData)
-	{
-		InitializeFromDataAsset(StatsData);
-	}
-	else
-	{
-		UE_LOG(LogStatsManager, Warning, TEXT("StatsManager: No StatsData found on %s"), *GetOwner()->GetName());
-	}
+	RefreshCachedAbilitySystemState(TEXT("BeginPlay"));
+	TryInitializeConfiguredStats(TEXT("BeginPlay"));
 }
 
 void UStatsManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -50,6 +70,189 @@ void UStatsManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorCo
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	DebugManager.DrawDebug(this, this);
+}
+
+void UStatsManager::NotifyAbilitySystemReady()
+{
+	RefreshCachedAbilitySystemState(TEXT("NotifyAbilitySystemReady"));
+	TryInitializeConfiguredStats(TEXT("NotifyAbilitySystemReady"));
+}
+
+void UStatsManager::LogWarningOnce(const FString& Key, const FString& Message) const
+{
+	UStatsManager* MutableThis = const_cast<UStatsManager*>(this);
+	if (MutableThis->EmittedWarningKeys.Contains(Key))
+	{
+		return;
+	}
+
+	MutableThis->EmittedWarningKeys.Add(Key);
+	UE_LOG(LogStatsManager, Warning, TEXT("%s"), *Message);
+}
+
+void UStatsManager::LogAbilitySystemState(const TCHAR* Context, UAbilitySystemComponent* ASC, const UAttributeSet* LiveAttributeSet) const
+{
+	UE_LOG(
+		LogStatsManager,
+		Log,
+		TEXT("StatsManager[%s]: Owner=%s ASC=%s SourceAttributeSetClass=%s LiveAttributeSet=%s LiveAttributeSetClass=%s"),
+		Context,
+		*GetNameSafe(GetOwner()),
+		*GetNameSafe(ASC),
+		*GetNameSafe(GetSourceAttributeSetClass()),
+		*GetNameSafe(LiveAttributeSet),
+		LiveAttributeSet ? *GetNameSafe(LiveAttributeSet->GetClass()) : TEXT("None"));
+}
+
+const UAttributeSet* UStatsManager::GetLiveSourceAttributeSet(UAbilitySystemComponent* ASC, const UClass* DesiredClass, bool bLogIfMissing, FName AttributeName) const
+{
+	const UClass* DesiredClassPtr = DesiredClass ? DesiredClass : UHunterAttributeSet::StaticClass();
+	if (!ASC)
+	{
+		if (bLogIfMissing)
+		{
+			LogWarningOnce(
+				FString::Printf(TEXT("MissingASC:%s"), *AttributeName.ToString()),
+				FString::Printf(
+					TEXT("StatsManager: Missing ASC while resolving live AttributeSet on actor=%s SourceAttributeSetClass=%s Attribute=%s"),
+					*GetNameSafe(GetOwner()),
+					*GetNameSafe(DesiredClassPtr),
+					AttributeName.IsNone() ? TEXT("None") : *AttributeName.ToString()));
+		}
+
+		return nullptr;
+	}
+
+	const UAttributeSet* LiveAttributeSet = nullptr;
+	for (const UAttributeSet* Candidate : ASC->GetSpawnedAttributes())
+	{
+		if (Candidate && Candidate->IsA(DesiredClassPtr))
+		{
+			LiveAttributeSet = Candidate;
+			break;
+		}
+	}
+
+	if (!LiveAttributeSet && DesiredClassPtr->IsChildOf(UHunterAttributeSet::StaticClass()))
+	{
+		const UAttributeSet* HunterAttributeSet = ASC->GetSet<UHunterAttributeSet>();
+		if (HunterAttributeSet && HunterAttributeSet->IsA(DesiredClassPtr))
+		{
+			LiveAttributeSet = HunterAttributeSet;
+		}
+	}
+
+	if (!LiveAttributeSet && bLogIfMissing)
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("MissingLiveAttributeSet:%s:%s"), *GetNameSafe(DesiredClassPtr), *AttributeName.ToString()),
+			FString::Printf(
+				TEXT("StatsManager: No live AttributeSet instance is registered on ASC. Actor=%s ASC=%s SourceAttributeSetClass=%s Attribute=%s SpawnedAttributeCount=%d"),
+				*GetNameSafe(GetOwner()),
+				*GetNameSafe(ASC),
+				*GetNameSafe(DesiredClassPtr),
+				AttributeName.IsNone() ? TEXT("None") : *AttributeName.ToString(),
+				ASC->GetSpawnedAttributes().Num()));
+	}
+
+	return LiveAttributeSet;
+}
+
+bool UStatsManager::HasExpectedLiveAttributeSet(bool bLogIfMissing, FName AttributeName) const
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	return GetLiveSourceAttributeSet(ASC, GetSourceAttributeSetClass().Get(), bLogIfMissing, AttributeName) != nullptr;
+}
+
+void UStatsManager::RefreshCachedAbilitySystemState(const TCHAR* Context) const
+{
+	UAbilitySystemComponent* ASC = nullptr;
+	if (AActor* Owner = GetOwner())
+	{
+		if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Owner))
+		{
+			ASC = ASI->GetAbilitySystemComponent();
+		}
+
+		if (!ASC)
+		{
+			ASC = Owner->FindComponentByClass<UAbilitySystemComponent>();
+		}
+	}
+
+	const UAttributeSet* LiveAttributeSet = GetLiveSourceAttributeSet(ASC, GetSourceAttributeSetClass().Get(), false);
+
+	UStatsManager* MutableThis = const_cast<UStatsManager*>(this);
+	MutableThis->CachedASC = ASC;
+	MutableThis->CachedAttributeSet = Cast<UHunterAttributeSet>(const_cast<UAttributeSet*>(LiveAttributeSet));
+
+	LogAbilitySystemState(Context, ASC, LiveAttributeSet);
+
+	if (!ASC)
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("MissingASCState:%s"), Context),
+			FString::Printf(
+				TEXT("StatsManager[%s]: No ASC found on actor=%s"),
+				Context,
+				*GetNameSafe(GetOwner())));
+	}
+	else if (!LiveAttributeSet)
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("MissingLiveSetState:%s"), Context),
+			FString::Printf(
+				TEXT("StatsManager[%s]: ASC=%s exists, but SourceAttributeSetClass=%s has no live registered AttributeSet on actor=%s"),
+				Context,
+				*GetNameSafe(ASC),
+				*GetNameSafe(GetSourceAttributeSetClass()),
+				*GetNameSafe(GetOwner())));
+	}
+}
+
+bool UStatsManager::TryInitializeConfiguredStats(const TCHAR* Context)
+{
+	if (!StatsData)
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("MissingStatsData:%s"), Context),
+			FString::Printf(TEXT("StatsManager[%s]: No StatsData configured on actor=%s"), Context, *GetNameSafe(GetOwner())));
+		return false;
+	}
+
+	if (bHasInitializedConfiguredStats)
+	{
+		return true;
+	}
+
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return false;
+	}
+
+	if (!GetAbilitySystemComponent())
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("DeferredInitMissingASC:%s"), Context),
+			FString::Printf(TEXT("StatsManager[%s]: Deferring stat initialization because ASC is missing on actor=%s"), Context, *GetNameSafe(GetOwner())));
+		return false;
+	}
+
+	if (!HasExpectedLiveAttributeSet(true))
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("DeferredInitMissingLiveSet:%s"), Context),
+			FString::Printf(
+				TEXT("StatsManager[%s]: Deferring stat initialization because SourceAttributeSetClass=%s is not live on ASC=%s for actor=%s"),
+				Context,
+				*GetNameSafe(GetSourceAttributeSetClass()),
+				*GetNameSafe(GetAbilitySystemComponent()),
+				*GetNameSafe(GetOwner())));
+		return false;
+	}
+
+	InitializeFromDataAsset(StatsData);
+	return bHasInitializedConfiguredStats;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -280,6 +483,100 @@ bool UStatsManager::ApplyGameplayEffectToTarget(AActor* TargetActor, TSubclassOf
 	return EffectHandle.IsValid();
 }
 
+bool UStatsManager::ResolveAttributeByName(FName AttributeName, FGameplayAttribute& OutAttribute) const
+{
+	return ResolveAttributeByName(AttributeName, OutAttribute, nullptr);
+}
+
+bool UStatsManager::ResolveAttributeByName(FName AttributeName, FGameplayAttribute& OutAttribute, FStatInitializationEntry* OutDefinition) const
+{
+	OutAttribute = FGameplayAttribute();
+	if (OutDefinition)
+	{
+		*OutDefinition = FStatInitializationEntry();
+	}
+
+	const TSubclassOf<UAttributeSet> AttributeSetClass = GetSourceAttributeSetClass();
+	if (!AttributeSetClass)
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("ResolveMissingSourceClass:%s"), *AttributeName.ToString()),
+			FString::Printf(
+				TEXT("ResolveAttributeByName: Missing SourceAttributeSetClass for actor=%s while resolving attribute=%s"),
+				*GetNameSafe(GetOwner()),
+				*AttributeName.ToString()));
+		return false;
+	}
+
+	// UHunterAttributeSet is the only AttributeSet in this project that currently exposes
+	// a name-based resolver. Additional sets should add their own resolver explicitly.
+	if (AttributeSetClass->IsChildOf(UHunterAttributeSet::StaticClass()))
+	{
+		OutAttribute = UHunterAttributeSet::FindAttributeByName(AttributeName);
+	}
+	else
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("ResolveUnsupportedSourceClass:%s:%s"), *GetNameSafe(AttributeSetClass), *AttributeName.ToString()),
+			FString::Printf(
+				TEXT("ResolveAttributeByName: SourceAttributeSetClass=%s is not supported by UHunterAttributeSet::FindAttributeByName for actor=%s attribute=%s"),
+				*GetNameSafe(AttributeSetClass),
+				*GetNameSafe(GetOwner()),
+				*AttributeName.ToString()));
+	}
+
+	if (!OutAttribute.IsValid())
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("ResolveFailed:%s:%s"), *GetNameSafe(AttributeSetClass), *AttributeName.ToString()),
+			FString::Printf(
+				TEXT("ResolveAttributeByName: Failed to resolve attribute=%s for actor=%s SourceAttributeSetClass=%s"),
+				*AttributeName.ToString(),
+				*GetNameSafe(GetOwner()),
+				*GetNameSafe(AttributeSetClass)));
+		return false;
+	}
+
+	if (OutDefinition && StatsData)
+	{
+		const TArray<FStatInitializationEntry>& Definitions = StatsData->GetBaseAttributes();
+
+		if (const FStatInitializationEntry* Found =
+			Definitions.FindByPredicate([&](const FStatInitializationEntry& Entry)
+			{
+				return Entry.StatName == AttributeName;
+			}))
+		{
+			*OutDefinition = *Found;
+		}
+	}
+
+	if (OutDefinition && !OutDefinition->IsValid())
+	{
+		TArray<FStatInitializationEntry> ReflectedDefinitions;
+		UBaseStatsData::GatherStatDefinitionsFromAttributeSet(AttributeSetClass, ReflectedDefinitions);
+
+		if (const FStatInitializationEntry* Found =
+			ReflectedDefinitions.FindByPredicate([&AttributeName](const FStatInitializationEntry& Entry)
+			{
+				return Entry.StatName == AttributeName;
+			}))
+		{
+			*OutDefinition = *Found;
+		}
+	}
+
+	UE_LOG(
+		LogStatsManager,
+		VeryVerbose,
+		TEXT("ResolveAttributeByName: Resolved attribute=%s for actor=%s SourceAttributeSetClass=%s"),
+		*AttributeName.ToString(),
+		*GetNameSafe(GetOwner()),
+		*GetNameSafe(AttributeSetClass));
+
+	return true;
+}
+
 FGameplayEffectSpecHandle UStatsManager::CreateEquipmentEffect(UItemInstance* Item, const TArray<FPHAttributeData>& Stats)
 {
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
@@ -312,7 +609,7 @@ FGameplayEffectSpecHandle UStatsManager::CreateEquipmentEffect(UItemInstance* It
 		FGameplayAttribute Attribute = Stat.ModifiedAttribute;
 		if (!Attribute.IsValid() && Stat.AttributeName != NAME_None)
 		{
-			Attribute = UHunterAttributeSet::FindAttributeByName(Stat.AttributeName);
+			ResolveAttributeByName(Stat.AttributeName, Attribute);
 		}
 
 		if (!Attribute.IsValid())
@@ -407,45 +704,239 @@ bool UStatsManager::ApplyStatModifier(UGameplayEffect* Effect, const FPHAttribut
 
 UHunterAttributeSet* UStatsManager::GetAttributeSet() const
 {
-	if (CachedAttributeSet)
-	{
-		return CachedAttributeSet;
-	}
-
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-	if (ASC)
+	if (!ASC)
 	{
-		return const_cast<UHunterAttributeSet*>(ASC->GetSet<UHunterAttributeSet>());
+		return nullptr;
 	}
 
-	return nullptr;
+	const UAttributeSet* LiveAttributeSet = GetLiveSourceAttributeSet(ASC, GetSourceAttributeSetClass().Get(), true);
+	UHunterAttributeSet* HunterAttributeSet = Cast<UHunterAttributeSet>(const_cast<UAttributeSet*>(LiveAttributeSet));
+	if (!HunterAttributeSet && LiveAttributeSet)
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("LiveSetWrongType:%s"), *GetNameSafe(LiveAttributeSet->GetClass())),
+			FString::Printf(
+				TEXT("StatsManager: Live AttributeSet is not a UHunterAttributeSet. Actor=%s ASC=%s SourceAttributeSetClass=%s LiveAttributeSetClass=%s"),
+				*GetNameSafe(GetOwner()),
+				*GetNameSafe(ASC),
+				*GetNameSafe(GetSourceAttributeSetClass()),
+				*GetNameSafe(LiveAttributeSet->GetClass())));
+	}
+
+	const_cast<UStatsManager*>(this)->CachedAttributeSet = HunterAttributeSet;
+	return HunterAttributeSet;
 }
 
 UAbilitySystemComponent* UStatsManager::GetAbilitySystemComponent() const
 {
-	if (CachedASC)
-	{
-		return CachedASC;
-	}
-
 	AActor* Owner = GetOwner();
 	if (!Owner)
 	{
 		return nullptr;
 	}
 
+	UAbilitySystemComponent* ResolvedASC = nullptr;
+
 	// Try to get ASC from owner (should implement IAbilitySystemInterface)
 	if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Owner))
 	{
-		return ASI->GetAbilitySystemComponent();
+		ResolvedASC = ASI->GetAbilitySystemComponent();
 	}
 
-	return nullptr;
+	if (!ResolvedASC)
+	{
+		ResolvedASC = Owner->FindComponentByClass<UAbilitySystemComponent>();
+	}
+
+	const_cast<UStatsManager*>(this)->CachedASC = ResolvedASC;
+	return ResolvedASC;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
 /* PRIMARY ATTRIBUTES (7)                                                  */
 /* ═══════════════════════════════════════════════════════════════════════ */
+
+bool UStatsManager::SetNumericAttributeByName(FName AttributeName, float Value, bool bAutoInitializeCurrentFromMax) const
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		UE_LOG(LogStatsManager, Error, TEXT("SetNumericAttributeByName: No AbilitySystemComponent found"));
+		return false;
+	}
+
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return false;
+	}
+
+	FStatInitializationEntry Definition;
+	FGameplayAttribute Attribute;
+	if (!ResolveAttributeByName(AttributeName, Attribute, &Definition))
+	{
+		const FString AssetName = StatsData ? StatsData->GetName() : TEXT("None");
+		const FString AttributeSetClassName = GetNameSafe(GetSourceAttributeSetClass());
+		UE_LOG(
+			LogStatsManager,
+			Warning,
+			TEXT("SetNumericAttributeByName: Failed to resolve stat '%s' from data asset '%s' against AttributeSet '%s'"),
+			*AttributeName.ToString(),
+			*AssetName,
+			*AttributeSetClassName);
+		return false;
+	}
+
+	if (!Attribute.IsValid())
+	{
+		UE_LOG(LogStatsManager, Warning, TEXT("SetNumericAttributeByName: Invalid resolved attribute '%s'"), *AttributeName.ToString());
+		return false;
+	}
+
+	if (!HasLiveAttribute(Attribute))
+	{
+		UE_LOG(
+			LogStatsManager,
+			Warning,
+			TEXT("SetNumericAttributeByName: Attribute '%s' resolved against SourceAttributeSetClass=%s but has no live backing AttributeSet on ASC=%s for actor=%s"),
+			*AttributeName.ToString(),
+			*GetNameSafe(GetSourceAttributeSetClass()),
+			*GetNameSafe(ASC),
+			*GetNameSafe(GetOwner()));
+		return false;
+	}
+
+	ASC->SetNumericAttributeBase(Attribute, Value);
+
+	if (!bAutoInitializeCurrentFromMax)
+	{
+		return true;
+	}
+
+	auto InitializePairedCurrentAttribute = [this, ASC, Value](FName CurrentStatName)
+	{
+		FGameplayAttribute CurrentAttribute;
+		if (ResolveAttributeByName(CurrentStatName, CurrentAttribute) && CurrentAttribute.IsValid())
+		{
+			ASC->SetNumericAttributeBase(CurrentAttribute, Value);
+		}
+	};
+
+	if (AttributeName == TEXT("MaxHealth"))
+	{
+		InitializePairedCurrentAttribute(TEXT("Health"));
+	}
+	else if (AttributeName == TEXT("MaxMana"))
+	{
+		InitializePairedCurrentAttribute(TEXT("Mana"));
+	}
+	else if (AttributeName == TEXT("MaxStamina"))
+	{
+		InitializePairedCurrentAttribute(TEXT("Stamina"));
+	}
+	else if (AttributeName == TEXT("MaxArcaneShield"))
+	{
+		InitializePairedCurrentAttribute(TEXT("ArcaneShield"));
+	}
+
+	return true;
+}
+
+TSubclassOf<UAttributeSet> UStatsManager::GetSourceAttributeSetClass() const
+{
+	if (StatsData)
+	{
+		return UBaseStatsData::ResolveSourceAttributeSetClass(StatsData);
+	}
+
+	if (CachedAttributeSet)
+	{
+		return CachedAttributeSet->GetClass();
+	}
+
+	return UHunterAttributeSet::StaticClass();
+}
+
+void UStatsManager::GatherStatDefinitions(TArray<FStatInitializationEntry>& OutDefinitions) const
+{
+	OutDefinitions.Reset();
+
+	if (StatsData && StatsData->GetBaseAttributes().Num() > 0)
+	{
+		OutDefinitions = StatsData->GetBaseAttributes();
+		return;
+	}
+
+	UBaseStatsData::GatherStatDefinitionsFromAttributeSet(GetSourceAttributeSetClass(), OutDefinitions);
+}
+
+bool UStatsManager::TryGetStatValueForInitialization(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, float& OutValue) const
+{
+	if (const float* MapValue = StatsMap.Find(StatName))
+	{
+		OutValue = *MapValue;
+		return true;
+	}
+
+	if (InStatsData && InStatsData->GetStatValue(StatName, OutValue))
+	{
+		return true;
+	}
+
+	return StatsManagerPrivate::TryGetFloatPropertyValue(InStatsData, StatName, OutValue);
+}
+
+bool UStatsManager::ApplyStatIfPresent(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, bool bAutoInitializeCurrentFromMax) const
+{
+	float Value = 0.0f;
+	if (!TryGetStatValueForInitialization(InStatsData, StatsMap, StatName, Value))
+	{
+		return false;
+	}
+
+	return SetNumericAttributeByName(StatName, Value, bAutoInitializeCurrentFromMax);
+}
+
+bool UStatsManager::ApplyCurrentVitalWithClamp(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName CurrentStatName, FName MaxStatName, FName StarterPropertyName) const
+{
+	float CurrentValue = 0.0f;
+	bool bHasCurrentValue = TryGetStatValueForInitialization(InStatsData, StatsMap, CurrentStatName, CurrentValue);
+
+	if (!bHasCurrentValue && StarterPropertyName != NAME_None)
+	{
+		bHasCurrentValue = StatsManagerPrivate::TryGetFloatPropertyValue(InStatsData, StarterPropertyName, CurrentValue);
+	}
+
+	float MaxValue = 0.0f;
+	bool bHasMaxValue = false;
+
+	FGameplayAttribute MaxAttribute;
+	if (ResolveAttributeByName(MaxStatName, MaxAttribute) && MaxAttribute.IsValid())
+	{
+		MaxValue = GetAttributeValue(MaxAttribute);
+		bHasMaxValue = true;
+	}
+	else
+	{
+		bHasMaxValue = TryGetStatValueForInitialization(InStatsData, StatsMap, MaxStatName, MaxValue);
+	}
+
+	if (!bHasCurrentValue)
+	{
+		if (!bHasMaxValue)
+		{
+			return false;
+		}
+
+		CurrentValue = MaxValue;
+	}
+
+	CurrentValue = bHasMaxValue
+		? FMath::Clamp(CurrentValue, 0.0f, MaxValue)
+		: FMath::Max(CurrentValue, 0.0f);
+
+	return SetNumericAttributeByName(CurrentStatName, CurrentValue, false);
+}
 
 float UStatsManager::GetStrength() const
 {
@@ -559,7 +1050,8 @@ float UStatsManager::GetMaxHealth() const
 
 float UStatsManager::GetHealthPercent() const
 {
-	float Max = GetMaxHealth();
+	const UHunterAttributeSet* AttrSet = GetAttributeSet();
+	const float Max = AttrSet ? AttrSet->GetMaxEffectiveHealth() : 0.0f;
 	return Max > 0.0f ? GetHealth() / Max : 0.0f;
 }
 
@@ -577,7 +1069,8 @@ float UStatsManager::GetMaxMana() const
 
 float UStatsManager::GetManaPercent() const
 {
-	float Max = GetMaxMana();
+	const UHunterAttributeSet* AttrSet = GetAttributeSet();
+	const float Max = AttrSet ? AttrSet->GetMaxEffectiveMana() : 0.0f;
 	return Max > 0.0f ? GetMana() / Max : 0.0f;
 }
 
@@ -595,7 +1088,8 @@ float UStatsManager::GetMaxStamina() const
 
 float UStatsManager::GetStaminaPercent() const
 {
-	float Max = GetMaxStamina();
+	const UHunterAttributeSet* AttrSet = GetAttributeSet();
+	const float Max = AttrSet ? AttrSet->GetMaxEffectiveStamina() : 0.0f;
 	return Max > 0.0f ? GetStamina() / Max : 0.0f;
 }
 
@@ -606,8 +1100,8 @@ float UStatsManager::GetStaminaPercent() const
 
 float UStatsManager::GetAttributeByName(FName AttributeName) const
 {
-	FGameplayAttribute Attribute = UHunterAttributeSet::FindAttributeByName(AttributeName);
-	if (!Attribute.IsValid())
+	FGameplayAttribute Attribute;
+	if (!ResolveAttributeByName(AttributeName, Attribute) || !Attribute.IsValid())
 	{
 		return 0.0f;
 	}
@@ -638,7 +1132,67 @@ float UStatsManager::GetAttributeValue(const FGameplayAttribute& Attribute) cons
 		return 0.0f;
 	}
 
+	if (!HasLiveAttribute(Attribute))
+	{
+		return 0.0f;
+	}
+
 	return ASC->GetNumericAttribute(Attribute);
+}
+
+bool UStatsManager::HasLiveAttribute(const FGameplayAttribute& Attribute) const
+{
+	const FString AttributeName = Attribute.IsValid() ? Attribute.GetName() : TEXT("Invalid");
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("HasLiveAttributeMissingASC:%s"), *AttributeName),
+			FString::Printf(
+				TEXT("HasLiveAttribute: No ASC for actor=%s while checking attribute=%s SourceAttributeSetClass=%s"),
+				*GetNameSafe(GetOwner()),
+				*AttributeName,
+				*GetNameSafe(GetSourceAttributeSetClass())));
+		return false;
+	}
+
+	if (!Attribute.IsValid())
+	{
+		LogWarningOnce(
+			TEXT("HasLiveAttributeInvalidAttribute"),
+			FString::Printf(TEXT("HasLiveAttribute: Invalid gameplay attribute supplied for actor=%s"), *GetNameSafe(GetOwner())));
+		return false;
+	}
+
+	const UClass* AttributeSetClass = Attribute.GetAttributeSetClass();
+	const UAttributeSet* LiveAttributeSet = GetLiveSourceAttributeSet(ASC, AttributeSetClass ? AttributeSetClass : GetSourceAttributeSetClass().Get(), true, FName(*AttributeName));
+	const bool bHasLiveAttribute = LiveAttributeSet && ASC->HasAttributeSetForAttribute(Attribute);
+	if (!bHasLiveAttribute)
+	{
+		LogWarningOnce(
+			FString::Printf(TEXT("HasLiveAttributeMissingLiveSet:%s"), *AttributeName),
+			FString::Printf(
+				TEXT("HasLiveAttribute: Attribute=%s has no live backing set. Actor=%s ASC=%s SourceAttributeSetClass=%s AttributeSetClass=%s LiveAttributeSet=%s"),
+				*AttributeName,
+				*GetNameSafe(GetOwner()),
+				*GetNameSafe(ASC),
+				*GetNameSafe(GetSourceAttributeSetClass()),
+				*GetNameSafe(AttributeSetClass),
+				*GetNameSafe(LiveAttributeSet)));
+	}
+	else
+	{
+		UE_LOG(
+			LogStatsManager,
+			VeryVerbose,
+			TEXT("HasLiveAttribute: Attribute=%s is live for actor=%s ASC=%s LiveAttributeSet=%s"),
+			*AttributeName,
+			*GetNameSafe(GetOwner()),
+			*GetNameSafe(ASC),
+			*GetNameSafe(LiveAttributeSet));
+	}
+
+	return bHasLiveAttribute;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -692,7 +1246,15 @@ void UStatsManager::InitializeFromDataAsset(UBaseStatsData* InStatsData)
 		return;
 	}
 
+	UE_LOG(
+		LogStatsManager,
+		Log,
+		TEXT("InitializeFromDataAsset: Begin asset=%s owner=%s"),
+		*GetNameSafe(InStatsData),
+		*GetNameSafe(GetOwner()));
+
 	StatsData = InStatsData;
+	RefreshCachedAbilitySystemState(TEXT("InitializeFromDataAsset"));
 
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
 	if (!ASC)
@@ -701,18 +1263,140 @@ void UStatsManager::InitializeFromDataAsset(UBaseStatsData* InStatsData)
 		return;
 	}
 
+	UE_LOG(
+		LogStatsManager,
+		Verbose,
+		TEXT("InitializeFromDataAsset: Found ASC=%s for owner=%s"),
+		*GetNameSafe(ASC),
+		*GetNameSafe(GetOwner()));
+
 	if (!GetOwner()->HasAuthority())
 	{
 		UE_LOG(LogStatsManager, Warning, TEXT("InitializeFromDataAsset: Must be called on server"));
 		return;
 	}
 
-	const TMap<FName, float> StatsMap = StatsData->GetAllStatsAsMap();
+	UHunterAttributeSet* AttributeSet = ASC->GetSet<UHunterAttributeSet>();
+	if (!AttributeSet)
+	{
+		UE_LOG(
+			LogStatsManager,
+			Error,
+			TEXT("InitializeFromDataAsset: ASC=%s has no UHunterAttributeSet for owner=%s"),
+			*GetNameSafe(ASC),
+			*GetNameSafe(GetOwner()));
+		return;
+	}
 
+	CachedASC = ASC;
+	CachedAttributeSet = AttributeSet;
+
+	UE_LOG(
+		LogStatsManager,
+		Verbose,
+		TEXT("InitializeFromDataAsset: Found ASC-owned AttributeSet=%s Outer=%s"),
+		*GetNameSafe(AttributeSet),
+		*GetNameSafe(AttributeSet->GetOuter()));
+
+	if (!HasExpectedLiveAttributeSet(true))
+	{
+		UE_LOG(
+			LogStatsManager,
+			Error,
+			TEXT("InitializeFromDataAsset: SourceAttributeSetClass=%s is not registered live on ASC=%s for actor=%s"),
+			*GetNameSafe(GetSourceAttributeSetClass()),
+			*GetNameSafe(ASC),
+			*GetNameSafe(GetOwner()));
+		return;
+	}
+
+	if (!InStatsData->SourceAttributeSetClass)
+	{
+		UE_LOG(
+			LogStatsManager,
+			Warning,
+			TEXT("InitializeFromDataAsset: %s has no SourceAttributeSetClass; defaulting to %s"),
+			*InStatsData->GetName(),
+			*GetNameSafe(UBaseStatsData::ResolveSourceAttributeSetClass(InStatsData)));
+	}
+
+	const TMap<FName, float> StatsMap = InStatsData->GetAllStatsAsMap();
+	TArray<FStatInitializationEntry> ReflectedDefinitions;
+	UBaseStatsData::GatherStatDefinitionsFromAttributeSet(GetSourceAttributeSetClass(), ReflectedDefinitions);
+	if (ReflectedDefinitions.Num() == 0)
+	{
+		UE_LOG(
+			LogStatsManager,
+			Warning,
+			TEXT("InitializeFromDataAsset: No reflected stats found for %s using AttributeSet %s"),
+			*InStatsData->GetName(),
+			*GetNameSafe(GetSourceAttributeSetClass()));
+	}
+
+	AttributeSet->SetIsInitializingStats(true);
+
+	int32 AppliedCount = 0;
+	int32 SkippedCount = 0;
+
+	auto ApplyIfPresent = [this, InStatsData, &StatsMap, &AppliedCount, &SkippedCount](FName StatName, bool bAutoInitializeCurrentFromMax)
+	{
+		float Value = 0.0f;
+		if (!TryGetStatValueForInitialization(InStatsData, StatsMap, StatName, Value))
+		{
+			return;
+		}
+
+		if (SetNumericAttributeByName(StatName, Value, bAutoInitializeCurrentFromMax))
+		{
+			++AppliedCount;
+		}
+		else
+		{
+			++SkippedCount;
+		}
+	};
+
+	// Phase C: Max pools first so current vitals always clamp against the correct limits.
+	ApplyIfPresent(TEXT("MaxHealth"), false);
+	ApplyIfPresent(TEXT("MaxMana"), false);
+	ApplyIfPresent(TEXT("MaxStamina"), false);
+	ApplyIfPresent(TEXT("MaxArcaneShield"), false);
+
+	// Phase D: Regen attributes are seeded as base GAS attributes here. The live meaning of
+	// Rate/Amount is still defined by the existing regen systems that consume those attributes.
+	ApplyIfPresent(TEXT("HealthRegenRate"), false);
+	ApplyIfPresent(TEXT("HealthRegenAmount"), false);
+	ApplyIfPresent(TEXT("ManaRegenRate"), false);
+	ApplyIfPresent(TEXT("ManaRegenAmount"), false);
+	ApplyIfPresent(TEXT("StaminaRegenRate"), false);
+	ApplyIfPresent(TEXT("StaminaRegenAmount"), false);
+
+	// Phase E: Apply the remaining exported stats without disturbing the deferred current vitals.
 	for (const TPair<FName, float>& Pair : StatsMap)
 	{
-		SetStatValue(Pair.Key, Pair.Value);
+		if (StatsManagerPrivate::IsHandledByOrderedInitialization(Pair.Key))
+		{
+			continue;
+		}
+
+		if (SetNumericAttributeByName(Pair.Key, Pair.Value, false))
+		{
+			++AppliedCount;
+		}
+		else
+		{
+			++SkippedCount;
+		}
 	}
+
+	// Phase F: Current vitals last, clamped against the live max values applied above.
+	AppliedCount += ApplyCurrentVitalWithClamp(InStatsData, StatsMap, TEXT("Health"), TEXT("MaxHealth"), NAME_None) ? 1 : 0;
+	AppliedCount += ApplyCurrentVitalWithClamp(InStatsData, StatsMap, TEXT("Mana"), TEXT("MaxMana"), NAME_None) ? 1 : 0;
+	AppliedCount += ApplyCurrentVitalWithClamp(InStatsData, StatsMap, TEXT("Stamina"), TEXT("MaxStamina"), NAME_None) ? 1 : 0;
+	AppliedCount += ApplyCurrentVitalWithClamp(InStatsData, StatsMap, TEXT("ArcaneShield"), TEXT("MaxArcaneShield"), NAME_None) ? 1 : 0;
+
+	AttributeSet->SetIsInitializingStats(false);
+	AttributeSet->RecalculateAllDerivedVitals();
 
 	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
 	EffectContext.AddSourceObject(GetOwner());
@@ -729,7 +1413,18 @@ void UStatsManager::InitializeFromDataAsset(UBaseStatsData* InStatsData)
 		}
 	}
 
-	UE_LOG(LogStatsManager, Log, TEXT("Stats initialized from %s"), *StatsData->StatSetName.ToString());
+	UE_LOG(
+		LogStatsManager,
+		Log,
+		TEXT("Stats initialized from %s using AttributeSet %s. Reflected=%d Authored=%d Applied=%d Skipped=%d"),
+		*InStatsData->GetName(),
+		*GetNameSafe(GetSourceAttributeSetClass()),
+		ReflectedDefinitions.Num(),
+		StatsMap.Num(),
+		AppliedCount,
+		SkippedCount);
+
+	bHasInitializedConfiguredStats = true;
 }
 
 void UStatsManager::InitializeFromMap(const TMap<FName, float>& StatsMap) const
@@ -740,59 +1435,25 @@ void UStatsManager::InitializeFromMap(const TMap<FName, float>& StatsMap) const
 		return;
 	}
 
+	int32 AppliedCount = 0;
+	int32 SkippedCount = 0;
+
 	for (const TPair<FName, float>& Pair : StatsMap)
 	{
-		SetStatValue(Pair.Key, Pair.Value);
+		if (SetNumericAttributeByName(Pair.Key, Pair.Value, true))
+		{
+			++AppliedCount;
+		}
+		else
+		{
+			++SkippedCount;
+		}
 	}
 
-	UE_LOG(LogStatsManager, Log, TEXT("Stats initialized from map (%d attributes)"), StatsMap.Num());
+	UE_LOG(LogStatsManager, Log, TEXT("Stats initialized from map. Applied=%d Skipped=%d"), AppliedCount, SkippedCount);
 }
 
 void UStatsManager::SetStatValue(FName AttributeName, float Value) const
 {
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-	UHunterAttributeSet* AttrSet = GetAttributeSet();
-
-	if (!ASC || !AttrSet)
-	{
-		UE_LOG(LogStatsManager, Error, TEXT("SetStatValue: ASC or AttributeSet is null"));
-		return;
-	}
-
-	if (!GetOwner()->HasAuthority())
-	{
-		return;
-	}
-
-	FGameplayAttribute Attribute = UHunterAttributeSet::FindAttributeByName(AttributeName);
-	
-	if (!Attribute.IsValid())
-	{
-		UE_LOG(LogStatsManager, Warning, TEXT("SetStatValue: Unknown attribute '%s'"), *AttributeName.ToString());
-		return;
-	}
-
-	ASC->SetNumericAttributeBase(Attribute, Value);
-
-	// Auto-fill current values for vitals
-	if (AttributeName == "MaxHealth")
-	{
-		FGameplayAttribute HealthAttr = UHunterAttributeSet::GetHealthAttribute();
-		ASC->SetNumericAttributeBase(HealthAttr, Value);
-	}
-	else if (AttributeName == "MaxMana")
-	{
-		FGameplayAttribute ManaAttr = UHunterAttributeSet::GetManaAttribute();
-		ASC->SetNumericAttributeBase(ManaAttr, Value);
-	}
-	else if (AttributeName == "MaxStamina")
-	{
-		FGameplayAttribute StaminaAttr = UHunterAttributeSet::GetStaminaAttribute();
-		ASC->SetNumericAttributeBase(StaminaAttr, Value);
-	}
-	else if (AttributeName == "MaxArcaneShield")
-	{
-		FGameplayAttribute ShieldAttr = UHunterAttributeSet::GetArcaneShieldAttribute();
-		ASC->SetNumericAttributeBase(ShieldAttr, Value);
-	}
+	SetNumericAttributeByName(AttributeName, Value, true);
 }

@@ -16,6 +16,14 @@
 				"CoreUObject",
 				"EnhancedInput"
 			]
+		},
+		{
+			"Name": "ALS_ProjectHunterEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"ALS_ProjectHunter"
+			]
 		}
 	],
 	"Plugins": [

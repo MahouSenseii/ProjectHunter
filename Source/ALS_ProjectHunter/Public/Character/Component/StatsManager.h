@@ -13,8 +13,10 @@ class UHunterAttributeSet;
 class UItemInstance;
 class UGameplayEffect;
 class UBaseStatsData;
+class UAttributeSet;
 struct FPHAttributeData;
 struct FGameplayAttribute;
+struct FStatInitializationEntry;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogStatsManager, Log, All);
 /**
@@ -31,6 +33,7 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	void NotifyAbilitySystemReady();
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* EQUIPMENT INTEGRATION (Required by EquipmentManager)                    */
@@ -79,6 +82,7 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Effects")
 	bool ApplyGameplayEffectToTarget(AActor* TargetActor, TSubclassOf<UGameplayEffect> EffectClass, float Level = 1.0f);
+	
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* PRIMARY ATTRIBUTES (7)                                                  */
@@ -186,6 +190,19 @@ public:
 	bool MeetsStatRequirements(const TMap<FName, float>& Requirements) const;
 
 	float GetAttributeValue(const FGameplayAttribute& Attribute) const;
+	bool HasLiveAttribute(const FGameplayAttribute& Attribute) const;
+	bool ResolveAttributeByName(FName AttributeName, FGameplayAttribute& OutAttribute) const;
+	bool ResolveAttributeByName(FName AttributeName, FGameplayAttribute& OutAttribute, FStatInitializationEntry* OutDefinition) const;
+	void GatherStatDefinitions(TArray<FStatInitializationEntry>& OutDefinitions) const;
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	TSubclassOf<UAttributeSet> GetSourceAttributeSetClass() const;
+
+	const UBaseStatsData* GetStatsDataAsset() const
+	{
+		
+		return StatsData;
+	}
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Debug")
 	FStatsDebugManager DebugManager;
@@ -232,6 +249,24 @@ protected:
 
 	/** Get AbilitySystemComponent from owner */
 	UAbilitySystemComponent* GetAbilitySystemComponent() const;
+	const UAttributeSet* GetLiveSourceAttributeSet(UAbilitySystemComponent* ASC, const UClass* DesiredClass, bool bLogIfMissing, FName AttributeName = NAME_None) const;
+	bool HasExpectedLiveAttributeSet(bool bLogIfMissing, FName AttributeName = NAME_None) const;
+	void RefreshCachedAbilitySystemState(const TCHAR* Context) const;
+	bool TryInitializeConfiguredStats(const TCHAR* Context);
+	void LogAbilitySystemState(const TCHAR* Context, UAbilitySystemComponent* ASC, const UAttributeSet* LiveAttributeSet) const;
+	void LogWarningOnce(const FString& Key, const FString& Message) const;
+
+	/** Resolve and apply a numeric attribute by name using the project's existing GAS path. */
+	bool SetNumericAttributeByName(FName AttributeName, float Value, bool bAutoInitializeCurrentFromMax = true) const;
+
+	/** Read a stat for initialization, preferring exported stat-map values and falling back to asset float properties. */
+	bool TryGetStatValueForInitialization(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, float& OutValue) const;
+
+	/** Apply a stat only when it is present in the initialization sources. */
+	bool ApplyStatIfPresent(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, bool bAutoInitializeCurrentFromMax = true) const;
+
+	/** Apply current vitals after max pools have been initialized, clamping them to the live max values. */
+	bool ApplyCurrentVitalWithClamp(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName CurrentStatName, FName MaxStatName, FName StarterPropertyName) const;
 
 	/**
 	 * Create a gameplay effect for equipment stats
@@ -260,6 +295,9 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> CachedASC;
+
+	bool bHasInitializedConfiguredStats = false;
+	mutable TSet<FString> EmittedWarningKeys;
 
 	/**
 	 * Active equipment effects

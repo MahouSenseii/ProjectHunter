@@ -3,15 +3,128 @@
 
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogHunterAttributeSet, Log, All);
+
+namespace HunterAttributeSetPrivate
+{
+	bool ShouldAssignAttributeValue(float CurrentValue, float NewValue)
+	{
+		return !FMath::IsNearlyEqual(CurrentValue, NewValue, KINDA_SMALL_NUMBER);
+	}
+
+	bool ShouldAssignAttributeDataValue(const FGameplayAttributeData& Attribute, float NewValue)
+	{
+		return ShouldAssignAttributeValue(Attribute.GetBaseValue(), NewValue) ||
+			ShouldAssignAttributeValue(Attribute.GetCurrentValue(), NewValue);
+	}
+
+	void AssignAttributeDirect(FGameplayAttributeData& Attribute, float NewValue)
+	{
+		Attribute.SetBaseValue(NewValue);
+		Attribute.SetCurrentValue(NewValue);
+	}
+
+	void AssignAttributeDirectIfNeeded(FGameplayAttributeData& Attribute, float NewValue)
+	{
+		if (ShouldAssignAttributeDataValue(Attribute, NewValue))
+		{
+			AssignAttributeDirect(Attribute, NewValue);
+		}
+	}
+
+	float ClampWithOptionalCap(float Value, float MaxCap)
+	{
+		const float ClampedValue = FMath::Max(Value, 0.0f);
+		return MaxCap > 0.0f ? FMath::Min(ClampedValue, MaxCap) : ClampedValue;
+	}
+
+	float ComputeComponentReservedAmount(float FlatReserved, float PercentageReserved, float RawMaxValue)
+	{
+		return FMath::Max(FlatReserved, 0.0f) + (FMath::Max(PercentageReserved, 0.0f) * 0.01f * FMath::Max(RawMaxValue, 0.0f));
+	}
+
+	float ClampReservedAmount(float ReservedAmount, float RawMaxValue, float MaxReservedValue)
+	{
+		const float EffectiveRawMax = FMath::Max(RawMaxValue, 0.0f);
+		const float ReservedCap = MaxReservedValue > 0.0f
+			? FMath::Min(FMath::Max(MaxReservedValue, 0.0f), EffectiveRawMax)
+			: EffectiveRawMax;
+
+		return FMath::Clamp(ReservedAmount, 0.0f, ReservedCap);
+	}
+
+	float ComputeEffectiveMax(float RawMaxValue, float ReservedAmount)
+	{
+		return FMath::Clamp(FMath::Max(RawMaxValue, 0.0f) - FMath::Max(ReservedAmount, 0.0f), 0.0f, FMath::Max(RawMaxValue, 0.0f));
+	}
+}
 
 
 UHunterAttributeSet::UHunterAttributeSet()
 {
-	GlobalXPGain.SetBaseValue(0.0f);       
-	LocalXPGain.SetBaseValue(0.0f);        
-	XPGainMultiplier.SetBaseValue(1.0f);   
-	XPPenalty.SetBaseValue(1.0f); 
+}
+
+void UHunterAttributeSet::SetIsInitializingStats(bool bInInitializing)
+{
+	if (bIsInitializingStats == bInInitializing)
+	{
+		return;
+	}
+
+	bIsInitializingStats = bInInitializing;
+
+	UE_LOG(
+		LogHunterAttributeSet,
+		Verbose,
+		TEXT("SetIsInitializingStats: %s for AttributeSet=%s Outer=%s"),
+		bIsInitializingStats ? TEXT("Enabled") : TEXT("Disabled"),
+		*GetNameSafe(this),
+		*GetNameSafe(GetOuter()));
+}
+
+bool UHunterAttributeSet::IsInitializingStats() const
+{
+	return bIsInitializingStats;
+}
+
+void UHunterAttributeSet::RecalculateAllDerivedVitals()
+{
+	if (bIsInitializingStats)
+	{
+		UE_LOG(
+			LogHunterAttributeSet,
+			VeryVerbose,
+			TEXT("RecalculateAllDerivedVitals: Skipped for AttributeSet=%s because initialization mode is still active"),
+			*GetNameSafe(this));
+		return;
+	}
+
+	if (bIsUpdatingDerivedVitalAttributes)
+	{
+		UE_LOG(
+			LogHunterAttributeSet,
+			VeryVerbose,
+			TEXT("RecalculateAllDerivedVitals: Skipped for AttributeSet=%s because a derived vital update is already in progress"),
+			*GetNameSafe(this));
+		return;
+	}
+
+	UE_LOG(
+		LogHunterAttributeSet,
+		Verbose,
+		TEXT("RecalculateAllDerivedVitals: Recalculating all derived vitals for AttributeSet=%s Outer=%s"),
+		*GetNameSafe(this),
+		*GetNameSafe(GetOuter()));
+
+	const TGuardValue<bool> GuardDerivedVitalUpdate(bIsUpdatingDerivedVitalAttributes, true);
+
+	UpdateHealthDerivedAttributes();
+	UpdateManaDerivedAttributes();
+	UpdateStaminaDerivedAttributes();
+	UpdateArcaneShieldDerivedAttributes();
 }
 
 FGameplayAttribute UHunterAttributeSet::FindAttributeByName(FName AttributeName)
@@ -392,11 +505,314 @@ void UHunterAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute
 	ClampSpecialAttributes(Attribute, NewValue);
 }
 
+void UHunterAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
+{
+	Super::PostAttributeChange(Attribute, OldValue, NewValue);
 
+	if (ShouldSkipDerivedVitalUpdate(TEXT("PostAttributeChange"), Attribute))
+	{
+		return;
+	}
+
+	UpdateDerivedVitalAttributes(Attribute);
+}
 
 void UHunterAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
+
+	if (ShouldSkipDerivedVitalUpdate(TEXT("PostGameplayEffectExecute"), Data.EvaluatedData.Attribute))
+	{
+		return;
+	}
+
+	UpdateDerivedVitalAttributes(Data.EvaluatedData.Attribute);
+}
+
+bool UHunterAttributeSet::ShouldSkipDerivedVitalUpdate(const TCHAR* Context, const FGameplayAttribute& Attribute) const
+{
+	const FString AttributeName = Attribute.IsValid() ? Attribute.GetName() : TEXT("Invalid");
+
+	if (bIsInitializingStats)
+	{
+		UE_LOG(
+			LogHunterAttributeSet,
+			VeryVerbose,
+			TEXT("%s: Skipping derived vital update for Attribute=%s because initialization mode is active on AttributeSet=%s"),
+			Context,
+			*AttributeName,
+			*GetNameSafe(this));
+		return true;
+	}
+
+	if (bIsUpdatingDerivedVitalAttributes)
+	{
+		UE_LOG(
+			LogHunterAttributeSet,
+			VeryVerbose,
+			TEXT("%s: Skipping derived vital update for Attribute=%s because a guarded derived update is already in progress on AttributeSet=%s"),
+			Context,
+			*AttributeName,
+			*GetNameSafe(this));
+		return true;
+	}
+
+	return false;
+}
+
+void UHunterAttributeSet::UpdateDerivedVitalAttributes(const FGameplayAttribute& Attribute)
+{
+	if (!Attribute.IsValid())
+	{
+		return;
+	}
+
+	if (ShouldSkipDerivedVitalUpdate(TEXT("UpdateDerivedVitalAttributes"), Attribute))
+	{
+		return;
+	}
+
+	const TGuardValue<bool> GuardDerivedVitalUpdate(bIsUpdatingDerivedVitalAttributes, true);
+
+	if (IsHealthVitalAttribute(Attribute))
+	{
+		UpdateHealthDerivedAttributes();
+	}
+
+	if (IsManaVitalAttribute(Attribute))
+	{
+		UpdateManaDerivedAttributes();
+	}
+
+	if (IsStaminaVitalAttribute(Attribute))
+	{
+		UpdateStaminaDerivedAttributes();
+	}
+
+	if (IsArcaneShieldVitalAttribute(Attribute))
+	{
+		UpdateArcaneShieldDerivedAttributes();
+	}
+}
+
+void UHunterAttributeSet::UpdateHealthDerivedAttributes()
+{
+	const float RawMaxHealth = FMath::Max(GetMaxHealth(), 0.0f);
+	const float ComponentReservedHealth = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
+		GetFlatReservedHealth(),
+		GetPercentageReservedHealth(),
+		RawMaxHealth);
+	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedHealth, KINDA_SMALL_NUMBER);
+	const float TargetReservedHealth = HunterAttributeSetPrivate::ClampReservedAmount(
+		bUseComponentReservation ? ComponentReservedHealth : GetReservedHealth(),
+		RawMaxHealth,
+		GetMaxReservedHealth());
+	const float TargetMaxEffectiveHealth = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxHealth, TargetReservedHealth);
+	const float TargetHealth = FMath::Clamp(GetHealth(), 0.0f, TargetMaxEffectiveHealth);
+	const float TargetHealthRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetHealthRegenRate(), GetMaxHealthRegenRate());
+	const float TargetHealthRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetHealthRegenAmount(), GetMaxHealthRegenAmount());
+
+	if (bUseComponentReservation)
+	{
+		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedHealth, TargetReservedHealth);
+	}
+
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveHealth, TargetMaxEffectiveHealth);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Health, TargetHealth);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(HealthRegenRate, TargetHealthRegenRate);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(HealthRegenAmount, TargetHealthRegenAmount);
+
+	UE_LOG(
+		LogHunterAttributeSet,
+		VeryVerbose,
+		TEXT("UpdateHealthDerivedAttributes: MaxHealth=%.2f ReservedHealth=%.2f EffectiveMaxHealth=%.2f Health=%.2f RegenRate=%.2f RegenAmount=%.2f"),
+		RawMaxHealth,
+		TargetReservedHealth,
+		TargetMaxEffectiveHealth,
+		TargetHealth,
+		TargetHealthRegenRate,
+		TargetHealthRegenAmount);
+}
+
+void UHunterAttributeSet::UpdateManaDerivedAttributes()
+{
+	const float RawMaxMana = FMath::Max(GetMaxMana(), 0.0f);
+	const float ComponentReservedMana = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
+		GetFlatReservedMana(),
+		GetPercentageReservedMana(),
+		RawMaxMana);
+	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedMana, KINDA_SMALL_NUMBER);
+	const float TargetReservedMana = HunterAttributeSetPrivate::ClampReservedAmount(
+		bUseComponentReservation ? ComponentReservedMana : GetReservedMana(),
+		RawMaxMana,
+		GetMaxReservedMana());
+	const float TargetMaxEffectiveMana = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxMana, TargetReservedMana);
+	const float TargetMana = FMath::Clamp(GetMana(), 0.0f, TargetMaxEffectiveMana);
+	const float TargetManaRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetManaRegenRate(), GetMaxManaRegenRate());
+	const float TargetManaRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetManaRegenAmount(), GetMaxManaRegenAmount());
+
+	if (bUseComponentReservation)
+	{
+		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedMana, TargetReservedMana);
+	}
+
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveMana, TargetMaxEffectiveMana);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Mana, TargetMana);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ManaRegenRate, TargetManaRegenRate);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ManaRegenAmount, TargetManaRegenAmount);
+
+	UE_LOG(
+		LogHunterAttributeSet,
+		VeryVerbose,
+		TEXT("UpdateManaDerivedAttributes: MaxMana=%.2f ReservedMana=%.2f EffectiveMaxMana=%.2f Mana=%.2f RegenRate=%.2f RegenAmount=%.2f"),
+		RawMaxMana,
+		TargetReservedMana,
+		TargetMaxEffectiveMana,
+		TargetMana,
+		TargetManaRegenRate,
+		TargetManaRegenAmount);
+}
+
+void UHunterAttributeSet::UpdateStaminaDerivedAttributes()
+{
+	const float RawMaxStamina = FMath::Max(GetMaxStamina(), 0.0f);
+	const float ComponentReservedStamina = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
+		GetFlatReservedStamina(),
+		GetPercentageReservedStamina(),
+		RawMaxStamina);
+	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedStamina, KINDA_SMALL_NUMBER);
+	const float TargetReservedStamina = HunterAttributeSetPrivate::ClampReservedAmount(
+		bUseComponentReservation ? ComponentReservedStamina : GetReservedStamina(),
+		RawMaxStamina,
+		GetMaxReservedStamina());
+	const float TargetMaxEffectiveStamina = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxStamina, TargetReservedStamina);
+	const float TargetStamina = FMath::Clamp(GetStamina(), 0.0f, TargetMaxEffectiveStamina);
+	const float TargetStaminaRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetStaminaRegenRate(), GetMaxStaminaRegenRate());
+	const float TargetStaminaRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetStaminaRegenAmount(), GetMaxStaminaRegenAmount());
+
+	if (bUseComponentReservation)
+	{
+		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedStamina, TargetReservedStamina);
+	}
+
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveStamina, TargetMaxEffectiveStamina);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Stamina, TargetStamina);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(StaminaRegenRate, TargetStaminaRegenRate);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(StaminaRegenAmount, TargetStaminaRegenAmount);
+
+	UE_LOG(
+		LogHunterAttributeSet,
+		VeryVerbose,
+		TEXT("UpdateStaminaDerivedAttributes: MaxStamina=%.2f ReservedStamina=%.2f EffectiveMaxStamina=%.2f Stamina=%.2f RegenRate=%.2f RegenAmount=%.2f DegenRate=%.2f DegenAmount=%.2f"),
+		RawMaxStamina,
+		TargetReservedStamina,
+		TargetMaxEffectiveStamina,
+		TargetStamina,
+		TargetStaminaRegenRate,
+		TargetStaminaRegenAmount,
+		FMath::Max(GetStaminaDegenRate(), 0.0f),
+		FMath::Max(GetStaminaDegenAmount(), 0.0f));
+}
+
+void UHunterAttributeSet::UpdateArcaneShieldDerivedAttributes()
+{
+	const float RawMaxArcaneShield = FMath::Max(GetMaxArcaneShield(), 0.0f);
+	const float ComponentReservedArcaneShield = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
+		GetFlatReservedArcaneShield(),
+		GetPercentageReservedArcaneShield(),
+		RawMaxArcaneShield);
+	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedArcaneShield, KINDA_SMALL_NUMBER);
+	const float TargetReservedArcaneShield = HunterAttributeSetPrivate::ClampReservedAmount(
+		bUseComponentReservation ? ComponentReservedArcaneShield : GetReservedArcaneShield(),
+		RawMaxArcaneShield,
+		GetMaxReservedArcaneShield());
+	const float TargetMaxEffectiveArcaneShield = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxArcaneShield, TargetReservedArcaneShield);
+	const float TargetArcaneShield = FMath::Clamp(GetArcaneShield(), 0.0f, TargetMaxEffectiveArcaneShield);
+	const float TargetArcaneShieldRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetArcaneShieldRegenRate(), GetMaxArcaneShieldRegenRate());
+	const float TargetArcaneShieldRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetArcaneShieldRegenAmount(), GetMaxArcaneShieldRegenAmount());
+
+	if (bUseComponentReservation)
+	{
+		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedArcaneShield, TargetReservedArcaneShield);
+	}
+
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveArcaneShield, TargetMaxEffectiveArcaneShield);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ArcaneShield, TargetArcaneShield);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ArcaneShieldRegenRate, TargetArcaneShieldRegenRate);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ArcaneShieldRegenAmount, TargetArcaneShieldRegenAmount);
+
+	UE_LOG(
+		LogHunterAttributeSet,
+		VeryVerbose,
+		TEXT("UpdateArcaneShieldDerivedAttributes: MaxArcaneShield=%.2f ReservedArcaneShield=%.2f EffectiveMaxArcaneShield=%.2f ArcaneShield=%.2f RegenRate=%.2f RegenAmount=%.2f"),
+		RawMaxArcaneShield,
+		TargetReservedArcaneShield,
+		TargetMaxEffectiveArcaneShield,
+		TargetArcaneShield,
+		TargetArcaneShieldRegenRate,
+		TargetArcaneShieldRegenAmount);
+}
+
+bool UHunterAttributeSet::IsHealthVitalAttribute(const FGameplayAttribute& Attribute) const
+{
+	return Attribute == GetHealthAttribute() ||
+		Attribute == GetMaxHealthAttribute() ||
+		Attribute == GetMaxEffectiveHealthAttribute() ||
+		Attribute == GetHealthRegenRateAttribute() ||
+		Attribute == GetMaxHealthRegenRateAttribute() ||
+		Attribute == GetHealthRegenAmountAttribute() ||
+		Attribute == GetMaxHealthRegenAmountAttribute() ||
+		Attribute == GetReservedHealthAttribute() ||
+		Attribute == GetMaxReservedHealthAttribute() ||
+		Attribute == GetFlatReservedHealthAttribute() ||
+		Attribute == GetPercentageReservedHealthAttribute();
+}
+
+bool UHunterAttributeSet::IsManaVitalAttribute(const FGameplayAttribute& Attribute) const
+{
+	return Attribute == GetManaAttribute() ||
+		Attribute == GetMaxManaAttribute() ||
+		Attribute == GetMaxEffectiveManaAttribute() ||
+		Attribute == GetManaRegenRateAttribute() ||
+		Attribute == GetMaxManaRegenRateAttribute() ||
+		Attribute == GetManaRegenAmountAttribute() ||
+		Attribute == GetMaxManaRegenAmountAttribute() ||
+		Attribute == GetReservedManaAttribute() ||
+		Attribute == GetMaxReservedManaAttribute() ||
+		Attribute == GetFlatReservedManaAttribute() ||
+		Attribute == GetPercentageReservedManaAttribute();
+}
+
+bool UHunterAttributeSet::IsStaminaVitalAttribute(const FGameplayAttribute& Attribute) const
+{
+	return Attribute == GetStaminaAttribute() ||
+		Attribute == GetMaxStaminaAttribute() ||
+		Attribute == GetMaxEffectiveStaminaAttribute() ||
+		Attribute == GetStaminaRegenRateAttribute() ||
+		Attribute == GetStaminaDegenRateAttribute() ||
+		Attribute == GetMaxStaminaRegenRateAttribute() ||
+		Attribute == GetStaminaRegenAmountAttribute() ||
+		Attribute == GetStaminaDegenAmountAttribute() ||
+		Attribute == GetMaxStaminaRegenAmountAttribute() ||
+		Attribute == GetReservedStaminaAttribute() ||
+		Attribute == GetMaxReservedStaminaAttribute() ||
+		Attribute == GetFlatReservedStaminaAttribute() ||
+		Attribute == GetPercentageReservedStaminaAttribute();
+}
+
+bool UHunterAttributeSet::IsArcaneShieldVitalAttribute(const FGameplayAttribute& Attribute) const
+{
+	return Attribute == GetArcaneShieldAttribute() ||
+		Attribute == GetMaxArcaneShieldAttribute() ||
+		Attribute == GetMaxEffectiveArcaneShieldAttribute() ||
+		Attribute == GetArcaneShieldRegenRateAttribute() ||
+		Attribute == GetMaxArcaneShieldRegenRateAttribute() ||
+		Attribute == GetArcaneShieldRegenAmountAttribute() ||
+		Attribute == GetMaxArcaneShieldRegenAmountAttribute() ||
+		Attribute == GetReservedArcaneShieldAttribute() ||
+		Attribute == GetMaxReservedArcaneShieldAttribute() ||
+		Attribute == GetFlatReservedArcaneShieldAttribute() ||
+		Attribute == GetPercentageReservedArcaneShieldAttribute();
 }
 
 
@@ -1423,31 +1839,62 @@ void UHunterAttributeSet::ClampVitalAttributes(const FGameplayAttribute& Attribu
 {
     if (Attribute == GetHealthAttribute())
     {
-        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxEffectiveHealth());
+        const float MaxHealthClampValue = bIsInitializingStats ? GetMaxHealth() : GetMaxEffectiveHealth();
+        NewValue = FMath::Clamp(NewValue, 0.0f, FMath::Max(MaxHealthClampValue, 0.0f));
     }
     else if (Attribute == GetManaAttribute())
     {
-        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxEffectiveMana());
+        const float MaxManaClampValue = bIsInitializingStats ? GetMaxMana() : GetMaxEffectiveMana();
+        NewValue = FMath::Clamp(NewValue, 0.0f, FMath::Max(MaxManaClampValue, 0.0f));
     }
     else if (Attribute == GetStaminaAttribute())
     {
-        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxEffectiveStamina());
+        const float MaxStaminaClampValue = bIsInitializingStats ? GetMaxStamina() : GetMaxEffectiveStamina();
+        NewValue = FMath::Clamp(NewValue, 0.0f, FMath::Max(MaxStaminaClampValue, 0.0f));
     }
     else if (Attribute == GetArcaneShieldAttribute())
     {
-        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxEffectiveArcaneShield());
+        const float MaxArcaneShieldClampValue = bIsInitializingStats ? GetMaxArcaneShield() : GetMaxEffectiveArcaneShield();
+        NewValue = FMath::Clamp(NewValue, 0.0f, FMath::Max(MaxArcaneShieldClampValue, 0.0f));
     }
     // Max vitals
     else if (Attribute == GetMaxHealthAttribute() || Attribute == GetMaxManaAttribute() ||
              Attribute == GetMaxStaminaAttribute() || Attribute == GetMaxArcaneShieldAttribute())
     {
-        NewValue = FMath::Clamp(NewValue, 1.0f, 99999.0f);
+        NewValue = FMath::Clamp(NewValue, 0.0f, 99999.0f);
     }
     // Effective max vitals
-    else if (Attribute == GetMaxEffectiveHealthAttribute() || Attribute == GetMaxEffectiveManaAttribute() ||
-             Attribute == GetMaxEffectiveStaminaAttribute() || Attribute == GetMaxEffectiveArcaneShieldAttribute())
+    else if (Attribute == GetMaxEffectiveHealthAttribute())
     {
-        NewValue = FMath::Max(NewValue, 1.0f);
+        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxHealth());
+    }
+    else if (Attribute == GetMaxEffectiveManaAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxMana());
+    }
+    else if (Attribute == GetMaxEffectiveStaminaAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxStamina());
+    }
+    else if (Attribute == GetMaxEffectiveArcaneShieldAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxArcaneShield());
+    }
+    else if (Attribute == GetReservedHealthAttribute() || Attribute == GetFlatReservedHealthAttribute() || Attribute == GetMaxReservedHealthAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxHealth());
+    }
+    else if (Attribute == GetReservedManaAttribute() || Attribute == GetFlatReservedManaAttribute() || Attribute == GetMaxReservedManaAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxMana());
+    }
+    else if (Attribute == GetReservedStaminaAttribute() || Attribute == GetFlatReservedStaminaAttribute() || Attribute == GetMaxReservedStaminaAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxStamina());
+    }
+    else if (Attribute == GetReservedArcaneShieldAttribute() || Attribute == GetFlatReservedArcaneShieldAttribute() || Attribute == GetMaxReservedArcaneShieldAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxArcaneShield());
     }
 }
 
@@ -1676,7 +2123,7 @@ void UHunterAttributeSet::ClampRateAndAmountAttributes(const FGameplayAttribute&
         Attribute == GetMaxHealthRegenRateAttribute() || Attribute == GetMaxManaRegenRateAttribute() ||
         Attribute == GetMaxStaminaRegenRateAttribute() || Attribute == GetMaxArcaneShieldRegenRateAttribute())
     {
-        NewValue = FMath::Clamp(NewValue, 0.1f, 60.0f);
+        NewValue = FMath::Clamp(NewValue, 0.0f, 60.0f);
     }
     // Regen/degen amounts
     else if (Attribute == GetHealthRegenAmountAttribute() || Attribute == GetManaRegenAmountAttribute() ||
