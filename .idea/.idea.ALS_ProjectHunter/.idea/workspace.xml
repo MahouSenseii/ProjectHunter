@@ -18,31 +18,116 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/ALS_ProjectHunterEditor.Build.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/ALS_ProjectHunterEditorModule.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/Data/BaseStatsDataCustomization.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/Data/BaseStatsDataCustomization.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Boots01.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Chest.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Chestplate01A.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Chestplate01C.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Chestplate02.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Gloves.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Helm.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Legs.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Boots01.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Chestplate01A.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Chestplate01B.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Chestplate01C.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Chestplate02.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Gloves01_Gold.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Gloves01_Silver.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Helm.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Legs01_Bronze.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Legs01_Silver.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Chest_Skeleton.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/SK_Chest01.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/SK_Chest02.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Boots.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Chestplate01A.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Chestplate01B.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Chestplate01C.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Chestplate02.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Chestplate03.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Gloves01.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Helm.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Legs.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book01DBrown.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book01Green.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book01LBrown.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book01Purple.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book01Red.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book02Blue.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book02LGreen.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book02Red.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_BookOpened.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_BooksHorizontal.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Bookshelf.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_BookshelfFilled.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Door.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_DoorKey.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_DropBag.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Easel.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorBase.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorLever.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorLeverBase.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorProp.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorRopeSupport.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorWinch.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorWindlass.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Forge.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ForgeHammer01.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ForgeHammer02.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ForgeTongs.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_GoldenCoins.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Painting01.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Scroll.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Shields/SM_Shield01.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Katana/SM_BladeLessKatana.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Katana/SM_BloodKatana.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Katana/SM_Katana01.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Katana/SM_Katana1.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Katana/SM_Katana_S.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/ML_SoftMetal_UE4.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Axe01.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Sword02.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Sword03.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Sword04.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Warhammer01.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Warhammer02.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Sword.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Sword/SM_Sword01.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Effects/HunterGE_DerivedPrimaryVitals.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_EffectiveResource.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_EnduranceMaxStamina.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_EnduranceStaminaDegen.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_IntelligenceManaRegen.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_ReservedResource.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_StrengthMaxHealth.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/TagManager.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/CombatManager.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Effects/HunterGE_DerivedPrimaryVitals.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_EffectiveResource.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_EnduranceMaxStamina.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_EnduranceStaminaDegen.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_IntelligenceManaRegen.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_ReservedResource.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_StrengthMaxHealth.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/TagManager.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/CombatManager.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" beforeDir="false" afterPath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ALS_ProjectHunter.uproject" beforeDir="false" afterPath="$PROJECT_DIR$/ALS_ProjectHunter.uproject" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Config/DefaultEngine.ini" beforeDir="false" afterPath="$PROJECT_DIR$/Config/DefaultEngine.ini" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Data/Stats/DA_BaseStats.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/Data/Stats/DA_BaseStats.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/ALS_ProjectHunter.Build.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/ALS_ProjectHunter.Build.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/ALS_ProjectHunter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/ALS_ProjectHunter.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAbilitySystemComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAbilitySystemComponent.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAttributeSet.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAttributeSet.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/CharacterProgressionManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/CharacterProgressionManager.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsDebug.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsDebug.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Data/BaseStatsData.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Data/BaseStatsData.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Data/StatDefinitions.cpp" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAbilitySystemComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAbilitySystemComponent.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAttributeSet.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAttributeSet.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/StatsDebug.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/StatsDebug.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/CharacterProgressionManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/CharacterProgressionManager.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/StatsManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/StatsManager.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/BaseStatsData.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/BaseStatsData.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/StatDefinitions.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor.Target.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor.Target.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatStruct.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatStruct.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,7 +145,6 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="cidr-memory-view://10" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Programs/Shared/EpicGames.Horde/HordeHttpClient.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Delegates/DelegateInstancesImpl.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Math/UnrealMathUtility.h" root0="FORCE_HIGHLIGHTING" />
@@ -69,6 +153,8 @@
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/UObject/NameTypes.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectHandle.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectPtr.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$USER_HOME$/Desktop/New folder/ProjectHunter-86ef09383d62559ddd62929651f449cd1c5948d2/ProjectHunter-86ef09383d62559ddd62929651f449cd1c5948d2/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveHealth.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$USER_HOME$/Desktop/New folder/ProjectHunter-86ef09383d62559ddd62929651f449cd1c5948d2/ProjectHunter-86ef09383d62559ddd62929651f449cd1c5948d2/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxHealth.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/ALS_ProjectHunter.uproject" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Plugins/ALS-Community/ALSV4_CPP.uplugin" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" root0="FORCE_HIGHLIGHTING" />
@@ -103,29 +189,29 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    ".NET Project.UnrealBuildTool.executor": "Debug",
-    "ASKED_ADD_EXTERNAL_FILES": "true",
-    "C++ Project.ALS_ProjectHunter.executor": "Debug",
-    "C/C++ Project.ALS_ProjectHunter.executor": "Debug",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "settings.sync",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;.NET Project.UnrealBuildTool.executor&quot;: &quot;Debug&quot;,
+    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
+    &quot;C++ Project.ALS_ProjectHunter.executor&quot;: &quot;Debug&quot;,
+    &quot;C/C++ Project.ALS_ProjectHunter.executor&quot;: &quot;Debug&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;settings.sync&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CidrLocalAttachDebugger.recentlyUsed">
       <recent name="com.jetbrains.rider.cpp.debugger.RiderCppLLDBDriverConfiguration" />
@@ -1055,7 +1141,11 @@
       <workItem from="1773593579413" duration="43000" />
       <workItem from="1773597897409" duration="71000" />
       <workItem from="1773602717861" duration="2736000" />
-      <workItem from="1773605541955" duration="6838000" />
+      <workItem from="1773605541955" duration="24163000" />
+      <workItem from="1773682915280" duration="55000" />
+      <workItem from="1773684102471" duration="4292000" />
+      <workItem from="1773702321008" duration="11338000" />
+      <workItem from="1773771038969" duration="510000" />
     </task>
     <servers />
   </component>
@@ -1120,28 +1210,18 @@
           <option name="timeStamp" value="141" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Component/InteractableManager.cpp</url>
-          <line>374</line>
-          <option name="timeStamp" value="147" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/Interaction/InteractionManager.cpp</url>
-          <line>1029</line>
-          <option name="timeStamp" value="148" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp</url>
-          <line>584</line>
+          <line>600</line>
           <option name="timeStamp" value="154" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp</url>
-          <line>600</line>
+          <line>616</line>
           <option name="timeStamp" value="155" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp</url>
-          <line>611</line>
+          <line>627</line>
           <option name="timeStamp" value="156" />
         </line-breakpoint>
         <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">

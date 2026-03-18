@@ -3,17 +3,36 @@
 #include "Character/PHBaseCharacter.h"
 #include "AbilitySystem/HunterAbilitySystemComponent.h"
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystem/Effects/HunterGE_DerivedPrimaryVitals.h"
 #include "AbilitySystemComponent.h"
 #include "Character/Component/CharacterProgressionManager.h"
 #include "Character/Component/StatsManager.h"
+#include "Character/Component/TagManager.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "Character/Component/EquipmentManager.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "PHGameplayTags.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogPHBaseCharacterAbilitySystem, Log, All);
+
+namespace PHBaseCharacterPrivate
+{
+	static bool HasDerivedVitalsStartupEffect(const TArray<TSubclassOf<UGameplayEffect>>& EffectClasses)
+	{
+		for (const TSubclassOf<UGameplayEffect>& EffectClass : EffectClasses)
+		{
+			if (EffectClass && EffectClass->IsChildOf(UHunterGE_DerivedPrimaryVitals::StaticClass()))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
 
 
 APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -36,6 +55,9 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 
 	// Create Stats Manager
 	StatsManager = CreateDefaultSubobject<UStatsManager>(TEXT("Stats Manager"));
+
+	// Create Tag Manager
+	TagManager = CreateDefaultSubobject<UTagManager>(TEXT("TagManager"));
 }
 
 void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -71,6 +93,20 @@ void APHBaseCharacter::PossessedBy(AController* NewController)
 		InitializeAbilitySystem();
 	}
 }
+
+void APHBaseCharacter::SprintAction_Implementation(bool bValue)
+{
+	Super::SprintAction_Implementation(bValue);
+
+	if (!TagManager)
+	{
+		return;
+	}
+
+	TagManager->SetTagState(FPHGameplayTags::Get().Condition_Sprinting, bValue);
+	TagManager->RefreshBaseConditionTags();
+}
+
 
 void APHBaseCharacter::OnRep_PlayerState()
 {
@@ -179,13 +215,32 @@ void APHBaseCharacter::InitializeAbilitySystem()
 	// AttributeSet registration above keeps the ASC wired to the same live stat object.
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
 
+	if (TagManager)
+	{
+		TagManager->Initialize(AbilitySystemComponent);
+	}
+
 	if (UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(AbilitySystemComponent))
 	{
 		HunterASC->AbilityActorInfoSet();
 	}
 
+	CachedLevel = FMath::Max(GetCharacterLevel(), 1);
+
+	if (HasAuthority())
+	{
+		AbilitySystemComponent->SetNumericAttributeBase(
+			UHunterAttributeSet::GetPlayerLevelAttribute(),
+			static_cast<float>(CachedLevel));
+	}
+
 	if (bAbilitySystemInitialized)
 	{
+		if (TagManager)
+		{
+			TagManager->RefreshBaseConditionTags();
+		}
+
 		if (StatsManager)
 		{
 			StatsManager->NotifyAbilitySystemReady();
@@ -229,6 +284,11 @@ void APHBaseCharacter::InitializeAbilitySystem()
 
 	// Call virtual function for subclass initialization
 	OnAbilitySystemInitialized();
+
+	if (TagManager)
+	{
+		TagManager->RefreshBaseConditionTags();
+	}
 
 	if (StatsManager)
 	{
@@ -399,6 +459,12 @@ void APHBaseCharacter::OnDeath_Implementation(AController* Killer, AActor* Damag
 
 void APHBaseCharacter::HandleHealthChanged(const FOnAttributeChangeData& Data)
 {
+	(void)Data;
+
+	if (TagManager)
+	{
+		TagManager->RefreshBaseConditionTags();
+	}
 }
 
 void APHBaseCharacter::PlayDeathAnimation()
@@ -450,8 +516,14 @@ void APHBaseCharacter::ApplyStartupEffects()
 	FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
 	EffectContext.AddSourceObject(this);
 
+	TArray<TSubclassOf<UGameplayEffect>> EffectiveStartupEffects = StartupEffects;
+	if (!PHBaseCharacterPrivate::HasDerivedVitalsStartupEffect(EffectiveStartupEffects))
+	{
+		EffectiveStartupEffects.Add(UHunterGE_DerivedPrimaryVitals::StaticClass());
+	}
+
 	// Apply all startup effects
-	for (TSubclassOf<UGameplayEffect>& EffectClass : StartupEffects)
+	for (TSubclassOf<UGameplayEffect>& EffectClass : EffectiveStartupEffects)
 	{
 		if (EffectClass)
 		{

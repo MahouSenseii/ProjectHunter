@@ -1158,6 +1158,7 @@ EALSGait AALSBaseCharacter::GetActualGait(EALSGait AllowedGait) const
 	{
 		if (AllowedGait == EALSGait::Sprinting)
 		{
+			
 			return EALSGait::Sprinting;
 		}
 		return EALSGait::Running;
@@ -1286,6 +1287,8 @@ void AALSBaseCharacter::SprintAction_Implementation(bool bValue)
 	if (bValue)
 	{
 		SetDesiredGait(EALSGait::Sprinting);
+		
+		
 	}
 	else
 	{

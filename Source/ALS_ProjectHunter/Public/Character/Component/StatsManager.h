@@ -57,8 +57,8 @@ public:
 	void RemoveEquipmentStats(UItemInstance* Item);
 
 	/**
-	 * Refresh all equipment stats (useful after stat recalculation)
-	 * Removes all equipment effects and reapplies them
+	 * Remove all active equipment effects and immediately re-apply them from the stored item instances.
+	 * Useful after a stat recalculation that requires all modifiers to be rebuilt.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Equipment")
 	void RefreshEquipmentStats();
@@ -299,11 +299,11 @@ protected:
 	bool bHasInitializedConfiguredStats = false;
 	mutable TSet<FString> EmittedWarningKeys;
 
-	/**
-	 * Active equipment effects
-	 * Maps item GUID to gameplay effect handle
-	 * Used to remove effects when equipment is unequipped
-	 */
+	/** Maps item GUID → active GE handle. Used to remove effects on unequip. */
 	UPROPERTY()
 	TMap<FGuid, FActiveGameplayEffectHandle> ActiveEquipmentEffects;
+
+	/** Maps item GUID → item instance. Used to re-apply effects on refresh. */
+	UPROPERTY()
+	TMap<FGuid, TObjectPtr<UItemInstance>> ActiveEquipmentItems;
 };

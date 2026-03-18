@@ -17,6 +17,7 @@ class UHunterAbilitySystemComponent;
 class UCharacterProgressionManager;
 class UEquipmentManager;
 class UStatsManager;
+class UTagManager;
 class UBaseStatsData;
 class UGameplayEffect;
 class UGameplayAbility;
@@ -45,6 +46,7 @@ public:
 	virtual void OnRep_Controller() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	virtual void SprintAction_Implementation(bool bValue) override;
 	UPROPERTY(BlueprintAssignable, Category="Combat")
 	FOnCombatAffiliationChanged OnCombatAffiliationChanged;
 	
@@ -74,6 +76,10 @@ public:
 	/** Stats Manager - All stat queries and calculations */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStatsManager> StatsManager;
+
+	/** Tag Manager - Central runtime gameplay tag state for this character */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tags", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UTagManager> TagManager;
 
 	/**
 	 * Base stats data asset
@@ -114,6 +120,12 @@ public:
 	UStatsManager* GetStatsManager() const
 	{
 		return StatsManager;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Tags")
+	UTagManager* GetTagManager() const
+	{
+		return TagManager;
 	}
 
 	/* ═══════════════════════════════════════════════════════════════════════ */

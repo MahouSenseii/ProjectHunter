@@ -179,7 +179,7 @@ namespace BaseStatsDataPrivate
 		if (MainCategory.Equals(TEXT("Vital"), ESearchCase::IgnoreCase) ||
 			MainCategory.Equals(TEXT("Vitals"), ESearchCase::IgnoreCase))
 		{
-			return EHunterStatType::Resource;
+			return EHunterStatType::Vital;
 		}
 
 		if (ContainsToken(MainCategory, TEXT("Offense")) || ContainsToken(MainCategory, TEXT("Combat")))
@@ -346,7 +346,17 @@ namespace BaseStatsDataPrivate
 		const FString StatTypeString = Property->GetMetaData(TEXT("StatType"));
 		if (!StatTypeString.IsEmpty())
 		{
-			return ParseStatType(StatTypeString);
+			const EHunterStatType ParsedStatType = ParseStatType(StatTypeString);
+			const bool bIsVitalCategory =
+				ParsedCategory.MainCategory.IsEqual(TEXT("Vital"), ENameCase::IgnoreCase) ||
+				ParsedCategory.MainCategory.IsEqual(TEXT("Vitals"), ENameCase::IgnoreCase);
+
+			if (bIsVitalCategory && ParsedStatType == EHunterStatType::Resource)
+			{
+				return EHunterStatType::Vital;
+			}
+
+			return ParsedStatType;
 		}
 
 		return GetStatTypeForParsedCategory(ParsedCategory);
@@ -365,7 +375,17 @@ namespace BaseStatsDataPrivate
 		const FString CategorySource = !Entry.RawCategory.IsEmpty()
 			? Entry.RawCategory
 			: Entry.Category.ToString();
-		ApplyParsedCategory(Entry, ParseCategoryPathImpl(CategorySource));
+		const FParsedStatCategory ParsedCategory = ParseCategoryPathImpl(CategorySource);
+		ApplyParsedCategory(Entry, ParsedCategory);
+
+		const bool bIsVitalCategory =
+			ParsedCategory.MainCategory.IsEqual(TEXT("Vital"), ENameCase::IgnoreCase) ||
+			ParsedCategory.MainCategory.IsEqual(TEXT("Vitals"), ENameCase::IgnoreCase);
+
+		if (bIsVitalCategory && Entry.StatType == EHunterStatType::Resource)
+		{
+			Entry.StatType = EHunterStatType::Vital;
+		}
 	}
 
 	static TArray<FReflectedStatDefinition> GatherAttributeSetDefinitions(const UClass* AttributeSetClass)

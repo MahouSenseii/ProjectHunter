@@ -65,6 +65,28 @@ namespace HunterAttributeSetPrivate
 
 UHunterAttributeSet::UHunterAttributeSet()
 {
+	InitPlayerLevel(1.0f);
+	InitBlockStaminaCostMultiplier(1.0f);
+	InitBlockAngle(120.0f);
+	InitBlockPhysicalMultiplier(1.0f);
+	InitBlockElementalMultiplier(1.0f);
+	InitBlockCorruptionMultiplier(1.0f);
+	InitGlobalMoreDamage(1.0f);
+	InitPhysicalMoreDamage(1.0f);
+	InitElementalMoreDamage(1.0f);
+	InitFireMoreDamage(1.0f);
+	InitIceMoreDamage(1.0f);
+	InitLightningMoreDamage(1.0f);
+	InitLightMoreDamage(1.0f);
+	InitCorruptionMoreDamage(1.0f);
+	InitGlobalDamageTakenMultiplier(1.0f);
+	InitPhysicalDamageTakenMultiplier(1.0f);
+	InitElementalDamageTakenMultiplier(1.0f);
+	InitFireDamageTakenMultiplier(1.0f);
+	InitIceDamageTakenMultiplier(1.0f);
+	InitLightningDamageTakenMultiplier(1.0f);
+	InitLightDamageTakenMultiplier(1.0f);
+	InitCorruptionDamageTakenMultiplier(1.0f);
 }
 
 void UHunterAttributeSet::SetIsInitializingStats(bool bInInitializing)
@@ -191,6 +213,7 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, Affliction,   COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, Luck,         COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, Covenant,     COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, PlayerLevel,  COND_None,      REPNOTIFY_Always);
 
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, GlobalXPGain,   COND_None, REPNOTIFY_Always);
@@ -299,6 +322,14 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, LightningPercentDamage, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, CorruptionPercentDamage,COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, IcePercentDamage,       COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, GlobalMoreDamage,       COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, PhysicalMoreDamage,     COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ElementalMoreDamage,    COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, FireMoreDamage,         COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, IceMoreDamage,          COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, LightningMoreDamage,    COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, LightMoreDamage,        COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, CorruptionMoreDamage,   COND_OwnerOnly, REPNOTIFY_Always);
 
 	// Situational
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, DamageBonusWhileAtFullHP, COND_OwnerOnly, REPNOTIFY_Always);
@@ -340,6 +371,14 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	/* ============================= */
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, GlobalDefenses,                COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, BlockStrength,                 COND_None,      REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, FlatBlockAmount,               COND_None,      REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ChipDamageWhileBlocking,       COND_None,      REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, BlockStaminaCostMultiplier,    COND_None,      REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, GuardBreakThreshold,           COND_None,      REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, BlockAngle,                    COND_None,      REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, BlockPhysicalMultiplier,       COND_None,      REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, BlockElementalMultiplier,      COND_None,      REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, BlockCorruptionMultiplier,     COND_None,      REPNOTIFY_Always);
 
 	// Armour
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, Armour,                        COND_OwnerOnly, REPNOTIFY_Always);
@@ -360,6 +399,14 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, LightningResistanceFlatBonus,  COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, LightningResistancePercentBonus,COND_OwnerOnly, REPNOTIFY_Always); 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, MaxLightningResistance,        COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, GlobalDamageTakenMultiplier,   COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, PhysicalDamageTakenMultiplier, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ElementalDamageTakenMultiplier,COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, FireDamageTakenMultiplier,     COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, IceDamageTakenMultiplier,      COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, LightningDamageTakenMultiplier,COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, LightDamageTakenMultiplier,    COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, CorruptionDamageTakenMultiplier,COND_OwnerOnly, REPNOTIFY_Always);
 
 	// Corruption
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, CorruptionResistanceFlatBonus, COND_OwnerOnly, REPNOTIFY_Always);
@@ -444,6 +491,7 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, Cooldown,         COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, LifeLeech,        COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ManaLeech,        COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, StaminaLeechPercent, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, MovementSpeed,    COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, Poise,            COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, Weight,           COND_OwnerOnly, REPNOTIFY_Always);
@@ -598,26 +646,12 @@ void UHunterAttributeSet::UpdateDerivedVitalAttributes(const FGameplayAttribute&
 void UHunterAttributeSet::UpdateHealthDerivedAttributes()
 {
 	const float RawMaxHealth = FMath::Max(GetMaxHealth(), 0.0f);
-	const float ComponentReservedHealth = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
-		GetFlatReservedHealth(),
-		GetPercentageReservedHealth(),
-		RawMaxHealth);
-	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedHealth, KINDA_SMALL_NUMBER);
-	const float TargetReservedHealth = HunterAttributeSetPrivate::ClampReservedAmount(
-		bUseComponentReservation ? ComponentReservedHealth : GetReservedHealth(),
-		RawMaxHealth,
-		GetMaxReservedHealth());
-	const float TargetMaxEffectiveHealth = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxHealth, TargetReservedHealth);
+	const float TargetReservedHealth = FMath::Max(GetReservedHealth(), 0.0f);
+	const float TargetMaxEffectiveHealth = FMath::Max(GetMaxEffectiveHealth(), 0.0f);
 	const float TargetHealth = FMath::Clamp(GetHealth(), 0.0f, TargetMaxEffectiveHealth);
 	const float TargetHealthRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetHealthRegenRate(), GetMaxHealthRegenRate());
 	const float TargetHealthRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetHealthRegenAmount(), GetMaxHealthRegenAmount());
 
-	if (bUseComponentReservation)
-	{
-		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedHealth, TargetReservedHealth);
-	}
-
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveHealth, TargetMaxEffectiveHealth);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Health, TargetHealth);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(HealthRegenRate, TargetHealthRegenRate);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(HealthRegenAmount, TargetHealthRegenAmount);
@@ -637,29 +671,10 @@ void UHunterAttributeSet::UpdateHealthDerivedAttributes()
 void UHunterAttributeSet::UpdateManaDerivedAttributes()
 {
 	const float RawMaxMana = FMath::Max(GetMaxMana(), 0.0f);
-	const float ComponentReservedMana = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
-		GetFlatReservedMana(),
-		GetPercentageReservedMana(),
-		RawMaxMana);
-	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedMana, KINDA_SMALL_NUMBER);
-	const float TargetReservedMana = HunterAttributeSetPrivate::ClampReservedAmount(
-		bUseComponentReservation ? ComponentReservedMana : GetReservedMana(),
-		RawMaxMana,
-		GetMaxReservedMana());
-	const float TargetMaxEffectiveMana = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxMana, TargetReservedMana);
+	const float TargetReservedMana = FMath::Max(GetReservedMana(), 0.0f);
+	const float TargetMaxEffectiveMana = FMath::Max(GetMaxEffectiveMana(), 0.0f);
 	const float TargetMana = FMath::Clamp(GetMana(), 0.0f, TargetMaxEffectiveMana);
-	const float TargetManaRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetManaRegenRate(), GetMaxManaRegenRate());
-	const float TargetManaRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetManaRegenAmount(), GetMaxManaRegenAmount());
-
-	if (bUseComponentReservation)
-	{
-		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedMana, TargetReservedMana);
-	}
-
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveMana, TargetMaxEffectiveMana);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Mana, TargetMana);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ManaRegenRate, TargetManaRegenRate);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ManaRegenAmount, TargetManaRegenAmount);
 
 	UE_LOG(
 		LogHunterAttributeSet,
@@ -669,33 +684,19 @@ void UHunterAttributeSet::UpdateManaDerivedAttributes()
 		TargetReservedMana,
 		TargetMaxEffectiveMana,
 		TargetMana,
-		TargetManaRegenRate,
-		TargetManaRegenAmount);
+		FMath::Max(GetManaRegenRate(), 0.0f),
+		FMath::Max(GetManaRegenAmount(), 0.0f));
 }
 
 void UHunterAttributeSet::UpdateStaminaDerivedAttributes()
 {
 	const float RawMaxStamina = FMath::Max(GetMaxStamina(), 0.0f);
-	const float ComponentReservedStamina = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
-		GetFlatReservedStamina(),
-		GetPercentageReservedStamina(),
-		RawMaxStamina);
-	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedStamina, KINDA_SMALL_NUMBER);
-	const float TargetReservedStamina = HunterAttributeSetPrivate::ClampReservedAmount(
-		bUseComponentReservation ? ComponentReservedStamina : GetReservedStamina(),
-		RawMaxStamina,
-		GetMaxReservedStamina());
-	const float TargetMaxEffectiveStamina = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxStamina, TargetReservedStamina);
+	const float TargetReservedStamina = FMath::Max(GetReservedStamina(), 0.0f);
+	const float TargetMaxEffectiveStamina = FMath::Max(GetMaxEffectiveStamina(), 0.0f);
 	const float TargetStamina = FMath::Clamp(GetStamina(), 0.0f, TargetMaxEffectiveStamina);
 	const float TargetStaminaRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetStaminaRegenRate(), GetMaxStaminaRegenRate());
 	const float TargetStaminaRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetStaminaRegenAmount(), GetMaxStaminaRegenAmount());
 
-	if (bUseComponentReservation)
-	{
-		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedStamina, TargetReservedStamina);
-	}
-
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveStamina, TargetMaxEffectiveStamina);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Stamina, TargetStamina);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(StaminaRegenRate, TargetStaminaRegenRate);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(StaminaRegenAmount, TargetStaminaRegenAmount);
@@ -1110,6 +1111,11 @@ void UHunterAttributeSet::OnRep_Luck(const FGameplayAttributeData& OldAmount) co
 void UHunterAttributeSet::OnRep_Covenant(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,Covenant, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_PlayerLevel(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, PlayerLevel, OldAmount)
 }
 
 void UHunterAttributeSet::OnRep_GlobalXPGain(const FGameplayAttributeData& OldValue) const
@@ -1548,6 +1554,46 @@ void UHunterAttributeSet::OnRep_DamageBonusWhileAtLowHP(const FGameplayAttribute
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,DamageBonusWhileAtLowHP, OldAmount)
 }
 
+void UHunterAttributeSet::OnRep_GlobalMoreDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,GlobalMoreDamage, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_PhysicalMoreDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,PhysicalMoreDamage, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_ElementalMoreDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,ElementalMoreDamage, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_FireMoreDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,FireMoreDamage, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_IceMoreDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,IceMoreDamage, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_LightningMoreDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,LightningMoreDamage, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_LightMoreDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,LightMoreDamage, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_CorruptionMoreDamage(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,CorruptionMoreDamage, OldAmount)
+}
+
 void UHunterAttributeSet::OnRep_MeleeDamage(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,MeleeDamage, OldAmount)
@@ -1666,6 +1712,86 @@ void UHunterAttributeSet::OnRep_BlockStrength(const FGameplayAttributeData& OldA
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,BlockStrength, OldAmount)
 }
 
+void UHunterAttributeSet::OnRep_FlatBlockAmount(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,FlatBlockAmount, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_ChipDamageWhileBlocking(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,ChipDamageWhileBlocking, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_BlockStaminaCostMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,BlockStaminaCostMultiplier, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_GuardBreakThreshold(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,GuardBreakThreshold, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_BlockAngle(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,BlockAngle, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_BlockPhysicalMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,BlockPhysicalMultiplier, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_BlockElementalMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,BlockElementalMultiplier, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_BlockCorruptionMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,BlockCorruptionMultiplier, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_GlobalDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,GlobalDamageTakenMultiplier, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_PhysicalDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,PhysicalDamageTakenMultiplier, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_ElementalDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,ElementalDamageTakenMultiplier, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_FireDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,FireDamageTakenMultiplier, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_IceDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,IceDamageTakenMultiplier, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_LightningDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,LightningDamageTakenMultiplier, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_LightDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,LightDamageTakenMultiplier, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_CorruptionDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,CorruptionDamageTakenMultiplier, OldAmount)
+}
+
 void UHunterAttributeSet::OnRep_ComboCounter(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,ComboCounter, OldAmount)
@@ -1684,6 +1810,11 @@ void UHunterAttributeSet::OnRep_LifeLeech(const FGameplayAttributeData& OldAmoun
 void UHunterAttributeSet::OnRep_ManaLeech(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,ManaLeech, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_StaminaLeechPercent(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,StaminaLeechPercent, OldAmount)
 }
 
 void UHunterAttributeSet::OnRep_MovementSpeed(const FGameplayAttributeData& OldAmount) const
@@ -1910,6 +2041,10 @@ void UHunterAttributeSet::ClampPrimaryAttributes(const FGameplayAttribute& Attri
     {
         NewValue = FMath::Clamp(NewValue, 0.0f, 9999.0f);
     }
+    else if (Attribute == GetPlayerLevelAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 1.0f, 9999.0f);
+    }
 }
 
 // ============================================================================
@@ -1994,7 +2129,8 @@ void UHunterAttributeSet::ClampPercentageAttributes(const FGameplayAttribute& At
         NewValue = FMath::Clamp(NewValue, 0.0f, 100.0f);
     }
     // Leech
-    else if (Attribute == GetLifeLeechAttribute() || Attribute == GetManaLeechAttribute())
+    else if (Attribute == GetLifeLeechAttribute() || Attribute == GetManaLeechAttribute() ||
+             Attribute == GetStaminaLeechPercentAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.0f, 100.0f);
     }
@@ -2008,7 +2144,8 @@ void UHunterAttributeSet::ClampPercentageAttributes(const FGameplayAttribute& At
         NewValue = FMath::Clamp(NewValue, 0.0f, 300.0f);
     }
     // Block Strength
-    else if (Attribute == GetBlockStrengthAttribute())
+    else if (Attribute == GetBlockStrengthAttribute() ||
+             Attribute == GetChipDamageWhileBlockingAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.0f, 100.0f);
     }
@@ -2047,6 +2184,13 @@ void UHunterAttributeSet::ClampDamageAttributes(const FGameplayAttribute& Attrib
              Attribute == GetChainDamageAttribute())
     {
         NewValue = FMath::Max(NewValue, 0.0f);
+    }
+    else if (Attribute == GetGlobalMoreDamageAttribute() || Attribute == GetPhysicalMoreDamageAttribute() ||
+             Attribute == GetElementalMoreDamageAttribute() || Attribute == GetFireMoreDamageAttribute() ||
+             Attribute == GetIceMoreDamageAttribute() || Attribute == GetLightningMoreDamageAttribute() ||
+             Attribute == GetLightMoreDamageAttribute() || Attribute == GetCorruptionMoreDamageAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.0f, 10.0f);
     }
 }
 
@@ -2093,7 +2237,8 @@ void UHunterAttributeSet::ClampResistanceAttributes(const FGameplayAttribute& At
     if (Attribute == GetArmourAttribute() || Attribute == GetArmourFlatBonusAttribute() ||
         Attribute == GetFireResistanceFlatBonusAttribute() || Attribute == GetIceResistanceFlatBonusAttribute() ||
         Attribute == GetLightResistanceFlatBonusAttribute() || Attribute == GetLightningResistanceFlatBonusAttribute() ||
-        Attribute == GetCorruptionResistanceFlatBonusAttribute())
+        Attribute == GetCorruptionResistanceFlatBonusAttribute() ||
+        Attribute == GetFlatBlockAmountAttribute() || Attribute == GetGuardBreakThresholdAttribute())
     {
         NewValue = FMath::Max(NewValue, 0.0f);
     }
@@ -2108,6 +2253,19 @@ void UHunterAttributeSet::ClampResistanceAttributes(const FGameplayAttribute& At
     else if (Attribute == GetGlobalDefensesAttribute())
     {
         NewValue = FMath::Max(NewValue, 0.0f);
+    }
+    else if (Attribute == GetBlockAngleAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.0f, 180.0f);
+    }
+    else if (Attribute == GetBlockStaminaCostMultiplierAttribute() || Attribute == GetBlockPhysicalMultiplierAttribute() ||
+             Attribute == GetBlockElementalMultiplierAttribute() || Attribute == GetBlockCorruptionMultiplierAttribute() ||
+             Attribute == GetGlobalDamageTakenMultiplierAttribute() || Attribute == GetPhysicalDamageTakenMultiplierAttribute() ||
+             Attribute == GetElementalDamageTakenMultiplierAttribute() || Attribute == GetFireDamageTakenMultiplierAttribute() ||
+             Attribute == GetIceDamageTakenMultiplierAttribute() || Attribute == GetLightningDamageTakenMultiplierAttribute() ||
+             Attribute == GetLightDamageTakenMultiplierAttribute() || Attribute == GetCorruptionDamageTakenMultiplierAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.0f, 10.0f);
     }
 }
 

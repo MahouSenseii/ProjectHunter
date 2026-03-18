@@ -9,6 +9,32 @@
 
 DEFINE_LOG_CATEGORY(LogCharacterProgressionManager);
 
+namespace CharacterProgressionManagerPrivate
+{
+	static void TrySyncPlayerLevelAttribute(UAbilitySystemComponent* ASC, int32 Level)
+	{
+		if (!ASC)
+		{
+			return;
+		}
+
+		const UHunterAttributeSet* AttributeSet = ASC->GetSet<UHunterAttributeSet>();
+		if (!AttributeSet)
+		{
+			UE_LOG(
+				LogCharacterProgressionManager,
+				Verbose,
+				TEXT("TrySyncPlayerLevelAttribute: Skipping level sync because the live HunterAttributeSet is not registered on ASC=%s yet"),
+				*GetNameSafe(ASC));
+			return;
+		}
+
+		ASC->SetNumericAttributeBase(
+			UHunterAttributeSet::GetPlayerLevelAttribute(),
+			static_cast<float>(FMath::Max(Level, 1)));
+	}
+}
+
 UCharacterProgressionManager::UCharacterProgressionManager()
 {
 	PrimaryComponentTick.bCanEverTick = false;
@@ -34,6 +60,11 @@ void UCharacterProgressionManager::BeginPlay()
 	// Cache references
 	CachedASC = GetAbilitySystemComponent();
 	CachedAttributeSet = GetAttributeSet();
+
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		CharacterProgressionManagerPrivate::TrySyncPlayerLevelAttribute(CachedASC.Get(), Level);
+	}
 
 	// Calculate initial XP requirement
 	XPToNextLevel = GetXPForLevel(Level + 1);
@@ -375,6 +406,8 @@ void UCharacterProgressionManager::OnLevelUpInternal()
 
 	// Update XP requirement
 	XPToNextLevel = GetXPForLevel(Level + 1);
+
+	CharacterProgressionManagerPrivate::TrySyncPlayerLevelAttribute(GetAbilitySystemComponent(), Level);
 
 	// Broadcast event
 	OnLevelUp.Broadcast(Level, StatPointsAwarded, SkillPointsAwarded);

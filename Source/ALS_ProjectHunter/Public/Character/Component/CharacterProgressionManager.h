@@ -87,7 +87,7 @@ public:
 
 	/** Current character level (1-100) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_Level, Category = "Progression")
-	int32 Level = 1;
+	int32 Level = 0;
 
 	/** Current experience points */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_CurrentXP, Category = "Progression")

@@ -306,12 +306,13 @@ void UStatsManager::ApplyEquipmentStats(UItemInstance* Item)
 
 	// Apply effect and store handle
 	FActiveGameplayEffectHandle EffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
-	
+
 	if (EffectHandle.IsValid())
 	{
 		ActiveEquipmentEffects.Add(Item->UniqueID, EffectHandle);
-		
-		UE_LOG(LogStatsManager, Log, TEXT("StatsManager: Applied %d stats from %s (GUID: %s)"), 
+		ActiveEquipmentItems.Add(Item->UniqueID, Item);
+
+		UE_LOG(LogStatsManager, Log, TEXT("StatsManager: Applied %d stats from %s (GUID: %s)"),
 			AllStats.Num(), *Item->GetName(), *Item->UniqueID.ToString());
 	}
 	else
@@ -352,8 +353,9 @@ void UStatsManager::RemoveEquipmentStats(UItemInstance* Item)
 	// Remove effect
 	ASC->RemoveActiveGameplayEffect(*EffectHandle);
 	ActiveEquipmentEffects.Remove(Item->UniqueID);
+	ActiveEquipmentItems.Remove(Item->UniqueID);
 
-	UE_LOG(LogStatsManager, Log, TEXT("StatsManager: Removed equipment stats for %s (GUID: %s)"), 
+	UE_LOG(LogStatsManager, Log, TEXT("StatsManager: Removed equipment stats for %s (GUID: %s)"),
 		*Item->GetName(), *Item->UniqueID.ToString());
 }
 
@@ -365,9 +367,12 @@ void UStatsManager::RefreshEquipmentStats()
 		return;
 	}
 
-	int32 NumEffects = ActiveEquipmentEffects.Num();
-	
-	// Remove all equipment effects
+	// Snapshot items before clearing so we can re-apply them
+	TArray<TObjectPtr<UItemInstance>> ItemsToReapply;
+	ActiveEquipmentItems.GenerateValueArray(ItemsToReapply);
+
+	const int32 NumEffects = ActiveEquipmentEffects.Num();
+
 	for (const TPair<FGuid, FActiveGameplayEffectHandle>& Pair : ActiveEquipmentEffects)
 	{
 		if (Pair.Value.IsValid())
@@ -375,10 +380,21 @@ void UStatsManager::RefreshEquipmentStats()
 			ASC->RemoveActiveGameplayEffect(Pair.Value);
 		}
 	}
-	
-	ActiveEquipmentEffects.Empty();
 
-	UE_LOG(LogStatsManager, Log, TEXT("StatsManager: Refreshed equipment stats (removed %d effects)"), NumEffects);
+	ActiveEquipmentEffects.Empty();
+	ActiveEquipmentItems.Empty();
+
+	int32 Reapplied = 0;
+	for (UItemInstance* Item : ItemsToReapply)
+	{
+		if (IsValid(Item))
+		{
+			ApplyEquipmentStats(Item);
+			++Reapplied;
+		}
+	}
+
+	UE_LOG(LogStatsManager, Log, TEXT("StatsManager: Refreshed equipment stats (removed %d, reapplied %d)"), NumEffects, Reapplied);
 }
 
 bool UStatsManager::HasEquipmentStatsApplied(UItemInstance* Item) const
@@ -1240,193 +1256,174 @@ float UStatsManager::GetPowerRatioAgainst(AActor* OtherActor) const
 
 void UStatsManager::InitializeFromDataAsset(UBaseStatsData* InStatsData)
 {
-	if (!InStatsData)
-	{
-		UE_LOG(LogStatsManager, Warning, TEXT("InitializeFromDataAsset: StatsData is null"));
-		return;
-	}
+    if (!InStatsData)
+    {
+        UE_LOG(LogStatsManager, Warning, TEXT("InitializeFromDataAsset: StatsData is null"));
+        return;
+    }
 
-	UE_LOG(
-		LogStatsManager,
-		Log,
-		TEXT("InitializeFromDataAsset: Begin asset=%s owner=%s"),
-		*GetNameSafe(InStatsData),
-		*GetNameSafe(GetOwner()));
+    AActor* Owner = GetOwner();
+    if (!Owner)
+    {
+        UE_LOG(LogStatsManager, Error, TEXT("InitializeFromDataAsset: Owner is null"));
+        return;
+    }
 
-	StatsData = InStatsData;
-	RefreshCachedAbilitySystemState(TEXT("InitializeFromDataAsset"));
+    UE_LOG(LogStatsManager, Log, TEXT("InitializeFromDataAsset: Begin asset=%s owner=%s"),
+        *GetNameSafe(InStatsData), *GetNameSafe(Owner));
 
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-	if (!ASC)
-	{
-		UE_LOG(LogStatsManager, Error, TEXT("InitializeFromDataAsset: No AbilitySystemComponent found"));
-		return;
-	}
+    StatsData = InStatsData;
+    RefreshCachedAbilitySystemState(TEXT("InitializeFromDataAsset"));
 
-	UE_LOG(
-		LogStatsManager,
-		Verbose,
-		TEXT("InitializeFromDataAsset: Found ASC=%s for owner=%s"),
-		*GetNameSafe(ASC),
-		*GetNameSafe(GetOwner()));
+    UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+    if (!ASC)
+    {
+        UE_LOG(LogStatsManager, Error, TEXT("InitializeFromDataAsset: No AbilitySystemComponent found"));
+        return;
+    }
 
-	if (!GetOwner()->HasAuthority())
-	{
-		UE_LOG(LogStatsManager, Warning, TEXT("InitializeFromDataAsset: Must be called on server"));
-		return;
-	}
+    if (!Owner->HasAuthority())
+    {
+        UE_LOG(LogStatsManager, Warning, TEXT("InitializeFromDataAsset: Must be called on server"));
+        return;
+    }
 
-	UHunterAttributeSet* AttributeSet = ASC->GetSet<UHunterAttributeSet>();
-	if (!AttributeSet)
-	{
-		UE_LOG(
-			LogStatsManager,
-			Error,
-			TEXT("InitializeFromDataAsset: ASC=%s has no UHunterAttributeSet for owner=%s"),
-			*GetNameSafe(ASC),
-			*GetNameSafe(GetOwner()));
-		return;
-	}
+    const TSubclassOf<UAttributeSet> SourceClass = GetSourceAttributeSetClass();
+    if (!SourceClass)
+    {
+        UE_LOG(LogStatsManager, Error, TEXT("InitializeFromDataAsset: No valid SourceAttributeSetClass for asset=%s"),
+            *GetNameSafe(InStatsData));
+        return;
+    }
 
-	CachedASC = ASC;
-	CachedAttributeSet = AttributeSet;
+	UHunterAttributeSet* AttributeSet =
+	 const_cast<UHunterAttributeSet*>(ASC->GetSet<UHunterAttributeSet>());
+    if (!AttributeSet)
+    {
+        UE_LOG(LogStatsManager, Error,
+            TEXT("InitializeFromDataAsset: ASC=%s has no live UHunterAttributeSet for owner=%s sourceClass=%s"),
+            *GetNameSafe(ASC), *GetNameSafe(Owner), *GetNameSafe(SourceClass));
+        return;
+    }
 
-	UE_LOG(
-		LogStatsManager,
-		Verbose,
-		TEXT("InitializeFromDataAsset: Found ASC-owned AttributeSet=%s Outer=%s"),
-		*GetNameSafe(AttributeSet),
-		*GetNameSafe(AttributeSet->GetOuter()));
+    CachedASC = ASC;
+    CachedAttributeSet = AttributeSet;
 
-	if (!HasExpectedLiveAttributeSet(true))
-	{
-		UE_LOG(
-			LogStatsManager,
-			Error,
-			TEXT("InitializeFromDataAsset: SourceAttributeSetClass=%s is not registered live on ASC=%s for actor=%s"),
-			*GetNameSafe(GetSourceAttributeSetClass()),
-			*GetNameSafe(ASC),
-			*GetNameSafe(GetOwner()));
-		return;
-	}
+    if (!HasExpectedLiveAttributeSet(true))
+    {
+        UE_LOG(LogStatsManager, Error,
+            TEXT("InitializeFromDataAsset: SourceAttributeSetClass=%s is not registered live on ASC=%s for actor=%s"),
+            *GetNameSafe(SourceClass), *GetNameSafe(ASC), *GetNameSafe(Owner));
+        return;
+    }
 
-	if (!InStatsData->SourceAttributeSetClass)
-	{
-		UE_LOG(
-			LogStatsManager,
-			Warning,
-			TEXT("InitializeFromDataAsset: %s has no SourceAttributeSetClass; defaulting to %s"),
-			*InStatsData->GetName(),
-			*GetNameSafe(UBaseStatsData::ResolveSourceAttributeSetClass(InStatsData)));
-	}
+    const TMap<FName, float> StatsMap = InStatsData->GetAllStatsAsMap();
 
-	const TMap<FName, float> StatsMap = InStatsData->GetAllStatsAsMap();
-	TArray<FStatInitializationEntry> ReflectedDefinitions;
-	UBaseStatsData::GatherStatDefinitionsFromAttributeSet(GetSourceAttributeSetClass(), ReflectedDefinitions);
-	if (ReflectedDefinitions.Num() == 0)
-	{
-		UE_LOG(
-			LogStatsManager,
-			Warning,
-			TEXT("InitializeFromDataAsset: No reflected stats found for %s using AttributeSet %s"),
-			*InStatsData->GetName(),
-			*GetNameSafe(GetSourceAttributeSetClass()));
-	}
+    TArray<FStatInitializationEntry> ReflectedDefinitions;
+    UBaseStatsData::GatherStatDefinitionsFromAttributeSet(SourceClass, ReflectedDefinitions);
 
-	AttributeSet->SetIsInitializingStats(true);
+    AttributeSet->SetIsInitializingStats(true);
 
-	int32 AppliedCount = 0;
-	int32 SkippedCount = 0;
+    int32 AppliedCount = 0;
+    int32 SkippedCount = 0;
 
-	auto ApplyIfPresent = [this, InStatsData, &StatsMap, &AppliedCount, &SkippedCount](FName StatName, bool bAutoInitializeCurrentFromMax)
-	{
-		float Value = 0.0f;
-		if (!TryGetStatValueForInitialization(InStatsData, StatsMap, StatName, Value))
-		{
-			return;
-		}
+    auto ApplyIfPresent = [this, InStatsData, &StatsMap, &AppliedCount, &SkippedCount](FName StatName, bool bAutoInitializeCurrentFromMax)
+    {
+        float Value = 0.0f;
+        if (!TryGetStatValueForInitialization(InStatsData, StatsMap, StatName, Value))
+        {
+            return;
+        }
 
-		if (SetNumericAttributeByName(StatName, Value, bAutoInitializeCurrentFromMax))
-		{
-			++AppliedCount;
-		}
-		else
-		{
-			++SkippedCount;
-		}
-	};
+        if (SetNumericAttributeByName(StatName, Value, bAutoInitializeCurrentFromMax))
+        {
+            ++AppliedCount;
+        }
+        else
+        {
+            ++SkippedCount;
+        }
+    };
 
-	// Phase C: Max pools first so current vitals always clamp against the correct limits.
-	ApplyIfPresent(TEXT("MaxHealth"), false);
-	ApplyIfPresent(TEXT("MaxMana"), false);
-	ApplyIfPresent(TEXT("MaxStamina"), false);
-	ApplyIfPresent(TEXT("MaxArcaneShield"), false);
+    auto ApplyCurrent = [this, InStatsData, &StatsMap, &AppliedCount, &SkippedCount](FName CurrentName, FName MaxName)
+    {
+        if (ApplyCurrentVitalWithClamp(InStatsData, StatsMap, CurrentName, MaxName, NAME_None))
+        {
+            ++AppliedCount;
+        }
+        else
+        {
+            ++SkippedCount;
+        }
+    };
 
-	// Phase D: Regen attributes are seeded as base GAS attributes here. The live meaning of
-	// Rate/Amount is still defined by the existing regen systems that consume those attributes.
-	ApplyIfPresent(TEXT("HealthRegenRate"), false);
-	ApplyIfPresent(TEXT("HealthRegenAmount"), false);
-	ApplyIfPresent(TEXT("ManaRegenRate"), false);
-	ApplyIfPresent(TEXT("ManaRegenAmount"), false);
-	ApplyIfPresent(TEXT("StaminaRegenRate"), false);
-	ApplyIfPresent(TEXT("StaminaRegenAmount"), false);
+    ApplyIfPresent(TEXT("MaxHealth"), false);
+    ApplyIfPresent(TEXT("MaxMana"), false);
+    ApplyIfPresent(TEXT("MaxStamina"), false);
+    ApplyIfPresent(TEXT("MaxArcaneShield"), false);
 
-	// Phase E: Apply the remaining exported stats without disturbing the deferred current vitals.
-	for (const TPair<FName, float>& Pair : StatsMap)
-	{
-		if (StatsManagerPrivate::IsHandledByOrderedInitialization(Pair.Key))
-		{
-			continue;
-		}
+    ApplyIfPresent(TEXT("HealthRegenRate"), false);
+    ApplyIfPresent(TEXT("HealthRegenAmount"), false);
+    ApplyIfPresent(TEXT("ManaRegenRate"), false);
+    ApplyIfPresent(TEXT("ManaRegenAmount"), false);
+    ApplyIfPresent(TEXT("StaminaRegenRate"), false);
+    ApplyIfPresent(TEXT("StaminaRegenAmount"), false);
 
-		if (SetNumericAttributeByName(Pair.Key, Pair.Value, false))
-		{
-			++AppliedCount;
-		}
-		else
-		{
-			++SkippedCount;
-		}
-	}
+    for (const TPair<FName, float>& Pair : StatsMap)
+    {
+        if (StatsManagerPrivate::IsHandledByOrderedInitialization(Pair.Key))
+        {
+            continue;
+        }
 
-	// Phase F: Current vitals last, clamped against the live max values applied above.
-	AppliedCount += ApplyCurrentVitalWithClamp(InStatsData, StatsMap, TEXT("Health"), TEXT("MaxHealth"), NAME_None) ? 1 : 0;
-	AppliedCount += ApplyCurrentVitalWithClamp(InStatsData, StatsMap, TEXT("Mana"), TEXT("MaxMana"), NAME_None) ? 1 : 0;
-	AppliedCount += ApplyCurrentVitalWithClamp(InStatsData, StatsMap, TEXT("Stamina"), TEXT("MaxStamina"), NAME_None) ? 1 : 0;
-	AppliedCount += ApplyCurrentVitalWithClamp(InStatsData, StatsMap, TEXT("ArcaneShield"), TEXT("MaxArcaneShield"), NAME_None) ? 1 : 0;
+        if (SetNumericAttributeByName(Pair.Key, Pair.Value, false))
+        {
+            ++AppliedCount;
+        }
+        else
+        {
+            ++SkippedCount;
+        }
+    }
 
-	AttributeSet->SetIsInitializingStats(false);
-	AttributeSet->RecalculateAllDerivedVitals();
+    ApplyCurrent(TEXT("Health"), TEXT("MaxHealth"));
+    ApplyCurrent(TEXT("Mana"), TEXT("MaxMana"));
+    ApplyCurrent(TEXT("Stamina"), TEXT("MaxStamina"));
+    ApplyCurrent(TEXT("ArcaneShield"), TEXT("MaxArcaneShield"));
 
-	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
-	EffectContext.AddSourceObject(GetOwner());
+    AttributeSet->SetIsInitializingStats(false);
+    AttributeSet->RecalculateAllDerivedVitals();
 
-	for (TSubclassOf<UGameplayEffect> EffectClass : StatsData->InitializationEffects)
-	{
-		if (EffectClass)
-		{
-			FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, EffectContext);
-			if (SpecHandle.IsValid())
-			{
-				ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-			}
-		}
-	}
+    FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+    EffectContext.AddSourceObject(Owner);
 
-	UE_LOG(
-		LogStatsManager,
-		Log,
-		TEXT("Stats initialized from %s using AttributeSet %s. Reflected=%d Authored=%d Applied=%d Skipped=%d"),
-		*InStatsData->GetName(),
-		*GetNameSafe(GetSourceAttributeSetClass()),
-		ReflectedDefinitions.Num(),
-		StatsMap.Num(),
-		AppliedCount,
-		SkippedCount);
+    for (TSubclassOf<UGameplayEffect> EffectClass : InStatsData->InitializationEffects)
+    {
+        if (!EffectClass)
+        {
+            continue;
+        }
 
-	bHasInitializedConfiguredStats = true;
+        FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, EffectContext);
+        if (SpecHandle.IsValid())
+        {
+            ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+        }
+    }
+
+    AttributeSet->RecalculateAllDerivedVitals();
+
+    UE_LOG(LogStatsManager, Log,
+        TEXT("Stats initialized from %s using AttributeSet %s. Reflected=%d Authored=%d Applied=%d Skipped=%d"),
+        *InStatsData->GetName(),
+        *GetNameSafe(SourceClass),
+        ReflectedDefinitions.Num(),
+        StatsMap.Num(),
+        AppliedCount,
+        SkippedCount);
+
+    bHasInitializedConfiguredStats = true;
 }
-
 void UStatsManager::InitializeFromMap(const TMap<FName, float>& StatsMap) const
 {
 	if (!GetOwner()->HasAuthority())

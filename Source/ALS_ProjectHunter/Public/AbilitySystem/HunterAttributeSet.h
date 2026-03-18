@@ -114,6 +114,11 @@ public:
 	FGameplayAttributeData Covenant;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Covenant); // +0.02 Minion Damage, +0.01 Minion Health
 
+	/** GAS-facing mirror of the owner's progression level for non-snapshot MMC captures. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PlayerLevel, Category = "Progression", meta = (DisplayName = "Player Level"))
+	FGameplayAttributeData PlayerLevel;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PlayerLevel);
+
 	/* === EXPERIENCE GAIN MODIFIERS === */
 
 	/** Global XP Gain (additive from party/events) */
@@ -132,7 +137,7 @@ public:
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, XPGainMultiplier);
 
 	/** XP Penalty (for over-leveling, death, etc.) */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_XPGainMultiplier, Category = "Experience", meta = (DisplayName = "XP Penalty"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_XPPenalty, Category = "Experience", meta = (DisplayName = "XP Penalty"))
 	FGameplayAttributeData XPPenalty;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, XPPenalty);
 	
@@ -262,6 +267,46 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_DamageBonusWhileAtLowHP, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Damage Bonus While At Low HP"))
 	FGameplayAttributeData DamageBonusWhileAtLowHP;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, DamageBonusWhileAtLowHP);
+
+	/** Multiplicative damage layer applied to all outgoing hit damage. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_GlobalMoreDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Global More Damage"))
+	FGameplayAttributeData GlobalMoreDamage;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, GlobalMoreDamage);
+
+	/** Multiplicative damage layer applied to outgoing physical hit damage. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalMoreDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Physical More Damage"))
+	FGameplayAttributeData PhysicalMoreDamage;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PhysicalMoreDamage);
+
+	/** Multiplicative damage layer applied to outgoing elemental hit damage. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ElementalMoreDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Elemental More Damage"))
+	FGameplayAttributeData ElementalMoreDamage;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ElementalMoreDamage);
+
+	/** Multiplicative damage layer applied to outgoing fire hit damage. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireMoreDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Fire More Damage"))
+	FGameplayAttributeData FireMoreDamage;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FireMoreDamage);
+
+	/** Multiplicative damage layer applied to outgoing ice hit damage. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceMoreDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Ice More Damage"))
+	FGameplayAttributeData IceMoreDamage;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceMoreDamage);
+
+	/** Multiplicative damage layer applied to outgoing lightning hit damage. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningMoreDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Lightning More Damage"))
+	FGameplayAttributeData LightningMoreDamage;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningMoreDamage);
+
+	/** Multiplicative damage layer applied to outgoing light hit damage. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightMoreDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Light More Damage"))
+	FGameplayAttributeData LightMoreDamage;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightMoreDamage);
+
+	/** Multiplicative damage layer applied to outgoing corruption hit damage. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionMoreDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Corruption More Damage"))
+	FGameplayAttributeData CorruptionMoreDamage;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionMoreDamage);
 
 
 
@@ -417,7 +462,7 @@ public:
 	FGameplayAttributeData IceToFire;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceToFire);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToLightning, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Ice To Fire"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceToLightning, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Ice To Lightning"))
 	FGameplayAttributeData IceToLightning;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceToLightning);
 
@@ -595,6 +640,46 @@ public:
 	FGameplayAttributeData BlockStrength;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, BlockStrength);
 
+	/** Flat damage shaved off while actively blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FlatBlockAmount, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Flat Block Amount"))
+	FGameplayAttributeData FlatBlockAmount;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FlatBlockAmount);
+
+	/** Percent of damage that always leaks through active blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChipDamageWhileBlocking, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Chip Damage While Blocking"))
+	FGameplayAttributeData ChipDamageWhileBlocking;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChipDamageWhileBlocking);
+
+	/** Multiplier applied to stamina loss caused by blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BlockStaminaCostMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Block Stamina Cost Multiplier"))
+	FGameplayAttributeData BlockStaminaCostMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, BlockStaminaCostMultiplier);
+
+	/** Incoming blocked impact required to trigger a guard break check. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_GuardBreakThreshold, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Guard Break Threshold"))
+	FGameplayAttributeData GuardBreakThreshold;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, GuardBreakThreshold);
+
+	/** Frontal cone angle, in degrees, that can actively block incoming hits. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BlockAngle, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Block Angle"))
+	FGameplayAttributeData BlockAngle;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, BlockAngle);
+
+	/** Multiplier applied to physical damage while actively blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BlockPhysicalMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Block Physical Multiplier"))
+	FGameplayAttributeData BlockPhysicalMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, BlockPhysicalMultiplier);
+
+	/** Multiplier applied to fire, ice, lightning, and light damage while actively blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BlockElementalMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Block Elemental Multiplier"))
+	FGameplayAttributeData BlockElementalMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, BlockElementalMultiplier);
+
+	/** Multiplier applied to corruption damage while actively blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BlockCorruptionMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Block Corruption Multiplier"))
+	FGameplayAttributeData BlockCorruptionMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, BlockCorruptionMultiplier);
+
 	/** Armor rating for physical damage mitigation. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Armour, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Armour"))
 	FGameplayAttributeData Armour;
@@ -672,6 +757,46 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxLightningResistance, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Max Lightning Resistance"))
 	FGameplayAttributeData MaxLightningResistance;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxLightningResistance);
+
+	/** Global multiplier applied to all incoming damage after mitigation and blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_GlobalDamageTakenMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Global Damage Taken Multiplier"))
+	FGameplayAttributeData GlobalDamageTakenMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, GlobalDamageTakenMultiplier);
+
+	/** Multiplier applied to incoming physical damage after mitigation and blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalDamageTakenMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Physical Damage Taken Multiplier"))
+	FGameplayAttributeData PhysicalDamageTakenMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PhysicalDamageTakenMultiplier);
+
+	/** Multiplier applied to incoming elemental damage after mitigation and blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ElementalDamageTakenMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Elemental Damage Taken Multiplier"))
+	FGameplayAttributeData ElementalDamageTakenMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ElementalDamageTakenMultiplier);
+
+	/** Multiplier applied to incoming fire damage after mitigation and blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FireDamageTakenMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Fire Damage Taken Multiplier"))
+	FGameplayAttributeData FireDamageTakenMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FireDamageTakenMultiplier);
+
+	/** Multiplier applied to incoming ice damage after mitigation and blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceDamageTakenMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Ice Damage Taken Multiplier"))
+	FGameplayAttributeData IceDamageTakenMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceDamageTakenMultiplier);
+
+	/** Multiplier applied to incoming lightning damage after mitigation and blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningDamageTakenMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Lightning Damage Taken Multiplier"))
+	FGameplayAttributeData LightningDamageTakenMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningDamageTakenMultiplier);
+
+	/** Multiplier applied to incoming light damage after mitigation and blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightDamageTakenMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Light Damage Taken Multiplier"))
+	FGameplayAttributeData LightDamageTakenMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightDamageTakenMultiplier);
+
+	/** Multiplier applied to incoming corruption damage after mitigation and blocking. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionDamageTakenMultiplier, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Corruption Damage Taken Multiplier"))
+	FGameplayAttributeData CorruptionDamageTakenMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionDamageTakenMultiplier);
 
 
 	/*Reflection*/
@@ -752,6 +877,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaLeech, Category = "Vital |  Misc", meta = (DisplayName = "Mana Leech"))
 	FGameplayAttributeData ManaLeech;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ManaLeech);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaLeechPercent, Category = "Vital |  Misc", meta = (DisplayName = "Stamina Leech Percent"))
+	FGameplayAttributeData StaminaLeechPercent;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StaminaLeechPercent);
 
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MovementSpeed, Category = "Vital |  Misc", meta = (DisplayName = "Movement Speed"))
 	FGameplayAttributeData MovementSpeed;
@@ -1291,6 +1420,10 @@ protected:
 	UFUNCTION()
 	void OnRep_Covenant(const FGameplayAttributeData& OldAmount) const;
 
+	/** Called when the mirrored progression level changes. */
+	UFUNCTION()
+	void OnRep_PlayerLevel(const FGameplayAttributeData& OldAmount) const;
+
 
 	/* ==============================================*/
 	/* ===  EXPERIENCE GAIN MODIFIERS Functions === */
@@ -1538,6 +1671,22 @@ void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 	void OnRep_ForkCount(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_ChainDamage(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_GlobalMoreDamage(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_PhysicalMoreDamage(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_ElementalMoreDamage(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_FireMoreDamage(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_IceMoreDamage(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_LightningMoreDamage(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_LightMoreDamage(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_CorruptionMoreDamage(const FGameplayAttributeData& OldAmount) const;
 
 	/* ============================= */
 	/* === Resistance Replication Functions === */
@@ -1598,6 +1747,38 @@ void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 	/** Block Strength */
 	UFUNCTION()
 	void OnRep_BlockStrength(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_FlatBlockAmount(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_ChipDamageWhileBlocking(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_BlockStaminaCostMultiplier(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_GuardBreakThreshold(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_BlockAngle(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_BlockPhysicalMultiplier(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_BlockElementalMultiplier(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_BlockCorruptionMultiplier(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_GlobalDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_PhysicalDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_ElementalDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_FireDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_IceDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_LightningDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_LightDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_CorruptionDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const;
 
 	
 	/* ============================= */
@@ -1629,6 +1810,8 @@ void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 	void OnRep_LifeLeech(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_ManaLeech(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_StaminaLeechPercent(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_MovementSpeed(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()

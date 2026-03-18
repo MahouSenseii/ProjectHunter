@@ -148,14 +148,6 @@ namespace StatsDebugPrivate
 		if (MainCategory.Equals(TEXT("Vital"), ESearchCase::IgnoreCase) ||
 			MainCategory.Equals(TEXT("Vitals"), ESearchCase::IgnoreCase))
 		{
-			if (ContainsToken(SubCategory, TEXT("Mana")) ||
-				ContainsToken(SubCategory, TEXT("Stamina")) ||
-				ContainsToken(SubCategory, TEXT("Arcane")) ||
-				SubCategory.Equals(TEXT("Resources"), ESearchCase::IgnoreCase))
-			{
-				return EStatDebugBucket::Resources;
-			}
-
 			if (ContainsToken(SubCategory, TEXT("Misc")) || ContainsToken(SubCategory, TEXT("Utility")))
 			{
 				return EStatDebugBucket::Utility;
