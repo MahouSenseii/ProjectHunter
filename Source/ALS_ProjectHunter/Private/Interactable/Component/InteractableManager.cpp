@@ -5,6 +5,8 @@
 #include "EngineUtils.h"
 #include "Interactable/Widget/InteractableWidget.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
@@ -149,20 +151,24 @@ void UInteractableManager::AutoFindMeshes()
 		return;
 	}
 
-	// Get all primitive components
-	TArray<UPrimitiveComponent*> Primitives;
-	Owner->GetComponents<UPrimitiveComponent>(Primitives);
-
-	for (UPrimitiveComponent* Primitive : Primitives)
+	TArray<UStaticMeshComponent*> StaticMeshes;
+	Owner->GetComponents<UStaticMeshComponent>(StaticMeshes);
+	for (UStaticMeshComponent* StaticMesh : StaticMeshes)
 	{
-		// Skip collision components
-		if (Primitive->GetName().Contains(TEXT("Collision")) || 
-		    Primitive->GetName().Contains(TEXT("Trigger")))
+		if (IsValid(StaticMesh))
 		{
-			continue;
+			MeshesToHighlight.AddUnique(StaticMesh);
 		}
+	}
 
-		MeshesToHighlight.Add(Primitive);
+	TArray<USkeletalMeshComponent*> SkeletalMeshes;
+	Owner->GetComponents<USkeletalMeshComponent>(SkeletalMeshes);
+	for (USkeletalMeshComponent* SkeletalMesh : SkeletalMeshes)
+	{
+		if (IsValid(SkeletalMesh))
+		{
+			MeshesToHighlight.AddUnique(SkeletalMesh);
+		}
 	}
 
 	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Auto-found %d meshes on %s"), 
@@ -186,6 +192,11 @@ void UInteractableManager::OnInteract_Implementation(AActor* Interactor)
 	case EInteractionType::IT_Toggle:
 		OnTapInteracted.Broadcast(Interactor);
 		UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Toggle interact on %s"), *GetOwner()->GetName());
+		break;
+
+	case EInteractionType::IT_TapOrHold:
+		OnTapInteracted.Broadcast(Interactor);
+		UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Tap path used on tap-or-hold interactable %s"), *GetOwner()->GetName());
 		break;
 		
 	default:
@@ -292,22 +303,7 @@ UInputAction* UInteractableManager::GetInputAction_Implementation() const
 
 FText UInteractableManager::GetInteractionText_Implementation() const
 {
-	// Return appropriate text based on interaction type
-	switch (Config.InteractionType)
-	{
-	case EInteractionType::IT_Hold:
-		return Config.HoldText;
-		
-	case EInteractionType::IT_Mash:
-		return Config.MashText;
-		
-	case EInteractionType::IT_TapOrHold:
-		// For TapOrHold, show both options
-		return FText::Format(FText::FromString("{0} | {1}"), Config.TapText, Config.HoldActionText);
-		
-	default:
-		return Config.InteractionText;
-	}
+	return GetDisplayTextForCurrentType();
 }
 
 FVector UInteractableManager::GetWidgetOffset_Implementation() const
@@ -389,6 +385,7 @@ void UInteractableManager::OnHoldInteractionCancelled_Implementation(AActor* Int
 	{
 		Widget->SetWidgetState(EInteractionWidgetState::IWS_Cancelled);
 		Widget->SetProgressBarVisible(true);
+		Widget->SetProgress(0.0f);
 	}
 
 	OnHoldCancelled.Broadcast(Interactor);
@@ -823,8 +820,9 @@ bool UInteractableManager::SupportsProgressBar() const
 
 void UInteractableManager::ApplyHighlight(bool bHighlight)
 {
-	for (UPrimitiveComponent* Mesh : MeshesToHighlight)
+	for (const TObjectPtr<UPrimitiveComponent>& MeshPtr : MeshesToHighlight)
 	{
+		UPrimitiveComponent* Mesh = MeshPtr.Get();
 		if (!Mesh)
 		{
 			continue;

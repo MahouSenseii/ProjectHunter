@@ -204,6 +204,9 @@ public:
 		return StatsData;
 	}
 
+	UFUNCTION(BlueprintCallable, Category = "Stats|Debug")
+	void SetStatsDebugEnabled(bool bEnable);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Debug")
 	FStatsDebugManager DebugManager;
 
@@ -288,13 +291,13 @@ protected:
 
 	/** Cached references */
 	UPROPERTY()
-	TObjectPtr<UHunterAttributeSet> CachedAttributeSet;
+	mutable TObjectPtr<UHunterAttributeSet> CachedAttributeSet;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Cached References")
 	UBaseStatsData* StatsData;
 
 	UPROPERTY()
-	TObjectPtr<UAbilitySystemComponent> CachedASC;
+	mutable TObjectPtr<UAbilitySystemComponent> CachedASC;
 
 	bool bHasInitializedConfiguredStats = false;
 	mutable TSet<FString> EmittedWarningKeys;

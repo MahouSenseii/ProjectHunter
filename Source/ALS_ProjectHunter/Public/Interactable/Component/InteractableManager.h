@@ -89,9 +89,9 @@ public:
 	// HIGHLIGHT SETTINGS
 	// ─────────────────────────────────────────────────────────────────────
 
-	/** Meshes to highlight on focus */
+	/** Meshes to highlight on focus. Player-side highlight overrides come from InteractionManager at runtime. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Highlight")
-	TArray<UPrimitiveComponent*> MeshesToHighlight;
+	TArray<TObjectPtr<UPrimitiveComponent>> MeshesToHighlight;
 
 	/** Enable custom depth on focus? */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Highlight")

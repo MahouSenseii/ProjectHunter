@@ -4,6 +4,7 @@
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
+#include "Character/Component/EquipmentManager.h"
 #include "Data/BaseStatsData.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
@@ -53,8 +54,15 @@ namespace StatsManagerPrivate
 DEFINE_LOG_CATEGORY(LogStatsManager);
 UStatsManager::UStatsManager()
 {
+#if UE_BUILD_SHIPPING
+	PrimaryComponentTick.bCanEverTick = false;
+#else
 	PrimaryComponentTick.bCanEverTick = true;
-	SetIsReplicatedByDefault(false); // Stats are replicated through AttributeSet
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+#endif
+	// Stats are mutated server-side only; attribute replication is handled by the
+	// AttributeSet/ASC, not by this manager component itself.
+	SetIsReplicatedByDefault(false);
 }
 
 void UStatsManager::BeginPlay()
@@ -63,11 +71,21 @@ void UStatsManager::BeginPlay()
 
 	RefreshCachedAbilitySystemState(TEXT("BeginPlay"));
 	TryInitializeConfiguredStats(TEXT("BeginPlay"));
+	SetStatsDebugEnabled(DebugManager.bEnableDebug);
 }
 
 void UStatsManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+#if UE_BUILD_SHIPPING
+	return;
+#endif
+
+	if (!DebugManager.bEnableDebug)
+	{
+		return;
+	}
 
 	DebugManager.DrawDebug(this, this);
 }
@@ -76,17 +94,35 @@ void UStatsManager::NotifyAbilitySystemReady()
 {
 	RefreshCachedAbilitySystemState(TEXT("NotifyAbilitySystemReady"));
 	TryInitializeConfiguredStats(TEXT("NotifyAbilitySystemReady"));
+	SetStatsDebugEnabled(DebugManager.bEnableDebug);
+}
+
+void UStatsManager::SetStatsDebugEnabled(bool bEnable)
+{
+#if UE_BUILD_SHIPPING
+	DebugManager.bEnableDebug = false;
+	SetComponentTickEnabled(false);
+#else
+	const bool bWasEnabled = DebugManager.bEnableDebug;
+	DebugManager.bEnableDebug = bEnable;
+
+	if (bWasEnabled && !DebugManager.bEnableDebug)
+	{
+		DebugManager.DrawDebug(this, this);
+	}
+
+	SetComponentTickEnabled(DebugManager.bEnableDebug);
+#endif
 }
 
 void UStatsManager::LogWarningOnce(const FString& Key, const FString& Message) const
 {
-	UStatsManager* MutableThis = const_cast<UStatsManager*>(this);
-	if (MutableThis->EmittedWarningKeys.Contains(Key))
+	if (EmittedWarningKeys.Contains(Key))
 	{
 		return;
 	}
 
-	MutableThis->EmittedWarningKeys.Add(Key);
+	EmittedWarningKeys.Add(Key);
 	UE_LOG(LogStatsManager, Warning, TEXT("%s"), *Message);
 }
 
@@ -182,9 +218,8 @@ void UStatsManager::RefreshCachedAbilitySystemState(const TCHAR* Context) const
 
 	const UAttributeSet* LiveAttributeSet = GetLiveSourceAttributeSet(ASC, GetSourceAttributeSetClass().Get(), false);
 
-	UStatsManager* MutableThis = const_cast<UStatsManager*>(this);
-	MutableThis->CachedASC = ASC;
-	MutableThis->CachedAttributeSet = Cast<UHunterAttributeSet>(const_cast<UAttributeSet*>(LiveAttributeSet));
+	CachedASC = ASC;
+	CachedAttributeSet = Cast<UHunterAttributeSet>(const_cast<UAttributeSet*>(LiveAttributeSet));
 
 	LogAbilitySystemState(Context, ASC, LiveAttributeSet);
 
@@ -367,9 +402,22 @@ void UStatsManager::RefreshEquipmentStats()
 		return;
 	}
 
-	// Snapshot items before clearing so we can re-apply them
 	TArray<TObjectPtr<UItemInstance>> ItemsToReapply;
-	ActiveEquipmentItems.GenerateValueArray(ItemsToReapply);
+	if (const UEquipmentManager* EquipmentManager = GetOwner()->FindComponentByClass<UEquipmentManager>())
+	{
+		for (UItemInstance* Item : EquipmentManager->GetAllEquippedItems())
+		{
+			if (IsValid(Item))
+			{
+				ItemsToReapply.Add(Item);
+			}
+		}
+	}
+	else
+	{
+		// Fall back to the local cache when an equipment component is not present.
+		ActiveEquipmentItems.GenerateValueArray(ItemsToReapply);
+	}
 
 	const int32 NumEffects = ActiveEquipmentEffects.Num();
 
@@ -652,12 +700,13 @@ FGameplayEffectSpecHandle UStatsManager::CreateEquipmentEffect(UItemInstance* It
 	EffectContext.AddSourceObject(Item);
 
 	// Create spec
-	FGameplayEffectSpec* Spec = new FGameplayEffectSpec(Effect, EffectContext, 1.0f);
+	FGameplayEffectSpecHandle SpecHandle;
+	SpecHandle.Data = MakeShared<FGameplayEffectSpec>(Effect, EffectContext, 1.0f);
 	
 	UE_LOG(LogStatsManager, Verbose, TEXT("StatsManager: Created effect '%s' with %d modifiers"), 
 		*EffectName.ToString(), ModifiersAdded);
 
-	return FGameplayEffectSpecHandle(Spec);
+	return SpecHandle;
 }
 
 bool UStatsManager::ApplyStatModifier(UGameplayEffect* Effect, const FPHAttributeData& Stat, const FGameplayAttribute& Attribute)
@@ -678,13 +727,14 @@ bool UStatsManager::ApplyStatModifier(UGameplayEffect* Effect, const FPHAttribut
 		break;
 
 	case EModifyType::MT_Multiply:
-		// Multiplicative: multiply base by (1 + value)
+		// "Increase" style percentage that folds into the shared multiplicative bucket.
 		ModOp = EGameplayModOp::Multiplicitive;
 		FinalValue = 1.0f + (FinalValue / 100.0f);
 		break;
 
 	case EModifyType::MT_More:
-		// "More" in PoE terms = separate multiplier
+		// "More" is authored as a percent too; normalize it so 15 becomes 1.15x,
+		// not 15x. Any higher-level distinction from MT_Multiply is handled upstream.
 		ModOp = EGameplayModOp::Multiplicitive;
 		FinalValue = 1.0f + (FinalValue / 100.0f);
 		break;
@@ -740,7 +790,7 @@ UHunterAttributeSet* UStatsManager::GetAttributeSet() const
 				*GetNameSafe(LiveAttributeSet->GetClass())));
 	}
 
-	const_cast<UStatsManager*>(this)->CachedAttributeSet = HunterAttributeSet;
+	CachedAttributeSet = HunterAttributeSet;
 	return HunterAttributeSet;
 }
 
@@ -765,7 +815,7 @@ UAbilitySystemComponent* UStatsManager::GetAbilitySystemComponent() const
 		ResolvedASC = Owner->FindComponentByClass<UAbilitySystemComponent>();
 	}
 
-	const_cast<UStatsManager*>(this)->CachedASC = ResolvedASC;
+	CachedASC = ResolvedASC;
 	return ResolvedASC;
 }
 

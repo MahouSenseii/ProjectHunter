@@ -3,7 +3,6 @@
 #include "Character/Component/Interaction/InteractionManager.h"
 
 #include "EngineUtils.h"
-#include "Character/Controller/HunterController.h"
 #include "Interactable/Interface/Interactable.h"
 #include "Interactable/Component/InteractableManager.h"
 #include "Interactable/Widget/InteractableWidget.h"
@@ -73,23 +72,28 @@ void UInteractionManager::BeginPlay()
 	
 	// This handles edge cases in multiplayer where possession
 	// might not be fully established yet
-	UE_LOG(LogInteractionManager, Log, TEXT("InteractionManager: Starting possession verification timer..."));
 	
-	GetWorld()->GetTimerManager().SetTimer(
-		PossessionCheckTimer,
-		this,
-		&UInteractionManager::CheckPossessionAndInitialize,
-		0.1f,  // Check every 0.1 seconds
-		true   // Loop
-	);
 }
 
 void UInteractionManager::Initialize()
 {
-	// Public initialization function (for manual setup if needed)
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	World->GetTimerManager().ClearTimer(InteractionCheckTimer);
+
+	if (!bSystemInitialized)
+	{
+		InitializeInteractionSystem();
+		return;
+	}
+
 	if (bInteractionEnabled)
 	{
-		GetWorld()->GetTimerManager().SetTimer(
+		World->GetTimerManager().SetTimer(
 			InteractionCheckTimer,
 			this,
 			&UInteractionManager::CheckForInteractables,
@@ -121,14 +125,19 @@ void UInteractionManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (GetWorld())
 	{
 		GetWorld()->GetTimerManager().ClearTimer(InteractionCheckTimer);
-		GetWorld()->GetTimerManager().ClearTimer(PossessionCheckTimer);
 	}
 
 	// End focus on current interactable
-	if (CurrentInteractable.GetInterface())
+	if (UObject* CurrentInteractableTarget = GetCurrentInteractableObject())
 	{
-		IInteractable::Execute_OnEndFocus(CurrentInteractable.GetObject(), GetOwner());
+		IInteractable::Execute_OnEndFocus(CurrentInteractableTarget, GetOwner());
 	}
+
+	CurrentInteractable = nullptr;
+	CurrentInteractableObject.Reset();
+	CurrentGroundItemID = INDEX_NONE;
+	ActiveInteractable = nullptr;
+	ActiveInteractableObject.Reset();
 
 	// Remove widget
 	if (InteractionWidget)
@@ -154,36 +163,46 @@ void UInteractionManager::OnInteractPressed()
 	bInteractInputHeld = true;
 
 	// Resolve focus right before deciding what interaction path to enter.
-	CheckForInteractables();
+	const UWorld* World = GetWorld();
+	const float CurrentTimeSeconds = World ? World->GetTimeSeconds() : 0.0f;
+	const bool bHasRecentTrace = LastInteractionCheckTimeSeconds >= 0.0f
+		&& TraceManager.CheckFrequency > KINDA_SMALL_NUMBER
+		&& (CurrentTimeSeconds - LastInteractionCheckTimeSeconds) < TraceManager.CheckFrequency;
 
-	if (CurrentInteractable.GetInterface())
+	if (!bHasRecentTrace)
 	{
-		const EInteractionType InteractionType = IInteractable::Execute_GetInteractionType(CurrentInteractable.GetObject());
+		CheckForInteractables();
+	}
+
+	const TScriptInterface<IInteractable> FocusedInteractable = GetCurrentInteractableInterface();
+	if (UObject* FocusedInteractableObject = GetCurrentInteractableObject())
+	{
+		const EInteractionType InteractionType = IInteractable::Execute_GetInteractionType(FocusedInteractableObject);
 
 		switch (InteractionType)
 		{
 			case EInteractionType::IT_Tap:
 			case EInteractionType::IT_Toggle:
 			{
-				InteractWithActor(ResolveInteractionActor(CurrentInteractable));
+				InteractWithActor(ResolveInteractionActor(FocusedInteractableObject));
 				return;
 			}
 
 			case EInteractionType::IT_Hold:
-				BeginActorHoldInteraction(CurrentInteractable, false);
+				BeginActorHoldInteraction(FocusedInteractable, false);
 				StartHoldPhaseIfNeeded();
 				return;
 
 			case EInteractionType::IT_TapOrHold:
-				BeginActorHoldInteraction(CurrentInteractable, true);
+				BeginActorHoldInteraction(FocusedInteractable, true);
 				return;
 
 			case EInteractionType::IT_Mash:
-				BeginOrAdvanceActorMashInteraction(CurrentInteractable);
+				BeginOrAdvanceActorMashInteraction(FocusedInteractable);
 				return;
 
 			case EInteractionType::IT_Continuous:
-				BeginActorContinuousInteraction(CurrentInteractable);
+				BeginActorContinuousInteraction(FocusedInteractable);
 				return;
 
 			case EInteractionType::IT_None:
@@ -211,8 +230,6 @@ void UInteractionManager::OnInteractReleased()
 	{
 		return;
 	}
-
-	SyncHeldInputSecondsFromController();
 
 	switch (ActiveInteractionMode)
 	{
@@ -249,7 +266,7 @@ void UInteractionManager::OnInteractReleased()
 		{
 			if (HeldInputSeconds < ActiveTapThresholdSeconds)
 			{
-				InteractWithActor(ResolveInteractionActor(ActiveInteractable));
+				InteractWithActor(ResolveInteractionActor(GetActiveInteractableObject()));
 				ResetActiveInteractionState(true);
 				return;
 			}
@@ -292,6 +309,11 @@ void UInteractionManager::CheckForInteractables()
 		return;
 	}
 
+	if (const UWorld* World = GetWorld())
+	{
+		LastInteractionCheckTimeSeconds = World->GetTimeSeconds();
+	}
+
 	// Get camera location for debug visualization
 	FVector CameraLocation;
 	FRotator CameraRotation;
@@ -316,7 +338,7 @@ void UInteractionManager::CheckForInteractables()
 	}
 
 	// Update actor interactable state
-	if (NewInteractable != CurrentInteractable)
+	if (GetCurrentInteractableObject() != NewInteractable.GetObject())
 	{
 		UpdateFocusState(NewInteractable);
 	}
@@ -398,9 +420,9 @@ void UInteractionManager::SetWidgetVisible(bool bVisible)
 
 UInteractableManager* UInteractionManager::GetCurrentInteractable() const
 {
-	if (CurrentInteractable.GetInterface())
+	if (UObject* CurrentInteractableTarget = GetCurrentInteractableObject())
 	{
-		return Cast<UInteractableManager>(CurrentInteractable.GetObject());
+		return Cast<UInteractableManager>(CurrentInteractableTarget);
 	}
 	return nullptr;
 }
@@ -512,6 +534,7 @@ void UInteractionManager::InitializeInteractionSystem()
 	// Start interaction check timer
 	if (bInteractionEnabled)
 	{
+		GetWorld()->GetTimerManager().ClearTimer(InteractionCheckTimer);
 		GetWorld()->GetTimerManager().SetTimer(
 			InteractionCheckTimer,
 			this,
@@ -527,28 +550,6 @@ void UInteractionManager::InitializeInteractionSystem()
 	bSystemInitialized = true;
 	
 	UE_LOG(LogInteractionManager, Log, TEXT("═══════════════════════════════════════════"));
-}
-
-void UInteractionManager::CheckPossessionAndInitialize()
-{
-	APawn* OwnerPawn = Cast<APawn>(GetOwner());
-	if (!OwnerPawn)
-	{
-		GetWorld()->GetTimerManager().ClearTimer(PossessionCheckTimer);
-		return;
-	}
-
-	// Check if possessed now (direct check again, not delegated)
-	if (OwnerPawn->IsLocallyControlled())
-	{
-		UE_LOG(LogInteractionManager, Log, TEXT("InteractionManager: Possession confirmed!"));
-		
-		// Stop checking
-		GetWorld()->GetTimerManager().ClearTimer(PossessionCheckTimer);
-		
-		// Already initialized in BeginPlay, so we just confirm here
-		UE_LOG(LogInteractionManager, Log, TEXT("InteractionManager: System already active"));
-	}
 }
 
 void UInteractionManager::InitializeSubManagers()
@@ -725,22 +726,23 @@ bool UInteractionManager::PickupGroundItemAndEquip(int32 ItemID)
 
 void UInteractionManager::UpdateFocusState(TScriptInterface<IInteractable> NewInteractable)
 {
-	if (CurrentInteractable.GetObject() == NewInteractable.GetObject())
+	if (GetCurrentInteractableObject() == NewInteractable.GetObject())
 	{
 		return;
 	}
 
-	if (CurrentInteractable.GetInterface())
+	if (UObject* PreviousInteractableObject = GetCurrentInteractableObject())
 	{
-		IInteractable::Execute_OnEndFocus(CurrentInteractable.GetObject(), GetOwner());
+		IInteractable::Execute_OnEndFocus(PreviousInteractableObject, GetOwner());
 		ResetHighlightStyle();
 	}
 
 	CurrentInteractable = NewInteractable;
+	CurrentInteractableObject = NewInteractable.GetObject();
 
-	if (CurrentInteractable.GetInterface())
+	if (UObject* NewInteractableObject = GetCurrentInteractableObject())
 	{
-		FInteractableHighlightStyle Style = IInteractable::Execute_GetHighlightStyle(CurrentInteractable.GetObject());
+		FInteractableHighlightStyle Style = IInteractable::Execute_GetHighlightStyle(NewInteractableObject);
 		Style.Color = PlayerHighlightColor;
 		Style.OutlineWidth = PlayerHighlightWidth;
 		Style.Threshold = PlayerHighlightThreshold;
@@ -750,7 +752,7 @@ void UInteractionManager::UpdateFocusState(TScriptInterface<IInteractable> NewIn
 			ApplyHighlightStyle(Style);
 		}
 
-		IInteractable::Execute_OnBeginFocus(CurrentInteractable.GetObject(), GetOwner());
+		IInteractable::Execute_OnBeginFocus(NewInteractableObject, GetOwner());
 	}
 
 	OnCurrentInteractableChanged.Broadcast(GetCurrentInteractable());
@@ -780,6 +782,7 @@ void UInteractionManager::BeginGroundTapOrHoldInteraction(int32 GroundItemID)
 	ActiveInteractionMode = EManagedInteractionMode::GroundTapOrHold;
 	ActiveGroundItemID = GroundItemID;
 	ActiveInteractable = nullptr;
+	ActiveInteractableObject.Reset();
 	HeldInputSeconds = 0.0f;
 	ActiveTapThresholdSeconds = FMath::Max(0.0f, PickupManager.TapHoldThreshold);
 	ActiveHoldDurationSeconds = FMath::Max(0.01f, PickupManager.HoldToEquipDuration);
@@ -808,6 +811,7 @@ void UInteractionManager::BeginActorHoldInteraction(const TScriptInterface<IInte
 		? EManagedInteractionMode::ActorTapOrHold
 		: EManagedInteractionMode::ActorHold;
 	ActiveInteractable = Interactable;
+	ActiveInteractableObject = Interactable.GetObject();
 	ActiveGroundItemID = INDEX_NONE;
 	HeldInputSeconds = 0.0f;
 	ActiveTapThresholdSeconds = bAllowTapOnRelease
@@ -839,6 +843,7 @@ void UInteractionManager::BeginActorContinuousInteraction(const TScriptInterface
 	bIsHolding = true;
 	ActiveInteractionMode = EManagedInteractionMode::ActorContinuous;
 	ActiveInteractable = Interactable;
+	ActiveInteractableObject = Interactable.GetObject();
 	ActiveGroundItemID = INDEX_NONE;
 	HeldInputSeconds = 0.0f;
 	ActiveTapThresholdSeconds = 0.0f;
@@ -849,7 +854,10 @@ void UInteractionManager::BeginActorContinuousInteraction(const TScriptInterface
 	LastInteractionProgress = -1.0f;
 
 	UpdateWidgetForActorInteractable(Interactable);
-	IInteractable::Execute_OnContinuousInteractionStart(ActiveInteractable.GetObject(), GetOwner());
+	if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
+	{
+		IInteractable::Execute_OnContinuousInteractionStart(ActiveInteractableObjectPtr, GetOwner());
+	}
 }
 
 void UInteractionManager::BeginOrAdvanceActorMashInteraction(const TScriptInterface<IInteractable>& Interactable)
@@ -861,7 +869,7 @@ void UInteractionManager::BeginOrAdvanceActorMashInteraction(const TScriptInterf
 
 	const bool bIsSameMashInteraction =
 		ActiveInteractionMode == EManagedInteractionMode::ActorMash
-		&& ActiveInteractable.GetObject() == Interactable.GetObject();
+		&& GetActiveInteractableObject() == Interactable.GetObject();
 
 	if (!bIsSameMashInteraction)
 	{
@@ -870,6 +878,7 @@ void UInteractionManager::BeginOrAdvanceActorMashInteraction(const TScriptInterf
 		bIsHolding = false;
 		ActiveInteractionMode = EManagedInteractionMode::ActorMash;
 		ActiveInteractable = Interactable;
+		ActiveInteractableObject = Interactable.GetObject();
 		ActiveGroundItemID = INDEX_NONE;
 		HeldInputSeconds = 0.0f;
 		ActiveTapThresholdSeconds = 0.0f;
@@ -882,10 +891,16 @@ void UInteractionManager::BeginOrAdvanceActorMashInteraction(const TScriptInterf
 		MashRequiredCount = FMath::Max(1, IInteractable::Execute_GetRequiredMashCount(Interactable.GetObject()));
 		MashCurrentCount = 0;
 		MashDecayRate = FMath::Max(0.0f, IInteractable::Execute_GetMashDecayRate(Interactable.GetObject()));
+		LastMashPressTimeSeconds = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
 		UpdateWidgetForActorInteractable(Interactable);
-		IInteractable::Execute_OnMashInteractionStart(ActiveInteractable.GetObject(), GetOwner());
+		if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
+		{
+			IInteractable::Execute_OnMashInteractionStart(ActiveInteractableObjectPtr, GetOwner());
+		}
 	}
+
+	LastMashPressTimeSeconds = GetWorld() ? GetWorld()->GetTimeSeconds() : LastMashPressTimeSeconds;
 
 	MashProgressUnits = FMath::Clamp(MashProgressUnits + 1.0f, 0.0f, static_cast<float>(MashRequiredCount));
 	MashCurrentCount = FMath::Clamp(FMath::FloorToInt(MashProgressUnits + KINDA_SMALL_NUMBER), 0, MashRequiredCount);
@@ -895,12 +910,18 @@ void UInteractionManager::BeginOrAdvanceActorMashInteraction(const TScriptInterf
 	LastInteractionProgress = ActiveProgress;
 
 	SetWidgetHoldingState(ActiveProgress);
-	IInteractable::Execute_OnMashInteractionUpdate(ActiveInteractable.GetObject(), GetOwner(), MashCurrentCount, MashRequiredCount, ActiveProgress);
+	if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
+	{
+		IInteractable::Execute_OnMashInteractionUpdate(ActiveInteractableObjectPtr, GetOwner(), MashCurrentCount, MashRequiredCount, ActiveProgress);
+	}
 	OnHoldProgressChanged.Broadcast(ActiveProgress);
 
 	if (ActiveProgress >= 1.0f)
 	{
-		IInteractable::Execute_OnMashInteractionComplete(ActiveInteractable.GetObject(), GetOwner());
+		if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
+		{
+			IInteractable::Execute_OnMashInteractionComplete(ActiveInteractableObjectPtr, GetOwner());
+		}
 		SetWidgetCompletedState();
 		ResetActiveInteractionState(true);
 	}
@@ -916,6 +937,7 @@ void UInteractionManager::ResetActiveInteractionState(bool bForceCancelHoldOnPic
 	bIsHolding = false;
 	ActiveInteractionMode = EManagedInteractionMode::None;
 	ActiveInteractable = nullptr;
+	ActiveInteractableObject.Reset();
 	ActiveGroundItemID = INDEX_NONE;
 	HeldInputSeconds = 0.0f;
 	ActiveTapThresholdSeconds = 0.0f;
@@ -928,6 +950,7 @@ void UInteractionManager::ResetActiveInteractionState(bool bForceCancelHoldOnPic
 	MashRequiredCount = 0;
 	MashCurrentCount = 0;
 	MashDecayRate = 0.0f;
+	LastMashPressTimeSeconds = -1.0f;
 }
 
 void UInteractionManager::StartHoldPhaseIfNeeded()
@@ -939,9 +962,12 @@ void UInteractionManager::StartHoldPhaseIfNeeded()
 
 	bHoldStarted = true;
 
-	if (ActiveInteractionMode != EManagedInteractionMode::GroundTapOrHold && ActiveInteractable.GetInterface())
+	if (ActiveInteractionMode != EManagedInteractionMode::GroundTapOrHold)
 	{
-		IInteractable::Execute_OnHoldInteractionStart(ActiveInteractable.GetObject(), GetOwner());
+		if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
+		{
+			IInteractable::Execute_OnHoldInteractionStart(ActiveInteractableObjectPtr, GetOwner());
+		}
 	}
 
 	const float HoldPhaseElapsed = FMath::Max(HeldInputSeconds - ActiveTapThresholdSeconds, 0.0f);
@@ -963,9 +989,12 @@ void UInteractionManager::PushActiveProgress(float NewProgress, bool bForce)
 	SetWidgetHoldingState(ClampedProgress);
 	OnHoldProgressChanged.Broadcast(ClampedProgress);
 
-	if (UsesActorTarget(ActiveInteractionMode) && UsesHoldLifecycle(ActiveInteractionMode) && ActiveInteractable.GetInterface())
+	if (UsesActorTarget(ActiveInteractionMode) && UsesHoldLifecycle(ActiveInteractionMode))
 	{
-		IInteractable::Execute_OnHoldInteractionUpdate(ActiveInteractable.GetObject(), GetOwner(), ClampedProgress);
+		if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
+		{
+			IInteractable::Execute_OnHoldInteractionUpdate(ActiveInteractableObjectPtr, GetOwner(), ClampedProgress);
+		}
 	}
 }
 
@@ -986,9 +1015,9 @@ void UInteractionManager::CompleteActiveHoldInteraction()
 		return;
 	}
 
-	if (ActiveInteractable.GetInterface())
+	if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
 	{
-		IInteractable::Execute_OnHoldInteractionComplete(ActiveInteractable.GetObject(), GetOwner());
+		IInteractable::Execute_OnHoldInteractionComplete(ActiveInteractableObjectPtr, GetOwner());
 	}
 
 	SetWidgetCompletedState();
@@ -997,9 +1026,12 @@ void UInteractionManager::CompleteActiveHoldInteraction()
 
 void UInteractionManager::CancelActiveHoldInteraction(bool bShowCancelledState)
 {
-	if (UsesActorTarget(ActiveInteractionMode) && ActiveInteractable.GetInterface() && !bHoldCompleted)
+	if (UsesActorTarget(ActiveInteractionMode) && !bHoldCompleted)
 	{
-		IInteractable::Execute_OnHoldInteractionCancelled(ActiveInteractable.GetObject(), GetOwner());
+		if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
+		{
+			IInteractable::Execute_OnHoldInteractionCancelled(ActiveInteractableObjectPtr, GetOwner());
+		}
 	}
 
 	if (bShowCancelledState)
@@ -1017,9 +1049,9 @@ void UInteractionManager::EndActorContinuousInteraction()
 		return;
 	}
 
-	if (ActiveInteractable.GetInterface())
+	if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
 	{
-		IInteractable::Execute_OnContinuousInteractionEnd(ActiveInteractable.GetObject(), GetOwner());
+		IInteractable::Execute_OnContinuousInteractionEnd(ActiveInteractableObjectPtr, GetOwner());
 	}
 
 	ResetActiveInteractionState(true);
@@ -1038,7 +1070,7 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 		case EManagedInteractionMode::ActorHold:
 		case EManagedInteractionMode::ActorTapOrHold:
 		{
-			if (UsesActorTarget(ActiveInteractionMode) && !ActiveInteractable.GetInterface())
+			if (UsesActorTarget(ActiveInteractionMode) && !HasValidActiveInteractable())
 			{
 				ResetActiveInteractionState(true);
 				return;
@@ -1066,7 +1098,7 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 
 		case EManagedInteractionMode::ActorMash:
 		{
-			if (!ActiveInteractable.GetInterface())
+			if (!HasValidActiveInteractable())
 			{
 				ResetActiveInteractionState(true);
 				return;
@@ -1076,7 +1108,18 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 
 			if (MashDecayRate > 0.0f && MashProgressUnits > 0.0f)
 			{
-				MashProgressUnits = FMath::Max(0.0f, MashProgressUnits - (MashDecayRate * DeltaTime));
+				const float CurrentTimeSeconds = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+				const float TimeSinceLastPress = LastMashPressTimeSeconds >= 0.0f
+					? CurrentTimeSeconds - LastMashPressTimeSeconds
+					: TNumericLimits<float>::Max();
+				constexpr float MashDecayGraceSeconds = 0.15f;
+				constexpr float MashMaxDecayPerFrame = 0.25f;
+
+				if (TimeSinceLastPress > MashDecayGraceSeconds)
+				{
+					const float DecayAmount = FMath::Min(MashDecayRate * DeltaTime, MashMaxDecayPerFrame);
+					MashProgressUnits = FMath::Max(0.0f, MashProgressUnits - DecayAmount);
+				}
 			}
 
 			MashCurrentCount = FMath::Clamp(FMath::FloorToInt(MashProgressUnits + KINDA_SMALL_NUMBER), 0, MashRequiredCount);
@@ -1088,13 +1131,19 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 			{
 				LastInteractionProgress = ActiveProgress;
 				SetWidgetHoldingState(ActiveProgress);
-				IInteractable::Execute_OnMashInteractionUpdate(ActiveInteractable.GetObject(), GetOwner(), MashCurrentCount, MashRequiredCount, ActiveProgress);
+				if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
+				{
+					IInteractable::Execute_OnMashInteractionUpdate(ActiveInteractableObjectPtr, GetOwner(), MashCurrentCount, MashRequiredCount, ActiveProgress);
+				}
 				OnHoldProgressChanged.Broadcast(ActiveProgress);
 			}
 
 			if (bHadMashProgress && MashProgressUnits <= KINDA_SMALL_NUMBER)
 			{
-				IInteractable::Execute_OnMashInteractionFailed(ActiveInteractable.GetObject(), GetOwner());
+				if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
+				{
+					IInteractable::Execute_OnMashInteractionFailed(ActiveInteractableObjectPtr, GetOwner());
+				}
 				SetWidgetCancelledState();
 				ResetActiveInteractionState(true);
 				return;
@@ -1102,7 +1151,10 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 
 			if (ActiveProgress >= 1.0f)
 			{
-				IInteractable::Execute_OnMashInteractionComplete(ActiveInteractable.GetObject(), GetOwner());
+				if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
+				{
+					IInteractable::Execute_OnMashInteractionComplete(ActiveInteractableObjectPtr, GetOwner());
+				}
 				SetWidgetCompletedState();
 				ResetActiveInteractionState(true);
 			}
@@ -1112,14 +1164,17 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 
 		case EManagedInteractionMode::ActorContinuous:
 		{
-			if (!ActiveInteractable.GetInterface())
+			if (!HasValidActiveInteractable())
 			{
 				ResetActiveInteractionState(true);
 				return;
 			}
 
 			HeldInputSeconds += DeltaTime;
-			IInteractable::Execute_OnContinuousInteractionUpdate(ActiveInteractable.GetObject(), GetOwner(), HeldInputSeconds);
+			if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
+			{
+				IInteractable::Execute_OnContinuousInteractionUpdate(ActiveInteractableObjectPtr, GetOwner(), HeldInputSeconds);
+			}
 			break;
 		}
 
@@ -1131,9 +1186,9 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 
 void UInteractionManager::RefreshFocusedWidget()
 {
-	if (CurrentInteractable.GetInterface())
+	if (HasValidCurrentInteractable())
 	{
-		UpdateWidgetForActorInteractable(CurrentInteractable);
+		UpdateWidgetForActorInteractable(GetCurrentInteractableInterface());
 	}
 	else if (CurrentGroundItemID != INDEX_NONE)
 	{
@@ -1147,17 +1202,22 @@ void UInteractionManager::RefreshFocusedWidget()
 
 AActor* UInteractionManager::ResolveInteractionActor(const TScriptInterface<IInteractable>& Interactable) const
 {
-	if (!Interactable.GetInterface())
+	return ResolveInteractionActor(Interactable.GetObject());
+}
+
+AActor* UInteractionManager::ResolveInteractionActor(UObject* InteractableObject) const
+{
+	if (!IsValid(InteractableObject))
 	{
 		return nullptr;
 	}
 
-	if (const UInteractableManager* InteractableComp = Cast<UInteractableManager>(Interactable.GetObject()))
+	if (const UInteractableManager* InteractableComp = Cast<UInteractableManager>(InteractableObject))
 	{
 		return InteractableComp->GetOwner();
 	}
 
-	return Cast<AActor>(Interactable.GetObject());
+	return Cast<AActor>(InteractableObject);
 }
 
 float UInteractionManager::GetRequiredHoldSeconds() const
@@ -1168,6 +1228,30 @@ float UInteractionManager::GetRequiredHoldSeconds() const
 bool UInteractionManager::HasActiveInteraction() const
 {
 	return ActiveInteractionMode != EManagedInteractionMode::None;
+}
+
+bool UInteractionManager::HasValidCurrentInteractable() const
+{
+	return CurrentInteractableObject.IsValid()
+		&& CurrentInteractable.GetObject() == CurrentInteractableObject.Get()
+		&& CurrentInteractable.GetInterface() != nullptr;
+}
+
+bool UInteractionManager::HasValidActiveInteractable() const
+{
+	return ActiveInteractableObject.IsValid()
+		&& ActiveInteractable.GetObject() == ActiveInteractableObject.Get()
+		&& ActiveInteractable.GetInterface() != nullptr;
+}
+
+UObject* UInteractionManager::GetCurrentInteractableObject() const
+{
+	return HasValidCurrentInteractable() ? CurrentInteractableObject.Get() : nullptr;
+}
+
+UObject* UInteractionManager::GetActiveInteractableObject() const
+{
+	return HasValidActiveInteractable() ? ActiveInteractableObject.Get() : nullptr;
 }
 
 bool UInteractionManager::UsesHoldLifecycle(EManagedInteractionMode Mode) const
@@ -1194,37 +1278,6 @@ bool UInteractionManager::UsesActorTarget(EManagedInteractionMode Mode) const
 bool UInteractionManager::ShouldUpdatePromptWidgetFromFocus() const
 {
 	return !HasActiveInteraction();
-}
-
-void UInteractionManager::SyncHeldInputSecondsFromController()
-{
-	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
-	if (!OwnerPawn)
-	{
-		return;
-	}
-
-	const AHunterController* HunterController = Cast<AHunterController>(OwnerPawn->GetController());
-	if (!HunterController)
-	{
-		return;
-	}
-
-	const UInputAction* InputAction = nullptr;
-
-	if (ActiveInteractable.GetInterface())
-	{
-		InputAction = IInteractable::Execute_GetInputAction(ActiveInteractable.GetObject());
-	}
-	else if (ActiveGroundItemID != INDEX_NONE || CurrentGroundItemID != INDEX_NONE)
-	{
-		InputAction = GroundItemActionInput;
-	}
-
-	if (InputAction)
-	{
-		HeldInputSeconds = FMath::Max(HeldInputSeconds, HunterController->GetElapsedSeconds(InputAction));
-	}
 }
 
 // ═══════════════════════════════════════════════════════════════════════

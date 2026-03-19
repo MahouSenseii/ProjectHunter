@@ -322,18 +322,29 @@ void FStatsDebugManager::RegisterStats(UStatsManager* StatsManager)
 	bool bNeedsSync = !bEntriesSynchronized || StatEntries.Num() != Definitions.Num();
 	if (!bNeedsSync)
 	{
-		for (int32 Index = 0; Index < Definitions.Num(); ++Index)
+		TMap<FName, const FStatInitializationEntry*> DefinitionsByName;
+		DefinitionsByName.Reserve(Definitions.Num());
+		for (const FStatInitializationEntry& Definition : Definitions)
 		{
-			const FStatInitializationEntry& Definition = Definitions[Index];
-			const FStatDebugEntry& ExistingEntry = StatEntries[Index];
-			const FName ExpectedStatType(*StaticEnum<EHunterStatType>()->GetNameStringByValue(static_cast<int64>(Definition.StatType)));
+			DefinitionsByName.Add(Definition.StatName, &Definition);
+		}
 
-			if (ExistingEntry.StatName != Definition.StatName ||
-				ExistingEntry.Category != Definition.Category ||
-				ExistingEntry.SortOrder != Definition.SortOrder ||
-				ExistingEntry.DisplayName.ToString() != Definition.DisplayName.ToString() ||
-				ExistingEntry.Tooltip.ToString() != Definition.Tooltip.ToString() ||
-				ExistingEntry.IconName != Definition.IconName ||
+		for (const FStatDebugEntry& ExistingEntry : StatEntries)
+		{
+			const FStatInitializationEntry* Definition = DefinitionsByName.FindRef(ExistingEntry.StatName);
+			if (!Definition)
+			{
+				bNeedsSync = true;
+				break;
+			}
+
+			const FName ExpectedStatType(*StaticEnum<EHunterStatType>()->GetNameStringByValue(static_cast<int64>(Definition->StatType)));
+
+			if (ExistingEntry.Category != Definition->Category ||
+				ExistingEntry.SortOrder != Definition->SortOrder ||
+				ExistingEntry.DisplayName.ToString() != Definition->DisplayName.ToString() ||
+				ExistingEntry.Tooltip.ToString() != Definition->Tooltip.ToString() ||
+				ExistingEntry.IconName != Definition->IconName ||
 				ExistingEntry.StatType != ExpectedStatType)
 			{
 				bNeedsSync = true;
@@ -438,10 +449,10 @@ bool FStatsDebugManager::IsCategoryEnabled(FName Category) const
 	}
 }
 
-void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<FString>& OutLines)
+void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<FString>& OutLines, TArray<FColor>& OutColors)
 {
 	OutLines.Reset();
-	CachedLineColors.Reset();
+	OutColors.Reset();
 
 	if (!StatsManager)
 	{
@@ -463,7 +474,7 @@ void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<F
 	const UBaseStatsData* StatsData = StatsManager->GetStatsDataAsset();
 
 	OutLines.Reserve(StatEntries.Num() * 2);
-	CachedLineColors.Reserve(StatEntries.Num() * 2);
+	OutColors.Reserve(StatEntries.Num() * 2);
 
 	FName ActiveMainCategory = NAME_None;
 	FName ActiveSubCategory = NAME_None;
@@ -477,13 +488,25 @@ void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<F
 
 		const FStatInitializationEntry* Definition = StatsDebugPrivate::FindDefinition(DefinitionsByName, Entry.StatName);
 		const FParsedStatCategory ParsedCategory = UBaseStatsData::ParseCategoryPath(Definition ? Definition->Category : Entry.Category);
+		const StatsDebugPrivate::EStatDebugBucket Bucket = StatsDebugPrivate::ClassifyBucket(ParsedCategory, Entry.StatName);
+
+		if (Bucket == StatsDebugPrivate::EStatDebugBucket::Custom && !WarnedCustomBucketStats.Contains(Entry.StatName))
+		{
+			WarnedCustomBucketStats.Add(Entry.StatName);
+			UE_LOG(
+				LogStatsDebugManager,
+				Warning,
+				TEXT("StatsDebug: Stat '%s' fell into the Custom bucket for category '%s'. Enable Custom to view it or update bucket classification."),
+				*Entry.StatName.ToString(),
+				*(Definition ? Definition->Category.ToString() : Entry.Category.ToString()));
+		}
 
 		// Debug output groups on the parsed parent/subcategory path so "Vital|Health"
 		// shows as nested headers instead of collapsing into a single flattened bucket.
 		if (ParsedCategory.MainCategory != ActiveMainCategory)
 		{
 			OutLines.Add(StatsDebugPrivate::BuildMainCategoryHeader(ParsedCategory.MainCategory));
-			CachedLineColors.Add(StatsDebugPrivate::CategoryHeaderColor);
+			OutColors.Add(StatsDebugPrivate::CategoryHeaderColor);
 			ActiveMainCategory = ParsedCategory.MainCategory;
 			ActiveSubCategory = NAME_None;
 		}
@@ -491,7 +514,7 @@ void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<F
 		if (ParsedCategory.SubCategory != NAME_None && ParsedCategory.SubCategory != ActiveSubCategory)
 		{
 			OutLines.Add(StatsDebugPrivate::BuildSubCategoryHeader(ParsedCategory.SubCategory));
-			CachedLineColors.Add(StatsDebugPrivate::CategoryHeaderColor);
+			OutColors.Add(StatsDebugPrivate::CategoryHeaderColor);
 			ActiveSubCategory = ParsedCategory.SubCategory;
 		}
 		else if (ParsedCategory.SubCategory == NAME_None)
@@ -552,7 +575,7 @@ void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<F
 		}
 
 		OutLines.Add(FString::Printf(TEXT("%s | %s | %s%s"), *Label, *LiveText, *AuthoredText, *DeltaText));
-		CachedLineColors.Add(RowColor);
+		OutColors.Add(RowColor);
 	}
 
 	if (OutLines.Num() == 0)
@@ -567,7 +590,7 @@ void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<F
 			OutLines.Add(FString::Printf(TEXT("No reflected stats matched filter '%s'."), *ActiveFilter));
 		}
 
-		CachedLineColors.Add(FColor(180, 180, 180));
+		OutColors.Add(FColor(180, 180, 180));
 	}
 }
 
@@ -597,7 +620,7 @@ void FStatsDebugManager::DrawDebug(UStatsManager* StatsManager, UObject* WorldCo
 		return;
 	}
 
-	BuildDisplayLines(StatsManager, CachedDisplayLines);
+	BuildDisplayLines(StatsManager, CachedDisplayLines, CachedLineColors);
 
 	if (bShouldDrawNow && GEngine)
 	{
@@ -637,13 +660,14 @@ void FStatsDebugManager::LogDebug(UStatsManager* StatsManager)
 		return;
 	}
 
-	const double CurrentTimeSeconds = FPlatformTime::Seconds();
+	const UWorld* World = StatsManager ? StatsManager->GetWorld() : nullptr;
+	const double CurrentTimeSeconds = World ? static_cast<double>(World->GetTimeSeconds()) : FPlatformTime::Seconds();
 	if (!ShouldRefresh(CurrentTimeSeconds, LastLogUpdateTimeSeconds))
 	{
 		return;
 	}
 
-	BuildDisplayLines(StatsManager, CachedDisplayLines);
+	BuildDisplayLines(StatsManager, CachedDisplayLines, CachedLineColors);
 	StatsDebugPrivate::WriteLinesToLog(StatsManager, CachedDisplayLines);
 }
 

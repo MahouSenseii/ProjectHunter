@@ -17,118 +17,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Boots01.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Chest.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Chestplate01A.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Chestplate01C.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Chestplate02.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Gloves.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Helm.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/PhysicsAssets/PA_Legs.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Boots01.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Chestplate01A.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Chestplate01B.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Chestplate01C.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Chestplate02.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Gloves01_Gold.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Gloves01_Silver.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Helm.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Legs01_Bronze.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Armor/SK_Legs01_Silver.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/Chest_Skeleton.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/SK_Chest01.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Skeletal/SK_Chest02.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Boots.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Chestplate01A.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Chestplate01B.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Chestplate01C.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Chestplate02.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Chestplate03.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Gloves01.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Helm.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Armor/SM_Legs.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book01DBrown.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book01Green.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book01LBrown.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book01Purple.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book01Red.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book02Blue.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book02LGreen.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Book02Red.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_BookOpened.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_BooksHorizontal.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Bookshelf.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_BookshelfFilled.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Door.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_DoorKey.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_DropBag.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Easel.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorBase.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorLever.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorLeverBase.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorProp.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorRopeSupport.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorWinch.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ElevatorWindlass.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Forge.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ForgeHammer01.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ForgeHammer02.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_ForgeTongs.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_GoldenCoins.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Painting01.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Misc/SM_Scroll.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Shields/SM_Shield01.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Katana/SM_BladeLessKatana.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Katana/SM_BloodKatana.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Katana/SM_Katana01.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Katana/SM_Katana1.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Katana/SM_Katana_S.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/ML_SoftMetal_UE4.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Axe01.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Sword02.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Sword03.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Sword04.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Warhammer01.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/SM_Warhammer02.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Sword.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/Mesh/Static/Weapons/Sword/SM_Sword01.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Effects/HunterGE_DerivedPrimaryVitals.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_EffectiveResource.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_EnduranceMaxStamina.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_EnduranceStaminaDegen.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_IntelligenceManaRegen.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_ReservedResource.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_StrengthMaxHealth.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/TagManager.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/CombatManager.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Effects/HunterGE_DerivedPrimaryVitals.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_EffectiveResource.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_EnduranceMaxStamina.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_EnduranceStaminaDegen.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_IntelligenceManaRegen.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_ReservedResource.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_StrengthMaxHealth.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/TagManager.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/CombatManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" beforeDir="false" afterPath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Config/DefaultEngine.ini" beforeDir="false" afterPath="$PROJECT_DIR$/Config/DefaultEngine.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Data/Stats/DA_BaseStats.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/Data/Stats/DA_BaseStats.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAbilitySystemComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAbilitySystemComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAttributeSet.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAttributeSet.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/CharacterProgressionManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/CharacterProgressionManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsDebug.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsDebug.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Data/BaseStatsData.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Data/BaseStatsData.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAbilitySystemComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAbilitySystemComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAttributeSet.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAttributeSet.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/CharacterProgressionManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/CharacterProgressionManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/StatsManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/StatsManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatStruct.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatStruct.h" afterDir="false" />
-    </list>
+    <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -1146,6 +1035,7 @@
       <workItem from="1773684102471" duration="4292000" />
       <workItem from="1773702321008" duration="11338000" />
       <workItem from="1773771038969" duration="510000" />
+      <workItem from="1773857584031" duration="369000" />
     </task>
     <servers />
   </component>

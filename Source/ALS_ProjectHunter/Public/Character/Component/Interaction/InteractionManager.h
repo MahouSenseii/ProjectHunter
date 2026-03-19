@@ -206,7 +206,10 @@ public:
 	UInteractableManager* GetCurrentInteractable() const;
 
 	UFUNCTION(BlueprintPure, Category = "Interaction")
-	TScriptInterface<IInteractable> GetCurrentInteractableInterface() const { return CurrentInteractable; }
+	TScriptInterface<IInteractable> GetCurrentInteractableInterface() const
+	{
+		return HasValidCurrentInteractable() ? CurrentInteractable : TScriptInterface<IInteractable>();
+	}
 
 	UFUNCTION(BlueprintPure, Category = "Interaction")
 	int32 GetCurrentGroundItemID() const { return CurrentGroundItemID; }
@@ -245,7 +248,6 @@ protected:
 	// ═══════════════════════════════════════════════
 
 	void InitializeInteractionSystem();
-	void CheckPossessionAndInitialize();
 	void InitializeSubManagers();
 	void InitializeWidget();
 	void ApplyQuickSettings();
@@ -272,13 +274,17 @@ protected:
 	void EndActorContinuousInteraction();
 	void RefreshFocusedWidget();
 	AActor* ResolveInteractionActor(const TScriptInterface<IInteractable>& Interactable) const;
+	AActor* ResolveInteractionActor(UObject* InteractableObject) const;
 	float GetRequiredHoldSeconds() const;
 	bool HasActiveInteraction() const;
+	bool HasValidCurrentInteractable() const;
+	bool HasValidActiveInteractable() const;
+	UObject* GetCurrentInteractableObject() const;
+	UObject* GetActiveInteractableObject() const;
 	bool UsesHoldLifecycle(EManagedInteractionMode Mode) const;
 	bool UsesTapThreshold(EManagedInteractionMode Mode) const;
 	bool UsesActorTarget(EManagedInteractionMode Mode) const;
 	bool ShouldUpdatePromptWidgetFromFocus() const;
-	void SyncHeldInputSecondsFromController();
 
 	// ═══════════════════════════════════════════════
 	// WIDGET MANAGEMENT
@@ -330,6 +336,12 @@ private:
 	/** Active focused interactable while interaction is in progress */
 	TScriptInterface<IInteractable> ActiveInteractable;
 
+	/** Weak validation for the currently focused interactable UObject */
+	TWeakObjectPtr<UObject> CurrentInteractableObject;
+
+	/** Weak validation for the active interaction target UObject */
+	TWeakObjectPtr<UObject> ActiveInteractableObject;
+
 	/** Active ground item being interacted with */
 	int32 ActiveGroundItemID = INDEX_NONE;
 
@@ -369,10 +381,15 @@ private:
 	/** Mash decay rate per second */
 	float MashDecayRate = 0.0f;
 
+	/** Last time a focus trace was performed (world time seconds) */
+	float LastInteractionCheckTimeSeconds = -1.0f;
+
+	/** Last mash button press timestamp used to smooth decay at low FPS */
+	float LastMashPressTimeSeconds = -1.0f;
+
 	// ═══════════════════════════════════════════════
 	// TIMERS
 	// ═══════════════════════════════════════════════
 
 	FTimerHandle InteractionCheckTimer;
-	FTimerHandle PossessionCheckTimer;
 };

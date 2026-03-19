@@ -115,7 +115,7 @@ struct ALS_PROJECTHUNTER_API FStatsDebugManager
 	void RegisterStats(UStatsManager* StatsManager);
 	bool IsStatEnabled(const FStatDebugEntry& Entry) const;
 	bool IsCategoryEnabled(FName Category) const;
-	void BuildDisplayLines(UStatsManager* StatsManager, TArray<FString>& OutLines);
+	void BuildDisplayLines(UStatsManager* StatsManager, TArray<FString>& OutLines, TArray<FColor>& OutColors);
 	void DrawDebug(UStatsManager* StatsManager, UObject* WorldContext);
 	void LogDebug(UStatsManager* StatsManager);
 
@@ -129,4 +129,5 @@ private:
 	int32 LastDrawnLineCount;
 	TArray<FString> CachedDisplayLines;
 	TArray<FColor> CachedLineColors;
+	TSet<FName> WarnedCustomBucketStats;
 };
