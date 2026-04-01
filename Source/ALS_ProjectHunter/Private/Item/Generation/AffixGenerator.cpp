@@ -3,6 +3,8 @@
 #include "Item/Generation/AffixGenerator.h"
 #include "Engine/DataTable.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogAffixGenerator, Log, All);
+
 // ═══════════════════════════════════════════════════════════════════════
 // MAIN GENERATION
 // ═══════════════════════════════════════════════════════════════════════
@@ -96,7 +98,7 @@ UDataTable* FAffixGenerator::GetAffixDataTable(EAffixes AffixType) const
 			return LoadSuffixDataTable();
 			
 		default:
-			UE_LOG(LogTemp, Warning, TEXT("AffixGenerator: Unsupported affix type %d"), 
+			UE_LOG(LogAffixGenerator, Warning, TEXT("AffixGenerator: Unsupported affix type %d"), 
 				static_cast<int32>(AffixType));
 			return nullptr;
 	}
@@ -118,18 +120,23 @@ UDataTable* FAffixGenerator::LoadPrefixDataTable() const
 	
 	bPrefixLoadAttempted = true;
 	CachedPrefixTable = Cast<UDataTable>(PrefixDataTablePath.TryLoad());
-	
+
 	if (!CachedPrefixTable)
 	{
-		UE_LOG(LogTemp, Error, TEXT("AffixGenerator: Failed to load PREFIX DataTable from '%s'"),
+		UE_LOG(LogAffixGenerator, Error, TEXT("AffixGenerator: Failed to load PREFIX DataTable from '%s'"),
 			*PrefixDataTablePath.ToString());
 	}
 	else
 	{
-		UE_LOG(LogTemp, Log, TEXT("AffixGenerator: Loaded PREFIX DataTable with %d rows"),
-			CachedPrefixTable->GetRowNames().Num());
+		// P-1 FIX: Cache all row pointers once so BuildAffixPoolByCorruption never calls
+		// GetAllRows again. Raw pointers stay valid as long as the DataTable is alive.
+		CachedPrefixRows.Reset();
+		CachedPrefixTable->GetAllRows<FPHAttributeData>("LoadPrefixDataTable", CachedPrefixRows);
+
+		UE_LOG(LogAffixGenerator, Log, TEXT("AffixGenerator: Loaded PREFIX DataTable with %d rows"),
+			CachedPrefixRows.Num());
 	}
-	
+
 	return CachedPrefixTable;
 }
 
@@ -149,18 +156,22 @@ UDataTable* FAffixGenerator::LoadSuffixDataTable() const
 	
 	bSuffixLoadAttempted = true;
 	CachedSuffixTable = Cast<UDataTable>(SuffixDataTablePath.TryLoad());
-	
+
 	if (!CachedSuffixTable)
 	{
-		UE_LOG(LogTemp, Error, TEXT("AffixGenerator: Failed to load SUFFIX DataTable from '%s'"),
+		UE_LOG(LogAffixGenerator, Error, TEXT("AffixGenerator: Failed to load SUFFIX DataTable from '%s'"),
 			*SuffixDataTablePath.ToString());
 	}
 	else
 	{
-		UE_LOG(LogTemp, Log, TEXT("AffixGenerator: Loaded SUFFIX DataTable with %d rows"),
-			CachedSuffixTable->GetRowNames().Num());
+		// P-1 FIX: Cache all row pointers once (same rationale as CachedPrefixRows).
+		CachedSuffixRows.Reset();
+		CachedSuffixTable->GetAllRows<FPHAttributeData>("LoadSuffixDataTable", CachedSuffixRows);
+
+		UE_LOG(LogAffixGenerator, Log, TEXT("AffixGenerator: Loaded SUFFIX DataTable with %d rows"),
+			CachedSuffixRows.Num());
 	}
-	
+
 	return CachedSuffixTable;
 }
 
@@ -180,23 +191,25 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 	FRandomStream& RandStream) const
 {
 	TArray<FPHAttributeData> RolledAffixes;
-	TArray<FName> ExcludedAffixes; // Prevent duplicates
-	
+	// I-09 FIX: TSet for O(1) Contains() lookups instead of O(n) TArray::Contains.
+	TSet<FName> ExcludedAffixes;
+	ExcludedAffixes.Reserve(Count);
+
 	// OPTIMIZATION: Pre-allocate array size
 	RolledAffixes.Reserve(Count);
-	
+
 	for (int32 i = 0; i < Count; ++i)
 	{
 		// Determine if this affix should be corrupted
-		const bool bShouldBeCorrupted = bMustRollOneCorrupted 
+		const bool bShouldBeCorrupted = bMustRollOneCorrupted
 			|| (CorruptionChance > 0.0f && RandStream.FRand() < CorruptionChance);
-		
+
 		// Build affix pool (filtered by corruption type)
 		TArray<FPHAttributeData*> AvailableAffixes = BuildAffixPoolByCorruption(
 			AffixType, ItemType, ItemSubType, ItemLevel,
 			bShouldBeCorrupted, ExcludedAffixes
 		);
-		
+
 		// If we forced corruption but got no negative affixes, try positive ones instead
 		if (AvailableAffixes.Num() == 0)
 		{
@@ -207,36 +220,36 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 					false, ExcludedAffixes
 				);
 			}
-			
+
 			if (AvailableAffixes.Num() == 0)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("AffixGenerator: No available affixes for type %d at level %d"),
+				UE_LOG(LogAffixGenerator, Warning, TEXT("AffixGenerator: No available affixes for type %d at level %d"),
 					static_cast<int32>(AffixType), ItemLevel);
 				continue;
 			}
 		}
-		
+
 		// Select random affix from pool
 		const FPHAttributeData* SelectedAffix = SelectRandomAffix(AvailableAffixes, RandStream);
 		if (!SelectedAffix)
 		{
 			continue;
 		}
-		
+
 		// Create rolled instance with random value
 		FPHAttributeData RolledAffix = CreateRolledAffix(*SelectedAffix, RandStream);
 		RolledAffixes.Add(RolledAffix);
-		
+
 		// Track if we've rolled a corrupted affix
 		if (RolledAffix.IsCorruptedAffix())
 		{
 			bOutHasRolledCorrupted = true;
 		}
-		
+
 		// Exclude this affix from future rolls (prevent duplicates)
 		ExcludedAffixes.Add(SelectedAffix->AttributeName);
 	}
-	
+
 	return RolledAffixes;
 }
 
@@ -246,20 +259,22 @@ TArray<FPHAttributeData*> FAffixGenerator::BuildAffixPoolByCorruption(
 	EItemSubType ItemSubType,
 	int32 ItemLevel,
 	bool bCorruptedOnly,
-	const TArray<FName>& ExcludeAffixes) const
+	const TSet<FName>& ExcludeAffixes) const
 {
 	TArray<FPHAttributeData*> Pool;
 	
-	// SINGLE RESPONSIBILITY: Get correct DataTable for type
+	// P-1 FIX: Ensure the table (and its row cache) is loaded, then use the cached
+	// row pointers directly instead of calling GetAllRows<> on every invocation.
+	// GetAllRows performs a full table scan each call; with many items generating
+	// affixes per frame this was a significant hotspot.
 	UDataTable* AffixTable = GetAffixDataTable(AffixType);
 	if (!AffixTable)
 	{
 		return Pool;
 	}
-	
-	// Get all affixes from the correct table
-	TArray<FPHAttributeData*> AllAffixes;
-	AffixTable->GetAllRows<FPHAttributeData>("BuildAffixPoolByCorruption", AllAffixes);
+
+	const TArray<FPHAttributeData*>& AllAffixes =
+		(AffixType == EAffixes::AF_Prefix) ? CachedPrefixRows : CachedSuffixRows;
 	
 	// OPTIMIZATION: Pre-allocate reasonable size
 	Pool.Reserve(AllAffixes.Num() / 4);
@@ -362,7 +377,11 @@ FPHAttributeData FAffixGenerator::CreateRolledAffix(
 	FRandomStream& RandStream) const
 {
 	FPHAttributeData RolledAffix = TemplateAffix;
-	RolledAffix.RollValue();
+	// I-02 FIX: Forward the seeded RandStream to RollValue so the affix roll is
+	// deterministic and reproducible from a fixed seed. Previously called the
+	// no-arg RollValue() which consumed FMath::RandRange (global RNG), breaking
+	// seed-based item replay.
+	RolledAffix.RollValue(RandStream);
 	RolledAffix.GenerateUID();
 	return RolledAffix;
 }

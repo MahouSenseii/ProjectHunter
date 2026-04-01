@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Engine/StreamableManager.h"
 #include "Loot/Library/LootStruct.h"
 #include "Loot/Generation/LootGenerator.h"
 #include "LootSubsystem.generated.h"
@@ -175,7 +176,11 @@ protected:
 	// INTERNAL - REGISTRY
 	// ═══════════════════════════════════════════════
 
+	/** P-2 FIX: Kick off an async load of the registry DataTable. */
 	void LoadRegistry();
+
+	/** Called by the streamable manager when the registry asset finishes loading. */
+	void OnRegistryLoaded();
 	
 	// ═══════════════════════════════════════════════
 	// INTERNAL - LOOT TABLE LOADING
@@ -223,6 +228,12 @@ protected:
 
 	/** Loot generator instance */
 	FLootGenerator LootGenerator;
+
+	/**
+	 * P-2 FIX: Holds the async streamable handle so the GC doesn't collect the
+	 * in-flight request before the registry DataTable finishes loading.
+	 */
+	TSharedPtr<FStreamableHandle> RegistryStreamHandle;
 };
 
 // ═══════════════════════════════════════════════════════════════════════

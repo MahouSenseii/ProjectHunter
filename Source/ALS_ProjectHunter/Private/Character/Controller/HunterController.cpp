@@ -9,6 +9,7 @@
 #include "Character/Component/Interaction/InteractionManager.h"
 #include "GameFramework/Pawn.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogHunterController, Log, All);
 
 AHunterController::AHunterController(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -50,7 +51,7 @@ void AHunterController::Menu(const FInputActionValue& Value) const
 	// TODO: Implement menu logic
 	if (Value.Get<bool>())
 	{
-		UE_LOG(LogTemp, Log, TEXT("Menu button pressed"));
+		UE_LOG(LogHunterController, Log, TEXT("Menu button pressed"));
 	}
 }
 
@@ -134,12 +135,12 @@ void AHunterController::CacheComponents()
 		
 		if (!InteractionManager)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("HunterController: No InteractionManager found on %s"), 
+			UE_LOG(LogHunterController, Warning, TEXT("HunterController: No InteractionManager found on %s"), 
 				*PossessedPawn->GetName());
 		}
 		else
 		{
-			UE_LOG(LogTemp, Log, TEXT("HunterController: Cached InteractionManager"));
+			UE_LOG(LogHunterController, Log, TEXT("HunterController: Cached InteractionManager"));
 		}
 	}
 }

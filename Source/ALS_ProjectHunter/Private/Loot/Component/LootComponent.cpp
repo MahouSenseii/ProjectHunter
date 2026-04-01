@@ -165,15 +165,21 @@ FLootRequest ULootComponent::BuildRequest(float PlayerLuck, float PlayerMagicFin
 
 bool ULootComponent::EnsureSubsystem() const
 {
-	if (CachedLootSubsystem)
+	// B-3 FIX: A raw pointer truthiness check survives level transitions because
+	// the UWorldSubsystem is torn down (Pending Kill) while the pointer still
+	// points to valid memory.  IsValid() catches the Pending-Kill state.
+	if (IsValid(CachedLootSubsystem))
 	{
 		return true;
 	}
-	
+
+	// Clear a potentially stale pending-kill pointer before re-querying.
+	CachedLootSubsystem = nullptr;
+
 	if (UWorld* World = GetWorld())
 	{
 		CachedLootSubsystem = World->GetSubsystem<ULootSubsystem>();
 	}
-	
+
 	return CachedLootSubsystem != nullptr;
 }

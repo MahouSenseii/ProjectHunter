@@ -3,6 +3,7 @@
 #include "Loot/Subsystem/LootSubsystem.h"
 #include "Tower/Subsystem/GroundItemSubsystem.h"
 #include "Item/ItemInstance.h"
+#include "Engine/AssetManager.h"
 #include "Engine/DataTable.h"
 #include "Engine/World.h"
 
@@ -32,13 +33,21 @@ void ULootSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void ULootSubsystem::Deinitialize()
 {
+	// P-2 FIX: Cancel any in-flight async load before tearing down so the
+	// delegate doesn't fire into a partially-destroyed subsystem.
+	if (RegistryStreamHandle.IsValid())
+	{
+		RegistryStreamHandle->CancelHandle();
+		RegistryStreamHandle.Reset();
+	}
+
 	ClearLootTableCache();
 	CachedRegistry = nullptr;
 	CachedGroundItemSubsystem = nullptr;
 	CachedWorld = nullptr;
-	
+
 	Super::Deinitialize();
-	
+
 	UE_LOG(LogLootSubsystem, Log, TEXT("LootSubsystem deinitialized"));
 }
 
@@ -178,19 +187,44 @@ void ULootSubsystem::LoadRegistry()
 		UE_LOG(LogLootSubsystem, Warning, TEXT("LoadRegistry: No registry path configured"));
 		return;
 	}
-	
-	CachedRegistry = LootSourceRegistryPath.LoadSynchronous();
-	
+
+	// P-2 FIX: The original code called LoadSynchronous() during Initialize(),
+	// which blocks the game thread at level-load time and causes a hitch.
+	// Instead, kick off an async request.  Any GenerateLoot() call that arrives
+	// before the registry is ready will log a warning and return an empty batch –
+	// a safe graceful-degradation path that avoids stalling the loading screen.
+	FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
+	RegistryStreamHandle = Streamable.RequestAsyncLoad(
+		LootSourceRegistryPath.ToSoftObjectPath(),
+		FStreamableDelegate::CreateUObject(this, &ULootSubsystem::OnRegistryLoaded),
+		FStreamableManager::DefaultAsyncLoadPriority,
+		/*bManageActiveHandle=*/true
+	);
+
+	UE_LOG(LogLootSubsystem, Log,
+		TEXT("LoadRegistry: Async load requested for '%s'"),
+		*LootSourceRegistryPath.ToString());
+}
+
+void ULootSubsystem::OnRegistryLoaded()
+{
+	CachedRegistry = LootSourceRegistryPath.Get();
+
 	if (CachedRegistry)
 	{
-		UE_LOG(LogLootSubsystem, Log, TEXT("Loaded loot registry with %d sources"), 
+		UE_LOG(LogLootSubsystem, Log,
+			TEXT("OnRegistryLoaded: Registry ready – %d sources"),
 			CachedRegistry->GetRowNames().Num());
 	}
 	else
 	{
-		UE_LOG(LogLootSubsystem, Error, TEXT("Failed to load loot registry from '%s'"),
+		UE_LOG(LogLootSubsystem, Error,
+			TEXT("OnRegistryLoaded: Asset loaded but cast to UDataTable failed for '%s'"),
 			*LootSourceRegistryPath.ToString());
 	}
+
+	// Release the handle; the subsystem owns CachedRegistry via UPROPERTY now.
+	RegistryStreamHandle.Reset();
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -227,13 +261,27 @@ const FLootTable* ULootSubsystem::GetLootTableFromSource(const FLootSourceEntry&
 	
 	if (!CachedTable)
 	{
-		CachedTable = Source.LootTable.LoadSynchronous();
-		
+		// N-14 FIX: Prefer the already-resident asset to avoid a synchronous load hitch.
+		// LoadSynchronous() stalls the game thread for the full asset load time when the
+		// DataTable is not yet in memory.  Check Get() first so the common in-memory case
+		// is free.  The synchronous fallback is kept as a safety net but now emits a
+		// warning so designers know to pre-load hot loot tables via UAssetManager or a
+		// Primary Asset label before the first chest interaction.
+		CachedTable = Source.LootTable.Get();
+		if (!CachedTable)
+		{
+			UE_LOG(LogLootSubsystem, Warning,
+				TEXT("GetLootTableFromSource: '%s' is not in memory — falling back to synchronous load. "
+				     "Pre-load this DataTable to avoid a frame hitch."),
+				*Source.LootTable.ToString());
+			CachedTable = Source.LootTable.LoadSynchronous();
+		}
+
 		if (CachedTable)
 		{
 			LootTableCache.Add(CacheKey, CachedTable);
 			OnLootTableLoaded.Broadcast(RowName, true);
-			
+
 			UE_LOG(LogLootSubsystem, Verbose, TEXT("Cached loot table: %s"), *CacheKey.ToString());
 		}
 		else
@@ -363,23 +411,31 @@ TArray<FName> ULootSubsystem::GetAllSourceIDs() const
 TArray<FName> ULootSubsystem::GetSourceIDsByCategory(ELootSourceType Category) const
 {
 	TArray<FName> SourceIDs;
-	
+
 	if (!CachedRegistry)
 	{
 		return SourceIDs;
 	}
-	
-	const TMap<FName, uint8*>& RowMap = CachedRegistry->GetRowMap();
-	
-	for (const TPair<FName, uint8*>& Pair : RowMap)
+
+	// P-1 FIX: GetRowMap() + reinterpret_cast<FLootSourceEntry*> is unsafe –
+	// the raw uint8* pointer skips the struct's vtable / alignment guarantees.
+	// GetAllRows<T> is the correct typed DataTable API.
+	TArray<FLootSourceEntry*> AllRows;
+	CachedRegistry->GetAllRows<FLootSourceEntry>(TEXT("GetSourceIDsByCategory"), AllRows);
+
+	// GetAllRows doesn't return the row names alongside the data, so we walk
+	// the row names in parallel.  Both arrays are in the same insertion order.
+	TArray<FName> AllNames = CachedRegistry->GetRowNames();
+	ensure(AllRows.Num() == AllNames.Num());
+
+	for (int32 i = 0; i < AllRows.Num(); ++i)
 	{
-		const FLootSourceEntry* Entry = reinterpret_cast<FLootSourceEntry*>(Pair.Value);
-		if (Entry && Entry->Category == Category)
+		if (AllRows[i] && AllRows[i]->Category == Category)
 		{
-			SourceIDs.Add(Pair.Key);
+			SourceIDs.Add(AllNames[i]);
 		}
 	}
-	
+
 	return SourceIDs;
 }
 

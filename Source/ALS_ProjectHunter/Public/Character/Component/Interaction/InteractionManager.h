@@ -27,16 +27,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurrentInteractableChanged, UInte
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGroundItemFocusChanged, int32, GroundItemID);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHoldProgressChanged, float, Progress);
 
-UENUM()
-enum class EManagedInteractionMode : uint8
-{
-	None,
-	GroundTapOrHold,
-	ActorHold,
-	ActorTapOrHold,
-	ActorMash,
-	ActorContinuous
-};
+// EManagedInteractionMode is defined in InteractionEnumLibrary.h (alongside FActiveInteraction).
 
 /**
  * Interaction Manager Component
@@ -220,8 +211,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Interaction")
 	bool IsSystemInitialized() const { return bSystemInitialized; }
 
+	/**
+	 * True while the active interaction is one that requires the button to be held
+	 * (Hold, TapOrHold, Continuous). False for Mash (press-based) and None.
+	 * Derived directly from ActiveInteraction.Mode — no separate flag needed.
+	 */
 	UFUNCTION(BlueprintPure, Category = "Interaction")
-	bool IsHoldingInteraction() const { return bIsHolding; }
+	bool IsHoldingInteraction() const;
 
 	UFUNCTION(BlueprintPure, Category = "Interaction")
 	float GetCurrentHoldProgress() const;
@@ -311,81 +307,66 @@ protected:
 	/** Get item instance for ground item ID */
 	UItemInstance* GetGroundItemInstance(int32 GroundItemID) const;
 
+	// ═══════════════════════════════════════════════
+	// SERVER RPCs  (multiplayer foundation)
+	// ═══════════════════════════════════════════════
+
+	/**
+	 * Ask the server to pick up a ground item into inventory.
+	 * Called from clients; the server validates proximity and executes.
+	 */
+	UFUNCTION(Server, Reliable, Category = "Interaction|Pickup")
+	void Server_PickupToInventory(int32 ItemID, FVector ClientLocation);
+
+	/**
+	 * Ask the server to pick up a ground item and equip it.
+	 */
+	UFUNCTION(Server, Reliable, Category = "Interaction|Pickup")
+	void Server_PickupAndEquip(int32 ItemID, FVector ClientLocation);
+
 private:
 	// ═══════════════════════════════════════════════
 	// WIDGET INSTANCE
 	// ═══════════════════════════════════════════════
 
-	/** The interaction widget instance */
+	/** The screen-space interaction widget instance */
 	UPROPERTY()
 	TObjectPtr<UInteractableWidget> InteractionWidget;
 
 	// ═══════════════════════════════════════════════
-	// STATE FLAGS
+	// SYSTEM FLAGS
 	// ═══════════════════════════════════════════════
 
 	/** Guard flag to prevent double initialization */
 	bool bSystemInitialized = false;
 
-	/** Is currently in hold interaction? */
-	bool bIsHolding = false;
-
-	/** Current managed interaction mode */
-	EManagedInteractionMode ActiveInteractionMode = EManagedInteractionMode::None;
-
-	/** Active focused interactable while interaction is in progress */
-	TScriptInterface<IInteractable> ActiveInteractable;
-
-	/** Weak validation for the currently focused interactable UObject */
-	TWeakObjectPtr<UObject> CurrentInteractableObject;
-
-	/** Weak validation for the active interaction target UObject */
-	TWeakObjectPtr<UObject> ActiveInteractableObject;
-
-	/** Active ground item being interacted with */
-	int32 ActiveGroundItemID = INDEX_NONE;
-
 	/** Is interact input currently held down */
 	bool bInteractInputHeld = false;
 
-	/** Primary held time source of truth for active hold-style interactions */
-	float HeldInputSeconds = 0.0f;
+	/**
+	 * Set to true after a failed TActorIterator<APostProcessVolume> scan so we
+	 * don't repeat the expensive full-level iteration every time ApplyHighlightStyle
+	 * or ResetHighlightStyle is called without a volume present in the level.
+	 */
+	bool bPostProcessSearchFailed = false;
 
-	/** Per-interaction threshold before hold starts */
-	float ActiveTapThresholdSeconds = 0.0f;
+	// ═══════════════════════════════════════════════
+	// FOCUS TRACKING (current interactable in crosshair)
+	// ═══════════════════════════════════════════════
 
-	/** Duration required to complete hold after threshold */
-	float ActiveHoldDurationSeconds = 0.0f;
-
-	/** Current normalized progress [0..1] */
-	float ActiveProgress = 0.0f;
-
-	/** Has the hold lifecycle started for the active interaction */
-	bool bHoldStarted = false;
-
-	/** Has the hold lifecycle already completed */
-	bool bHoldCompleted = false;
-
-	/** Last progress value sent to the presentation layer */
-	float LastInteractionProgress = -1.0f;
-
-	/** Mash count progress (can decay as float) */
-	float MashProgressUnits = 0.0f;
-
-	/** Required mash presses */
-	int32 MashRequiredCount = 0;
-
-	/** Current integer mash press count (display/events) */
-	int32 MashCurrentCount = 0;
-
-	/** Mash decay rate per second */
-	float MashDecayRate = 0.0f;
+	/** Weak validation handle for the currently focused interactable UObject */
+	TWeakObjectPtr<UObject> CurrentInteractableObject;
 
 	/** Last time a focus trace was performed (world time seconds) */
 	float LastInteractionCheckTimeSeconds = -1.0f;
 
-	/** Last mash button press timestamp used to smooth decay at low FPS */
-	float LastMashPressTimeSeconds = -1.0f;
+	// ═══════════════════════════════════════════════
+	// ACTIVE INTERACTION STATE
+	// All per-interaction transient data lives here.
+	// Call ActiveInteraction.Reset() to clear every field at once.
+	// ═══════════════════════════════════════════════
+
+	FActiveInteraction ActiveInteraction;
 
 	// ═══════════════════════════════════════════════
 	// TIMERS

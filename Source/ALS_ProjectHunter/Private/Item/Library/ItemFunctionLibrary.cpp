@@ -529,24 +529,27 @@ void UItemFunctionLibrary::GetAffixCountByRarity(
 			OutMinSuffixes = 0; OutMaxSuffixes = 1;
 			break;
 			
-		case EItemRarity::IR_GradeD:  // Grade D (Rare) - 2-3 affixes
+		// FIX: Affix counts below were higher than what FAffixGenerator::GetAffixCountByRarity
+		// actually rolls, causing the UI to advertise more affixes than items ever receive.
+		// All values now match the authoritative AffixGenerator table exactly.
+		case EItemRarity::IR_GradeD:  // Grade D (Rare) - 1-2 affixes
+			OutMinPrefixes = 1; OutMaxPrefixes = 1;
+			OutMinSuffixes = 0; OutMaxSuffixes = 1;
+			break;
+
+		case EItemRarity::IR_GradeC:  // Grade C (Elite) - 2-3 affixes
+			OutMinPrefixes = 1; OutMaxPrefixes = 2;
+			OutMinSuffixes = 1; OutMaxSuffixes = 1;
+			break;
+
+		case EItemRarity::IR_GradeB:  // Grade B (Named) - 2-4 affixes
 			OutMinPrefixes = 1; OutMaxPrefixes = 2;
 			OutMinSuffixes = 1; OutMaxSuffixes = 2;
 			break;
-			
-		case EItemRarity::IR_GradeC:  // Grade C (Elite) - 3-4 affixes
-			OutMinPrefixes = 1; OutMaxPrefixes = 2;
-			OutMinSuffixes = 2; OutMaxSuffixes = 3;
-			break;
-			
-		case EItemRarity::IR_GradeB:  // Grade B (Named) - 4-5 affixes
+
+		case EItemRarity::IR_GradeA:  // Grade A (Legendary) - 4-5 affixes
 			OutMinPrefixes = 2; OutMaxPrefixes = 3;
-			OutMinSuffixes = 2; OutMaxSuffixes = 3;
-			break;
-			
-		case EItemRarity::IR_GradeA:  // Grade A (Legendary) - 5-6 affixes
-			OutMinPrefixes = 2; OutMaxPrefixes = 3;
-			OutMinSuffixes = 3; OutMaxSuffixes = 3;
+			OutMinSuffixes = 2; OutMaxSuffixes = 2;
 			break;
 			
 		case EItemRarity::IR_GradeS:  // Grade S (Mythic) - 6 affixes (max)

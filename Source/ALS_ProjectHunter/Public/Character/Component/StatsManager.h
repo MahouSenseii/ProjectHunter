@@ -3,7 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Character/Component/StatsDebug.h"
+#include "Character/Component/StatsDebugManager.h"
 #include "GameplayEffectTypes.h"
 #include "StatsManager.generated.h"
 
@@ -293,7 +293,10 @@ protected:
 	UPROPERTY()
 	mutable TObjectPtr<UHunterAttributeSet> CachedAttributeSet;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Cached References")
+	// N-08 FIX: Was EditAnywhere — allows changing the asset on instanced components
+	// in the level, bypassing the Blueprint default and causing divergent state.
+	// EditDefaultsOnly restricts edits to Blueprint/CDO, which is the correct scope.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats|Config")
 	UBaseStatsData* StatsData;
 
 	UPROPERTY()

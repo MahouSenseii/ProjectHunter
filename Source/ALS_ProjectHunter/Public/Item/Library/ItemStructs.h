@@ -4,12 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
+#include "Item/Runtime/EquippedItemRuntimeActor.h"
 #include "Item/Library/ItemEnums.h"
 #include "Item/Library/AffixEnums.h"
 #include "AttributeSet.h"
 #include "ItemStructs.generated.h"
 
 // Forward declarations
+class AActor;
 class UStaticMesh;
 class USkeletalMesh;
 class UMaterialInstance;
@@ -426,6 +428,21 @@ struct FPHAttributeData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Filtering")
 	TArray<EItemSubType> AllowedSubTypes;
 
+	// N-17 FIX: Dedicated item-level range fields so IsValidForItemLevel() does not
+	// reuse MinValue/MaxValue (which hold the affix magnitude range).  Reusing the
+	// magnitude range for level gating caused level checks to silently use wrong bounds
+	// whenever the affix had a non-integer magnitude (e.g. 0.05 – 0.20 for a 5-20%
+	// modifier) — those items would only appear on items of level 0.
+	/** Minimum item level required for this affix to be rolled (inclusive, 1 = any) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Filtering",
+		meta = (ClampMin = "1", ClampMax = "100"))
+	int32 MinItemLevel = 1;
+
+	/** Maximum item level at which this affix can be rolled (inclusive, 100 = any) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Filtering",
+		meta = (ClampMin = "1", ClampMax = "100"))
+	int32 MaxItemLevel = 100;
+
 	// ═══════════════════════════════════════════════
 	// MODIFICATION TARGET & SCOPE
 	// ═══════════════════════════════════════════════
@@ -518,6 +535,16 @@ struct FPHAttributeData : public FTableRowBase
 		RolledStatValue = FMath::RandRange(MinValue, MaxValue);
 	}
 
+	/**
+	 * I-02 FIX: Seeded overload so affix generation is fully deterministic.
+	 * Call this when a FRandomStream is available (e.g. inside FAffixGenerator)
+	 * to keep the generation seed self-contained and replay-safe.
+	 */
+	void RollValue(FRandomStream& RandStream)
+	{
+		RolledStatValue = RandStream.RandRange(MinValue, MaxValue);
+	}
+
 	int32 GetRankPointValue() const
 	{
 		return GetRankPointsValue(RankPoints);
@@ -590,7 +617,9 @@ struct FPHAttributeData : public FTableRowBase
 	}
 	
 	bool IsCorruptedAffix() const { return AffixType == EAffixes::AF_Corrupted; }
-	bool IsValidForItemLevel(int32 Level) const {return MinValue <= Level && Level <= MaxValue; }
+
+	// N-17 FIX: Use dedicated MinItemLevel/MaxItemLevel instead of MinValue/MaxValue.
+	bool IsValidForItemLevel(int32 Level) const { return MinItemLevel <= Level && Level <= MaxItemLevel; }
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -808,14 +837,23 @@ struct FItemBase : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Visual")
 	UMaterialInstance* ItemImage = nullptr;
-	
-	/** Only for weapons with actor representation */
-	UPROPERTY(EditAnywhere, Category = "Item|Visual", 
-		meta = (EditCondition = "ItemType == EItemType::IT_Weapon", EditConditionHides))
+
+	/** Spawn a runtime actor for active/special equipment instead of using only a mesh representation. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Visual",
+		meta = (EditCondition = "ItemType == EItemType::IT_Weapon || ItemType == EItemType::IT_Armor || ItemType == EItemType::IT_Accessory", EditConditionHides))
+	bool bUseRuntimeActor = false;
+
+	/** Runtime actor class used for active/special equipment behavior. Prefer a Blueprint child of AEquippedItemRuntimeActor. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Visual",
+		meta = (EditCondition = "bUseRuntimeActor && (ItemType == EItemType::IT_Weapon || ItemType == EItemType::IT_Armor || ItemType == EItemType::IT_Accessory)", EditConditionHides))
+	TSubclassOf<AEquippedItemRuntimeActor> RuntimeActorClass = nullptr;
+
+	/** Legacy compatibility for older weapon rows. Prefer bUseRuntimeActor. */
+	UPROPERTY()
 	bool bUseWeaponActor = false;
 
-	UPROPERTY(EditAnywhere, Category = "Item|Visual", 
-		meta = (EditCondition = "ItemType == EItemType::IT_Weapon && bUseWeaponActor", EditConditionHides))
+	/** Legacy compatibility for older weapon rows. Prefer RuntimeActorClass. */
+	UPROPERTY()
 	TSubclassOf<AActor> WeaponActorClass = nullptr;
 
 	// ═══════════════════════════════════════════════
@@ -962,8 +1000,16 @@ struct FItemBase : public FTableRowBase
 	/** Check if base data is valid */
 	bool IsValid() const
 	{
-		const bool bHasAnyMesh = (StaticMesh != nullptr) || (SkeletalMesh != nullptr);
-		return !ItemName.IsEmpty() && ItemType != EItemType::IT_None && bHasAnyMesh;
+		// N-15 FIX: Removed !ItemName.IsEmpty() requirement.
+		// Non-unique items (consumables, materials, currency) intentionally have an
+		// empty ItemName — they derive their display name from the base item template.
+		// Requiring a non-empty name incorrectly blocked those items from passing
+		// validation, causing them to fail inventory adds and equipment checks.
+		const bool bHasVisualRepresentation =
+			(StaticMesh != nullptr) ||
+			(SkeletalMesh != nullptr) ||
+			(GetRuntimeActorClass() != nullptr);
+		return ItemType != EItemType::IT_None && bHasVisualRepresentation;
 	}
 
 	/** Check if valid for inventory */
@@ -1011,6 +1057,23 @@ struct FItemBase : public FTableRowBase
 
 	/** Check if this is currency */
 	bool IsCurrency() const { return ItemType == EItemType::IT_Currency; }
+
+	/** Check if this item should spawn a runtime actor when equipped. */
+	bool UsesRuntimeActor() const
+	{
+		return bUseRuntimeActor || bUseWeaponActor;
+	}
+
+	/** Get the runtime actor class, including legacy weapon-actor fallback support. */
+	TSubclassOf<AActor> GetRuntimeActorClass() const
+	{
+		if (RuntimeActorClass)
+		{
+			return RuntimeActorClass.Get();
+		}
+
+		return WeaponActorClass;
+	}
 
 	/** Get socket name for context */
 	FName GetSocketForContext(FName Context) const

@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "HAL/CriticalSection.h"
 #include "GroundItemSubsystem.generated.h"
 
 // Forward declarations
@@ -117,7 +118,14 @@ protected:
 
 	void EnsureISMContainerExists();
 	UInstancedStaticMeshComponent* GetOrCreateISMComponent(UStaticMesh* Mesh);
-	void ReindexAfterRemoval(UInstancedStaticMeshComponent* ISMComponent, int32 RemovedIndex);
+
+	/**
+	 * P-3 FIX (was ReindexAfterRemoval): After RemoveInstanceSwap, only the single item
+	 * whose instance was at LastIndex needs its stored index updated to RemovedIndex.
+	 * O(1) — no full-table scan required.
+	 */
+	void UpdateIndexAfterSwap(UInstancedStaticMeshComponent* ISMComponent,
+	                          int32 RemovedIndex, int32 LastIndex);
 
 private:
 	// ═══════════════════════════════════════════════
@@ -130,8 +138,10 @@ private:
 	// DATA
 	// ═══════════════════════════════════════════════
 
+	// WS-2 FIX: TWeakObjectPtr so we never hold a dangling reference if the
+	// container actor is destroyed externally (e.g. seamless travel, GC).
 	UPROPERTY()
-	AISMContainerActor* ISMContainerActor;
+	TWeakObjectPtr<AISMContainerActor> ISMContainerActor;
 
 	/*
 	 *TMap cannot be used in anything Online related
@@ -149,12 +159,24 @@ private:
 	UPROPERTY()
 	TMap<UStaticMesh*, UInstancedStaticMeshComponent*> MeshToISM;
 
+	/**
+	 * P-3 FIX: Reverse lookup — maps an UItemInstance* directly to its ItemID.
+	 * Makes GetInstanceID() O(1) instead of O(n) linear scan over GroundItems.
+	 */
+	UPROPERTY()
+	TMap<UItemInstance*, int32> InstanceToIDMap;
+
 	int32 NextItemID = 0;
 
 	// ═══════════════════════════════════════════════
-	// THREAD SAFETY 
+	// THREAD SAFETY
 	// ═══════════════════════════════════════════════
 
 	bool bIsProcessingRemoval = false;
+
+	// WS-1 FIX: FCriticalSection guards PendingRemovals against concurrent
+	// access from async loading callbacks or parallel-for tasks that might
+	// trigger item removal outside the game thread.
+	FCriticalSection PendingRemovalsCS;
 	TArray<int32> PendingRemovals;
 };

@@ -326,7 +326,7 @@ public:
 
 	/** Who opened this chest? */
 	UPROPERTY(BlueprintReadOnly, Category = "Loot Chest|State")
-	AActor* LastInteractor;
+	TObjectPtr<AActor> LastInteractor;
 
 	// ═══════════════════════════════════════════════
 	// EVENTS (Blueprint implementable)
@@ -398,6 +398,13 @@ public:
 
 	UFUNCTION()
 	void OnRep_ChestState();
+
+	/**
+	 * C-7 FIX: Server RPC so clients can request chest opening.
+	 * OpenChest() on a client now calls this instead of returning early.
+	 */
+	UFUNCTION(Server, Reliable)
+	void ServerOpenChest(AActor* Opener);
 
 protected:
 	// ═══════════════════════════════════════════════

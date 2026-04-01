@@ -14,6 +14,11 @@ namespace TagManagerPrivate
 	constexpr float LowResourceThreshold = 0.35f;
 	constexpr float MovementSpeedThresholdSq = 25.f;
 
+	// N-06 FIX: Refresh interval in seconds. Attribute-based conditions are driven by
+	// GAS delegates (zero cost at rest). The tick now only re-checks movement/sprint
+	// state at this cadence rather than every frame.
+	constexpr float ConditionRefreshInterval = 0.1f;
+
 	float GetEffectiveMaxValue(const float EffectiveMaxValue, const float RawMaxValue)
 	{
 		return EffectiveMaxValue > 0.f ? EffectiveMaxValue : FMath::Max(RawMaxValue, 0.f);
@@ -44,13 +49,33 @@ void UTagManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComp
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	(void)DeltaTime;
 	(void)TickType;
 	(void)ThisTickFunction;
 
-	if (ASC)
+	if (!ASC)
 	{
+		return;
+	}
+
+	// OPT-TAG: Flush coalesced attribute-change refreshes (dirty flag set by
+	// BindAttributeChangeDelegates callbacks). This replaces the old approach
+	// where every delegate callback immediately called RefreshBaseConditionTags(),
+	// which in heavy combat could fire 5-10x per frame for the same result.
+	if (bBaseConditionsDirty)
+	{
+		bBaseConditionsDirty = false;
 		RefreshBaseConditionTags();
+	}
+
+	// N-06 FIX: Only re-check movement/sprint state at a reduced cadence (100ms).
+	// Attribute-based conditions (health, mana, stamina) are now event-driven via
+	// GAS delegates bound in BindAttributeChangeDelegates(), so we don't need to
+	// poll them every frame here.
+	ConditionRefreshAccumulator += DeltaTime;
+	if (ConditionRefreshAccumulator >= TagManagerPrivate::ConditionRefreshInterval)
+	{
+		ConditionRefreshAccumulator = 0.f;
+		RefreshMovementConditionTags();
 	}
 }
 
@@ -68,6 +93,12 @@ void UTagManager::Initialize(UAbilitySystemComponent* InASC)
 	UE_LOG(LogTagManager, Verbose, TEXT("Initialized TagManager for owner %s with ASC %s."), *GetNameSafe(GetOwner()), *GetNameSafe(ASC));
 
 	ApplyPendingStates();
+
+	// N-06 FIX: Bind GAS attribute-change delegates so resource conditions update
+	// reactively instead of being polled every frame.
+	BindAttributeChangeDelegates();
+
+	// Initial full refresh (establishes baseline state on first Init)
 	RefreshBaseConditionTags();
 }
 
@@ -234,9 +265,9 @@ void UTagManager::RefreshBaseConditionTags()
 	}
 	SetTagState(Tags.Condition_Sprinting, bSprinting);
 
-	// Blocking and combat remain runtime-state driven until those systems expose dedicated booleans.
-	const bool bBlocking = HasTag(Tags.Condition_Self_IsBlocking);
-	SetTagState(Tags.Condition_Self_IsBlocking, bBlocking);
+	// N-07 FIX: Removed the self-referential "const bool bBlocking = HasTag(...); SetTagState(..., bBlocking);"
+	// pattern — reading the tag and immediately writing the same value back is a pure no-op.
+	// Condition_Self_IsBlocking must be set externally by the blocking ability / combat system.
 
 	const bool bInCombat = HasTag(Tags.Condition_InCombat)
 		|| HasTag(Tags.Condition_TakingDamage)
@@ -306,4 +337,94 @@ bool UTagManager::ComputeFullResourceState(const float CurrentValue, const float
 const UHunterAttributeSet* UTagManager::GetHunterAttributeSet() const
 {
 	return ASC ? ASC->GetSet<UHunterAttributeSet>() : nullptr;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// N-06 FIX: Event-driven attribute refresh helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+void UTagManager::RefreshMovementConditionTags()
+{
+	// Called at reduced cadence (100ms) from Tick; only handles movement/sprint
+	// because these require polling the character velocity / gait state.
+	if (!ASC)
+	{
+		return;
+	}
+
+	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+	const APHBaseCharacter* HunterCharacter = Cast<APHBaseCharacter>(GetOwner());
+	const ACharacter* CharacterOwner = Cast<ACharacter>(GetOwner());
+
+	const bool bMoving = CharacterOwner && CharacterOwner->GetVelocity().SizeSquared2D() > TagManagerPrivate::MovementSpeedThresholdSq;
+	SetTagState(Tags.Condition_WhileMoving, bMoving);
+	SetTagState(Tags.Condition_WhileStationary, !bMoving);
+
+	bool bSprinting = HasTag(Tags.Condition_Sprinting);
+	if (HunterCharacter)
+	{
+		bSprinting = HunterCharacter->GetGait() == EALSGait::Sprinting
+			|| HunterCharacter->GetDesiredGait() == EALSGait::Sprinting;
+	}
+	SetTagState(Tags.Condition_Sprinting, bSprinting);
+
+	// Keep InCombat/OutOfCombat updated here too (relies on tag state, not attribute polling)
+	const bool bInCombat = HasTag(Tags.Condition_TakingDamage)
+		|| HasTag(Tags.Condition_DealingDamage)
+		|| HasTag(Tags.Condition_RecentlyHit)
+		|| HasTag(Tags.Condition_RecentlyUsedSkill);
+	SetTagState(Tags.Condition_InCombat, bInCombat);
+	SetTagState(Tags.Condition_OutOfCombat, !bInCombat);
+}
+
+void UTagManager::BindAttributeChangeDelegates()
+{
+	// N-06 FIX: Bind to GAS attribute change callbacks so resource-based condition
+	// tags (low/full health, mana, stamina, arcane shield) are updated reactively
+	// rather than being re-evaluated every frame in Tick.
+	//
+	// This uses a single lambda that calls RefreshBaseConditionTags() on any of
+	// the tracked attribute changes.  The ASC throttles these internally: they only
+	// fire when the value actually changes.
+
+	if (!ASC)
+	{
+		return;
+	}
+
+	// OPT-TAG: Instead of calling RefreshBaseConditionTags() directly from each
+	// delegate (which can fire many times per frame during combat), set a dirty
+	// flag. The tick flushes it once per frame — same result, fraction of the cost.
+	auto OnResourceChanged = [this](const FOnAttributeChangeData& Data)
+	{
+		bBaseConditionsDirty = true;
+	};
+
+	const UHunterAttributeSet* AttrSet = GetHunterAttributeSet();
+	if (!AttrSet)
+	{
+		return;
+	}
+
+	// Health
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetHealthAttribute()).AddLambda(OnResourceChanged);
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxHealthAttribute()).AddLambda(OnResourceChanged);
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxEffectiveHealthAttribute()).AddLambda(OnResourceChanged);
+
+	// Mana
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetManaAttribute()).AddLambda(OnResourceChanged);
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxManaAttribute()).AddLambda(OnResourceChanged);
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxEffectiveManaAttribute()).AddLambda(OnResourceChanged);
+
+	// Stamina
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetStaminaAttribute()).AddLambda(OnResourceChanged);
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxStaminaAttribute()).AddLambda(OnResourceChanged);
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxEffectiveStaminaAttribute()).AddLambda(OnResourceChanged);
+
+	// Arcane Shield
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetArcaneShieldAttribute()).AddLambda(OnResourceChanged);
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxArcaneShieldAttribute()).AddLambda(OnResourceChanged);
+	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxEffectiveArcaneShieldAttribute()).AddLambda(OnResourceChanged);
+
+	UE_LOG(LogTagManager, Verbose, TEXT("BindAttributeChangeDelegates: bound resource delegates for owner %s"), *GetNameSafe(GetOwner()));
 }

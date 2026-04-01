@@ -134,12 +134,25 @@ void UHunterAbilitySystemComponent::StartSprintStaminaDegen()
 		return;
 	}
 
-	const float DegenRate = FMath::Max(AttributeSet->GetStaminaDegenRate(), 0.f);
-	const float DegenAmount = FMath::Max(AttributeSet->GetStaminaDegenAmount(), 0.f);
-	if (DegenRate <= 0.f || DegenAmount <= 0.f)
+	// N-13 FIX: Cache these values so TickSprintStaminaDegen does not re-query every tick.
+	CachedDegenRate   = FMath::Max(AttributeSet->GetStaminaDegenRate(), 0.f);
+	CachedDegenAmount = FMath::Max(AttributeSet->GetStaminaDegenAmount(), 0.f);
+	if (CachedDegenRate <= 0.f || CachedDegenAmount <= 0.f)
 	{
 		StopSprintStaminaDegen();
 		return;
+	}
+
+	// OPT-SPRINT: Pre-build the GE spec once at sprint start so TickSprintStaminaDegen
+	// only updates the SetByCaller magnitude instead of allocating context + spec 10x/sec.
+	if (SprintStaminaDrainGE)
+	{
+		FGameplayEffectContextHandle Context = MakeEffectContext();
+		CachedSprintDrainSpec = MakeOutgoingSpec(SprintStaminaDrainGE, 1.f, Context);
+	}
+	else
+	{
+		CachedSprintDrainSpec = FGameplayEffectSpecHandle(); // clear
 	}
 
 	if (!World->GetTimerManager().IsTimerActive(SprintStaminaDegenTimerHandle))
@@ -160,7 +173,7 @@ void UHunterAbilitySystemComponent::StartSprintStaminaDegen()
 			bSprintDegenEffectTagApplied = true;
 		}
 	}
-	UE_LOG(LogHunterGAS, Verbose, TEXT("StartSprintStaminaDegen: ASC=%s Rate=%.2f Amount=%.2f"), *GetName(), DegenRate, DegenAmount);
+	UE_LOG(LogHunterGAS, Verbose, TEXT("StartSprintStaminaDegen: ASC=%s Rate=%.2f Amount=%.2f"), *GetName(), CachedDegenRate, CachedDegenAmount);
 }
 
 void UHunterAbilitySystemComponent::StopSprintStaminaDegen()
@@ -169,6 +182,9 @@ void UHunterAbilitySystemComponent::StopSprintStaminaDegen()
 	{
 		World->GetTimerManager().ClearTimer(SprintStaminaDegenTimerHandle);
 	}
+
+	// OPT-SPRINT: Release cached spec — it holds refs to the context/effect CDO.
+	CachedSprintDrainSpec = FGameplayEffectSpecHandle();
 
 	if (bSprintDegenEffectTagApplied)
 	{
@@ -197,6 +213,15 @@ void UHunterAbilitySystemComponent::TickSprintStaminaDegen()
 		return;
 	}
 
+	// N-13 FIX: Use cached degen parameters (set in StartSprintStaminaDegen) to avoid
+	// a redundant AttributeSet query every 0.1 s.  We still need the AttributeSet only
+	// for the current Stamina value, which must be live.
+	if (CachedDegenRate <= 0.f || CachedDegenAmount <= 0.f)
+	{
+		StopSprintStaminaDegen();
+		return;
+	}
+
 	const UHunterAttributeSet* AttributeSet = GetHunterAttributeSet();
 	if (!AttributeSet)
 	{
@@ -204,16 +229,8 @@ void UHunterAbilitySystemComponent::TickSprintStaminaDegen()
 		return;
 	}
 
-	const float DegenRate = FMath::Max(AttributeSet->GetStaminaDegenRate(), 0.f);
-	const float DegenAmount = FMath::Max(AttributeSet->GetStaminaDegenAmount(), 0.f);
-	if (DegenRate <= 0.f || DegenAmount <= 0.f)
-	{
-		StopSprintStaminaDegen();
-		return;
-	}
-
 	const float CurrentStamina = FMath::Max(AttributeSet->GetStamina(), 0.f);
-	const float DrainAmount = DegenRate * DegenAmount * HunterAbilitySystemComponentPrivate::SprintStaminaDegenTickInterval;
+	const float DrainAmount = CachedDegenRate * CachedDegenAmount * HunterAbilitySystemComponentPrivate::SprintStaminaDegenTickInterval;
 	if (DrainAmount <= 0.f)
 	{
 		return;
@@ -222,7 +239,34 @@ void UHunterAbilitySystemComponent::TickSprintStaminaDegen()
 	const float NewStamina = FMath::Max(0.f, CurrentStamina - DrainAmount);
 	if (!FMath::IsNearlyEqual(CurrentStamina, NewStamina))
 	{
-		SetNumericAttributeBase(UHunterAttributeSet::GetStaminaAttribute(), NewStamina);
+		// C-1 FIX: Route stamina drain through the GAS pipeline so that
+		// PreAttributeChange / PostAttributeChange clamps fire and the
+		// change is properly replicated through the attribute replication
+		// system.  SprintStaminaDrainGE must be an Instant GE with a
+		// SetByCaller modifier on Data.Damage.Stamina (negative = drain).
+		//
+		// OPT-SPRINT: Reuse the spec cached in StartSprintStaminaDegen —
+		// only the SetByCaller magnitude changes per tick.
+		bool bAppliedViaGE = false;
+		if (CachedSprintDrainSpec.IsValid())
+		{
+			CachedSprintDrainSpec.Data->SetSetByCallerMagnitude(
+				FPHGameplayTags::Get().Data_Damage_Stamina, -DrainAmount);
+			ApplyGameplayEffectSpecToSelf(*CachedSprintDrainSpec.Data.Get());
+			bAppliedViaGE = true;
+		}
+
+		if (!bAppliedViaGE)
+		{
+			// Legacy fallback: direct base-value write.
+			// Configure SprintStaminaDrainGE in Blueprint to remove this path.
+			UE_LOG(LogHunterGAS, Warning,
+				TEXT("TickSprintStaminaDegen: SprintStaminaDrainGE not set on %s — "
+				     "falling back to SetNumericAttributeBase (bypasses GAS pipeline). "
+				     "Configure SprintStaminaDrainGE in Blueprint defaults."),
+				*GetName());
+			SetNumericAttributeBase(UHunterAttributeSet::GetStaminaAttribute(), NewStamina);
+		}
 
 		if (UTagManager* TagManager = HunterAbilitySystemComponentPrivate::ResolveTagManager(this))
 		{

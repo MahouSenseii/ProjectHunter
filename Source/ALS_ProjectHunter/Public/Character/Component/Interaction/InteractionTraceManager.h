@@ -92,10 +92,11 @@ public:
 	 * @param OutRotation - Camera rotation
 	 * @return True if successful
 	 */
-	bool GetCameraViewPoint(FVector& OutLocation, FRotator& OutRotation) const;
+	bool GetCameraViewPoint(FVector& OutLocation, FRotator& OutRotation);
 
 
-	void GetTraceOrigin(FVector& OutCameraLocation,FVector& OutCameraDirection) const;
+	// B-1 FIX: Non-const because GetCameraViewPoint refreshes the cached controller.
+	void GetTraceOrigin(FVector& OutCameraLocation, FVector& OutCameraDirection);
 	
 	/**
 	 * Check if owner is locally controlled

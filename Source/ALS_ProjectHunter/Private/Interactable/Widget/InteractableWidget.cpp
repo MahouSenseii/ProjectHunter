@@ -24,6 +24,163 @@ namespace InteractableWidgetMaterialParams
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// CONSTRUCTOR — seeds KeyboardIcons and GamepadIcons with nullptr slots
+// so every key appears in the Blueprint details panel ready to assign.
+// ═══════════════════════════════════════════════════════════════════════
+
+UInteractableWidget::UInteractableWidget(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
+{
+	// ── Keyboard: Letters ────────────────────────────────────────────────
+	KeyboardIcons.Add(EKeys::A, nullptr);
+	KeyboardIcons.Add(EKeys::B, nullptr);
+	KeyboardIcons.Add(EKeys::C, nullptr);
+	KeyboardIcons.Add(EKeys::D, nullptr);
+	KeyboardIcons.Add(EKeys::E, nullptr);
+	KeyboardIcons.Add(EKeys::F, nullptr);
+	KeyboardIcons.Add(EKeys::G, nullptr);
+	KeyboardIcons.Add(EKeys::H, nullptr);
+	KeyboardIcons.Add(EKeys::I, nullptr);
+	KeyboardIcons.Add(EKeys::J, nullptr);
+	KeyboardIcons.Add(EKeys::K, nullptr);
+	KeyboardIcons.Add(EKeys::L, nullptr);
+	KeyboardIcons.Add(EKeys::M, nullptr);
+	KeyboardIcons.Add(EKeys::N, nullptr);
+	KeyboardIcons.Add(EKeys::O, nullptr);
+	KeyboardIcons.Add(EKeys::P, nullptr);
+	KeyboardIcons.Add(EKeys::Q, nullptr);
+	KeyboardIcons.Add(EKeys::R, nullptr);
+	KeyboardIcons.Add(EKeys::S, nullptr);
+	KeyboardIcons.Add(EKeys::T, nullptr);
+	KeyboardIcons.Add(EKeys::U, nullptr);
+	KeyboardIcons.Add(EKeys::V, nullptr);
+	KeyboardIcons.Add(EKeys::W, nullptr);
+	KeyboardIcons.Add(EKeys::X, nullptr);
+	KeyboardIcons.Add(EKeys::Y, nullptr);
+	KeyboardIcons.Add(EKeys::Z, nullptr);
+
+	// ── Keyboard: Number row ─────────────────────────────────────────────
+	KeyboardIcons.Add(EKeys::Zero,  nullptr);
+	KeyboardIcons.Add(EKeys::One,   nullptr);
+	KeyboardIcons.Add(EKeys::Two,   nullptr);
+	KeyboardIcons.Add(EKeys::Three, nullptr);
+	KeyboardIcons.Add(EKeys::Four,  nullptr);
+	KeyboardIcons.Add(EKeys::Five,  nullptr);
+	KeyboardIcons.Add(EKeys::Six,   nullptr);
+	KeyboardIcons.Add(EKeys::Seven, nullptr);
+	KeyboardIcons.Add(EKeys::Eight, nullptr);
+	KeyboardIcons.Add(EKeys::Nine,  nullptr);
+
+	// ── Keyboard: Numpad ─────────────────────────────────────────────────
+	KeyboardIcons.Add(EKeys::NumPadZero,     nullptr);
+	KeyboardIcons.Add(EKeys::NumPadOne,      nullptr);
+	KeyboardIcons.Add(EKeys::NumPadTwo,      nullptr);
+	KeyboardIcons.Add(EKeys::NumPadThree,    nullptr);
+	KeyboardIcons.Add(EKeys::NumPadFour,     nullptr);
+	KeyboardIcons.Add(EKeys::NumPadFive,     nullptr);
+	KeyboardIcons.Add(EKeys::NumPadSix,      nullptr);
+	KeyboardIcons.Add(EKeys::NumPadSeven,    nullptr);
+	KeyboardIcons.Add(EKeys::NumPadEight,    nullptr);
+	KeyboardIcons.Add(EKeys::NumPadNine,     nullptr);
+	KeyboardIcons.Add(EKeys::Multiply,       nullptr);
+	KeyboardIcons.Add(EKeys::Add,            nullptr);
+	KeyboardIcons.Add(EKeys::Subtract,       nullptr);
+	KeyboardIcons.Add(EKeys::Decimal,        nullptr);
+	KeyboardIcons.Add(EKeys::Divide,         nullptr);
+
+	// ── Keyboard: Function keys ──────────────────────────────────────────
+	KeyboardIcons.Add(EKeys::F1,  nullptr);
+	KeyboardIcons.Add(EKeys::F2,  nullptr);
+	KeyboardIcons.Add(EKeys::F3,  nullptr);
+	KeyboardIcons.Add(EKeys::F4,  nullptr);
+	KeyboardIcons.Add(EKeys::F5,  nullptr);
+	KeyboardIcons.Add(EKeys::F6,  nullptr);
+	KeyboardIcons.Add(EKeys::F7,  nullptr);
+	KeyboardIcons.Add(EKeys::F8,  nullptr);
+	KeyboardIcons.Add(EKeys::F9,  nullptr);
+	KeyboardIcons.Add(EKeys::F10, nullptr);
+	KeyboardIcons.Add(EKeys::F11, nullptr);
+	KeyboardIcons.Add(EKeys::F12, nullptr);
+
+	// ── Keyboard: Navigation / editing ───────────────────────────────────
+	KeyboardIcons.Add(EKeys::SpaceBar,  nullptr);
+	KeyboardIcons.Add(EKeys::Enter,     nullptr);
+	KeyboardIcons.Add(EKeys::Escape,    nullptr);
+	KeyboardIcons.Add(EKeys::Tab,       nullptr);
+	KeyboardIcons.Add(EKeys::BackSpace, nullptr);
+	KeyboardIcons.Add(EKeys::Delete,    nullptr);
+	KeyboardIcons.Add(EKeys::Insert,    nullptr);
+	KeyboardIcons.Add(EKeys::Home,      nullptr);
+	KeyboardIcons.Add(EKeys::End,       nullptr);
+	KeyboardIcons.Add(EKeys::PageUp,    nullptr);
+	KeyboardIcons.Add(EKeys::PageDown,  nullptr);
+
+	// ── Keyboard: Arrow keys ─────────────────────────────────────────────
+	KeyboardIcons.Add(EKeys::Up,    nullptr);
+	KeyboardIcons.Add(EKeys::Down,  nullptr);
+	KeyboardIcons.Add(EKeys::Left,  nullptr);
+	KeyboardIcons.Add(EKeys::Right, nullptr);
+
+	// ── Keyboard: Modifiers ───────────────────────────────────────────────
+	KeyboardIcons.Add(EKeys::LeftShift,   nullptr);
+	KeyboardIcons.Add(EKeys::RightShift,  nullptr);
+	KeyboardIcons.Add(EKeys::LeftControl, nullptr);
+	KeyboardIcons.Add(EKeys::RightControl,nullptr);
+	KeyboardIcons.Add(EKeys::LeftAlt,     nullptr);
+	KeyboardIcons.Add(EKeys::RightAlt,    nullptr);
+	KeyboardIcons.Add(EKeys::CapsLock,    nullptr);
+	KeyboardIcons.Add(EKeys::NumLock,     nullptr);
+	KeyboardIcons.Add(EKeys::ScrollLock,  nullptr);
+
+	// ── Keyboard: Punctuation / symbols ──────────────────────────────────
+	KeyboardIcons.Add(EKeys::Tilde,        nullptr); // ` ~
+	KeyboardIcons.Add(EKeys::Hyphen,       nullptr); // - _
+	KeyboardIcons.Add(EKeys::Equals,       nullptr); // = +
+	KeyboardIcons.Add(EKeys::LeftBracket,  nullptr); // [ {
+	KeyboardIcons.Add(EKeys::RightBracket, nullptr); // ] }
+	KeyboardIcons.Add(EKeys::Backslash,    nullptr); // \ |
+	KeyboardIcons.Add(EKeys::Semicolon,    nullptr); // ; :
+	KeyboardIcons.Add(EKeys::Apostrophe,   nullptr); // ' "
+	KeyboardIcons.Add(EKeys::Comma,        nullptr); // , <
+	KeyboardIcons.Add(EKeys::Period,       nullptr); // . >
+	KeyboardIcons.Add(EKeys::Slash,        nullptr); // / ?
+
+	// ── Gamepad: Face buttons ─────────────────────────────────────────────
+	// Bottom = A (Xbox) / Cross (PS)
+	// Right  = B (Xbox) / Circle (PS)
+	// Left   = X (Xbox) / Square (PS)
+	// Top    = Y (Xbox) / Triangle (PS)
+	GamepadIcons.Add(EKeys::Gamepad_FaceButton_Bottom, nullptr);
+	GamepadIcons.Add(EKeys::Gamepad_FaceButton_Right,  nullptr);
+	GamepadIcons.Add(EKeys::Gamepad_FaceButton_Left,   nullptr);
+	GamepadIcons.Add(EKeys::Gamepad_FaceButton_Top,    nullptr);
+
+	// ── Gamepad: Shoulders & triggers ────────────────────────────────────
+	// LB/L1, RB/R1, LT/L2, RT/R2
+	GamepadIcons.Add(EKeys::Gamepad_LeftShoulder,  nullptr);
+	GamepadIcons.Add(EKeys::Gamepad_RightShoulder, nullptr);
+	GamepadIcons.Add(EKeys::Gamepad_LeftTrigger,   nullptr);
+	GamepadIcons.Add(EKeys::Gamepad_RightTrigger,  nullptr);
+
+	// ── Gamepad: Thumbstick clicks ────────────────────────────────────────
+	// L3, R3
+	GamepadIcons.Add(EKeys::Gamepad_LeftThumbstick,  nullptr);
+	GamepadIcons.Add(EKeys::Gamepad_RightThumbstick, nullptr);
+
+	// ── Gamepad: D-Pad ────────────────────────────────────────────────────
+	GamepadIcons.Add(EKeys::Gamepad_DPad_Up,    nullptr);
+	GamepadIcons.Add(EKeys::Gamepad_DPad_Down,  nullptr);
+	GamepadIcons.Add(EKeys::Gamepad_DPad_Left,  nullptr);
+	GamepadIcons.Add(EKeys::Gamepad_DPad_Right, nullptr);
+
+	// ── Gamepad: System buttons ───────────────────────────────────────────
+	// Special_Left  = Select / Back / Share / View
+	// Special_Right = Start / Menu / Options
+	GamepadIcons.Add(EKeys::Gamepad_Special_Left,  nullptr);
+	GamepadIcons.Add(EKeys::Gamepad_Special_Right, nullptr);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // LIFECYCLE
 // ═══════════════════════════════════════════════════════════════════════
 

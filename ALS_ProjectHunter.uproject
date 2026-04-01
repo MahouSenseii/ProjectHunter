@@ -40,7 +40,7 @@
 		},
 		{
 			"Name": "Paper2D",
-			"Enabled": true
+			"Enabled": false
 		},
 		{
 			"Name": "SkeletalMeshModelingTools",

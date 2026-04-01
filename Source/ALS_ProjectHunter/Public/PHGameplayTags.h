@@ -47,6 +47,7 @@ public:
 	static void RegisterReflectionTags();
 	static void RegisterDamageConversionTags();
 	static void RegisterStatusEffectAliases();
+	static void RegisterSetByCallerDamageTags();
 	
 
 	// Keep both to preserve ABI/use-sites (you can deprecate one later)
@@ -448,6 +449,21 @@ public:
 	static FGameplayTag Condition_HasStaffEquipped;
 	static FGameplayTag Condition_InCombat;
 	static FGameplayTag Condition_OutOfCombat;
+
+	/* ================================================ */
+	/* ===  SetByCaller Data Tags (Damage via GE)   === */
+	/* ================================================ */
+	/** Used by DamageApplicationGE SetByCaller modifiers — pass negative values to subtract. */
+	static FGameplayTag Data_Damage_Health;
+	static FGameplayTag Data_Damage_ArcaneShield;
+	static FGameplayTag Data_Damage_Stamina;
+
+	// N-20 FIX: Recovery (healing) SetByCaller tags were missing.
+	// HealingApplicationGE and regen GEs use these as SetByCaller keys,
+	// mirroring the damage tag pattern.  Pass positive values to add.
+	static FGameplayTag Data_Recovery_Health;
+	static FGameplayTag Data_Recovery_Mana;
+	static FGameplayTag Data_Recovery_Stamina;
 
 	/* ===================== */
 	/* ===    Effects    === */

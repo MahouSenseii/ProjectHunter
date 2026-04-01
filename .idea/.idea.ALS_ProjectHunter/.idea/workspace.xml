@@ -17,7 +17,24 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="" />
+    <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/BP_Stamina.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/BP_Stamina.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/WBP_Health.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/WBP_Health.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/WBP_HunterHUD.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/WBP_HunterHUD.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/WBP_Mana.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/WBP_Mana.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Mob/MobManagerActor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Mob/MobManagerActor.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Mob/MobPoolSubsystem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Mob/MobPoolSubsystem.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Effects/HunterGE_DerivedPrimaryVitals.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Effects/HunterGE_DerivedPrimaryVitals.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/CharacterProgressionManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/CharacterProgressionManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/DoTManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/DoTManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/MonsterModifierComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/MonsterModifierComponent.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobManagerActor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobManagerActor.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/MonsterModifierComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/MonsterModifierComponent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUDResourceWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUDResourceWidget.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/~$ojectHunter_DeepDive_Review_R2.docx" beforeDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -27,14 +44,16 @@
     <option name="firstShow" value="false" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="1" />
+    <option name="cachedIndexableFilesCount" value="13" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
+    <setting file="cidr-memory-view://5" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Programs/Shared/EpicGames.Horde/HordeHttpClient.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Concepts/DerivedFrom.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Delegates/DelegateInstancesImpl.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Math/UnrealMathUtility.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Templates/Invoke.h" root0="FORCE_HIGHLIGHTING" />
@@ -42,12 +61,17 @@
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/UObject/NameTypes.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectHandle.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectPtr.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Engine/Classes/Camera/PlayerCameraManager.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$USER_HOME$/Desktop/New folder/ProjectHunter-86ef09383d62559ddd62929651f449cd1c5948d2/ProjectHunter-86ef09383d62559ddd62929651f449cd1c5948d2/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxEffectiveHealth.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$USER_HOME$/Desktop/New folder/ProjectHunter-86ef09383d62559ddd62929651f449cd1c5948d2/ProjectHunter-86ef09383d62559ddd62929651f449cd1c5948d2/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagCalc/MMC_MaxHealth.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/ALS_ProjectHunter.uproject" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Plugins/ALS-Community/ALSV4_CPP.uplugin" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Mob/MobPoolSubsystem.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMCResourceShared.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Component/MovesetManager.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatStruct.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystem/StashSubsystem.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/Data/BaseStatsDataCustomization.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../ProjectHunterTest/Source/ProjectHunterTest/PHGameplayTags.cpp" root0="FORCE_HIGHLIGHTING" />
   </component>
@@ -1036,6 +1060,20 @@
       <workItem from="1773702321008" duration="11338000" />
       <workItem from="1773771038969" duration="510000" />
       <workItem from="1773857584031" duration="369000" />
+      <workItem from="1773893022635" duration="11578000" />
+      <workItem from="1773965202130" duration="3415000" />
+      <workItem from="1774009789853" duration="35000" />
+      <workItem from="1774055392772" duration="1508000" />
+      <workItem from="1774057020779" duration="1185000" />
+      <workItem from="1774065727529" duration="1471000" />
+      <workItem from="1774068846187" duration="1462000" />
+      <workItem from="1774077708235" duration="4792000" />
+      <workItem from="1774116597351" duration="5783000" />
+      <workItem from="1774206750086" duration="6680000" />
+      <workItem from="1774287079867" duration="485000" />
+      <workItem from="1774871384586" duration="3997000" />
+      <workItem from="1774934478871" duration="2118000" />
+      <workItem from="1774963154074" duration="12437000" />
     </task>
     <servers />
   </component>
@@ -1096,22 +1134,22 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/Interaction/InteractionManager.cpp</url>
-          <line>854</line>
+          <line>917</line>
           <option name="timeStamp" value="141" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp</url>
-          <line>600</line>
+          <line>648</line>
           <option name="timeStamp" value="154" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp</url>
-          <line>616</line>
+          <line>669</line>
           <option name="timeStamp" value="155" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/StatsManager.cpp</url>
-          <line>627</line>
+          <line>680</line>
           <option name="timeStamp" value="156" />
         </line-breakpoint>
         <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">

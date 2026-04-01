@@ -4,12 +4,28 @@
 
 #include "Character/Component/Library/InventoryEnum.h"
 #include "Item/ItemInstance.h"
+#include "Net/UnrealNetwork.h"
 #include "Tower/Subsystem/GroundItemSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogInventoryManager);
+
 UInventoryManager::UInventoryManager()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+
+	// N-04 FIX: Enable replication so the server has an accurate copy of the
+	// inventory, allowing server-side ownership checks (e.g. ServerEquipItem).
+	SetIsReplicatedByDefault(true);
+}
+
+// N-04 FIX: Register replicated properties
+void UInventoryManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Only the owning client receives the full item list (saves bandwidth;
+	// other players only see equipment via EquipmentManager replication).
+	DOREPLIFETIME_CONDITION(UInventoryManager, Items, COND_OwnerOnly);
 }
 
 void UInventoryManager::BeginPlay()
@@ -204,13 +220,25 @@ void UInventoryManager::DropItem(UItemInstance* Item, FVector DropLocation)
 		return;
 	}
 
+	// N-05 FIX: GetWorld() was called without a null check. If the component's
+	// world pointer is invalid (e.g. during level teardown), this would crash.
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogInventoryManager, Warning, TEXT("InventoryManager: DropItem called with null World — item lost"));
+		return;
+	}
+
 	// Add to ground
-	UGroundItemSubsystem* GroundSystem = GetWorld()->GetSubsystem<UGroundItemSubsystem>();
-	if (GroundSystem)
+	if (UGroundItemSubsystem* GroundSystem = World->GetSubsystem<UGroundItemSubsystem>())
 	{
 		GroundSystem->AddItemToGround(Item, DropLocation);
-		UE_LOG(LogInventoryManager, Log, TEXT("InventoryManager: Dropped %s at %s"), 
+		UE_LOG(LogInventoryManager, Log, TEXT("InventoryManager: Dropped %s at %s"),
 			*Item->GetDisplayName().ToString(), *DropLocation.ToString());
+	}
+	else
+	{
+		UE_LOG(LogInventoryManager, Warning, TEXT("InventoryManager: DropItem — GroundItemSubsystem not found, item lost"));
 	}
 }
 
@@ -459,6 +487,13 @@ int32 UInventoryManager::FindSlotForItem(UItemInstance* Item) const
 	}
 
 	return INDEX_NONE;
+}
+
+bool UInventoryManager::ContainsItem(UItemInstance* Item) const
+{
+	// B-4 FIX: Delegates to FindSlotForItem so the search logic lives in one place.
+	// Returns true if the item occupies any slot in this inventory.
+	return FindSlotForItem(Item) != INDEX_NONE;
 }
 
 // ═══════════════════════════════════════════════
@@ -727,4 +762,19 @@ void UInventoryManager::CleanupInvalidItems()
 			Items[i] = nullptr;
 		}
 	}
+}
+
+// ═══════════════════════════════════════════════
+// N-04 FIX: Replication callback
+// ═══════════════════════════════════════════════
+
+void UInventoryManager::OnRep_Items()
+{
+	// Items array has been replicated from the server to the owning client.
+	// Rebroadcast delegates so the inventory UI and weight bar refresh correctly.
+	BroadcastInventoryChanged();
+	UpdateWeight();
+
+	UE_LOG(LogInventoryManager, Verbose, TEXT("OnRep_Items: inventory synced (%d slots occupied)"),
+		GetItemCount());
 }

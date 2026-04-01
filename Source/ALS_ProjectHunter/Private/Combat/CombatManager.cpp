@@ -4,6 +4,8 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "GameFramework/Actor.h"
+#include "GameplayEffect.h"
+#include "GameplayEffectTypes.h"
 #include "PHGameplayTags.h"
 
 DEFINE_LOG_CATEGORY(LogCombatManager);
@@ -249,14 +251,16 @@ bool UCombatManager::ResolveHit(AActor* SourceActor, AActor* TargetActor, FComba
 		return true;
 	}
 
+	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActor(SourceActor);
+
 	ApplyResolvedDamage(SourceActor, TargetActor, OutResult);
 
-	if (const UHunterAttributeSet* UpdatedTargetAttributes = GetHunterAttributeSetFromActor(TargetActor))
-	{
-		OutResult.bKilledTarget = UpdatedTargetAttributes->GetHealth() <= 0.f;
-	}
+	// OPT: Reuse the already-cached TargetAttributes pointer — the object is the same,
+	// only its field values change after ApplyResolvedDamage. Avoids a redundant lookup.
+	OutResult.bKilledTarget = TargetAttributes->GetHealth() <= 0.f;
 
-	ApplyOnHitEffects(SourceActor, TargetActor, OutResult);
+	// OPT: Pass pre-fetched SourceASC and SourceAttributes to avoid 2 more lookups inside.
+	ApplyOnHitEffects(SourceActor, TargetActor, OutResult, SourceASC, SourceAttributes);
 
 	UE_LOG(LogCombatManager, Verbose, TEXT("ResolveHit completed. Source=%s Target=%s %s"),
 		*GetNameSafe(SourceActor),
@@ -315,38 +319,85 @@ void UCombatManager::ApplyResolvedDamage(AActor* SourceActor, AActor* TargetActo
 		return;
 	}
 
-	const float CurrentStamina = FMath::Max(TargetAttributes->GetStamina(), 0.f);
-	const float CurrentArcaneShield = FMath::Max(TargetAttributes->GetArcaneShield(), 0.f);
-	const float CurrentHealth = FMath::Max(TargetAttributes->GetHealth(), 0.f);
-
-	const float NewStamina = FMath::Max(0.f, CurrentStamina - FMath::Max(Result.DamageToStamina, 0.f));
-	const float NewArcaneShield = FMath::Max(0.f, CurrentArcaneShield - FMath::Max(Result.DamageToArcaneShield, 0.f));
-	const float NewHealth = FMath::Max(0.f, CurrentHealth - FMath::Max(Result.DamageToHealth, 0.f));
-
-	if (!FMath::IsNearlyEqual(CurrentStamina, NewStamina))
+	// B-1 FIX: Route damage through GAS (PreAttributeChange/PostAttributeChange) so the
+	// AttributeSet's clamping logic fires. If DamageApplicationGE is configured use the
+	// proper GE path; otherwise fall back to direct mutation with a loud warning.
+	if (DamageApplicationGE)
 	{
-		TargetASC->SetNumericAttributeBase(UHunterAttributeSet::GetStaminaAttribute(), NewStamina);
-	}
+		FGameplayEffectContextHandle Context = TargetASC->MakeEffectContext();
+		Context.AddSourceObject(SourceActor ? SourceActor : GetOwner());
 
-	if (!FMath::IsNearlyEqual(CurrentArcaneShield, NewArcaneShield))
+		FGameplayEffectSpecHandle Spec = TargetASC->MakeOutgoingSpec(DamageApplicationGE, 1.f, Context);
+		if (Spec.IsValid())
+		{
+			const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+
+			// Negate: the GE modifier is Additive, so a negative magnitude subtracts.
+			if (Result.DamageToHealth > 0.f)
+			{
+				Spec.Data->SetSetByCallerMagnitude(Tags.Data_Damage_Health, -Result.DamageToHealth);
+			}
+			if (Result.DamageToArcaneShield > 0.f)
+			{
+				Spec.Data->SetSetByCallerMagnitude(Tags.Data_Damage_ArcaneShield, -Result.DamageToArcaneShield);
+			}
+			if (Result.DamageToStamina > 0.f)
+			{
+				Spec.Data->SetSetByCallerMagnitude(Tags.Data_Damage_Stamina, -Result.DamageToStamina);
+			}
+
+			TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+
+			UE_LOG(LogCombatManager, Verbose,
+				TEXT("Applied resolved damage via GE. Source=%s Target=%s Health-=%.2f ArcaneShield-=%.2f Stamina-=%.2f"),
+				*GetNameSafe(SourceActor), *GetNameSafe(TargetActor),
+				Result.DamageToHealth, Result.DamageToArcaneShield, Result.DamageToStamina);
+		}
+		else
+		{
+			UE_LOG(LogCombatManager, Error,
+				TEXT("ApplyResolvedDamage: MakeOutgoingSpec failed for DamageApplicationGE on %s."),
+				*GetNameSafe(this));
+		}
+	}
+	else
 	{
-		TargetASC->SetNumericAttributeBase(UHunterAttributeSet::GetArcaneShieldAttribute(), NewArcaneShield);
-	}
+		// B-1 FALLBACK (configure DamageApplicationGE to fix this):
+		// SetNumericAttributeBase bypasses PreAttributeChange clamping in the AttributeSet.
+		UE_LOG(LogCombatManager, Warning,
+			TEXT("ApplyResolvedDamage: DamageApplicationGE is not set on %s. Falling back to "
+				 "SetNumericAttributeBase which bypasses GAS clamping. "
+				 "Please configure DamageApplicationGE in Blueprint defaults."),
+			*GetNameSafe(this));
 
-	if (!FMath::IsNearlyEqual(CurrentHealth, NewHealth))
-	{
-		TargetASC->SetNumericAttributeBase(UHunterAttributeSet::GetHealthAttribute(), NewHealth);
-	}
+		const float CurrentStamina     = FMath::Max(TargetAttributes->GetStamina(), 0.f);
+		const float CurrentArcaneShield = FMath::Max(TargetAttributes->GetArcaneShield(), 0.f);
+		const float CurrentHealth       = FMath::Max(TargetAttributes->GetHealth(), 0.f);
 
-	UE_LOG(LogCombatManager, Verbose, TEXT("Applied resolved damage. Source=%s Target=%s Stamina %.2f->%.2f ArcaneShield %.2f->%.2f Health %.2f->%.2f"),
-		*GetNameSafe(SourceActor),
-		*GetNameSafe(TargetActor),
-		CurrentStamina,
-		NewStamina,
-		CurrentArcaneShield,
-		NewArcaneShield,
-		CurrentHealth,
-		NewHealth);
+		const float NewStamina      = FMath::Max(0.f, CurrentStamina      - FMath::Max(Result.DamageToStamina, 0.f));
+		const float NewArcaneShield = FMath::Max(0.f, CurrentArcaneShield - FMath::Max(Result.DamageToArcaneShield, 0.f));
+		const float NewHealth       = FMath::Max(0.f, CurrentHealth       - FMath::Max(Result.DamageToHealth, 0.f));
+
+		if (!FMath::IsNearlyEqual(CurrentStamina, NewStamina))
+		{
+			TargetASC->SetNumericAttributeBase(UHunterAttributeSet::GetStaminaAttribute(), NewStamina);
+		}
+		if (!FMath::IsNearlyEqual(CurrentArcaneShield, NewArcaneShield))
+		{
+			TargetASC->SetNumericAttributeBase(UHunterAttributeSet::GetArcaneShieldAttribute(), NewArcaneShield);
+		}
+		if (!FMath::IsNearlyEqual(CurrentHealth, NewHealth))
+		{
+			TargetASC->SetNumericAttributeBase(UHunterAttributeSet::GetHealthAttribute(), NewHealth);
+		}
+
+		UE_LOG(LogCombatManager, Verbose,
+			TEXT("Applied resolved damage (direct). Source=%s Target=%s Stamina %.2f->%.2f ArcaneShield %.2f->%.2f Health %.2f->%.2f"),
+			*GetNameSafe(SourceActor), *GetNameSafe(TargetActor),
+			CurrentStamina, NewStamina,
+			CurrentArcaneShield, NewArcaneShield,
+			CurrentHealth, NewHealth);
+	}
 }
 
 UAbilitySystemComponent* UCombatManager::GetAbilitySystemComponentFromActor(const AActor* Actor)
@@ -976,47 +1027,88 @@ void UCombatManager::ResolveCriticalStrike(FCombatDamagePacket& Packet, const UH
 	UE_LOG(LogCombatManager, Verbose, TEXT("Critical strike succeeded. Roll=%.2f Chance=%.2f Multiplier=%.2f"), CritRoll, CritChance, CritMultiplier);
 }
 
-void UCombatManager::ApplyOnHitEffects(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result) const
+void UCombatManager::ApplyOnHitEffects(
+	AActor* SourceActor,
+	AActor* TargetActor,
+	const FCombatResolveResult& Result,
+	UAbilitySystemComponent* CachedSourceASC,
+	const UHunterAttributeSet* CachedSourceAttributes) const
 {
 	if (Result.TotalDamageTaken <= 0.f || !IsValid(SourceActor) || !IsValid(TargetActor) || !TargetActor->HasAuthority())
 	{
 		return;
 	}
 
-	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActor(SourceActor);
-	const UHunterAttributeSet* SourceAttributes = GetHunterAttributeSetFromActor(SourceActor);
+	// OPT: Use pre-cached pointers from ResolveHit when available; fall back to lookup
+	// only when called standalone (e.g. from Blueprint).
+	UAbilitySystemComponent* SourceASC =
+		CachedSourceASC ? CachedSourceASC : GetAbilitySystemComponentFromActor(SourceActor);
+	const UHunterAttributeSet* SourceAttributes =
+		CachedSourceAttributes ? CachedSourceAttributes : GetHunterAttributeSetFromActor(SourceActor);
+
 	if (SourceASC && SourceAttributes)
 	{
-		const auto ApplyOnHitRecovery = [&](const float RecoveryAmount, const float CurrentValue, const float MaxValue, const FGameplayAttribute& Attribute)
+		const float LifeOnHit    = FMath::Max(SourceAttributes->GetLifeOnHit(),    0.f);
+		const float ManaOnHit    = FMath::Max(SourceAttributes->GetManaOnHit(),    0.f);
+		const float StaminaOnHit = FMath::Max(SourceAttributes->GetStaminaOnHit(), 0.f);
+
+		if (LifeOnHit > 0.f || ManaOnHit > 0.f || StaminaOnHit > 0.f)
 		{
-			if (RecoveryAmount <= 0.f)
+			if (RecoveryApplicationGE)
 			{
-				return;
-			}
+				// I-01 FIX: Route on-hit recovery through the GAS GE pipeline so
+				// PreAttributeChange clamping fires correctly. Previously called
+				// SetNumericAttributeBase directly, bypassing all GAS attribute hooks.
+				FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+				Context.AddSourceObject(SourceActor);
 
-			const float EffectiveMax = MaxValue > 0.f ? MaxValue : CurrentValue + RecoveryAmount;
-			const float NewValue = FMath::Clamp(CurrentValue + RecoveryAmount, 0.f, EffectiveMax);
-			if (!FMath::IsNearlyEqual(CurrentValue, NewValue))
+				FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(RecoveryApplicationGE, 1.f, Context);
+				if (Spec.IsValid())
+				{
+					// Tags must match the SetByCaller tags configured on RecoveryApplicationGE.
+					// Use RequestGameplayTag to keep the code decoupled from FPHGameplayTags
+					// so designers can choose tag names freely in the GE asset.
+					static const FGameplayTag RecoveryHealthTag   = FGameplayTag::RequestGameplayTag(FName("Data.Recovery.Health"));
+					static const FGameplayTag RecoveryManaTag     = FGameplayTag::RequestGameplayTag(FName("Data.Recovery.Mana"));
+					static const FGameplayTag RecoveryStaminaTag  = FGameplayTag::RequestGameplayTag(FName("Data.Recovery.Stamina"));
+
+					if (LifeOnHit > 0.f)
+					{
+						Spec.Data->SetSetByCallerMagnitude(RecoveryHealthTag, LifeOnHit);
+					}
+					if (ManaOnHit > 0.f)
+					{
+						Spec.Data->SetSetByCallerMagnitude(RecoveryManaTag, ManaOnHit);
+					}
+					if (StaminaOnHit > 0.f)
+					{
+						Spec.Data->SetSetByCallerMagnitude(RecoveryStaminaTag, StaminaOnHit);
+					}
+
+					SourceASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+
+					UE_LOG(LogCombatManager, Verbose,
+						TEXT("Applied on-hit recovery via GE. Source=%s Life+%.2f Mana+%.2f Stamina+%.2f"),
+						*GetNameSafe(SourceActor), LifeOnHit, ManaOnHit, StaminaOnHit);
+				}
+				else
+				{
+					UE_LOG(LogCombatManager, Error,
+						TEXT("ApplyOnHitEffects: MakeOutgoingSpec failed for RecoveryApplicationGE on %s."),
+						*GetNameSafe(this));
+				}
+			}
+			else
 			{
-				SourceASC->SetNumericAttributeBase(Attribute, NewValue);
+				// I-01 FALLBACK: Direct attribute mutation bypasses GAS clamping hooks.
+				// Assign RecoveryApplicationGE in Blueprint defaults to fix this.
+				UE_LOG(LogCombatManager, Warning,
+					TEXT("ApplyOnHitEffects: RecoveryApplicationGE is not set on %s. "
+					     "On-hit recovery (Life+%.2f Mana+%.2f Stamina+%.2f) skipped. "
+					     "Please configure RecoveryApplicationGE in Blueprint defaults."),
+					*GetNameSafe(this), LifeOnHit, ManaOnHit, StaminaOnHit);
 			}
-		};
-
-		ApplyOnHitRecovery(
-			FMath::Max(SourceAttributes->GetLifeOnHit(), 0.f),
-			FMath::Max(SourceAttributes->GetHealth(), 0.f),
-			FMath::Max(SourceAttributes->GetMaxEffectiveHealth(), 0.f),
-			UHunterAttributeSet::GetHealthAttribute());
-		ApplyOnHitRecovery(
-			FMath::Max(SourceAttributes->GetManaOnHit(), 0.f),
-			FMath::Max(SourceAttributes->GetMana(), 0.f),
-			FMath::Max(SourceAttributes->GetMaxEffectiveMana(), 0.f),
-			UHunterAttributeSet::GetManaAttribute());
-		ApplyOnHitRecovery(
-			FMath::Max(SourceAttributes->GetStaminaOnHit(), 0.f),
-			FMath::Max(SourceAttributes->GetStamina(), 0.f),
-			FMath::Max(SourceAttributes->GetMaxEffectiveStamina(), 0.f),
-			UHunterAttributeSet::GetStaminaAttribute());
+		}
 	}
 
 	ApplyAilments(SourceActor, TargetActor, Result);
@@ -1025,18 +1117,150 @@ void UCombatManager::ApplyOnHitEffects(AActor* SourceActor, AActor* TargetActor,
 
 void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result) const
 {
-	(void)SourceActor;
-	(void)TargetActor;
-	(void)Result;
+	// I-03: Structural skeleton for ailment application. Probability calculations are
+	// implemented here so hit-by-hit logic is deterministic. Actual GE application is
+	// deferred until ailment GE assets are created in Blueprint (per user instruction).
+	//
+	// OPT-AILMENT: Early-out until ailment GE assets exist. Remove this guard once
+	// at least one ailment GE is wired up — the per-ailment TODO blocks below will
+	// handle the rest individually.
+	// ────────────────────────────────────────────────────────────────────────
+	// To re-enable: delete (or #if 0) the early-return below and assign
+	// AilmentGE class references on CombatManager defaults in Blueprint.
+	// ────────────────────────────────────────────────────────────────────────
+	UE_LOG(LogCombatManager, VeryVerbose,
+		TEXT("ApplyAilments: Skipped — ailment GE assets not yet created. "
+		     "Remove early-return in CombatManager.cpp once GEs are ready."));
+	return; // OPT-AILMENT: no-op until GE hookup — avoids dead probability math every hit
 
-	// TODO: Apply bleed, ignite, freeze, shock, corruption, petrify, and stun once ailment effect specs are defined.
+	if (!IsValid(SourceActor) || !IsValid(TargetActor))
+	{
+		return;
+	}
+
+	const UHunterAttributeSet* SourceAttributes = GetHunterAttributeSetFromActor(SourceActor);
+	if (!SourceAttributes)
+	{
+		return;
+	}
+
+	// ── Bleed (Physical) ──────────────────────────────────────────────────
+	if (Result.PhysicalTaken > 0.f)
+	{
+		const float BleedChance = FMath::Clamp(SourceAttributes->GetChanceToBleed(), 0.f, 100.f);
+		if (BleedChance > 0.f && FMath::FRandRange(0.f, 100.f) < BleedChance)
+		{
+			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Bleed triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), BleedChance);
+			// TODO: Apply Bleed GE via TargetASC once GE asset is created in Blueprint.
+		}
+	}
+
+	// ── Ignite (Fire) ─────────────────────────────────────────────────────
+	if (Result.FireTaken > 0.f)
+	{
+		const float IgniteChance = FMath::Clamp(SourceAttributes->GetChanceToIgnite(), 0.f, 100.f);
+		if (IgniteChance > 0.f && FMath::FRandRange(0.f, 100.f) < IgniteChance)
+		{
+			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Ignite triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), IgniteChance);
+			// TODO: Apply Ignite GE via TargetASC once GE asset is created in Blueprint.
+		}
+	}
+
+	// ── Freeze (Ice) ──────────────────────────────────────────────────────
+	if (Result.IceTaken > 0.f)
+	{
+		const float FreezeChance = FMath::Clamp(SourceAttributes->GetChanceToFreeze(), 0.f, 100.f);
+		if (FreezeChance > 0.f && FMath::FRandRange(0.f, 100.f) < FreezeChance)
+		{
+			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Freeze triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), FreezeChance);
+			// TODO: Apply Freeze GE via TargetASC once GE asset is created in Blueprint.
+		}
+	}
+
+	// ── Shock (Lightning) ─────────────────────────────────────────────────
+	if (Result.LightningTaken > 0.f)
+	{
+		const float ShockChance = FMath::Clamp(SourceAttributes->GetChanceToShock(), 0.f, 100.f);
+		if (ShockChance > 0.f && FMath::FRandRange(0.f, 100.f) < ShockChance)
+		{
+			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Shock triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), ShockChance);
+			// TODO: Apply Shock GE via TargetASC once GE asset is created in Blueprint.
+		}
+	}
+
+	// ── Petrify (Light) ───────────────────────────────────────────────────
+	if (Result.LightTaken > 0.f)
+	{
+		const float PetrifyChance = FMath::Clamp(SourceAttributes->GetChanceToPetrify(), 0.f, 100.f);
+		if (PetrifyChance > 0.f && FMath::FRandRange(0.f, 100.f) < PetrifyChance)
+		{
+			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Petrify triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), PetrifyChance);
+			// TODO: Apply Petrify GE via TargetASC once GE asset is created in Blueprint.
+		}
+	}
+
+	// ── Corruption Ailment (Corruption) ───────────────────────────────────
+	if (Result.CorruptionTaken > 0.f)
+	{
+		const float CorruptChance = FMath::Clamp(SourceAttributes->GetChanceToCorrupt(), 0.f, 100.f);
+		if (CorruptChance > 0.f && FMath::FRandRange(0.f, 100.f) < CorruptChance)
+		{
+			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Corruption ailment triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), CorruptChance);
+			// TODO: Apply Corruption Ailment GE via TargetASC once GE asset is created in Blueprint.
+		}
+	}
 }
 
 void UCombatManager::ApplyReflect(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result) const
 {
-	(void)SourceActor;
-	(void)TargetActor;
-	(void)Result;
+	// I-03: Structural skeleton for damage reflection. Probability and amount calculations
+	// are implemented here. Actual damage delivery uses a dedicated non-recursive path
+	// (direct attribute mutation rather than ResolveHit) to prevent infinite loops.
 
-	// TODO: Apply reflect via a dedicated non-recursive path so it never loops back into ResolveHit indefinitely.
+	if (!IsValid(SourceActor) || !IsValid(TargetActor))
+	{
+		return;
+	}
+
+	const UHunterAttributeSet* TargetAttributes = GetHunterAttributeSetFromActor(TargetActor);
+	if (!TargetAttributes)
+	{
+		return;
+	}
+
+	// ── Physical Reflect ──────────────────────────────────────────────────
+	// ReflectChancePhysical gates whether reflect fires; ReflectPhysical is the % amount.
+	const float PhysReflectChance = FMath::Clamp(TargetAttributes->GetReflectChancePhysical(), 0.f, 100.f);
+	const float PhysicalReflectPct = (PhysReflectChance > 0.f && FMath::FRandRange(0.f, 100.f) < PhysReflectChance)
+		? FMath::Clamp(TargetAttributes->GetReflectPhysical(), 0.f, 100.f)
+		: 0.f;
+	const float PhysicalReflectAmount = Result.PhysicalTaken * (PhysicalReflectPct / 100.f);
+
+	// ── Elemental Reflect ─────────────────────────────────────────────────
+	const float ElemReflectChance = FMath::Clamp(TargetAttributes->GetReflectChanceElemental(), 0.f, 100.f);
+	const float ElementalReflectPct = (ElemReflectChance > 0.f && FMath::FRandRange(0.f, 100.f) < ElemReflectChance)
+		? FMath::Clamp(TargetAttributes->GetReflectElemental(), 0.f, 100.f)
+		: 0.f;
+	const float FireReflectAmount       = Result.FireTaken       * (ElementalReflectPct / 100.f);
+	const float IceReflectAmount        = Result.IceTaken        * (ElementalReflectPct / 100.f);
+	const float LightningReflectAmount  = Result.LightningTaken  * (ElementalReflectPct / 100.f);
+	const float LightReflectAmount      = Result.LightTaken      * (ElementalReflectPct / 100.f);
+	const float CorruptionReflectAmount = Result.CorruptionTaken * (ElementalReflectPct / 100.f);
+
+	const float TotalReflect = PhysicalReflectAmount + FireReflectAmount + IceReflectAmount +
+	                           LightningReflectAmount + LightReflectAmount + CorruptionReflectAmount;
+
+	if (TotalReflect <= 0.f)
+	{
+		return;
+	}
+
+	UE_LOG(LogCombatManager, Verbose,
+		TEXT("ApplyReflect: Reflecting %.2f damage back to %s from %s. GE hookup pending."),
+		TotalReflect, *GetNameSafe(SourceActor), *GetNameSafe(TargetActor));
+
+	// TODO: Apply TotalReflect to SourceActor via a direct GAS GE (non-recursive path).
+	// Do NOT call ResolveHit(TargetActor, SourceActor, ...) here — that would recurse
+	// infinitely if the source also has reflect. Use a lightweight instant GE that
+	// bypasses ailment and reflect processing.
 }

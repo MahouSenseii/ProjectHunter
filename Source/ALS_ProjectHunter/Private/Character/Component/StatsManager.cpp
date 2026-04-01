@@ -649,13 +649,18 @@ FGameplayEffectSpecHandle UStatsManager::CreateEquipmentEffect(UItemInstance* It
 		return FGameplayEffectSpecHandle();
 	}
 
-	// FIX: Use unique names based on item GUID to prevent naming collisions
-	// Old code used same name for all items, causing issues when multiple items equipped
-	FName EffectName = FName(*FString::Printf(TEXT("EquipEffect_%s"), *Item->UniqueID.ToString()));
-	
-	// Create the effect as a subobject of the owner (not transient package)
-	// This ensures proper garbage collection and avoids naming conflicts
-	UGameplayEffect* Effect = NewObject<UGameplayEffect>(GetOwner(), EffectName);
+	// BUG FIX: Do NOT pass an explicit FName to NewObject here.
+	// The previous code used a GUID-based name ("EquipEffect_<UniqueID>") to avoid
+	// collisions between simultaneously-equipped items — that part was correct.  But
+	// if the same item is unequipped and then re-equipped, the old UGameplayEffect
+	// object (orphaned but not yet GC'd) still lives with the same outer (GetOwner())
+	// and the same name.  NewObject would silently create a renamed copy ("EquipEffect_<GUID>_1",
+	// "_2", …) that accumulates across every re-equip cycle.
+	//
+	// Letting UE auto-generate a unique name on every call avoids the collision entirely.
+	// Objects are owned by GetOwner() so GC still collects them correctly when no longer
+	// referenced, and per-session uniqueness is guaranteed by UE's internal counter.
+	UGameplayEffect* Effect = NewObject<UGameplayEffect>(GetOwner());
 	Effect->DurationPolicy = EGameplayEffectDurationType::Infinite;
 	
 
@@ -703,8 +708,8 @@ FGameplayEffectSpecHandle UStatsManager::CreateEquipmentEffect(UItemInstance* It
 	FGameplayEffectSpecHandle SpecHandle;
 	SpecHandle.Data = MakeShared<FGameplayEffectSpec>(Effect, EffectContext, 1.0f);
 	
-	UE_LOG(LogStatsManager, Verbose, TEXT("StatsManager: Created effect '%s' with %d modifiers"), 
-		*EffectName.ToString(), ModifiersAdded);
+	UE_LOG(LogStatsManager, Verbose, TEXT("StatsManager: Created equipment effect for item '%s' with %d modifiers"),
+		*Item->GetName(), ModifiersAdded);
 
 	return SpecHandle;
 }

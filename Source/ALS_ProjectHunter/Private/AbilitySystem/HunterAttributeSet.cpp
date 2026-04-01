@@ -87,6 +87,17 @@ UHunterAttributeSet::UHunterAttributeSet()
 	InitLightningDamageTakenMultiplier(1.0f);
 	InitLightDamageTakenMultiplier(1.0f);
 	InitCorruptionDamageTakenMultiplier(1.0f);
+
+	// FIX: XPPenalty is a multiplier where 1.0 = no penalty and 0.0 = all XP lost.
+	// Without this initialization it defaulted to 0.0f, causing AwardExperienceFromKill
+	// to multiply all XP by zero — players gained no kill XP at all.
+	// XPGainMultiplier has the same semantic (0 = broken) and is already clamped to >= 1.0f
+	// in AwardExperienceFromKill (N-03 FIX), but XPPenalty was not clamped there.
+	InitXPPenalty(1.0f);
+
+	// FIX: XPGainMultiplier is also a "more" multiplier (1.0 = neutral). Initialize it
+	// explicitly to avoid relying solely on the runtime clamp in AwardExperienceFromKill.
+	InitXPGainMultiplier(1.0f);
 }
 
 void UHunterAttributeSet::SetIsInitializingStats(bool bInInitializing)
@@ -354,6 +365,9 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ProjectileCount,    COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ProjectileSpeed,    COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, RangedDamage,       COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ChainCount,         COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ForkCount,          COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ChainDamage,        COND_OwnerOnly, REPNOTIFY_Always);
 
 	/* ============================= */
 	/* === Durations =============== */
@@ -379,6 +393,10 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, BlockPhysicalMultiplier,       COND_None,      REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, BlockElementalMultiplier,      COND_None,      REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, BlockCorruptionMultiplier,     COND_None,      REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ReflectPhysical,              COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ReflectElemental,             COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ReflectChancePhysical,        COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ReflectChanceElemental,       COND_OwnerOnly, REPNOTIFY_Always);
 
 	// Armour
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, Armour,                        COND_OwnerOnly, REPNOTIFY_Always);
@@ -419,8 +437,8 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, MaxIceResistance,              COND_OwnerOnly, REPNOTIFY_Always);
 
 
-	// Physical Damage Conversions\
-	// DOREPLIFETIME_CONDITION_NOTIFY(HunterAttributeSet, PhysicalToFire, COND_None, REPNOTIFY_Always);
+	// Physical Damage Conversions
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, PhysicalToFire, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, PhysicalToIce, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, PhysicalToLightning, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, PhysicalToLight, COND_None, REPNOTIFY_Always);
@@ -503,6 +521,8 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ManaOnHit,        COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, StaminaOnHit,     COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, StaminaCostChanges,COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, AuraEffect,       COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, AuraRadius,        COND_OwnerOnly, REPNOTIFY_Always);
 
 	/* ============================= */
 	/* === Current Vitals ========= */
@@ -646,12 +666,25 @@ void UHunterAttributeSet::UpdateDerivedVitalAttributes(const FGameplayAttribute&
 void UHunterAttributeSet::UpdateHealthDerivedAttributes()
 {
 	const float RawMaxHealth = FMath::Max(GetMaxHealth(), 0.0f);
-	const float TargetReservedHealth = FMath::Max(GetReservedHealth(), 0.0f);
-	const float TargetMaxEffectiveHealth = FMath::Max(GetMaxEffectiveHealth(), 0.0f);
+
+	// AS-B1 FIX: Recompute reserved amount from flat/percent components (mirrors ArcaneShield logic).
+	const float ComponentReservedHealth = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
+		GetFlatReservedHealth(), GetPercentageReservedHealth(), RawMaxHealth);
+	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedHealth, KINDA_SMALL_NUMBER);
+	const float TargetReservedHealth = HunterAttributeSetPrivate::ClampReservedAmount(
+		bUseComponentReservation ? ComponentReservedHealth : GetReservedHealth(),
+		RawMaxHealth, GetMaxReservedHealth());
+	const float TargetMaxEffectiveHealth = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxHealth, TargetReservedHealth);
+
 	const float TargetHealth = FMath::Clamp(GetHealth(), 0.0f, TargetMaxEffectiveHealth);
 	const float TargetHealthRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetHealthRegenRate(), GetMaxHealthRegenRate());
 	const float TargetHealthRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetHealthRegenAmount(), GetMaxHealthRegenAmount());
 
+	if (bUseComponentReservation)
+	{
+		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedHealth, TargetReservedHealth);
+	}
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveHealth, TargetMaxEffectiveHealth);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Health, TargetHealth);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(HealthRegenRate, TargetHealthRegenRate);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(HealthRegenAmount, TargetHealthRegenAmount);
@@ -671,10 +704,29 @@ void UHunterAttributeSet::UpdateHealthDerivedAttributes()
 void UHunterAttributeSet::UpdateManaDerivedAttributes()
 {
 	const float RawMaxMana = FMath::Max(GetMaxMana(), 0.0f);
-	const float TargetReservedMana = FMath::Max(GetReservedMana(), 0.0f);
-	const float TargetMaxEffectiveMana = FMath::Max(GetMaxEffectiveMana(), 0.0f);
+
+	// AS-B1 FIX: Recompute reserved amount from flat/percent components.
+	const float ComponentReservedMana = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
+		GetFlatReservedMana(), GetPercentageReservedMana(), RawMaxMana);
+	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedMana, KINDA_SMALL_NUMBER);
+	const float TargetReservedMana = HunterAttributeSetPrivate::ClampReservedAmount(
+		bUseComponentReservation ? ComponentReservedMana : GetReservedMana(),
+		RawMaxMana, GetMaxReservedMana());
+	const float TargetMaxEffectiveMana = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxMana, TargetReservedMana);
+
 	const float TargetMana = FMath::Clamp(GetMana(), 0.0f, TargetMaxEffectiveMana);
+	// AS-B2 FIX: Clamp regen rate/amount against their caps (was missing for Mana unlike Health/Stamina).
+	const float TargetManaRegenRate   = HunterAttributeSetPrivate::ClampWithOptionalCap(GetManaRegenRate(),   GetMaxManaRegenRate());
+	const float TargetManaRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetManaRegenAmount(), GetMaxManaRegenAmount());
+
+	if (bUseComponentReservation)
+	{
+		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedMana, TargetReservedMana);
+	}
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveMana, TargetMaxEffectiveMana);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Mana, TargetMana);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ManaRegenRate, TargetManaRegenRate);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ManaRegenAmount, TargetManaRegenAmount);
 
 	UE_LOG(
 		LogHunterAttributeSet,
@@ -691,12 +743,25 @@ void UHunterAttributeSet::UpdateManaDerivedAttributes()
 void UHunterAttributeSet::UpdateStaminaDerivedAttributes()
 {
 	const float RawMaxStamina = FMath::Max(GetMaxStamina(), 0.0f);
-	const float TargetReservedStamina = FMath::Max(GetReservedStamina(), 0.0f);
-	const float TargetMaxEffectiveStamina = FMath::Max(GetMaxEffectiveStamina(), 0.0f);
+
+	// AS-B1 FIX: Recompute reserved amount from flat/percent components.
+	const float ComponentReservedStamina = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
+		GetFlatReservedStamina(), GetPercentageReservedStamina(), RawMaxStamina);
+	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedStamina, KINDA_SMALL_NUMBER);
+	const float TargetReservedStamina = HunterAttributeSetPrivate::ClampReservedAmount(
+		bUseComponentReservation ? ComponentReservedStamina : GetReservedStamina(),
+		RawMaxStamina, GetMaxReservedStamina());
+	const float TargetMaxEffectiveStamina = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxStamina, TargetReservedStamina);
+
 	const float TargetStamina = FMath::Clamp(GetStamina(), 0.0f, TargetMaxEffectiveStamina);
 	const float TargetStaminaRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetStaminaRegenRate(), GetMaxStaminaRegenRate());
 	const float TargetStaminaRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetStaminaRegenAmount(), GetMaxStaminaRegenAmount());
 
+	if (bUseComponentReservation)
+	{
+		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedStamina, TargetReservedStamina);
+	}
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveStamina, TargetMaxEffectiveStamina);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Stamina, TargetStamina);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(StaminaRegenRate, TargetStaminaRegenRate);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(StaminaRegenAmount, TargetStaminaRegenAmount);

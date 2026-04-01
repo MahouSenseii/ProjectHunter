@@ -24,6 +24,21 @@ class ALS_PROJECTHUNTER_API UItemInstance : public UObject
 public:
 	UItemInstance();
 
+	/**
+	 * Migrate this item from an older serialization version to ITEM_CURRENT_VERSION.
+	 * Call after loading from save data.  Each version bump adds a migration step.
+	 * Returns true if any migration was performed.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Item|Serialization")
+	bool MigrateToCurrentVersion();
+
+	/**
+	 * PostLoadInit — call after deserializing from a save file.
+	 * Runs version migration, recomputes transients (TotalWeight, DisplayName), etc.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Item|Serialization")
+	void PostLoadInit();
+
 	// ═══════════════════════════════════════════════
 	// STATIC DATA REFERENCE
 	// ═══════════════════════════════════════════════
@@ -43,9 +58,27 @@ public:
 	/** Random seed for deterministic generation */
 	UPROPERTY(SaveGame, BlueprintReadOnly, Category = "Item")
 	int32 Seed;
-	
+
 	// ═══════════════════════════════════════════════
-	// QUANTITY & WEIGHT 
+	// SERIALIZATION VERSION
+	// ═══════════════════════════════════════════════
+
+	/**
+	 * Schema version for save-data migration.
+	 * Increment ITEM_CURRENT_VERSION whenever the serialized layout changes
+	 * (new fields, renamed fields, changed semantics).  The save/load system
+	 * can branch on this value to upgrade old items without data loss.
+	 *
+	 * Version history:
+	 *   1  — Initial version (all fields up to this point).
+	 */
+	static constexpr int32 ITEM_CURRENT_VERSION = 1;
+
+	UPROPERTY(SaveGame, BlueprintReadOnly, Category = "Item")
+	int32 SerializationVersion = ITEM_CURRENT_VERSION;
+
+	// ═══════════════════════════════════════════════
+	// QUANTITY & WEIGHT
 	// ═══════════════════════════════════════════════
 	
 	/** Stack quantity (for stackable items) */
@@ -96,9 +129,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item|Consumable")
 	int32 RemainingUses = 1;
 
-	/** Cooldown remaining in seconds */
-	UPROPERTY(BlueprintReadWrite, Category = "Item|Consumable")
-	float CooldownRemaining = 0.0f;
+	// C-5 FIX: CooldownRemaining was a mutable countdown field that was never ticked down
+	// (UItemInstance has no Tick). Replaced by LastUseTime (a wall-clock timestamp) and
+	// removed here to prevent Blueprint misuse. Use GetCooldownProgress() / CanUseConsumable().
 
 	/** Last use timestamp (for cooldown tracking) */
 	UPROPERTY(BlueprintReadWrite, SaveGame, Category = "Item|Consumable")
@@ -584,7 +617,4 @@ private:
 
 	/** Apply consumable effects to target */
 	bool ApplyConsumableEffects(AActor* Target);
-
-	/** Update cooldown timer */
-	void UpdateCooldown(float DeltaTime);
 };

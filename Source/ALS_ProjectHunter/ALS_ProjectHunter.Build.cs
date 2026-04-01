@@ -19,7 +19,6 @@ public class ALS_ProjectHunter : ModuleRules
 			"Niagara",
 			"EnhancedInput",
 			"ALSV4_CPP",
-			"Paper2D",
 			"UMG"
 		});
 

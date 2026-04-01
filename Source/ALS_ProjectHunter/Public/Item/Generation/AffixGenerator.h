@@ -112,13 +112,15 @@ private:
 	 * @param AffixType - Prefix or Suffix (routes to correct DataTable)
 	 * @param bCorruptedOnly - If true, only return negative affixes
 	 */
+	// I-09 FIX: ExcludeAffixes is now TSet<FName> for O(1) Contains() instead of O(n).
+	// RollAffixesWithCorruption builds the set from TArray for backward compat.
 	TArray<FPHAttributeData*> BuildAffixPoolByCorruption(
 		EAffixes AffixType,
 		EItemType ItemType,
 		EItemSubType ItemSubType,
 		int32 ItemLevel,
 		bool bCorruptedOnly,
-		const TArray<FName>& ExcludeAffixes) const;
+		const TSet<FName>& ExcludeAffixes) const;
 
 	/**
 	 * Select random affix from pool (weighted)
@@ -140,13 +142,23 @@ private:
 
 	/** Cached PREFIX DataTable (lazy-loaded) */
 	mutable UDataTable* CachedPrefixTable = nullptr;
-	
+
 	/** Cached SUFFIX DataTable (lazy-loaded) */
 	mutable UDataTable* CachedSuffixTable = nullptr;
-	
+
+	/**
+	 * P-1 FIX: Cached row pointers for each DataTable.
+	 * GetAllRows<> scans every row on every call — caching here reduces per-item-generation
+	 * cost from O(n) DataTable scan to O(1) pointer read.
+	 * Populated once alongside the table load; raw pointers remain valid for the DataTable's
+	 * lifetime (DataTables never shrink at runtime).
+	 */
+	mutable TArray<FPHAttributeData*> CachedPrefixRows;
+	mutable TArray<FPHAttributeData*> CachedSuffixRows;
+
 	/** Track if we've attempted to load prefixes (prevents repeated failures) */
 	mutable bool bPrefixLoadAttempted = false;
-	
+
 	/** Track if we've attempted to load suffixes (prevents repeated failures) */
 	mutable bool bSuffixLoadAttempted = false;
 

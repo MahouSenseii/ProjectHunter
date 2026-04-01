@@ -4,10 +4,69 @@
 #include "Item/Generation/AffixGenerator.h"
 #include "AbilitySystemComponent.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogItemInstance, Log, All);
+
 UItemInstance::UItemInstance()
 {
 	UniqueID = FGuid::NewGuid();
 	Seed = FMath::Rand();
+}
+
+// ═══════════════════════════════════════════════
+// SERIALIZATION / MIGRATION
+// ═══════════════════════════════════════════════
+
+bool UItemInstance::MigrateToCurrentVersion()
+{
+	if (SerializationVersion >= ITEM_CURRENT_VERSION)
+	{
+		return false; // Already current
+	}
+
+	bool bMigrated = false;
+
+	// ── Version 0 → 1 ───────────────────────────────────────────────────
+	// Items saved before the version field existed will have the default
+	// value 0 (zero-initialized by UObject).  Treat them as version 1
+	// since the field layout hasn't actually changed yet.
+	if (SerializationVersion < 1)
+	{
+		// Future migration steps go here.
+		// Example:
+		//   if (SomeOldField_DEPRECATED != DefaultValue)
+		//   {
+		//       NewField = ConvertOldToNew(SomeOldField_DEPRECATED);
+		//   }
+		SerializationVersion = 1;
+		bMigrated = true;
+	}
+
+	// ── Add future migration blocks here in ascending order ──────────────
+	// if (SerializationVersion < 2)
+	// {
+	//     // Migrate from v1 → v2
+	//     SerializationVersion = 2;
+	//     bMigrated = true;
+	// }
+
+	if (bMigrated)
+	{
+		UE_LOG(LogItemInstance, Log,
+			TEXT("MigrateToCurrentVersion: item '%s' migrated to version %d"),
+			*UniqueID.ToString(), SerializationVersion);
+	}
+
+	return bMigrated;
+}
+
+void UItemInstance::PostLoadInit()
+{
+	// Step 1: Run version migration
+	MigrateToCurrentVersion();
+
+	// IS-1 FIX: Invalidate base data cache so deserialized items pick up
+	// any DataTable changes made since the save was written.
+	InvalidateBaseCache();
 }
 
 // ═══════════════════════════════════════════════
@@ -42,11 +101,14 @@ void UItemInstance::InitializeWithCorruption(
 	BaseItemHandle = InBaseItemHandle;
 	ItemLevel = FMath::Clamp(InItemLevel, 1, 100);
 	Rarity = InRarity;
+
+	// IS-2 FIX: Clamp corruption chance at the API boundary
+	CorruptionChance = FMath::Clamp(CorruptionChance, 0.0f, 1.0f);
 	
 	// Validate base data
 	if (!HasValidBaseData())
 	{
-		UE_LOG(LogTemp, Error, TEXT("ItemInstance: Invalid base item handle: %s"),
+		UE_LOG(LogItemInstance, Error, TEXT("ItemInstance: Invalid base item handle: %s"),
 			*InBaseItemHandle.RowName.ToString());
 		return;
 	}
@@ -143,8 +205,15 @@ void UItemInstance::InitializeWithCorruption(
 			break;
 	}
 	
-	// Initialize economy
-	bIsTradeable = Base->bIsTradeable;
+	// C-3 FIX: Only propagate Base->bIsTradeable for non-quest/non-key items.
+	// IT_Quest and IT_Key cases already set bIsTradeable = false inside the
+	// switch above.  Unconditionally overwriting here would silently undo that
+	// and allow quest items to be traded if the DataTable row had bIsTradeable=true.
+	const EItemType ResolvedType = Base->ItemType;
+	if (ResolvedType != EItemType::IT_Quest && ResolvedType != EItemType::IT_Key)
+	{
+		bIsTradeable = Base->bIsTradeable;
+	}
 	
 	// Update weight
 	UpdateTotalWeight();
@@ -199,7 +268,7 @@ void UItemInstance::CalculateCorruptionState()
 	{
 		bCanBeModified = false;
 		
-		UE_LOG(LogTemp, Log, TEXT("ItemInstance: Corruption detected! Points: %d"), TotalCorruptionPoints);
+		UE_LOG(LogItemInstance, Log, TEXT("ItemInstance: Corruption detected! Points: %d"), TotalCorruptionPoints);
 	}
 }
 
@@ -449,7 +518,12 @@ float UItemInstance::GetBaseWeight() const
 
 bool UItemInstance::bIsTwoHanded() const
 {
+	// C-2 FIX: Guard against null Base before dereferencing.
 	FItemBase* Base = GetBaseData();
+	if (!Base)
+	{
+		return false;
+	}
 	return Base->WeaponHandle == EWeaponHandle::WH_TwoHanded;
 }
 
@@ -505,7 +579,7 @@ void UItemInstance::ApplyAffixesToCharacter(UAbilitySystemComponent* ASC)
 		
 		// TODO: Create and apply GameplayEffect for this affix
 		
-		UE_LOG(LogTemp, Log, TEXT("Applied affix: %s = %f (Corrupted: %s)"),
+		UE_LOG(LogItemInstance, Log, TEXT("Applied affix: %s = %f (Corrupted: %s)"),
 			*Affix.AttributeName.ToString(), 
 			Affix.RolledStatValue,
 			Affix.IsCorruptedAffix() ? TEXT("YES") : TEXT("NO"));
@@ -553,8 +627,8 @@ bool UItemInstance::UseConsumable(AActor* Target)
 		return false;
 	}
 	
-	// Start cooldown
-	CooldownRemaining = Base->ConsumableData.Cooldown;
+	// C-5 FIX: Record wall-clock timestamp; CanUseConsumable() computes the
+	// remaining cooldown from this without needing a tick driver.
 	LastUseTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 	
 	// Reduce uses or quantity
@@ -576,28 +650,39 @@ bool UItemInstance::CanUseConsumable() const
 	{
 		return false;
 	}
-	
-	if (CooldownRemaining > 0.0f)
-	{
-		return false;
-	}
-	
+
+	// C-5 FIX: UItemInstance is a UObject and has no tick, so CooldownRemaining
+	// was never decremented and the cooldown never expired.  Replace the mutable
+	// countdown field with a stateless wall-clock check against LastUseTime.
 	FItemBase* Base = GetBaseData();
 	if (!Base)
 	{
 		return false;
 	}
-	
+
+	if (Base->ConsumableData.Cooldown > 0.0f && LastUseTime > 0.0f)
+	{
+		const UWorld* World = GetWorld();
+		if (World)
+		{
+			const float Elapsed = World->GetTimeSeconds() - LastUseTime;
+			if (Elapsed < Base->ConsumableData.Cooldown)
+			{
+				return false;
+			}
+		}
+	}
+
 	if (Base->ConsumableData.MaxUses > 1 && RemainingUses <= 0)
 	{
 		return false;
 	}
-	
+
 	if (Quantity <= 0)
 	{
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -608,8 +693,22 @@ float UItemInstance::GetCooldownProgress() const
 	{
 		return 1.0f;
 	}
-	
-	return FMath::Clamp(1.0f - (CooldownRemaining / Base->ConsumableData.Cooldown), 0.0f, 1.0f);
+
+	// C-5 FIX: Compute progress from wall-clock time, not from the stale
+	// CooldownRemaining field that was never ticked down.
+	if (LastUseTime <= 0.0f)
+	{
+		return 1.0f;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return 1.0f;
+	}
+
+	const float Elapsed = World->GetTimeSeconds() - LastUseTime;
+	return FMath::Clamp(Elapsed / Base->ConsumableData.Cooldown, 0.0f, 1.0f);
 }
 
 bool UItemInstance::ReduceUses(int32 Amount)
@@ -620,17 +719,64 @@ bool UItemInstance::ReduceUses(int32 Amount)
 
 bool UItemInstance::ApplyConsumableEffects(AActor* Target)
 {
-	// TODO: Apply GameplayEffects to target
-	// Get target's ASC and apply Base->ConsumableEffects
-	return true;
-}
-
-void UItemInstance::UpdateCooldown(float DeltaTime)
-{
-	if (CooldownRemaining > 0.0f)
+	// C-4 FIX: Actually apply ConsumableData.EffectsToApply via GAS.
+	FItemBase* Base = GetBaseData();
+	if (!Base)
 	{
-		CooldownRemaining = FMath::Max(0.0f, CooldownRemaining - DeltaTime);
+		return false;
 	}
+
+	if (Base->ConsumableData.EffectsToApply.IsEmpty())
+	{
+		// No effects configured – treat as success (item still consumed).
+		UE_LOG(LogItemInstance, Warning,
+			TEXT("ItemInstance::ApplyConsumableEffects: '%s' has no EffectsToApply configured."),
+			*GetBaseItemName().ToString());
+		return true;
+	}
+
+	UAbilitySystemComponent* TargetASC = Target->FindComponentByClass<UAbilitySystemComponent>();
+
+	if (!TargetASC)
+	{
+		UE_LOG(LogItemInstance, Warning,
+			TEXT("ItemInstance::ApplyConsumableEffects: Target '%s' has no AbilitySystemComponent."),
+			*Target->GetName());
+		return false;
+	}
+
+	// Apply every GE in the consumable's effect list.
+	bool bAllApplied = true;
+	for (const TSubclassOf<UGameplayEffect>& GEClass : Base->ConsumableData.EffectsToApply)
+	{
+		if (!GEClass)
+		{
+			UE_LOG(LogItemInstance, Warning,
+				TEXT("ItemInstance::ApplyConsumableEffects: Null GE class in '%s' EffectsToApply – skipping."),
+				*GetBaseItemName().ToString());
+			continue;
+		}
+
+		FGameplayEffectContextHandle Context = TargetASC->MakeEffectContext();
+		FGameplayEffectSpecHandle Spec = TargetASC->MakeOutgoingSpec(GEClass, ItemLevel, Context);
+		if (Spec.IsValid())
+		{
+			FActiveGameplayEffectHandle Handle = TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+			if (!Handle.IsValid())
+			{
+				UE_LOG(LogItemInstance, Warning,
+					TEXT("ItemInstance::ApplyConsumableEffects: Failed to apply '%s' to '%s'."),
+					*GEClass->GetName(), *Target->GetName());
+				bAllApplied = false;
+			}
+		}
+		else
+		{
+			bAllApplied = false;
+		}
+	}
+
+	return bAllApplied;
 }
 
 // ═══════════════════════════════════════════════
@@ -805,7 +951,13 @@ UItemInstance* UItemInstance::SplitStack(int32 Amount)
 		return nullptr;
 	}
 	
-	UItemInstance* NewInstance = NewObject<UItemInstance>(GetTransientPackage(), GetClass());
+	// FIX: Use the same outer as the original item instead of GetTransientPackage().
+	// Objects created under GetTransientPackage() have no stable UPROPERTY reference
+	// chain keeping them alive, so a GC sweep that runs between SplitStack() and
+	// InventoryManager::AddItem() could collect the new instance before it is stored.
+	// Using GetOuter() makes the new item's lifetime mirror the original's — it is
+	// rooted through the same owner chain and cannot be collected prematurely.
+	UItemInstance* NewInstance = NewObject<UItemInstance>(GetOuter(), GetClass());
 	
 	NewInstance->BaseItemHandle = BaseItemHandle;
 	NewInstance->ItemLevel = ItemLevel;
@@ -977,7 +1129,7 @@ void UItemInstance::PostLoadInitialize()
 	
 	if (!HasValidBaseData())
 	{
-		UE_LOG(LogTemp, Error, TEXT("ItemInstance: Base data no longer exists for %s!"),
+		UE_LOG(LogItemInstance, Error, TEXT("ItemInstance: Base data no longer exists for %s!"),
 			*UniqueID.ToString());
 	}
 	

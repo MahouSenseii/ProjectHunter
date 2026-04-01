@@ -55,7 +55,7 @@ ALootChest::ALootChest()
 	ChestState = EChestState::CS_Closed;
 	LastInteractor = nullptr;
 	
-	void ConfigureMeshVisibilityAndCollision();
+	ConfigureMeshVisibilityAndCollision();
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -359,10 +359,10 @@ void ALootChest::OpenChest(AActor* Opener)
 		return;
 	}
 
-	// Server authority check
+	// C-7 FIX: Forward to the server via RPC so clients can actually open chests.
 	if (!HasAuthority())
 	{
-		// TODO: RPC to server
+		ServerOpenChest(Opener);
 		return;
 	}
 
@@ -371,9 +371,13 @@ void ALootChest::OpenChest(AActor* Opener)
 	// Change state to opening
 	SetChestState(EChestState::CS_Opening);
 
-	// Play feedback
-	PlayOpenSound();
-	PlayOpenVFX();
+	// N-09 FIX: Sound and VFX are client-only presentation — skip on dedicated server
+	// to avoid wasted cycles and potential audio-system null-dereferences.
+	if (!IsNetMode(NM_DedicatedServer))
+	{
+		PlayOpenSound();
+		PlayOpenVFX();
+	}
 
 	// Start animation (timer-based, not tick-based!)
 	if (AnimationConfig.bPlayOpenAnimation)
@@ -391,6 +395,13 @@ void ALootChest::OpenChest(AActor* Opener)
 
 	UE_LOG(LogLootChest, Log, TEXT("%s: Opened by %s"),
 		*GetName(), Opener ? *Opener->GetName() : TEXT("Unknown"));
+}
+
+void ALootChest::ServerOpenChest_Implementation(AActor* Opener)
+{
+	// C-7 FIX: Server-side body for the Server RPC.  Delegates straight to
+	// OpenChest(); HasAuthority() will be true here so the guard passes.
+	OpenChest(Opener);
 }
 
 void ALootChest::ResetChest()
@@ -457,11 +468,12 @@ void ALootChest::SetChestState(EChestState NewState)
 	UpdateMeshForState();
 	UpdateInteractionForState();
 
-	// Trigger replication
-	if (HasAuthority())
-	{
-		OnRep_ChestState();
-	}
+	// N-11 FIX: Do NOT call OnRep_ChestState() on the server. OnRep callbacks are
+	// client-only notification paths; calling them server-side conflates two different
+	// code paths and can cause double-execution on listen servers.
+	// The server runs UpdateMeshForState() and UpdateInteractionForState() directly above.
+	// Clients receive the state change via normal property replication and their
+	// OnRep_ChestState() fires automatically.
 
 	UE_LOG(LogLootChest, Verbose, TEXT("%s: State changed from %s to %s"),
 		*GetName(), *UEnum::GetValueAsString(OldState), *UEnum::GetValueAsString(NewState));
@@ -578,7 +590,9 @@ void ALootChest::GetPlayerLootStats(AActor* Player, float& OutLuck, float& OutMa
 
 		if (bApplyPlayerMagicFind)
 		{
-			//OutMagicFind = StatsManager->GetStatValue(EStatType::MagicFind);
+			// C-6 FIX: Call GetMagicFind() – previously commented out, leaving
+			// OutMagicFind stuck at 0.0f and magic find never influencing loot.
+			OutMagicFind = StatsManager->GetMagicFind();
 		}
 
 		UE_LOG(LogLootChest, Verbose, TEXT("%s: Player %s stats - Luck: %.2f, MagicFind: %.2f"),

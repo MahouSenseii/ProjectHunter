@@ -3,13 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayEffect.h"
 #include "Components/ActorComponent.h"
+#include "GameplayEffectTypes.h"
 #include "CharacterProgressionManager.generated.h"
 
 // Forward declarations
 class UAbilitySystemComponent;
 class UHunterAttributeSet;
-class AHunterBaseCharacter;  // Changed from AEnemyCharacter
+class AHunterBaseCharacter;
+struct FGameplayAttribute;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCharacterProgressionManager, Log, All);
 /**
@@ -87,7 +90,7 @@ public:
 
 	/** Current character level (1-100) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_Level, Category = "Progression")
-	int32 Level = 0;
+	int32 Level = 1;  // N-01 FIX: was 0; Level 0 breaks all level-gated calculations at spawn
 
 	/** Current experience points */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_CurrentXP, Category = "Progression")
@@ -125,9 +128,29 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression|Stats")
 	int32 StatPointsPerLevel = 2;
 
+	/**
+	 * Maps each primary attribute name to the Gameplay Effect class used when a stat point
+	 * is spent on it.  Each GE should be configured as Infinite with a single +1 Additive
+	 * modifier on the corresponding attribute (set via ScalableFloat or SetByCaller).
+	 *
+	 * Example entries: "Strength" -> GE_StatPoint_Strength, "Intelligence" -> GE_StatPoint_Intelligence
+	 *
+	 * Exposed to Blueprint defaults so designers can wire up GEs without touching C++.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Progression|StatPoints",
+		meta = (DisplayName = "Stat Point GE Classes (Per Attribute)"))
+	TMap<FName, TSubclassOf<UGameplayEffect>> StatPointGEClasses;
+
 	/** Track stat points spent per attribute (for respec) - Uses TArray for replication support */
-	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Progression|Stats")
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_SpentStatPoints, Category = "Progression|Stats")
 	TArray<FStatPointSpending> SpentStatPoints;
+
+	/**
+	 * Fast-lookup cache of SpentStatPoints (TMap equivalent, not replicated).
+	 * Rebuilt from SpentStatPoints on BeginPlay and OnRep.
+	 */
+	UPROPERTY(Transient)
+	TMap<FName, int32> SpentStatPointsCache;
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* SKILL POINTS (Optional) */
@@ -183,8 +206,9 @@ public:
 	/**
 	 * Check if player has enough XP to level up
 	 * Automatically levels up if threshold reached
+	 * N-02 FIX: Added BlueprintAuthorityOnly — clients must not trigger level-up logic directly
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Progression")
+	UFUNCTION(BlueprintCallable, Category = "Progression", BlueprintAuthorityOnly)
 	void CheckForLevelUp();
 
 	/**
@@ -261,6 +285,21 @@ protected:
 	/** Handle level up rewards (stat points, skill points, etc.) */
 	void OnLevelUpInternal();
 
+	/**
+	 * Maps attribute names to all active GE handles applied for stat-point spending.
+	 * Server-only — not replicated.  Handles are removed on respec.
+	 */
+	TMap<FName, TArray<FActiveGameplayEffectHandle>> StatPointGEHandles;
+
+	/** Rebuild SpentStatPointsCache from the replicated SpentStatPoints array */
+	void RebuildSpentStatPointsCache();
+
+	/**
+	 * Maps a primary-attribute name to its FGameplayAttribute accessor.
+	 * Returns an invalid FGameplayAttribute{} for unknown names.
+	 */
+	static FGameplayAttribute GetAttributeForStatName(FName StatName);
+
 	/** Apply stat point to attribute via GAS */
 	void ApplyStatPointToAttribute(FName AttributeName);
 
@@ -282,6 +321,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_CurrentXP(int64 OldXP);
+
+	UFUNCTION()
+	void OnRep_SpentStatPoints();
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* CACHED REFERENCES */

@@ -20,7 +20,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnWeightChanged, float, CurrentWei
 
 
 /**
- * Slot-based + Weight-based Inventory System 
+ * Slot-based + Weight-based Inventory System
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UInventoryManager : public UActorComponent
@@ -31,6 +31,11 @@ public:
 	UInventoryManager();
 
 	virtual void BeginPlay() override;
+
+	// N-04 FIX: InventoryManager was not replicated at all. Items must replicate so
+	// the server knows what is in a client's inventory (required for server-side
+	// equip validation, anti-cheat, and authoritative pickup logic).
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// ═══════════════════════════════════════════════
 	// CONFIGURATION (Hunter Manga Style)
@@ -60,8 +65,12 @@ public:
 	// STORAGE
 	// ═══════════════════════════════════════════════
 
-	/** All items in inventory (slot-based array) */
-	UPROPERTY(SaveGame, BlueprintReadOnly, Category = "Inventory")
+	/** All items in inventory (slot-based array).
+	 *  N-04 FIX: Marked Replicated so the server always has an accurate copy.
+	 *  OnRep_Items keeps the client UI consistent after server-authoritative changes.
+	 *  COND_OwnerOnly: only the owning client receives the full inventory.
+	 */
+	UPROPERTY(SaveGame, BlueprintReadOnly, ReplicatedUsing = OnRep_Items, Category = "Inventory")
 	TArray<UItemInstance*> Items;
 
 	// ═══════════════════════════════════════════════
@@ -264,6 +273,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	int32 FindSlotForItem(UItemInstance* Item) const;
 
+	/**
+	 * Check whether a specific item instance is present in this inventory.
+	 * Used by EquipmentManager to validate server-side equip requests.
+	 * @param Item - Item instance to search for
+	 * @return True if the item is in the inventory
+	 */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool ContainsItem(UItemInstance* Item) const;
+
 	// ═══════════════════════════════════════════════
 	// SEARCH & FILTER
 	// ═══════════════════════════════════════════════
@@ -355,5 +373,14 @@ private:
 
 	/** Remove all null/invalid items */
 	void CleanupInvalidItems();
+
+	// ─────────────────────────────────────────────────────────────────
+	// N-04 FIX: Replication callbacks
+	// ─────────────────────────────────────────────────────────────────
+
+	/** Called on owning client when Items array replicates from server.
+	 *  Rebroadcasts OnInventoryChanged and OnWeightChanged so UI stays in sync. */
+	UFUNCTION()
+	void OnRep_Items();
 };
 

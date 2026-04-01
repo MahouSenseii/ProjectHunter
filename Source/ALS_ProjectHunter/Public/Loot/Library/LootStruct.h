@@ -455,6 +455,10 @@ struct FLootTable : public FTableRowBase
 	TArray<FLootEntry> GetValidEntries() const
 	{
 		TArray<FLootEntry> Result;
+		// N-21 FIX: Reserve worst-case capacity to eliminate repeated heap
+		// reallocations as entries are added.  Worst case is all entries pass
+		// the filter; the excess capacity is freed on return-by-value (NRVO).
+		Result.Reserve(Entries.Num());
 		for (const FLootEntry& Entry : Entries)
 		{
 			if (Entry.IsValid())
@@ -469,6 +473,7 @@ struct FLootTable : public FTableRowBase
 	TArray<FLootEntry> GetCorruptedEntries() const
 	{
 		TArray<FLootEntry> Result;
+		Result.Reserve(Entries.Num()); // N-21 FIX
 		for (const FLootEntry& Entry : Entries)
 		{
 			if (Entry.bIsCorrupted && Entry.IsValid())
@@ -483,6 +488,7 @@ struct FLootTable : public FTableRowBase
 	TArray<FLootEntry> GetNormalEntries() const
 	{
 		TArray<FLootEntry> Result;
+		Result.Reserve(Entries.Num()); // N-21 FIX
 		for (const FLootEntry& Entry : Entries)
 		{
 			if (!Entry.bIsCorrupted && Entry.IsValid())
@@ -497,6 +503,7 @@ struct FLootTable : public FTableRowBase
 	TArray<FLootEntry> GetEntriesByCorruptionType(ECorruptionType Type) const
 	{
 		TArray<FLootEntry> Result;
+		Result.Reserve(Entries.Num()); // N-21 FIX
 		for (const FLootEntry& Entry : Entries)
 		{
 			if (Entry.CorruptionType == Type && Entry.IsValid())
@@ -511,6 +518,7 @@ struct FLootTable : public FTableRowBase
 	TArray<FLootEntry> GetCorruptibleEntries() const
 	{
 		TArray<FLootEntry> Result;
+		Result.Reserve(Entries.Num()); // N-21 FIX
 		for (const FLootEntry& Entry : Entries)
 		{
 			if (Entry.bCanBeCorrupted && Entry.IsValid())

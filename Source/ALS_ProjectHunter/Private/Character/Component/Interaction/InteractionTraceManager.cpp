@@ -15,17 +15,17 @@
 DEFINE_LOG_CATEGORY(LogInteractionTraceManager);
 FInteractionTraceManager::FInteractionTraceManager()
 	: InteractionDistance(300.0f)
-	, CheckFrequency(0.1f)
-	, InteractionTraceChannel(ECC_Visibility)
-	, bUseALSCameraOrigin(true)
-	, OffsetForward(0.0f)
-	, OffsetRight(0.0f)
-	, OffsetUp(60.0f)
-	, OwnerActor(nullptr)
-	, WorldContext(nullptr)
-	, CachedPlayerController(nullptr)
-	, CachedALSCameraManager(nullptr)
-	, CachedGroundItemSubsystem(nullptr)
+	  , CheckFrequency(0.1f)
+	  , InteractionTraceChannel(ECC_Visibility)
+	  , bUseALSCameraOrigin(true)
+	  , OffsetForward(0.0f)
+	  , OffsetRight(0.0f)
+	  , OffsetUp(60.0f)
+	  , OwnerActor(nullptr)
+	  , WorldContext(nullptr)
+	  , CachedPlayerController(nullptr)
+	  , CachedALSCameraManager(nullptr)
+	  , CachedGroundItemSubsystem(nullptr), DebugManager(nullptr)
 {
 }
 
@@ -95,7 +95,7 @@ TScriptInterface<IInteractable> FInteractionTraceManager::TraceForActorInteracta
 		return Result;
 	}
 
-	// Check if hit actor is interactable
+	// Check if a hit actor is interactable
 	AActor* HitActor = HitResult.GetActor();
 	if (!IsActorInteractable(HitActor))
 	{
@@ -146,8 +146,25 @@ UItemInstance* FInteractionTraceManager::FindNearestGroundItem(int32& OutItemID)
 	);
 }
 
-bool FInteractionTraceManager::GetCameraViewPoint(FVector& OutLocation, FRotator& OutRotation) const
+bool FInteractionTraceManager::GetCameraViewPoint(FVector& OutLocation, FRotator& OutRotation)
 {
+
+	if (APawn* OwnerPawn = Cast<APawn>(OwnerActor))
+	{
+		CachedPlayerController = Cast<APlayerController>(OwnerPawn->GetController());
+
+		// Refresh ALS camera manager alongside the controller.
+		if (CachedPlayerController && CachedPlayerController->PlayerCameraManager)
+		{
+			CachedALSCameraManager = Cast<AALSPlayerCameraManager>(
+				CachedPlayerController->PlayerCameraManager);
+		}
+		else
+		{
+			CachedALSCameraManager = nullptr;
+		}
+	}
+
 	if (!CachedPlayerController)
 	{
 		// Fallback to owner location/rotation
@@ -169,11 +186,11 @@ bool FInteractionTraceManager::GetCameraViewPoint(FVector& OutLocation, FRotator
 	{
 		FVector PivotLocation = OwnerActor->GetActorLocation();
 
-		// Apply offset vectors
+		const FRotationMatrix RotMat(OutRotation);
 		OutLocation = PivotLocation
-			+ UKismetMathLibrary::GetForwardVector(OutRotation) * OffsetForward
-			+ UKismetMathLibrary::GetRightVector(OutRotation) * OffsetRight
-			+ UKismetMathLibrary::GetUpVector(OutRotation) * OffsetUp;
+			+ RotMat.GetUnitAxis(EAxis::X) * OffsetForward
+			+ RotMat.GetUnitAxis(EAxis::Y) * OffsetRight
+			+ RotMat.GetUnitAxis(EAxis::Z) * OffsetUp;
 
 		return true;
 	}
@@ -182,7 +199,7 @@ bool FInteractionTraceManager::GetCameraViewPoint(FVector& OutLocation, FRotator
 	return true;
 }
 
-void FInteractionTraceManager::GetTraceOrigin(FVector& OutCameraLocation, FVector& OutCameraDirection) const
+void FInteractionTraceManager::GetTraceOrigin(FVector& OutCameraLocation, FVector& OutCameraDirection)
 {
 	FRotator CameraRotation;
 	GetCameraViewPoint(OutCameraLocation, CameraRotation);
@@ -193,21 +210,19 @@ void FInteractionTraceManager::GetTraceOrigin(FVector& OutCameraLocation, FVecto
 
 FVector FInteractionTraceManager::GetTraceStartLocation(const FVector& CameraLocation, const FRotator& CameraRotation) const
 {
-	// If using ALS camera and camera manager available, use enhanced origin
+	
 	if (bUseALSCameraOrigin && CachedALSCameraManager)
 	{
-		return CameraLocation; // Already calculated with offsets in GetCameraViewPoint
+		return CachedALSCameraManager->GetCameraLocation();
 	}
 
-	// Standard camera location
+	// Standard path: pawn-pivot + directional offsets (computed in GetCameraViewPoint).
 	return CameraLocation;
 }
 
 FVector FInteractionTraceManager::GetTraceEndLocation(const FVector& CameraLocation, const FRotator& CameraRotation) const
 {
-	// Project forward from camera
-	FVector ForwardVector = UKismetMathLibrary::GetForwardVector(CameraRotation);
-	return CameraLocation + (ForwardVector * InteractionDistance);
+	return CameraLocation + CameraRotation.Vector() * InteractionDistance;
 }
 
 bool FInteractionTraceManager::IsLocallyControlled() const

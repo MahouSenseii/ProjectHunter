@@ -3,8 +3,9 @@
 #include "Character/Component/CharacterProgressionManager.h"
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystemComponent.h"
-#include "Character/PHBaseCharacter.h"  
+#include "Character/PHBaseCharacter.h"
 #include "GameplayEffect.h"
+#include "GameplayEffectTypes.h"
 #include "Net/UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY(LogCharacterProgressionManager);
@@ -50,7 +51,7 @@ void UCharacterProgressionManager::GetLifetimeReplicatedProps(TArray<FLifetimePr
 	DOREPLIFETIME(UCharacterProgressionManager, UnspentStatPoints);
 	DOREPLIFETIME(UCharacterProgressionManager, TotalStatPoints);
 	DOREPLIFETIME(UCharacterProgressionManager, UnspentSkillPoints);
-	DOREPLIFETIME(UCharacterProgressionManager, SpentStatPoints);
+	DOREPLIFETIME_CONDITION(UCharacterProgressionManager, SpentStatPoints, COND_OwnerOnly);
 }
 
 void UCharacterProgressionManager::BeginPlay()
@@ -65,6 +66,10 @@ void UCharacterProgressionManager::BeginPlay()
 	{
 		CharacterProgressionManagerPrivate::TrySyncPlayerLevelAttribute(CachedASC.Get(), Level);
 	}
+
+	// Rebuild the fast-lookup cache from the replicated array
+	// (handles save-game loads and listen-server clients)
+	RebuildSpentStatPointsCache();
 
 	// Calculate initial XP requirement
 	XPToNextLevel = GetXPForLevel(Level + 1);
@@ -89,7 +94,7 @@ void UCharacterProgressionManager::AwardExperienceFromKill(APHBaseCharacter* Kil
 	}
 
 	// 1. Get base XP from killed character
-	int64 BaseXP = 0; //KilledCharacter->GetXPReward();
+	int64 BaseXP = KilledCharacter->GetXPReward();
 
 	// 2. Get player's XP modifiers from AttributeSet
 	UHunterAttributeSet* AttrSet = GetAttributeSet();
@@ -102,11 +107,15 @@ void UCharacterProgressionManager::AwardExperienceFromKill(APHBaseCharacter* Kil
 
 	float GlobalXP = AttrSet->GetGlobalXPGain();           // Party/event bonuses
 	float LocalXP = AttrSet->GetLocalXPGain();             // Item bonuses
-	float MoreXP = AttrSet->GetXPGainMultiplier();         // Multiplicative bonuses
-	float Penalty = AttrSet->GetXPPenalty();               // Penalties
+	// N-03 FIX: XPGainMultiplier attribute defaults to 0.0f in the AttributeSet, which would
+	// zero all XP. Clamp to >= 1.0f so an un-initialized attribute has a neutral effect.
+	float MoreXP = FMath::Max(AttrSet->GetXPGainMultiplier(), 1.0f); // Multiplicative bonuses
+	float Penalty = AttrSet->GetXPPenalty();               // Penalties (e.g. death / curse penalties)
 
 	// 3. Calculate level difference penalty
-	int32 LevelDiff = Level; //- KilledCharacter->GetLevel();
+	// Positive value = player is higher level than the enemy => reduced XP
+	// Negative value = enemy is higher level => no penalty (full XP)
+	int32 LevelDiff = Level - KilledCharacter->GetCharacterLevel();
 	float LevelPenalty = CalculateLevelPenalty(LevelDiff);
 
 	// 4. Apply PoE2-style formula
@@ -147,12 +156,18 @@ void UCharacterProgressionManager::AwardExperience(int64 Amount)
 	// Get XP bonuses (but no level penalty)
 	UHunterAttributeSet* AttrSet = GetAttributeSet();
 	float GlobalXP = AttrSet ? AttrSet->GetGlobalXPGain() : 0.0f;
-	float LocalXP = AttrSet ? AttrSet->GetLocalXPGain() : 0.0f;
-	float MoreXP = AttrSet ? AttrSet->GetXPGainMultiplier() : 1.0f;
+	float LocalXP  = AttrSet ? AttrSet->GetLocalXPGain()  : 0.0f;
+	// N-03 FIX: Clamp MoreXP >= 1.0f — attribute defaults to 0.0f which would zero all XP
+	float MoreXP   = FMath::Max(AttrSet ? AttrSet->GetXPGainMultiplier() : 1.0f, 1.0f);
+	// BUG FIX: XPPenalty (death penalty, curses, etc.) must apply to ALL XP awards,
+	// not just kill XP. AwardExperienceFromKill already multiplied by Penalty; this
+	// direct-award path was skipping it, making penalties irrelevant for quest/event XP.
+	// XPPenalty defaults to 1.0f (neutral), so this has zero effect when no penalty is active.
+	float Penalty  = FMath::Max(AttrSet ? AttrSet->GetXPPenalty() : 1.0f, 0.0f);
 
 	// Calculate final XP
 	float IncreasedMultiplier = 1.0f + (GlobalXP + LocalXP) / 100.0f;
-	float FinalMultiplier = IncreasedMultiplier * MoreXP;
+	float FinalMultiplier = IncreasedMultiplier * MoreXP * Penalty;
 
 	int64 FinalXP = FMath::RoundToInt64(Amount * FinalMultiplier);
 	FinalXP = FMath::Max(FinalXP, 1LL);
@@ -314,7 +329,7 @@ bool UCharacterProgressionManager::SpendStatPoint(FName AttributeName)
 	// Deduct stat point
 	UnspentStatPoints--;
 
-	// Track spent points in TArray
+	// --- Update replicated TArray ---
 	bool bFound = false;
 	for (FStatPointSpending& Spending : SpentStatPoints)
 	{
@@ -325,12 +340,14 @@ bool UCharacterProgressionManager::SpendStatPoint(FName AttributeName)
 			break;
 		}
 	}
-
-	// If not found, add new entry
 	if (!bFound)
 	{
 		SpentStatPoints.Add(FStatPointSpending(AttributeName, 1));
 	}
+
+	// --- Update fast-lookup TMap cache ---
+	int32& CachedCount = SpentStatPointsCache.FindOrAdd(AttributeName, 0);
+	CachedCount++;
 
 	// Apply to AttributeSet
 	ApplyStatPointToAttribute(AttributeName);
@@ -362,6 +379,7 @@ bool UCharacterProgressionManager::ResetStatPoints(int32 Cost)
 	// Refund all stat points
 	UnspentStatPoints = TotalStatPoints;
 	SpentStatPoints.Empty();
+	SpentStatPointsCache.Empty();
 
 	UE_LOG(LogCharacterProgressionManager, Log, TEXT("Stat Points Reset! Refunded: %d points"), TotalStatPoints);
 
@@ -370,13 +388,10 @@ bool UCharacterProgressionManager::ResetStatPoints(int32 Cost)
 
 int32 UCharacterProgressionManager::GetStatPointsSpentOn(FName AttributeName) const
 {
-	// Search TArray for attribute
-	for (const FStatPointSpending& Spending : SpentStatPoints)
+	// O(1) lookup via the fast-lookup cache (rebuilt from replicated array on BeginPlay/OnRep)
+	if (const int32* Found = SpentStatPointsCache.Find(AttributeName))
 	{
-		if (Spending.AttributeName == AttributeName)
-		{
-			return Spending.PointsSpent;
-		}
+		return *Found;
 	}
 	return 0;
 }
@@ -413,73 +428,84 @@ void UCharacterProgressionManager::OnLevelUpInternal()
 	OnLevelUp.Broadcast(Level, StatPointsAwarded, SkillPointsAwarded);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Q-2: Single authoritative attribute-name → FGameplayAttribute mapping.
+//       Referenced by both ApplyStatPointToAttribute and RemoveStatPointFromAttribute
+//       so adding a new primary stat only requires editing this one function.
+// ─────────────────────────────────────────────────────────────────────────────
+FGameplayAttribute UCharacterProgressionManager::GetAttributeForStatName(FName StatName)
+{
+	if (StatName == "Strength")     return UHunterAttributeSet::GetStrengthAttribute();
+	if (StatName == "Intelligence") return UHunterAttributeSet::GetIntelligenceAttribute();
+	if (StatName == "Dexterity")    return UHunterAttributeSet::GetDexterityAttribute();
+	if (StatName == "Endurance")    return UHunterAttributeSet::GetEnduranceAttribute();
+	if (StatName == "Affliction")   return UHunterAttributeSet::GetAfflictionAttribute();
+	if (StatName == "Luck")         return UHunterAttributeSet::GetLuckAttribute();
+	if (StatName == "Covenant")     return UHunterAttributeSet::GetCovenantAttribute();
+
+	return FGameplayAttribute{};
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// C-2 / C-3 fix: use a pre-configured Blueprint GE class (no runtime NewObject).
+//   StatPointGEClasses["Strength"] should point to a Blueprint GE that is
+//   Infinite with a single +1 Additive modifier on the Strength attribute.
+//   We store every FActiveGameplayEffectHandle so respec can remove them cleanly.
+// ─────────────────────────────────────────────────────────────────────────────
 void UCharacterProgressionManager::ApplyStatPointToAttribute(FName AttributeName)
 {
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-	UHunterAttributeSet* AttrSet = GetAttributeSet();
-
-	if (!ASC || !AttrSet)
+	if (!ASC)
 	{
-		UE_LOG(LogCharacterProgressionManager, Error, TEXT("ApplyStatPointToAttribute: ASC or AttributeSet is null"));
+		UE_LOG(LogCharacterProgressionManager, Error, TEXT("ApplyStatPointToAttribute: ASC is null"));
 		return;
 	}
 
-	// Get the attribute to modify
-	FGameplayAttribute Attribute = FGameplayAttribute();
+	// Validate the attribute name maps to a known FGameplayAttribute
+	const FGameplayAttribute Attribute = GetAttributeForStatName(AttributeName);
+	if (!Attribute.IsValid())
+	{
+		UE_LOG(LogCharacterProgressionManager, Error,
+			TEXT("ApplyStatPointToAttribute: Unknown primary attribute '%s'"), *AttributeName.ToString());
+		return;
+	}
 
-	// Map attribute names to FGameplayAttribute
-	if (AttributeName == "Strength")
+	// Look up the designer-configured GE class for this attribute
+	const TSubclassOf<UGameplayEffect>* GEClassPtr = StatPointGEClasses.Find(AttributeName);
+	if (!GEClassPtr || !(*GEClassPtr))
 	{
-		Attribute = UHunterAttributeSet::GetStrengthAttribute();
+		UE_LOG(LogCharacterProgressionManager, Warning,
+			TEXT("ApplyStatPointToAttribute: No GE class configured for attribute '%s'. "
+				 "Add an entry to StatPointGEClasses in the Blueprint defaults."),
+			*AttributeName.ToString());
+		return;
 	}
-	else if (AttributeName == "Intelligence")
+
+	// Apply the Infinite GE; store its handle for later removal (respec)
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	Context.AddSourceObject(GetOwner());
+
+	const FActiveGameplayEffectHandle Handle =
+		ASC->ApplyGameplayEffectToSelf((*GEClassPtr)->GetDefaultObject<UGameplayEffect>(),
+									   1.0f, Context);
+
+	if (Handle.IsValid())
 	{
-		Attribute = UHunterAttributeSet::GetIntelligenceAttribute();
-	}
-	else if (AttributeName == "Dexterity")
-	{
-		Attribute = UHunterAttributeSet::GetDexterityAttribute();
-	}
-	else if (AttributeName == "Endurance")
-	{
-		Attribute = UHunterAttributeSet::GetEnduranceAttribute();
-	}
-	else if (AttributeName == "Affliction")
-	{
-		Attribute = UHunterAttributeSet::GetAfflictionAttribute();
-	}
-	else if (AttributeName == "Luck")
-	{
-		Attribute = UHunterAttributeSet::GetLuckAttribute();
-	}
-	else if (AttributeName == "Covenant")
-	{
-		Attribute = UHunterAttributeSet::GetCovenantAttribute();
+		StatPointGEHandles.FindOrAdd(AttributeName).Add(Handle);
+		UE_LOG(LogCharacterProgressionManager, Log,
+			TEXT("ApplyStatPointToAttribute: Applied +1 to '%s' (handle %s)"),
+			*AttributeName.ToString(), *Handle.ToString());
 	}
 	else
 	{
-		UE_LOG(LogCharacterProgressionManager, Error, TEXT("ApplyStatPointToAttribute: Unknown attribute '%s'"), *AttributeName.ToString());
-		return;
+		UE_LOG(LogCharacterProgressionManager, Error,
+			TEXT("ApplyStatPointToAttribute: GE application failed for '%s'"), *AttributeName.ToString());
 	}
-
-	// Create GameplayEffect to add +1 to the attribute
-	UGameplayEffect* GE_StatPoint = NewObject<UGameplayEffect>(GetTransientPackage(), FName(TEXT("GE_StatPoint")));
-	GE_StatPoint->DurationPolicy = EGameplayEffectDurationType::Infinite;
-
-	// Add modifier
-	int32 ModifierIndex = GE_StatPoint->Modifiers.Num();
-	GE_StatPoint->Modifiers.SetNum(ModifierIndex + 1);
-	FGameplayModifierInfo& ModifierInfo = GE_StatPoint->Modifiers[ModifierIndex];
-	ModifierInfo.ModifierMagnitude = FScalableFloat(1.0f); // +1
-	ModifierInfo.ModifierOp = EGameplayModOp::Additive;
-	ModifierInfo.Attribute = Attribute;
-
-	// Apply effect
-	ASC->ApplyGameplayEffectToSelf(GE_StatPoint, 1.0f, ASC->MakeEffectContext());
-
-	UE_LOG(LogCharacterProgressionManager, Log, TEXT("Applied +1 to %s"), *AttributeName.ToString());
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// C-2 fix: remove exactly PointsToRemove stored handles — no counter-GE stacking.
+// ─────────────────────────────────────────────────────────────────────────────
 void UCharacterProgressionManager::RemoveStatPointFromAttribute(FName AttributeName, int32 PointsToRemove)
 {
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
@@ -488,58 +514,41 @@ void UCharacterProgressionManager::RemoveStatPointFromAttribute(FName AttributeN
 		return;
 	}
 
-	// Get the attribute
-	FGameplayAttribute Attribute = FGameplayAttribute();
-
-	if (AttributeName == "Strength")
+	TArray<FActiveGameplayEffectHandle>* Handles = StatPointGEHandles.Find(AttributeName);
+	if (!Handles || Handles->Num() == 0)
 	{
-		Attribute = UHunterAttributeSet::GetStrengthAttribute();
-	}
-	else if (AttributeName == "Intelligence")
-	{
-		Attribute = UHunterAttributeSet::GetIntelligenceAttribute();
-	}
-	else if (AttributeName == "Dexterity")
-	{
-		Attribute = UHunterAttributeSet::GetDexterityAttribute();
-	}
-	else if (AttributeName == "Endurance")
-	{
-		Attribute = UHunterAttributeSet::GetEnduranceAttribute();
-	}
-	else if (AttributeName == "Affliction")
-	{
-		Attribute = UHunterAttributeSet::GetAfflictionAttribute();
-	}
-	else if (AttributeName == "Luck")
-	{
-		Attribute = UHunterAttributeSet::GetLuckAttribute();
-	}
-	else if (AttributeName == "Covenant")
-	{
-		Attribute = UHunterAttributeSet::GetCovenantAttribute();
-	}
-	else
-	{
+		// No handles tracked — nothing to remove (e.g. first session without saved handles)
+		UE_LOG(LogCharacterProgressionManager, Warning,
+			TEXT("RemoveStatPointFromAttribute: No tracked GE handles for '%s'. "
+				 "Attribute will not be adjusted."), *AttributeName.ToString());
 		return;
 	}
 
-	// Create GameplayEffect to remove points
-	UGameplayEffect* GE_RemoveStatPoint = NewObject<UGameplayEffect>(GetTransientPackage(), FName(TEXT("GE_RemoveStatPoint")));
-	GE_RemoveStatPoint->DurationPolicy = EGameplayEffectDurationType::Infinite;
+	const int32 ToRemove = FMath::Min(PointsToRemove, Handles->Num());
+	for (int32 i = 0; i < ToRemove; ++i)
+	{
+		const FActiveGameplayEffectHandle Handle = Handles->Pop(EAllowShrinking::No);
+		if (Handle.IsValid())
+		{
+			ASC->RemoveActiveGameplayEffect(Handle);
+		}
+	}
 
-	// Add modifier (negative)
-	int32 ModifierIndex = GE_RemoveStatPoint->Modifiers.Num();
-	GE_RemoveStatPoint->Modifiers.SetNum(ModifierIndex + 1);
-	FGameplayModifierInfo& ModifierInfo = GE_RemoveStatPoint->Modifiers[ModifierIndex];
-	ModifierInfo.ModifierMagnitude = FScalableFloat(-static_cast<float>(PointsToRemove));
-	ModifierInfo.ModifierOp = EGameplayModOp::Additive;
-	ModifierInfo.Attribute = Attribute;
+	UE_LOG(LogCharacterProgressionManager, Log,
+		TEXT("RemoveStatPointFromAttribute: Removed %d point(s) from '%s'"),
+		ToRemove, *AttributeName.ToString());
+}
 
-	// Apply effect
-	ASC->ApplyGameplayEffectToSelf(GE_RemoveStatPoint, 1.0f, ASC->MakeEffectContext());
-
-	UE_LOG(LogCharacterProgressionManager, Log, TEXT("Removed %d points from %s"), PointsToRemove, *AttributeName.ToString());
+// ─────────────────────────────────────────────────────────────────────────────
+// P-4: Rebuild fast-lookup TMap from the replicated TArray.
+// ─────────────────────────────────────────────────────────────────────────────
+void UCharacterProgressionManager::RebuildSpentStatPointsCache()
+{
+	SpentStatPointsCache.Empty(SpentStatPoints.Num());
+	for (const FStatPointSpending& Entry : SpentStatPoints)
+	{
+		SpentStatPointsCache.Add(Entry.AttributeName, Entry.PointsSpent);
+	}
 }
 
 UAbilitySystemComponent* UCharacterProgressionManager::GetAbilitySystemComponent() const
@@ -589,8 +598,20 @@ void UCharacterProgressionManager::OnRep_Level(int32 OldLevel)
 
 void UCharacterProgressionManager::OnRep_CurrentXP(int64 OldXP)
 {
-	UE_LOG(LogCharacterProgressionManager, Log, TEXT("OnRep_CurrentXP: %lld -> %lld (Progress: %.1f%%)"), 
+	UE_LOG(LogCharacterProgressionManager, Log, TEXT("OnRep_CurrentXP: %lld -> %lld (Progress: %.1f%%)"),
 		OldXP, CurrentXP, GetXPProgressPercent() * 100.0f);
 
 	// Can trigger UI updates here
+}
+
+void UCharacterProgressionManager::OnRep_SpentStatPoints()
+{
+	// SpentStatPoints (TArray) has been replicated to this client.
+	// Rebuild the fast-lookup TMap cache so GetStatPointsSpentOn() stays O(1).
+	RebuildSpentStatPointsCache();
+
+	UE_LOG(LogCharacterProgressionManager, Log,
+		TEXT("OnRep_SpentStatPoints: cache rebuilt (%d entries)"), SpentStatPoints.Num());
+
+	// Can trigger UI updates (stat allocation screen refresh) here
 }

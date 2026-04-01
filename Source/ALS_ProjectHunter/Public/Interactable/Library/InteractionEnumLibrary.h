@@ -174,6 +174,27 @@ enum class EInteractionResult : uint8
 };
 
 // ═══════════════════════════════════════════════════════════════════════
+// MANAGED INTERACTION MODE
+// Moved here from InteractionManager so FActiveInteraction can reference it.
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Internal mode used by InteractionManager to track which interaction
+ * lifecycle is currently active.  More granular than EInteractionType because
+ * it distinguishes ground-item vs actor variants of the same type.
+ */
+UENUM()
+enum class EManagedInteractionMode : uint8
+{
+	None,
+	GroundTapOrHold,
+	ActorHold,
+	ActorTapOrHold,
+	ActorMash,
+	ActorContinuous
+};
+
+// ═══════════════════════════════════════════════════════════════════════
 // STRUCTS
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -275,81 +296,133 @@ struct FInteractionConfig
 	FInteractionConfig() = default;
 };
 /**
- * Active Interaction Data - Runtime state for ongoing interaction
+ * Active Interaction Data - Consolidated runtime state for any ongoing interaction.
+ *
+ * InteractionManager owns exactly one of these and calls Reset() to clear it.
+ * All per-interaction transient fields live here so ResetActiveInteractionState()
+ * is a single Reset() call instead of zeroing a dozen loose members manually.
  */
 USTRUCT(BlueprintType)
 struct FActiveInteraction
 {
 	GENERATED_BODY()
 
-	/** Current interaction state */
-	UPROPERTY(BlueprintReadOnly)
-	EInteractionState State = EInteractionState::IS_Idle;
+	// ── Mode / Type ───────────────────────────────────────────────
 
-	/** Current interaction type being performed */
+	/** Which lifecycle branch is running (None = no active interaction) */
+	UPROPERTY(BlueprintReadOnly)
+	EManagedInteractionMode Mode = EManagedInteractionMode::None;
+
+	/** Interaction type of the active target (for Blueprint queries) */
 	UPROPERTY(BlueprintReadOnly)
 	EInteractionType Type = EInteractionType::IT_None;
 
-	/** Who is interacting */
+	/** Current interaction state (Idle → Started → InProgress → Completed/Cancelled) */
+	UPROPERTY(BlueprintReadOnly)
+	EInteractionState State = EInteractionState::IS_Idle;
+
+	// ── Participants ──────────────────────────────────────────────
+
+	/** Who is interacting (always the owning pawn) */
 	UPROPERTY(BlueprintReadOnly)
 	AActor* Interactor = nullptr;
 
-	/** What is being interacted with */
+	/** Strong reference to the actor-based interactable target */
 	UPROPERTY(BlueprintReadOnly)
 	TScriptInterface<class IInteractable> Target;
 
-	/** Elapsed time (for hold) */
+	/** Weak validation handle for the target UObject (prevents stale pointer dispatch) */
+	UPROPERTY()
+	TWeakObjectPtr<UObject> TargetObject;
+
+	/** Ground item ID when mode is GroundTapOrHold (INDEX_NONE otherwise) */
+	UPROPERTY(BlueprintReadOnly)
+	int32 GroundItemID = INDEX_NONE;
+
+	// ── Hold / Continuous timing ──────────────────────────────────
+
+	/** Seconds the interact input has been held for the current interaction */
 	UPROPERTY(BlueprintReadOnly)
 	float ElapsedTime = 0.0f;
 
-	/** Current progress [0.0 - 1.0] */
+	/** Seconds before the hold phase begins (0 for pure holds, >0 for TapOrHold) */
+	UPROPERTY(BlueprintReadOnly)
+	float TapThresholdSeconds = 0.0f;
+
+	/** Seconds required to complete the hold phase (after threshold) */
+	UPROPERTY(BlueprintReadOnly)
+	float HoldDurationSeconds = 0.0f;
+
+	/** True once OnHoldInteractionStart has fired */
+	UPROPERTY(BlueprintReadOnly)
+	bool bHoldStarted = false;
+
+	/** True once OnHoldInteractionComplete has fired */
+	UPROPERTY(BlueprintReadOnly)
+	bool bHoldCompleted = false;
+
+	// ── Progress ─────────────────────────────────────────────────
+
+	/** Current normalized progress [0.0 – 1.0] */
 	UPROPERTY(BlueprintReadOnly)
 	float Progress = 0.0f;
 
-	/** Current mash count */
+	/** Last progress value pushed to the presentation layer (change-detection) */
+	UPROPERTY(BlueprintReadOnly)
+	float LastProgress = -1.0f;
+
+	// ── Mash-specific ─────────────────────────────────────────────
+
+	/** Fractional mash progress units (can decay as float between presses) */
+	UPROPERTY(BlueprintReadOnly)
+	float MashProgressUnits = 0.0f;
+
+	/** Integer press count displayed to UI / sent to interactable */
 	UPROPERTY(BlueprintReadOnly)
 	int32 MashCount = 0;
 
-	/** Last mash time (for decay) */
+	/** Total presses needed to complete the mash */
 	UPROPERTY(BlueprintReadOnly)
-	float LastMashTime = 0.0f;
+	int32 MashRequiredCount = 0;
+
+	/** Progress units lost per second when the player stops mashing */
+	UPROPERTY(BlueprintReadOnly)
+	float MashDecayRate = 0.0f;
+
+	/** World time of the last valid mash press (for decay grace period) */
+	UPROPERTY(BlueprintReadOnly)
+	float LastMashTime = -1.0f;
 
 	FActiveInteraction() = default;
 
-	/** Is interaction active? */
+	/** True while any interaction lifecycle is running */
 	bool IsActive() const
 	{
-		return State == EInteractionState::IS_Started || State == EInteractionState::IS_InProgress;
+		return Mode != EManagedInteractionMode::None;
 	}
 
-	/** Reset to idle */
+	/** Clear all fields back to their defaults */
 	void Reset()
 	{
-		State = EInteractionState::IS_Idle;
-		Type = EInteractionType::IT_None;
-		Interactor = nullptr;
-		Target = nullptr;
-		ElapsedTime = 0.0f;
-		Progress = 0.0f;
-		MashCount = 0;
-		LastMashTime = 0.0f;
+		Mode                = EManagedInteractionMode::None;
+		Type                = EInteractionType::IT_None;
+		State               = EInteractionState::IS_Idle;
+		Interactor          = nullptr;
+		Target              = nullptr;
+		TargetObject.Reset();
+		GroundItemID        = INDEX_NONE;
+		ElapsedTime         = 0.0f;
+		TapThresholdSeconds = 0.0f;
+		HoldDurationSeconds = 0.0f;
+		bHoldStarted        = false;
+		bHoldCompleted      = false;
+		Progress            = 0.0f;
+		LastProgress        = -1.0f;
+		MashProgressUnits   = 0.0f;
+		MashCount           = 0;
+		MashRequiredCount   = 0;
+		MashDecayRate       = 0.0f;
+		LastMashTime        = -1.0f;
 	}
 };
 
-/**
- * DoOnce State - Helper for DoOnce pattern
- * Used to ensure code executes only once until reset
- */
-USTRUCT(BlueprintType)
-struct FDoOnceState
-{
-	GENERATED_BODY()
-
-	/** Has been initialized? */
-	bool bHasBeenInitialized = false;
-
-	/** Is gate closed? */
-	bool bIsClosed = false;
-
-	FDoOnceState() = default;
-};

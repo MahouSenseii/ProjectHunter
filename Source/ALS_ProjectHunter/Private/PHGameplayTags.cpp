@@ -1,8 +1,10 @@
-// Copyright@2024 Quentin Davis 
+// Copyright@2024 Quentin Davis
 
 #include "PHGameplayTags.h"
 #include "GameplayTagsManager.h"
 #include "AbilitySystem/HunterAttributeSet.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogPHGameplayTags, Log, All);
 
 
 
@@ -356,6 +358,16 @@ DEFINE_GAMEPLAY_TAG(Effect_Mana_RegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Health_DegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Mana_DegenActive)
 
+// SetByCaller data tags — used by DamageApplicationGE
+DEFINE_GAMEPLAY_TAG(Data_Damage_Health)
+DEFINE_GAMEPLAY_TAG(Data_Damage_ArcaneShield)
+DEFINE_GAMEPLAY_TAG(Data_Damage_Stamina)
+
+// N-20 FIX: Recovery SetByCaller tags (mirrors damage tags for healing GEs)
+DEFINE_GAMEPLAY_TAG(Data_Recovery_Health)
+DEFINE_GAMEPLAY_TAG(Data_Recovery_Mana)
+DEFINE_GAMEPLAY_TAG(Data_Recovery_Stamina)
+
 #undef DEFINE_GAMEPLAY_TAG
 
 // ==============================
@@ -383,6 +395,7 @@ void FPHGameplayTags::InitRegister()
 	RegisterReflectionTags();
 	RegisterDamageConversionTags();
 	RegisterStatusEffectAliases();
+	RegisterSetByCallerDamageTags();
 	RegisterAttributeToTagMappings();
 	// Keep the lookup-map rebuild steps last: they clear and repopulate shared maps.
 	RegisterAllAttribute();
@@ -845,6 +858,24 @@ void FPHGameplayTags::RegisterStatusEffectAliases()
 	Attributes_Secondary_Duration_Purify          = T.AddNativeGameplayTag("Attributes.Secondary.Duration.Purify",          TEXT(""));
 }
 
+void FPHGameplayTags::RegisterSetByCallerDamageTags()
+{
+	// B-1 FIX: These tags are used as SetByCaller keys on DamageApplicationGE.
+	// The GE must have an Instant duration with three Additive modifiers, each
+	// using a SetByCaller magnitude with the corresponding tag below.
+	// CombatManager::ApplyResolvedDamage passes negative magnitudes (damage = subtraction).
+	UGameplayTagsManager& T = UGameplayTagsManager::Get();
+	Data_Damage_Health       = T.AddNativeGameplayTag("Data.Damage.Health",       TEXT("SetByCaller key for health damage in DamageApplicationGE."));
+	Data_Damage_ArcaneShield = T.AddNativeGameplayTag("Data.Damage.ArcaneShield", TEXT("SetByCaller key for arcane shield damage in DamageApplicationGE."));
+	Data_Damage_Stamina      = T.AddNativeGameplayTag("Data.Damage.Stamina",      TEXT("SetByCaller key for stamina damage in DamageApplicationGE."));
+
+	// N-20 FIX: Register recovery (healing) SetByCaller tags.
+	// HealingApplicationGE uses these as SetByCaller keys — pass positive magnitudes.
+	Data_Recovery_Health  = T.AddNativeGameplayTag("Data.Recovery.Health",  TEXT("SetByCaller key for health recovery in HealingApplicationGE."));
+	Data_Recovery_Mana    = T.AddNativeGameplayTag("Data.Recovery.Mana",    TEXT("SetByCaller key for mana recovery in HealingApplicationGE."));
+	Data_Recovery_Stamina = T.AddNativeGameplayTag("Data.Recovery.Stamina", TEXT("SetByCaller key for stamina recovery in HealingApplicationGE."));
+}
+
 void FPHGameplayTags::RegisterAttributeToTagMappings()
 {
     AttributeToTagMap.Empty();
@@ -935,11 +966,11 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     // Safety check - ensure AttributeSet is ready
     if (!UHunterAttributeSet::GetHealthAttribute().IsValid())
     {
-        UE_LOG(LogTemp, Error, TEXT("❌ AttributeSet not ready - skipping tag mappings"));
+        UE_LOG(LogPHGameplayTags, Error, TEXT("❌ AttributeSet not ready - skipping tag mappings"));
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("=== Registering Tag-to-Attribute Mappings ==="));
+    UE_LOG(LogPHGameplayTags, Warning, TEXT("=== Registering Tag-to-Attribute Mappings ==="));
 
     // ===========================
     // Vitals - Current Values 
@@ -1058,7 +1089,7 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Piercing.Armour")), UHunterAttributeSet::GetArmourPiercingAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Piercing.Armor")), UHunterAttributeSet::GetArmourPiercingAttribute());
 
-    UE_LOG(LogTemp, Log, TEXT("✓ Tag-to-Attribute mappings initialized with %d entries"), TagToAttributeMap.Num());
+    UE_LOG(LogPHGameplayTags, Log, TEXT("✓ Tag-to-Attribute mappings initialized with %d entries"), TagToAttributeMap.Num());
 }
 
 FGameplayAttribute FPHGameplayTags::GetAttributeFromTag(const FGameplayTag& Tag)
@@ -1455,7 +1486,7 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Duration.Purify"),         UHunterAttributeSet::GetPurifyDurationAttribute());
 
 	// (Optional) Log summary for sanity
-	UE_LOG(LogTemp, Log, TEXT("[PHGameplayTags] RegisterAllAttribute(): %d attributes in AllAttributesMap, %d status tags, %d min/max pairs."),
+	UE_LOG(LogPHGameplayTags, Log, TEXT("[PHGameplayTags] RegisterAllAttribute(): %d attributes in AllAttributesMap, %d status tags, %d min/max pairs."),
 		AllAttributesMap.Num(),
 		StatusEffectTagToAttributeMap.Num(),
 		TagsMinMax.Num());

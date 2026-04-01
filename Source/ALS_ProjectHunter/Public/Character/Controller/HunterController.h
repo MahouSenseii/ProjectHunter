@@ -15,6 +15,22 @@ class UInteractionManager;
 class UInputMappingContext;
 
 /**
+ * DoOnce State - Helper for DoOnce pattern
+ * Ensures code executes only once until explicitly reset.
+ * Lives here because it is exclusively used by HunterController::DoOnce().
+ */
+USTRUCT(BlueprintType)
+struct FDoOnceState
+{
+	GENERATED_BODY()
+
+	bool bHasBeenInitialized = false;
+	bool bIsClosed = false;
+
+	FDoOnceState() = default;
+};
+
+/**
  * Hunter Player Controller 
  */
 UCLASS()

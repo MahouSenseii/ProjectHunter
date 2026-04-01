@@ -234,11 +234,11 @@ public:
 	FGameplayAttributeData MaxLightningDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxLightningDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningFlatDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Max Lightning Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningFlatDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Lightning Flat Damage"))
 	FGameplayAttributeData LightningFlatDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningFlatDamage);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningPercentDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Max Percent Damage"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningPercentDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Lightning Percent Damage"))
 	FGameplayAttributeData LightningPercentDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningPercentDamage);
 
@@ -496,7 +496,7 @@ public:
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningToCorruption);
 
 	/** Light Damage Conversions */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToPhysical, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Lightning To Physical"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightToPhysical, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Light To Physical"))
 	FGameplayAttributeData LightToPhysical;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightToPhysical);
 
@@ -521,7 +521,7 @@ public:
 	FGameplayAttributeData CorruptionToPhysical;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionToPhysical);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToFire, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Corruption To Physical"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToFire, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Corruption To Fire"))
 	FGameplayAttributeData CorruptionToFire;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionToFire);
 
@@ -724,7 +724,7 @@ public:
 	FGameplayAttributeData IceResistanceFlatBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceResistanceFlatBonus);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceResistancePercentBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Max Fire Resistance"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IceResistancePercentBonus, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Ice Resistance Percent Bonus"))
 	FGameplayAttributeData IceResistancePercentBonus;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IceResistancePercentBonus);
 
@@ -910,7 +910,7 @@ public:
 	FGameplayAttributeData HealthCostChanges;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, HealthCostChanges);
 	
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LifeOnHit, Category = "Vital |  Misc", meta = (DisplayName = "Life OnH it"))
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LifeOnHit, Category = "Vital |  Misc", meta = (DisplayName = "Life On Hit"))
 	FGameplayAttributeData LifeOnHit;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LifeOnHit);
 

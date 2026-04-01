@@ -60,16 +60,10 @@ bool FGroundItemPickupManager::PickupToInventory(int32 ItemID)
 		return false;
 	}
 
-	// Get client location for validation
-	FVector ClientLocation = OwnerActor->GetActorLocation();
-
-	// If on server, execute directly
-	if (OwnerActor->HasAuthority())
-	{
-		return PickupToInventoryInternal(ItemID, ClientLocation);
-	}
-
-	// TODO: Add RPC call here for networked games
+	// OPT-RPC: Authority routing is now handled by InteractionManager's
+	// Server RPCs.  By the time this method is called the code is already
+	// executing on the authority (or in a single-player context).
+	const FVector ClientLocation = OwnerActor->GetActorLocation();
 	return PickupToInventoryInternal(ItemID, ClientLocation);
 }
 
@@ -86,16 +80,9 @@ bool FGroundItemPickupManager::PickupAndEquip(int32 ItemID)
 		return false;
 	}
 
-	// Get client location for validation
-	FVector ClientLocation = OwnerActor->GetActorLocation();
-
-	// If on server, execute directly
-	if (OwnerActor->HasAuthority())
-	{
-		return PickupAndEquipInternal(ItemID, ClientLocation);
-	}
-
-	// TODO: Add RPC call here for networked games
+	// OPT-RPC: Same as PickupToInventory — authority routing lives in
+	// InteractionManager::Server_PickupAndEquip.
+	const FVector ClientLocation = OwnerActor->GetActorLocation();
 	return PickupAndEquipInternal(ItemID, ClientLocation);
 }
 
@@ -154,7 +141,7 @@ void FGroundItemPickupManager::StartHoldInteraction(int32 ItemID)
 	HoldElapsedTime = 0.0f;
 	HoldProgress = 0.0f;
 
-	UE_LOG(LogTemp, Log, TEXT("GroundItemPickupManager: Hold interaction started for item %d"), ItemID);
+	UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Hold interaction started for item %d"), ItemID);
 }
 
 bool FGroundItemPickupManager::UpdateHoldProgress(float DeltaTime)
@@ -203,7 +190,7 @@ void FGroundItemPickupManager::CancelHoldInteraction()
 	HoldElapsedTime = 0.0f;
 	HoldProgress = 0.0f;
 
-	UE_LOG(LogTemp, Log, TEXT("GroundItemPickupManager: Hold interaction cancelled for item %d"), CancelledItemID);
+	UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Hold interaction cancelled for item %d"), CancelledItemID);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -221,7 +208,7 @@ void FGroundItemPickupManager::CacheComponents()
 	CachedInventoryManager = OwnerActor->FindComponentByClass<UInventoryManager>();
 	if (!CachedInventoryManager)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("GroundItemPickupManager: No InventoryManager found"));
+		UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: No InventoryManager found"));
 	}
 
 	// Cache equipment manager
@@ -248,14 +235,14 @@ bool FGroundItemPickupManager::PickupToInventoryInternal(int32 ItemID, FVector C
 	UItemInstance* Item = CachedGroundItemSubsystem->RemoveItemFromGround(ItemID);
 	if (!Item)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("GroundItemPickupManager: Item %d not found"), ItemID);
+		UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: Item %d not found"), ItemID);
 		return false;
 	}
 
 	// Add to inventory
 	if (CachedInventoryManager->AddItem(Item))
 	{
-		UE_LOG(LogTemp, Log, TEXT("GroundItemPickupManager: Picked up %s to inventory"), *Item->GetDisplayName().ToString());
+		UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Picked up %s to inventory"), *Item->GetDisplayName().ToString());
 		return true;
 	}
 
@@ -266,7 +253,7 @@ bool FGroundItemPickupManager::PickupToInventoryInternal(int32 ItemID, FVector C
 		CachedGroundItemSubsystem->AddItemToGround(Item, *OriginalLocation);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("GroundItemPickupManager: Inventory full, item returned to ground"));
+	UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: Inventory full, item returned to ground"));
 	return false;
 }
 

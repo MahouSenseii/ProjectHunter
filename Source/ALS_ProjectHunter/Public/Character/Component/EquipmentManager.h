@@ -10,6 +10,7 @@ class UItemInstance;
 class UInventoryManager;
 class UAbilitySystemComponent;
 class UStatsManager;
+class AEquippedItemRuntimeActor;
 class USkeletalMeshComponent;
 struct FItemBase;
 struct FItemAttachmentRules;
@@ -123,6 +124,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Equipment")
 	void UnequipAll(bool bMoveToBag = true);
 
+	/** Get the active runtime actor for a slot, if the equipped item uses one. */
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	AEquippedItemRuntimeActor* GetActiveRuntimeItemActor(EEquipmentSlot Slot) const;
+
+	/** Start the equipped runtime item's primary action. */
+	UFUNCTION(BlueprintCallable, Category = "Equipment")
+	bool BeginPrimaryItemAction(EEquipmentSlot Slot = EEquipmentSlot::ES_MainHand);
+
+	/** End the equipped runtime item's primary action. */
+	UFUNCTION(BlueprintCallable, Category = "Equipment")
+	bool EndPrimaryItemAction(EEquipmentSlot Slot = EEquipmentSlot::ES_MainHand);
+
 	// ═══════════════════════════════════════════════
 	// EQUIPMENT SLOTS
 	// ═══════════════════════════════════════════════
@@ -142,7 +155,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Equipment|Events")
 	FOnEquipmentChanged OnEquipmentChanged;
 
-	/** Called when weapon representation needs updating (visual + combat) */
+	/** Called when equipped item representation needs updating (visual + combat). */
 	UPROPERTY(BlueprintAssignable, Category = "Equipment|Events")
 	FOnWeaponUpdated OnWeaponUpdated;
 
@@ -162,7 +175,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Config")
 	bool bApplyStatsOnEquip = true;
 
-	/** Update weapon representation automatically? */
+	/** Update equipped item representation automatically? */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Config")
 	bool bAutoUpdateWeapons = true;
 
@@ -197,18 +210,18 @@ protected:
 	bool IsRingSlot(EEquipmentSlot Slot) const;
 
 	/**
-	 * Update equipped weapon (visual + combat representation)
-	 * Spawns weapon actor or mesh component based on item configuration
+	 * Update equipped item representation (visual + runtime/combat behavior)
+	 * Spawns a runtime actor or mesh component based on item configuration.
 	 * 
-	 * Weapon Actor (bUseWeaponActor = true):
-	 *   - Spawns BP with combat logic (mesh, collision, damage traces, VFX)
-	 *   - Use for: Combat-enabled weapons
+	 * Runtime Actor (bUseRuntimeActor = true):
+	 *   - Spawns a Blueprint child of AEquippedItemRuntimeActor for active/special items.
+	 *   - Use for: Weapons or other equipped items with traces, VFX, action logic, etc.
 	 * 
-	 * Mesh Component (bUseWeaponActor = false):
-	 *   - Spawns USkeletalMeshComponent or UStaticMeshComponent
-	 *   - Use for: Cosmetic items, shields, visual-only equipment
+	 * Mesh Component (bUseRuntimeActor = false):
+	 *   - Spawns USkeletalMeshComponent or UStaticMeshComponent.
+	 *   - Use for: Passive/cosmetic equipment that only needs a visual attachment.
 	 * 
-	 * @param Slot - Equipment slot (MainHand/OffHand/TwoHand)
+	 * @param Slot - Equipment slot
 	 * @param Item - Item to represent (nullptr to clear/unequip)
 	 */
 	void UpdateEquippedWeapon(EEquipmentSlot Slot, UItemInstance* Item);
@@ -216,15 +229,15 @@ protected:
 	/** Get socket context for equipment slot */
 	FName GetSocketContextForSlot(EEquipmentSlot Slot) const;
 
-	/** Spawn weapon actor blueprint (visual + combat) */
+	/** Spawn runtime actor representation (visual + combat/special logic). */
 	void SpawnWeaponActor(EEquipmentSlot Slot, UItemInstance* Item, FItemBase* BaseData, 
 	                     FName SocketName, FName ComponentTag);
 
-	/** Spawn weapon mesh component (visual only) */
+	/** Spawn attached mesh representation (visual only). */
 	void SpawnWeaponMesh(EEquipmentSlot Slot, UItemInstance* Item, FItemBase* BaseData,
 	                    FName SocketName, FName ComponentTag);
 
-	/** Clean up weapon (actor or component) */
+	/** Clean up attached representation (actor or component). */
 	void CleanupWeapon(FName ComponentTag, EEquipmentSlot Slot);
 
 	/** Convert item attachment rules to Unreal's attachment rules */
@@ -266,11 +279,18 @@ protected:
 	TMap<EEquipmentSlot, UItemInstance*> EquippedItemsMap;
 
 	/**
-	 * Active weapon actors (for combat-enabled weapons)
-	 * Stores spawned weapon actor blueprints with combat logic
+	 * Active runtime actors for equipped items that own their own behavior.
 	 */
 	UPROPERTY(Transient)
-	TMap<EEquipmentSlot, AActor*> ActiveWeaponActors;
+	TMap<EEquipmentSlot, AActor*> ActiveRuntimeItemActors;
+
+	/**
+	 * B-2 FIX: Active mesh components spawned by SpawnWeaponMesh for slots that use a
+	 * mesh-only representation. Stored here for O(1) access and reliable cleanup.
+	 * Not replicated — rebuilt locally on both server and clients.
+	 */
+	UPROPERTY(Transient)
+	TMap<EEquipmentSlot, USceneComponent*> ActiveMeshComponents;
 
 	// ═══════════════════════════════════════════════
 	// NETWORK
@@ -283,6 +303,14 @@ protected:
 	/** Server RPC: Unequip item */
 	UFUNCTION(Server, Reliable)
 	void ServerUnequipItem(EEquipmentSlot Slot, bool bMoveToBag);
+
+	/** Server RPC: Begin primary item action. */
+	UFUNCTION(Server, Reliable)
+	void ServerBeginPrimaryItemAction(EEquipmentSlot Slot);
+
+	/** Server RPC: End primary item action. */
+	UFUNCTION(Server, Reliable)
+	void ServerEndPrimaryItemAction(EEquipmentSlot Slot);
 
 	/** Multicast RPC: Broadcast equipment change */
 	UFUNCTION(NetMulticast, Reliable)

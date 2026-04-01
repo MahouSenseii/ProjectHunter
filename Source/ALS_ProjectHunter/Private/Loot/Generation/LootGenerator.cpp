@@ -279,17 +279,29 @@ EItemRarity FLootGenerator::DetermineRarity(
 			break;
 	}
 	
-	if (UpgradeChance > 0.0f && RandStream.FRand() < UpgradeChance)
+	// I-07 FIX: Replace single roll (max +1 tier) with a decaying loop so that high
+	// magic-find values can push items multiple rarity tiers upward. Each iteration
+	// the chance is multiplied by a decay factor (0.35) to make each successive
+	// upgrade exponentially less likely — matching the intended PoE-style
+	// "diminishing returns" feel for magic find investment.
+	if (UpgradeChance > 0.0f)
 	{
-		int32 RarityInt = static_cast<int32>(BaseRarity);
-		int32 MaxRarity = static_cast<int32>(EItemRarity::IR_GradeS);
-		
-		if (RarityInt < MaxRarity)
+		constexpr float DecayFactor = 0.35f;
+		constexpr int32 MaxRarityInt = static_cast<int32>(EItemRarity::IR_GradeS);
+
+		float CurrentChance = UpgradeChance;
+		while (CurrentChance > 0.0f && RandStream.FRand() < CurrentChance)
 		{
+			int32 RarityInt = static_cast<int32>(BaseRarity);
+			if (RarityInt >= MaxRarityInt)
+			{
+				break; // Already at maximum non-unique rarity
+			}
 			BaseRarity = static_cast<EItemRarity>(RarityInt + 1);
+			CurrentChance *= DecayFactor;
 		}
 	}
-	
+
 	return BaseRarity;
 }
 
@@ -383,7 +395,12 @@ TArray<int32> FLootGenerator::SelectWeighted(
 	
 	TArray<int32> AvailableIndices;
 	TArray<float> AvailableWeights;
-	
+
+	// P-2 FIX: Track remaining weight as a running sum rather than re-summing
+	// the entire AvailableWeights array on every iteration (was O(n) per pick → O(n²) total).
+	// We initialise RemainingWeight once and subtract each removed entry's weight.
+	float RemainingWeight = TotalWeight;
+
 	if (!bAllowDuplicates)
 	{
 		for (int32 i = 0; i < Entries.Num(); ++i)
@@ -392,23 +409,18 @@ TArray<int32> FLootGenerator::SelectWeighted(
 			AvailableWeights.Add(Entries[i].GetEffectiveWeight());
 		}
 	}
-	
+
 	for (int32 i = 0; i < NumToSelect; ++i)
 	{
-		float CurrentTotalWeight = bAllowDuplicates ? TotalWeight : 0.0f;
-		
 		if (!bAllowDuplicates)
 		{
-			for (float W : AvailableWeights)
-			{
-				CurrentTotalWeight += W;
-			}
-			
 			if (AvailableIndices.Num() == 0)
 			{
 				break;
 			}
 		}
+
+		float CurrentTotalWeight = bAllowDuplicates ? TotalWeight : RemainingWeight;
 		
 		float RandomValue = RandStream.FRandRange(0.0f, CurrentTotalWeight);
 		float CurrentWeight = 0.0f;
@@ -433,6 +445,9 @@ TArray<int32> FLootGenerator::SelectWeighted(
 				if (RandomValue < CurrentWeight)
 				{
 					Selected.Add(AvailableIndices[j]);
+					// P-2 FIX: subtract this entry's weight from the running total
+					// so the next iteration's CurrentTotalWeight is correct in O(1).
+					RemainingWeight -= AvailableWeights[j];
 					AvailableIndices.RemoveAtSwap(j);
 					AvailableWeights.RemoveAtSwap(j);
 					break;
@@ -509,19 +524,26 @@ TArray<int32> FLootGenerator::SelectAll(
 	const FLootDropSettings& Settings,
 	FRandomStream& RandStream) const
 {
+	// C-4 FIX: LSM_All must return EVERY valid entry unconditionally.
+	// Previously this was identical to SelectSequential (copy-paste bug) —
+	// it incorrectly rolled a per-entry random chance and skipped some entries.
+	// Entries have already been validated by FilterEntries, so we just add all indices.
+
+	// FIX: Settings and RandStream are not used by LSM_All (by design — all entries
+	// are selected unconditionally). Suppress unused-parameter warnings explicitly
+	// rather than removing the parameters, which would break the calling convention
+	// shared with the other Select* methods.
+	(void)Settings;
+	(void)RandStream;
+
 	TArray<int32> Selected;
-	
+	Selected.Reserve(Entries.Num());
+
 	for (int32 i = 0; i < Entries.Num(); ++i)
 	{
-		const FLootEntry& Entry = Entries[i];
-		float EffectiveChance = Entry.DropChance * Settings.DropChanceMultiplier;
-		
-		if (RandStream.FRand() < EffectiveChance)
-		{
-			Selected.Add(i);
-		}
+		Selected.Add(i);
 	}
-	
+
 	return Selected;
 }
 

@@ -8,6 +8,8 @@
 #include "Character/Component/CharacterProgressionManager.h"
 #include "Character/Component/StatsManager.h"
 #include "Character/Component/TagManager.h"
+#include "Character/Component/DoTManager.h"
+#include "Character/Component/MovesetManager.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "Character/Component/EquipmentManager.h"
@@ -58,6 +60,13 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 
 	// Create Tag Manager
 	TagManager = CreateDefaultSubobject<UTagManager>(TEXT("TagManager"));
+
+	// Create DoT Manager — assign GE classes in Blueprint defaults
+	DoTManager = CreateDefaultSubobject<UDoTManager>(TEXT("DoTManager"));
+
+	// Create Moveset Manager — weapon skill socket system
+	MovesetManager = CreateDefaultSubobject<UMovesetManager>(TEXT("MovesetManager"));
+	MovesetManager->SetIsReplicated(true);
 }
 
 void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -68,6 +77,9 @@ void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	DOREPLIFETIME(APHBaseCharacter, bIsDead);
 	DOREPLIFETIME(APHBaseCharacter, TeamID);
 	DOREPLIFETIME(APHBaseCharacter, CombatAffiliation);
+	// I-05: LastKillerActor was declared UPROPERTY(Replicated) but missing here.
+	// Added so late-joining clients can retrieve the killer after a Multicast fires.
+	DOREPLIFETIME(APHBaseCharacter, LastKillerActor);
 }
 
 
@@ -209,16 +221,10 @@ void APHBaseCharacter::InitializeAbilitySystem()
 		return;
 	}
 
-	const bool bHasLiveAttributeSet = EnsureAttributeSetRegisteredWithAbilitySystem();
-
-	// Refresh actor info every time possession/controller state changes. The owned
-	// AttributeSet registration above keeps the ASC wired to the same live stat object.
+	// I-04 FIX: Always refresh actor info and level when possession or controller
+	// state changes. These calls are cheap, idempotent, and required on every
+	// invocation to keep the ASC up-to-date after re-possession.
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
-
-	if (TagManager)
-	{
-		TagManager->Initialize(AbilitySystemComponent);
-	}
 
 	if (UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(AbilitySystemComponent))
 	{
@@ -234,6 +240,9 @@ void APHBaseCharacter::InitializeAbilitySystem()
 			static_cast<float>(CachedLevel));
 	}
 
+	// I-04 FIX: Early-out for re-possession path. Everything below this guard is
+	// one-time setup; running it again would re-register delegates, re-grant
+	// abilities, and re-apply startup effects — all incorrect.
 	if (bAbilitySystemInitialized)
 	{
 		if (TagManager)
@@ -256,6 +265,13 @@ void APHBaseCharacter::InitializeAbilitySystem()
 		return;
 	}
 
+	// --- First-time initialization from here down ---
+
+	// I-04 FIX: EnsureAttributeSetRegisteredWithAbilitySystem and TagManager->Initialize
+	// are now placed here (after the guard) so they only run once, not on every
+	// possession/controller change event.
+	const bool bHasLiveAttributeSet = EnsureAttributeSetRegisteredWithAbilitySystem();
+
 	if (!bHasLiveAttributeSet)
 	{
 		UE_LOG(
@@ -265,6 +281,11 @@ void APHBaseCharacter::InitializeAbilitySystem()
 			*GetName(),
 			*GetNameSafe(AbilitySystemComponent));
 		return;
+	}
+
+	if (TagManager)
+	{
+		TagManager->Initialize(AbilitySystemComponent);
 	}
 
 	// Initialize attributes with base values
@@ -372,7 +393,9 @@ int32 APHBaseCharacter::GetCharacterLevel() const
 
 int64 APHBaseCharacter::GetXPReward() const
 {
-	return GetCharacterLevel() * 100;
+	// I-10 FIX: Apply XPRewardMultiplier so designers can tune per-enemy XP budgets
+	// in Blueprint/DataAsset without touching code. Previously hard-coded to Level*100.
+	return static_cast<int64>(GetCharacterLevel() * 100 * XPRewardMultiplier);
 }
 
 void APHBaseCharacter::AwardExperienceFromKill(APHBaseCharacter* KilledCharacter)
@@ -392,7 +415,16 @@ void APHBaseCharacter::AwardExperienceFromKill(APHBaseCharacter* KilledCharacter
 
 void APHBaseCharacter::OnRep_IsDead()
 {
-	if (!bIsDead)
+	// I-05 FIX: Multicast_NotifyDeath now delivers bIsDead + LastKillerActor atomically
+	// to all connected clients, eliminating the previous race where LastKillerActor
+	// could arrive after bIsDead triggered this callback with a stale null killer.
+	//
+	// OnRep_IsDead is kept only as a safety net for clients that connect AFTER the
+	// character has already died (late joiners receive replicated state but miss the
+	// multicast). In that case we fire the visual death state without the event so the
+	// corpse appears correctly. The OnDeathEvent broadcast is intentionally skipped
+	// here because gameplay logic should not re-fire on late join.
+	if (!bIsDead || HasAuthority())
 	{
 		return;
 	}
@@ -405,7 +437,6 @@ void APHBaseCharacter::OnRep_IsDead()
 	}
 
 	PlayDeathAnimation();
-	OnDeathEvent.Broadcast(this, LastKillerActor);
 }
 
 float APHBaseCharacter::GetHealth() const
@@ -445,16 +476,48 @@ void APHBaseCharacter::OnDeath_Implementation(AController* Killer, AActor* Damag
 		return;
 	}
 
+	// I-05 FIX: Set server-side state for late-join replication, then deliver
+	// the authoritative death notification via a reliable multicast RPC so that
+	// ALL clients receive bIsDead and LastKillerActor in a single packet — no race.
 	bIsDead = true;
 	LastKillerActor = DamageCauser;
 
-	UE_LOG(LogTemp, Log, TEXT("%s died"), *GetName());
+	UE_LOG(LogPHBaseCharacterAbilitySystem, Log, TEXT("%s died"), *GetName());
 
-	PlayDeathAnimation();
+	// Apply physics/movement changes immediately on the server
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetCharacterMovement()->DisableMovement();
-	
-	OnDeathEvent.Broadcast(this, DamageCauser);
+	PlayDeathAnimation();
+
+	// Reliable multicast delivers atomic death state + event to all clients
+	Multicast_NotifyDeath(DamageCauser);
+}
+
+void APHBaseCharacter::Multicast_NotifyDeath_Implementation(AActor* KillerActor)
+{
+	// Skip on the server — OnDeath_Implementation already handled the local state.
+	if (HasAuthority())
+	{
+		// Server-side: broadcast event now that both properties are set
+		OnDeathEvent.Broadcast(this, KillerActor);
+		return;
+	}
+
+	// Client-side: apply death visuals/physics and broadcast the event.
+	// LastKillerActor is supplied directly as a parameter, so it is always valid
+	// here regardless of when the Replicated property arrives.
+	bIsDead = true;
+	LastKillerActor = KillerActor;
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->DisableMovement();
+	}
+
+	PlayDeathAnimation();
+	OnDeathEvent.Broadcast(this, KillerActor);
 }
 
 void APHBaseCharacter::HandleHealthChanged(const FOnAttributeChangeData& Data)

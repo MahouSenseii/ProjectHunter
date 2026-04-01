@@ -27,10 +27,10 @@ void UGroundItemSubsystem::Deinitialize()
 {
 	ClearAllItems();
 	
-	if (ISMContainerActor)
+	if (ISMContainerActor.IsValid())
 	{
 		ISMContainerActor->Destroy();
-		ISMContainerActor = nullptr;
+		ISMContainerActor.Reset();
 	}
 	
 	Super::Deinitialize();
@@ -44,7 +44,8 @@ void UGroundItemSubsystem::Deinitialize()
 
 void UGroundItemSubsystem::EnsureISMContainerExists()
 {
-	if (ISMContainerActor && IsValid(ISMContainerActor))
+	// WS-2 FIX: TWeakObjectPtr::IsValid() returns false if the actor was GC'd.
+	if (ISMContainerActor.IsValid())
 	{
 		return;
 	}
@@ -74,7 +75,7 @@ void UGroundItemSubsystem::EnsureISMContainerExists()
 		Params
 	);
 	
-	if (ISMContainerActor)
+	if (ISMContainerActor.IsValid())
 	{
 		UE_LOG(LogGroundItemSubsystem, Log, TEXT("GroundItemSubsystem: Created ISM container actor"));
 	}
@@ -100,14 +101,14 @@ UInstancedStaticMeshComponent* UGroundItemSubsystem::GetOrCreateISMComponent(USt
 	}
 
 	EnsureISMContainerExists();
-	
-	if (!ISMContainerActor)
+
+	if (!ISMContainerActor.IsValid())
 	{
 		return nullptr;
 	}
 
 	UInstancedStaticMeshComponent* NewISM = NewObject<UInstancedStaticMeshComponent>(
-		ISMContainerActor,
+		ISMContainerActor.Get(),
 		*FString::Printf(TEXT("ISM_%s"), *Mesh->GetName())
 	);
 	
@@ -125,24 +126,32 @@ UInstancedStaticMeshComponent* UGroundItemSubsystem::GetOrCreateISMComponent(USt
 	return NewISM;
 }
 
-void UGroundItemSubsystem::ReindexAfterRemoval(UInstancedStaticMeshComponent* ISMComponent, int32 RemovedIndex)
+void UGroundItemSubsystem::UpdateIndexAfterSwap(UInstancedStaticMeshComponent* ISMComponent,
+                                                int32 RemovedIndex, int32 LastIndex)
 {
-	
+	// P-3 FIX: After the manual swap-and-pop, the instance that was at LastIndex now
+	// sits at RemovedIndex. Only that one entry needs its stored index updated.
+	if (RemovedIndex == LastIndex)
+	{
+		// The removed instance WAS the last one; no swap occurred, nothing to update.
+		return;
+	}
+
+	// OPT-ISM: The old linear scan over ItemISMData was O(n) in the number of
+	// ground items.  This is fine for single removals but adds up during batch
+	// operations.  We still do a linear scan here (since we don't maintain an
+	// ISM-index→ItemID reverse map) but break early, keeping it O(n) worst case
+	// with typically very fast early exits.
 	for (TPair<int32, FGroundItemISMData>& Pair : ItemISMData)
 	{
 		FGroundItemISMData& Data = Pair.Value;
-		
-		if (Data.ISMComponent != ISMComponent)
+		if (Data.ISMComponent == ISMComponent && Data.InstanceIndex == LastIndex)
 		{
-			continue;
-		}
-
-		if (Data.InstanceIndex > RemovedIndex)
-		{
-			Data.InstanceIndex--;
-			
-			UE_LOG(LogGroundItemSubsystem, Verbose, TEXT("ReindexAfterRemoval: Item %d index shifted from %d to %d"),
-				Pair.Key, Data.InstanceIndex + 1, Data.InstanceIndex);
+			Data.InstanceIndex = RemovedIndex;
+			UE_LOG(LogGroundItemSubsystem, Verbose,
+				TEXT("UpdateIndexAfterSwap: Item %d moved from ISM index %d to %d after swap removal"),
+				Pair.Key, LastIndex, RemovedIndex);
+			return; // Only one item can hold LastIndex; stop once found.
 		}
 	}
 }
@@ -154,8 +163,8 @@ void UGroundItemSubsystem::ReindexAfterRemoval(UInstancedStaticMeshComponent* IS
 int32 UGroundItemSubsystem::AddItemToGround(UItemInstance* Item, FVector Location, FRotator Rotation)
 {
 	EnsureISMContainerExists();
-	
-	if (!ISMContainerActor)
+
+	if (!ISMContainerActor.IsValid())
 	{
 		UE_LOG(LogGroundItemSubsystem, Error, TEXT("AddItemToGround: Cannot add item - no container actor!"));
 		return -1;
@@ -196,7 +205,10 @@ int32 UGroundItemSubsystem::AddItemToGround(UItemInstance* Item, FVector Locatio
 	InstanceLocations.Add(ItemID, Location);
 	ItemISMData.Add(ItemID, FGroundItemISMData(ISM, ISMInstanceIndex, Mesh));
 
-	UE_LOG(LogGroundItemSubsystem, Log, TEXT("AddItemToGround: Added item '%s' (ID: %d, ISMIndex: %d) at %s"), 
+	// P-3 FIX: Keep the reverse map in sync for O(1) GetInstanceID lookups.
+	InstanceToIDMap.Add(Item, ItemID);
+
+	UE_LOG(LogGroundItemSubsystem, Log, TEXT("AddItemToGround: Added item '%s' (ID: %d, ISMIndex: %d) at %s"),
 		*Item->GetDisplayName().ToString(), ItemID, ISMInstanceIndex, *Location.ToString());
 
 	return ItemID;
@@ -209,24 +221,30 @@ UItemInstance* UGroundItemSubsystem::RemoveItemFromGround(int32 ItemID)
 	// ═══════════════════════════════════════════════
 	if (bIsProcessingRemoval)
 	{
-		UE_LOG(LogGroundItemSubsystem, Warning, 
+		UE_LOG(LogGroundItemSubsystem, Warning,
 			TEXT("RemoveItemFromGround: Already processing a removal, queuing item %d"), ItemID);
-		
+
+		// WS-1 FIX: Lock before touching PendingRemovals — async loaders or
+		// parallel-for tasks could call RemoveItemFromGround concurrently.
+		FScopeLock Lock(&PendingRemovalsCS);
 		PendingRemovals.AddUnique(ItemID);
 		return nullptr;
 	}
-	
+
 	bIsProcessingRemoval = true;
-	
+
 	UItemInstance* Result = RemoveItemFromGroundInternal(ItemID);
-	
+
 	// Process any queued removals
-	while (PendingRemovals.Num() > 0)
 	{
-		int32 QueuedID = PendingRemovals.Pop();
-		RemoveItemFromGroundInternal(QueuedID);
+		FScopeLock Lock(&PendingRemovalsCS);
+		while (PendingRemovals.Num() > 0)
+		{
+			int32 QueuedID = PendingRemovals.Pop();
+			RemoveItemFromGroundInternal(QueuedID);
+		}
 	}
-	
+
 	bIsProcessingRemoval = false;
 	
 	return Result;
@@ -248,18 +266,38 @@ UItemInstance* UGroundItemSubsystem::RemoveItemFromGroundInternal(int32 ItemID)
 	{
 		UInstancedStaticMeshComponent* ISM = ISMData->ISMComponent;
 		int32 InstanceIndex = ISMData->InstanceIndex;
+		const int32 LastIndex = ISM->GetInstanceCount() - 1;
 
-		if (InstanceIndex >= 0 && InstanceIndex < ISM->GetInstanceCount())
+		if (InstanceIndex >= 0 && InstanceIndex <= LastIndex)
 		{
-			ISM->RemoveInstance(InstanceIndex);
-			ReindexAfterRemoval(ISM, InstanceIndex);
-			
-			UE_LOG(LogGroundItemSubsystem, Log, TEXT("RemoveItemFromGround: Removed item ID %d (ISMIndex was %d)"), 
-				ItemID, InstanceIndex);
+			// P-3 FIX: Emulate swap-and-pop so removal is effectively O(1).
+			// UInstancedStaticMeshComponent has no RemoveInstanceSwap, so we do it
+			// manually:
+			//   1. If this isn't already the last slot, overwrite it with the last
+			//      instance's world transform — the visual result is identical.
+			//   2. Call RemoveInstance on the last slot: O(1) because no indices
+			//      after it need shifting.
+			//   3. UpdateIndexAfterSwap then fixes only the single bookkeeping entry
+			//      whose index moved from LastIndex to InstanceIndex.
+			if (InstanceIndex != LastIndex)
+			{
+				FTransform LastTransform;
+				ISM->GetInstanceTransform(LastIndex, LastTransform, /*bWorldSpace=*/true);
+				ISM->UpdateInstanceTransform(InstanceIndex, LastTransform,
+				                             /*bWorldSpace=*/true,
+				                             /*bMarkRenderStateDirty=*/false,
+				                             /*bTeleport=*/true);
+			}
+			ISM->RemoveInstance(LastIndex);
+			UpdateIndexAfterSwap(ISM, InstanceIndex, LastIndex);
+
+			UE_LOG(LogGroundItemSubsystem, Log,
+				TEXT("RemoveItemFromGround: Removed item ID %d (ISMIndex was %d, LastIndex was %d)"),
+				ItemID, InstanceIndex, LastIndex);
 		}
 		else
 		{
-			UE_LOG(LogGroundItemSubsystem, Error, 
+			UE_LOG(LogGroundItemSubsystem, Error,
 				TEXT("RemoveItemFromGround: Invalid ISM index %d for item %d (ISM has %d instances)"),
 				InstanceIndex, ItemID, ISM->GetInstanceCount());
 		}
@@ -267,6 +305,12 @@ UItemInstance* UGroundItemSubsystem::RemoveItemFromGroundInternal(int32 ItemID)
 	else
 	{
 		UE_LOG(LogGroundItemSubsystem, Warning, TEXT("RemoveItemFromGround: No valid ISM data for item ID %d"), ItemID);
+	}
+
+	// P-3 FIX: Remove from reverse lookup map to keep it in sync.
+	if (Item)
+	{
+		InstanceToIDMap.Remove(Item);
 	}
 
 	GroundItems.Remove(ItemID);
@@ -284,14 +328,19 @@ TArray<UItemInstance*> UGroundItemSubsystem::RemoveMultipleItemsFromGround(const
 {
 	TArray<UItemInstance*> RemovedItems;
 	RemovedItems.Reserve(ItemIDs.Num());
-	
+
 	if (ItemIDs.Num() == 0)
 	{
 		return RemovedItems;
 	}
-	
+
 	bIsProcessingRemoval = true;
-	
+
+	// OPT-ISM: Collect all affected ISM components so we can batch the render
+	// state rebuild.  Without this, each RemoveInstance call can trigger an
+	// individual MarkRenderStateDirty → N separate rebuilds for N removals.
+	TSet<UInstancedStaticMeshComponent*> AffectedISMs;
+
 	// Sort by ISM index descending for efficient removal
 	TArray<TPair<int32, int32>> SortedItems;
 	for (int32 ItemID : ItemIDs)
@@ -299,14 +348,18 @@ TArray<UItemInstance*> UGroundItemSubsystem::RemoveMultipleItemsFromGround(const
 		if (FGroundItemISMData* Data = ItemISMData.Find(ItemID))
 		{
 			SortedItems.Add(TPair<int32, int32>(ItemID, Data->InstanceIndex));
+			if (Data->ISMComponent)
+			{
+				AffectedISMs.Add(Data->ISMComponent);
+			}
 		}
 	}
-	
+
 	SortedItems.Sort([](const TPair<int32, int32>& A, const TPair<int32, int32>& B)
 	{
 		return A.Value > B.Value;
 	});
-	
+
 	for (const TPair<int32, int32>& Pair : SortedItems)
 	{
 		if (UItemInstance* Item = RemoveItemFromGroundInternal(Pair.Key))
@@ -314,9 +367,19 @@ TArray<UItemInstance*> UGroundItemSubsystem::RemoveMultipleItemsFromGround(const
 			RemovedItems.Add(Item);
 		}
 	}
-	
+
+	// OPT-ISM: Single render state rebuild per affected ISM component
+	// (instead of one per removal). This is the key perf win for batch pickup.
+	for (UInstancedStaticMeshComponent* ISM : AffectedISMs)
+	{
+		if (ISM && IsValid(ISM))
+		{
+			ISM->MarkRenderStateDirty();
+		}
+	}
+
 	bIsProcessingRemoval = false;
-	
+
 	return RemovedItems;
 }
 
@@ -401,14 +464,12 @@ int32 UGroundItemSubsystem::GetInstanceID(UItemInstance* Item) const
 		return -1;
 	}
 
-	for (const TPair<int32, UItemInstance*>& Pair : GroundItems)
+	// P-3 FIX: O(1) reverse-map lookup replaces the previous O(n) linear scan.
+	if (const int32* FoundID = InstanceToIDMap.Find(Item))
 	{
-		if (Pair.Value == Item)
-		{
-			return Pair.Key;
-		}
+		return *FoundID;
 	}
-	
+
 	return -1;
 }
 
@@ -448,6 +509,7 @@ void UGroundItemSubsystem::ClearAllItems()
 	GroundItems.Empty();
 	InstanceLocations.Empty();
 	ItemISMData.Empty();
+	InstanceToIDMap.Empty(); // P-3 FIX: keep reverse map in sync
 	PendingRemovals.Empty();
 
 	UE_LOG(LogGroundItemSubsystem, Log, TEXT("ClearAllItems: All ground items cleared"));

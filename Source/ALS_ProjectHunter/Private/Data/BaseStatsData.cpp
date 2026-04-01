@@ -913,30 +913,123 @@ void UBaseStatsData::StartStats()
 {
 	RefreshFromAttributeSetDefinition();
 
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Strength"), 10.0f);
+	// -------------------------------------------------------------------------
+	// Progression
+	// PlayerLevel is required by HunterMMC_StrengthMaxHealth and
+	// HunterMMC_EnduranceMaxStamina — without it both MMCs treat Level as 1 and
+	// the per-level bonus (12/level) won't accumulate correctly.
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("PlayerLevel"),       1.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("XPGainMultiplier"),  1.0f); // neutral multiplier
+	// FIX: XPPenalty is a multiplier (1.0 = no penalty, 0.0 = all XP lost).
+	// The previous value of 0.0f would zero all kill XP whenever StartStats() was
+	// used to initialise a character data asset — AwardExperienceFromKill multiplies
+	// the raw XP by GetXPPenalty() with no clamping at the call site.
+	// Companion fix: HunterAttributeSet constructor now also initialises to 1.0f so
+	// the attribute is safe even before InitializeFromDataAsset runs.
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("XPPenalty"),         1.0f); // neutral multiplier
+
+	// -------------------------------------------------------------------------
+	// Primary Attributes
+	// These feed HunterGE_DerivedPrimaryVitals via MMC captures:
+	//   Strength     -> MaxHealth  = 100 + 5 + Strength  + 12*(Level-1)
+	//   Endurance    -> MaxStamina = 100 + 5 + Endurance + 12*(Level-1)
+	//   Intelligence -> ManaRegenRate   += Intelligence
+	//                   ManaRegenAmount += Intelligence
+	//   Endurance    -> StaminaDegenAmount += Endurance  (Rate is fixed 1.0 by GE)
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Strength"),     10.0f);
 	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Intelligence"), 10.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Dexterity"), 10.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Endurance"), 10.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Affliction"), 10.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Luck"), 10.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Covenant"), 10.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Dexterity"),    10.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Endurance"),    10.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Affliction"),    5.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Luck"),          5.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Covenant"),      5.0f);
 
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxHealth"), 100.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxMana"), 100.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxStamina"), 100.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxArcaneShield"), 0.0f);
+	// -------------------------------------------------------------------------
+	// Vital — current pool values (initialize full)
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Health"),       100.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Mana"),         100.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Stamina"),      100.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("ArcaneShield"),   0.0f);
 
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Health"), 100.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Mana"), 100.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("Stamina"), 100.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("ArcaneShield"), 0.0f);
+	// -------------------------------------------------------------------------
+	// Vital — max pool caps
+	// MaxHealth and MaxStamina are Overridden by HunterGE_DerivedPrimaryVitals
+	// (MMC_StrengthMaxHealth / MMC_EnduranceMaxStamina), so these values act as
+	// pre-GE fallbacks only.  MaxMana has no Override GE — this IS the live value.
+	// At Level 1, Strength/Endurance = 10: MaxHealth = MaxStamina = 100+5+10 = 115.
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxHealth"),      100.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxMana"),        100.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxStamina"),     100.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxArcaneShield"),  0.0f);
 
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("HealthRegenRate"), 1.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("HealthRegenAmount"), 1.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("ManaRegenRate"), 1.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("ManaRegenAmount"), 1.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("StaminaRegenRate"), 1.0f);
-	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("StaminaRegenAmount"), 1.0f);
+	// -------------------------------------------------------------------------
+	// Vital — Health regen
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("HealthRegenRate"),      1.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("HealthRegenAmount"),    5.0f); // 5 HP/sec
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxHealthRegenRate"),   5.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxHealthRegenAmount"), 20.0f);
+
+	// -------------------------------------------------------------------------
+	// Vital — Health reserves (none by default)
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("FlatReservedHealth"),       0.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("PercentageReservedHealth"), 0.0f);
+
+	// -------------------------------------------------------------------------
+	// Vital — Stamina regen
+	// At 1.0 rate / 8.0 amount: 8 stamina/sec recovery — full bar in ~14s.
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("StaminaRegenRate"),      1.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("StaminaRegenAmount"),    8.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxStaminaRegenRate"),   5.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxStaminaRegenAmount"), 25.0f);
+
+	// -------------------------------------------------------------------------
+	// Vital — Stamina degen
+	// StaminaDegenRate: GE overrides this to 1.0 (fixed multiplier) — leave 0 here.
+	// StaminaDegenAmount: GE additively adds Endurance (10) — leave 0 here.
+	// Sprint drain formula: Rate(1.0) * Amount(10) * 0.1s = 1/tick = 10 stamina/sec.
+	// MaxStamina 115 empties in ~11.5s of sustained sprinting.
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("StaminaDegenRate"),   0.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("StaminaDegenAmount"), 0.0f);
+
+	// -------------------------------------------------------------------------
+	// Vital — Stamina reserves (none by default)
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("FlatReservedStamina"),       0.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("PercentageReservedStamina"), 0.0f);
+
+	// -------------------------------------------------------------------------
+	// Vital — Mana regen
+	// GE additively adds Intelligence (10) to both Rate and Amount.
+	// With base Rate=1.0 + 10 = 11 ticks/sec and Amount=1.0 + 10 = 11: 11 mana/sec.
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("ManaRegenRate"),      1.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("ManaRegenAmount"),    1.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxManaRegenRate"),   5.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxManaRegenAmount"), 20.0f);
+
+	// -------------------------------------------------------------------------
+	// Vital — Mana reserves (none by default)
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("FlatReservedMana"),       0.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("PercentageReservedMana"), 0.0f);
+
+	// -------------------------------------------------------------------------
+	// Vital — Arcane Shield (locked until unlocked via progression)
+	// -------------------------------------------------------------------------
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("ArcaneShieldRegenRate"),         1.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("ArcaneShieldRegenAmount"),       3.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxArcaneShieldRegenRate"),      5.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxArcaneShieldRegenAmount"),   15.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("FlatReservedArcaneShield"),      0.0f);
+	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("PercentageReservedArcaneShield"), 0.0f);
 
 	SortStatsByCategoryThenName();
 }

@@ -18,6 +18,8 @@ class UCharacterProgressionManager;
 class UEquipmentManager;
 class UStatsManager;
 class UTagManager;
+class UDoTManager;
+class UMovesetManager;
 class UBaseStatsData;
 class UGameplayEffect;
 class UGameplayAbility;
@@ -82,6 +84,20 @@ public:
 	TObjectPtr<UTagManager> TagManager;
 
 	/**
+	 * DoT Manager — apply and track Bleed, Ignite, Poison, Chill, Freeze, Shock.
+	 * Assign GE class references in the Blueprint defaults panel.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UDoTManager> DoTManager;
+
+	/**
+	 * Moveset Manager — socket, corrupt, and level weapon movesets.
+	 * Replicated; authority-only mutation via Server RPCs.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movesets", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UMovesetManager> MovesetManager;
+
+	/**
 	 * Base stats data asset
 	 * Defines starting attribute values for this character
 	 * Set in subclasses or Blueprint (e.g., DA_WarriorBaseStats, DA_GoblinBaseStats)
@@ -128,6 +144,18 @@ public:
 		return TagManager;
 	}
 
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	UDoTManager* GetDoTManager() const
+	{
+		return DoTManager;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Movesets")
+	UMovesetManager* GetMovesetManager() const
+	{
+		return MovesetManager;
+	}
+
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* CHARACTER INFO */
 	/* ═══════════════════════════════════════════════════════════════════════ */
@@ -166,6 +194,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Progression")
 	virtual int64 GetXPReward() const;
 
+	/** Multiplier applied to the base XP reward calculation. Override in subclasses or set in Blueprint. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression", meta = (ClampMin = "0.0"))
+	float XPRewardMultiplier = 1.0f;
+
 	/** Award XP to this character from killing another character */
 	UFUNCTION(BlueprintCallable, Category = "Progression", BlueprintAuthorityOnly)
 	void AwardExperienceFromKill(APHBaseCharacter* KilledCharacter);
@@ -192,10 +224,20 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	float GetHealthPercent() const;
 
-	/** Called when this character dies */
-	UFUNCTION(BlueprintNativeEvent, Category = "Combat")
+	/** Called when this character dies. Server-authoritative — clients receive
+	 *  death state via Multicast_NotifyDeath. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintAuthorityOnly, Category = "Combat")
 	void OnDeath(AController* Killer, AActor* DamageCauser);
 	virtual void OnDeath_Implementation(AController* Killer, AActor* DamageCauser);
+
+	/**
+	 * Reliable multicast RPC to deliver death state atomically to all clients.
+	 * Called server-side from OnDeath_Implementation — guarantees bIsDead and
+	 * LastKillerActor arrive in the same RPC payload, eliminating the replication
+	 * race between those two properties (I-05).
+	 */
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_NotifyDeath(AActor* KillerActor);
 
 	/** 
 	 * Called when health changes
@@ -256,13 +298,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	void PlayHitReactAnimation();
 
-protected:
 	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* INITIALIZATION */
+	/* INITIALIZATION (public so MobPoolSubsystem can reinitialize recycled actors) */
 	/* ═══════════════════════════════════════════════════════════════════════ */
 
-	virtual void InitializeAbilitySystem();
+	/** Reinitialize base attributes from the data asset / startup GEs. */
 	virtual void InitializeAttributes();
+
+protected:
+	virtual void InitializeAbilitySystem();
 	virtual void BindAttributeDelegates();
 	virtual void OnAbilitySystemInitialized();
 	bool EnsureAttributeSetRegisteredWithAbilitySystem();

@@ -6,14 +6,44 @@
 #include "Item/ItemInstance.h"
 #include "Item/Library/ItemFunctionLibrary.h"
 #include "Item/Library/ItemStructs.h"
+#include "Item/Runtime/EquippedItemRuntimeActor.h"
 #include "AbilitySystemComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/Pawn.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
 
 DEFINE_LOG_CATEGORY(LogEquipmentManager);
+
+namespace EquipmentManagerPrivate
+{
+	const EEquipmentSlot ManagedEquipmentSlots[] =
+	{
+		EEquipmentSlot::ES_MainHand,
+		EEquipmentSlot::ES_OffHand,
+		EEquipmentSlot::ES_TwoHand,
+		EEquipmentSlot::ES_Head,
+		EEquipmentSlot::ES_Chest,
+		EEquipmentSlot::ES_Hands,
+		EEquipmentSlot::ES_Legs,
+		EEquipmentSlot::ES_Feet,
+		EEquipmentSlot::ES_Ring1,
+		EEquipmentSlot::ES_Ring2,
+		EEquipmentSlot::ES_Ring3,
+		EEquipmentSlot::ES_Ring4,
+		EEquipmentSlot::ES_Ring5,
+		EEquipmentSlot::ES_Ring6,
+		EEquipmentSlot::ES_Ring7,
+		EEquipmentSlot::ES_Ring8,
+		EEquipmentSlot::ES_Ring9,
+		EEquipmentSlot::ES_Ring10,
+		EEquipmentSlot::ES_Amulet,
+		EEquipmentSlot::ES_Belt
+	};
+}
+
 UEquipmentManager::UEquipmentManager(): InventoryManager(nullptr), AbilitySystemComponent(nullptr),
                                         StatsManager(nullptr), CharacterMesh(nullptr)
 {
@@ -27,6 +57,14 @@ void UEquipmentManager::BeginPlay()
 	
 	// Rebuild map from array (for save game loads or late joiners)
 	RebuildEquipmentMap();
+
+	if (bAutoUpdateWeapons)
+	{
+		for (const EEquipmentSlot Slot : EquipmentManagerPrivate::ManagedEquipmentSlots)
+		{
+			UpdateEquippedWeapon(Slot, GetEquippedItem(Slot));
+		}
+	}
 }
 
 void UEquipmentManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -141,11 +179,12 @@ UItemInstance* UEquipmentManager::UnequipItem(EEquipmentSlot Slot, bool bMoveToB
 		UpdateEquippedWeapon(Slot, nullptr);
 	}
 
-	// Broadcast change
+	// I-06 FIX: Only broadcast the server-local event here. Clients receive the
+	// change via OnRep_EquippedItems diff broadcast — calling MulticastEquipmentChanged
+	// as well caused every client to fire OnEquipmentChanged twice per unequip.
 	OnEquipmentChanged.Broadcast(Slot, nullptr, CurrentItem);
-	MulticastEquipmentChanged(Slot, nullptr, CurrentItem);
 
-	UE_LOG(LogEquipmentManager, Log, TEXT("EquipmentManager: Unequipped %s from slot %d"), 
+	UE_LOG(LogEquipmentManager, Log, TEXT("EquipmentManager: Unequipped %s from slot %d"),
 		*CurrentItem->GetName(), static_cast<int32>(Slot));
 
 	return CurrentItem;
@@ -191,6 +230,45 @@ void UEquipmentManager::UnequipAll(bool bMoveToBag)
 	{
 		UnequipItem(Slot, bMoveToBag);
 	}
+}
+
+AEquippedItemRuntimeActor* UEquipmentManager::GetActiveRuntimeItemActor(EEquipmentSlot Slot) const
+{
+	if (AActor* const* FoundActor = ActiveRuntimeItemActors.Find(Slot))
+	{
+		return Cast<AEquippedItemRuntimeActor>(*FoundActor);
+	}
+
+	return nullptr;
+}
+
+bool UEquipmentManager::BeginPrimaryItemAction(EEquipmentSlot Slot)
+{
+	AEquippedItemRuntimeActor* RuntimeItemActor = GetActiveRuntimeItemActor(Slot);
+	const bool bStartedLocally = RuntimeItemActor ? RuntimeItemActor->BeginPrimaryAction() : false;
+
+	if (!GetOwner()->HasAuthority())
+	{
+		ServerBeginPrimaryItemAction(Slot);
+	}
+
+	return bStartedLocally;
+}
+
+bool UEquipmentManager::EndPrimaryItemAction(EEquipmentSlot Slot)
+{
+	AEquippedItemRuntimeActor* RuntimeItemActor = GetActiveRuntimeItemActor(Slot);
+	if (RuntimeItemActor)
+	{
+		RuntimeItemActor->EndPrimaryAction();
+	}
+
+	if (!GetOwner()->HasAuthority())
+	{
+		ServerEndPrimaryItemAction(Slot);
+	}
+
+	return RuntimeItemActor != nullptr;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -382,6 +460,15 @@ UItemInstance* UEquipmentManager::EquipItemInternal(UItemInstance* Item, EEquipm
 	// Equip new item
 	AddEquipment(Slot, Item);
 
+	// FIX: Remove the newly equipped item from the inventory so it only exists
+	// in the equipment slot. Without this, the item remained in both inventory
+	// and equipment simultaneously, causing duplicate stat applications and
+	// allowing exploits via the double-item state.
+	if (InventoryManager)
+	{
+		InventoryManager->RemoveItem(Item);
+	}
+
 	// Apply stats
 	if (bApplyStatsOnEquip)
 	{
@@ -413,11 +500,10 @@ UItemInstance* UEquipmentManager::EquipItemInternal(UItemInstance* Item, EEquipm
 		UpdateEquippedWeapon(Slot, Item);
 	}
 
-	// Broadcast change
+	// I-06 FIX: Server-local broadcast only. Client broadcast handled by OnRep_EquippedItems.
 	OnEquipmentChanged.Broadcast(Slot, Item, OldItem);
-	MulticastEquipmentChanged(Slot, Item, OldItem);
 
-	UE_LOG(LogEquipmentManager, Log, TEXT("EquipmentManager: Equipped %s to slot %d"), 
+	UE_LOG(LogEquipmentManager, Log, TEXT("EquipmentManager: Equipped %s to slot %d"),
 		*Item->GetName(), static_cast<int32>(Slot));
 
 	return OldItem;
@@ -436,6 +522,13 @@ bool UEquipmentManager::HandleTwoHandedWeapon(UItemInstance* Item, bool bSwapToB
 
 	// Equip to TwoHand slot (occupies both visually)
 	AddEquipment(EEquipmentSlot::ES_TwoHand, Item);
+
+	// FIX: Remove the newly equipped two-handed weapon from the inventory
+	// so it exists only in the equipment slot, not in both simultaneously.
+	if (InventoryManager)
+	{
+		InventoryManager->RemoveItem(Item);
+	}
 
 	// Apply new stats
 	if (bApplyStatsOnEquip)
@@ -478,9 +571,11 @@ bool UEquipmentManager::HandleTwoHandedWeapon(UItemInstance* Item, bool bSwapToB
 		UpdateEquippedWeapon(EEquipmentSlot::ES_TwoHand, Item);      // Show two-handed weapon
 	}
 
-	// Broadcast changes
+	// I-06 + I-12 FIX: Removed MulticastEquipmentChanged calls. Client broadcast is now
+	// exclusively handled by OnRep_EquippedItems diff logic, which already covers the
+	// TwoHand equip and the MainHand/OffHand clears. The old code only multicast the
+	// TwoHand event, silently skipping the cleared-hand notifications on clients.
 	OnEquipmentChanged.Broadcast(EEquipmentSlot::ES_TwoHand, Item, nullptr);
-	MulticastEquipmentChanged(EEquipmentSlot::ES_TwoHand, Item, nullptr);
 
 	if (OutOldMainHand || OutOldOffHand)
 	{
@@ -537,14 +632,7 @@ void UEquipmentManager::UpdateEquippedWeapon(EEquipmentSlot Slot, UItemInstance*
 		return;
 	}
 
-	// Determine socket context
-	FName SocketContext = GetSocketContextForSlot(Slot);
-	if (SocketContext == NAME_None)
-	{
-		return; // Not a weapon slot
-	}
-
-	// Clean up old weapon
+	// Clean up the previous representation before building the new one.
 	FName ComponentTag = FName(*FString::Printf(TEXT("EquippedWeapon_%s"), *UEnum::GetValueAsString(Slot)));
 	CleanupWeapon(ComponentTag, Slot);
 
@@ -565,14 +653,17 @@ void UEquipmentManager::UpdateEquippedWeapon(EEquipmentSlot Slot, UItemInstance*
 		return;
 	}
 
-	// Get socket
-	FName SocketName = BaseData->GetSocketForContext(SocketContext);
+	const FName SocketContext = GetSocketContextForSlot(Slot);
+	FName SocketName = SocketContext != NAME_None
+		? BaseData->GetSocketForContext(SocketContext)
+		: BaseData->AttachmentSocket;
+
 	if (SocketName == NAME_None)
 	{
 		SocketName = BaseData->AttachmentSocket;
 	}
 
-	if (SocketName == NAME_None || !CharacterMesh->DoesSocketExist(SocketName))
+	if (!CharacterMesh || SocketName == NAME_None || !CharacterMesh->DoesSocketExist(SocketName))
 	{
 		UE_LOG(LogEquipmentManager, Warning, TEXT("EquipmentManager::UpdateEquippedWeapon: Invalid socket '%s'"), 
 			*SocketName.ToString());
@@ -580,14 +671,21 @@ void UEquipmentManager::UpdateEquippedWeapon(EEquipmentSlot Slot, UItemInstance*
 	}
 
 	// Spawn appropriate representation
-	if (BaseData->bUseWeaponActor && BaseData->WeaponActorClass)
+	if (BaseData->UsesRuntimeActor() && BaseData->GetRuntimeActorClass())
 	{
-		// Spawn weapon actor (visual + combat)
+		// Spawn runtime actor (visual + combat/special logic)
 		SpawnWeaponActor(Slot, Item, BaseData, SocketName, ComponentTag);
 	}
 	else
 	{
-		// Spawn weapon mesh (visual only)
+		if (BaseData->UsesRuntimeActor())
+		{
+			UE_LOG(LogEquipmentManager, Warning,
+				TEXT("EquipmentManager: Item %s requested a runtime actor but no RuntimeActorClass is configured. Falling back to mesh."),
+				*Item->GetName());
+		}
+
+		// Spawn mesh-only representation
 		SpawnWeaponMesh(Slot, Item, BaseData, SocketName, ComponentTag);
 	}
 
@@ -613,20 +711,29 @@ FName UEquipmentManager::GetSocketContextForSlot(EEquipmentSlot Slot) const
 void UEquipmentManager::SpawnWeaponActor(EEquipmentSlot Slot, UItemInstance* Item,
                                          FItemBase* BaseData, FName SocketName, FName ComponentTag)
 {
-	if (!GetOwner() || !BaseData->WeaponActorClass)
+	if (!GetOwner())
 	{
 		return;
 	}
 
+	const TSubclassOf<AActor> RuntimeActorClass = BaseData->GetRuntimeActorClass();
+	if (!RuntimeActorClass)
+	{
+		return;
+	}
+
+	// OPT-SAFE: Cache the owner pawn once for Instigator + InitializeFromItem.
+	APawn* OwnerPawn = Cast<APawn>(GetOwner());
+
 	// Spawn parameters
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = GetOwner();
-	SpawnParams.Instigator = Cast<APawn>(GetOwner());
+	SpawnParams.Instigator = OwnerPawn;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	// Spawn weapon actor
 	AActor* WeaponActor = GetWorld()->SpawnActor<AActor>(
-		BaseData->WeaponActorClass,
+		RuntimeActorClass,
 		FVector::ZeroVector,
 		FRotator::ZeroRotator,
 		SpawnParams
@@ -640,18 +747,32 @@ void UEquipmentManager::SpawnWeaponActor(EEquipmentSlot Slot, UItemInstance* Ite
 
 	// Tag and store
 	WeaponActor->Tags.Add(ComponentTag);
-	ActiveWeaponActors.Add(Slot, WeaponActor);
+	ActiveRuntimeItemActors.Add(Slot, WeaponActor);
 
 	// Attach to socket
 	FAttachmentTransformRules AttachRules = ConvertAttachmentRules(BaseData->AttachmentRules);
-	WeaponActor->AttachToComponent(CharacterMesh, AttachRules, SocketName);
+	if (CharacterMesh)
+	{
+		WeaponActor->AttachToComponent(CharacterMesh, AttachRules, SocketName);
+	}
+	else
+	{
+		UE_LOG(LogEquipmentManager, Warning,
+			TEXT("EquipmentManager: CharacterMesh is null — weapon actor '%s' spawned but not attached."),
+			*WeaponActor->GetName());
+	}
 
-	// Initialize weapon with item data (for damage, stats, VFX, etc.)
-	// TODO: Implement ICombatWeapon interface
-	// if (WeaponActor->Implements<UICombatWeapon>())
-	// {
-	//     IICombatWeapon::Execute_InitializeWeapon(WeaponActor, Item);
-	// }
+	if (AEquippedItemRuntimeActor* RuntimeItemActor = Cast<AEquippedItemRuntimeActor>(WeaponActor))
+	{
+		RuntimeItemActor->InitializeFromItem(Item, OwnerPawn, Slot);
+		RuntimeItemActor->OnEquipped();
+	}
+	else
+	{
+		UE_LOG(LogEquipmentManager, Warning,
+			TEXT("EquipmentManager: Runtime actor class %s does not derive from AEquippedItemRuntimeActor; initialization hooks were skipped."),
+			*GetNameSafe(RuntimeActorClass));
+	}
 
 	UE_LOG(LogEquipmentManager, Log, TEXT("EquipmentManager: Spawned weapon actor '%s' to socket '%s'"), 
 		*WeaponActor->GetName(), *SocketName.ToString());
@@ -709,25 +830,50 @@ void UEquipmentManager::SpawnWeaponMesh(EEquipmentSlot Slot, UItemInstance* Item
 		UE_LOG(LogEquipmentManager, Warning, TEXT("EquipmentManager::SpawnWeaponMesh: Item has no mesh"));
 	}
 
+	// B-2 FIX: Store the component for O(1) cleanup and external access.
+	// Previously NewWeaponComponent was set but never saved anywhere, making
+	// it impossible to retrieve without an expensive tag-based component scan.
+	if (NewWeaponComponent)
+	{
+		ActiveMeshComponents.Add(Slot, NewWeaponComponent);
+	}
+
 	// TODO: Apply material customization based on item rarity, affixes, durability, etc.
 }
 
 void UEquipmentManager::CleanupWeapon(FName ComponentTag, EEquipmentSlot Slot)
 {
-	// Clean up weapon actor
-	if (AActor** FoundActor = ActiveWeaponActors.Find(Slot))
+	// Clean up runtime actor
+	if (AActor** FoundActor = ActiveRuntimeItemActors.Find(Slot))
 	{
 		if (*FoundActor && IsValid(*FoundActor))
 		{
+			if (AEquippedItemRuntimeActor* RuntimeItemActor = Cast<AEquippedItemRuntimeActor>(*FoundActor))
+			{
+				RuntimeItemActor->OnUnequipped();
+			}
+
 			(*FoundActor)->Destroy();
 		}
-		ActiveWeaponActors.Remove(Slot);
+		ActiveRuntimeItemActors.Remove(Slot);
 	}
 
-	// Clean up mesh components
+	// B-2 FIX: Also remove from the direct-reference map so the slot is clean
+	// and the next SpawnWeaponMesh can safely Add() to this slot.
+	if (USceneComponent** FoundMesh = ActiveMeshComponents.Find(Slot))
+	{
+		if (*FoundMesh && IsValid(*FoundMesh))
+		{
+			(*FoundMesh)->DestroyComponent();
+		}
+		ActiveMeshComponents.Remove(Slot);
+	}
+
+	// Tag-based sweep as a safety net (catches any components missed by the map,
+	// e.g. if the component was spawned before ActiveMeshComponents was introduced).
 	TArray<UActorComponent*> Components = GetOwner()->GetComponentsByTag(
 		USceneComponent::StaticClass(), ComponentTag);
-	
+
 	for (UActorComponent* Component : Components)
 	{
 		if (USceneComponent* SceneComp = Cast<USceneComponent>(Component))
@@ -768,25 +914,48 @@ FAttachmentTransformRules UEquipmentManager::ConvertAttachmentRules(const FItemA
 
 void UEquipmentManager::OnRep_EquippedItems()
 {
-	// Rebuild TMap from replicated TArray
+	// B-3 FIX: Capture the current (pre-replication) state so we can broadcast
+	// correct OldItem values. Previously this always broadcast nullptr for OldItem
+	// because the map was rebuilt before the diff was performed.
+	TMap<EEquipmentSlot, UItemInstance*> OldEquipmentMap = EquippedItemsMap;
+
+	// Rebuild TMap from replicated TArray (this reflects the new server state).
 	RebuildEquipmentMap();
 
-	// Update visuals on clients
-	if (bAutoUpdateWeapons)
+	// Build the set of slots present in the new array for O(1) lookup.
+	TSet<EEquipmentSlot> NewSlots;
+	for (const FEquipmentSlotEntry& Entry : EquippedItemsArray)
 	{
-		for (const FEquipmentSlotEntry& Entry : EquippedItemsArray)
+		NewSlots.Add(Entry.Slot);
+	}
+
+	// Broadcast changes for newly equipped / swapped items — with correct OldItem.
+	// OPT: Only call UpdateEquippedWeapon for slots that actually changed, instead of
+	// iterating all 20 managed slots unconditionally on every replication event.
+	for (const FEquipmentSlotEntry& Entry : EquippedItemsArray)
+	{
+		UItemInstance* OldItem = OldEquipmentMap.FindRef(Entry.Slot);
+		if (OldItem != Entry.Item)
 		{
-			if (Entry.Item)
+			if (bAutoUpdateWeapons)
 			{
 				UpdateEquippedWeapon(Entry.Slot, Entry.Item);
 			}
+			OnEquipmentChanged.Broadcast(Entry.Slot, Entry.Item, OldItem);
 		}
 	}
 
-	// Broadcast events
-	for (const FEquipmentSlotEntry& Entry : EquippedItemsArray)
+	// Handle slots that were cleared (item removed, not replaced).
+	for (const TPair<EEquipmentSlot, UItemInstance*>& OldEntry : OldEquipmentMap)
 	{
-		OnEquipmentChanged.Broadcast(Entry.Slot, Entry.Item, nullptr);
+		if (!NewSlots.Contains(OldEntry.Key))
+		{
+			if (bAutoUpdateWeapons)
+			{
+				UpdateEquippedWeapon(OldEntry.Key, nullptr);
+			}
+			OnEquipmentChanged.Broadcast(OldEntry.Key, nullptr, OldEntry.Value);
+		}
 	}
 
 	UE_LOG(LogEquipmentManager, Verbose, TEXT("EquipmentManager: Replicated equipment changes"));
@@ -798,16 +967,35 @@ void UEquipmentManager::OnRep_EquippedItems()
 
 void UEquipmentManager::ServerEquipItem_Implementation(UItemInstance* Item, EEquipmentSlot Slot, bool bSwapToBag)
 {
-	// Validation
 	if (!Item)
 	{
 		return;
 	}
 
-	// TODO: Add anti-cheat validation
-	// - Verify item is in client's inventory
-	// - Verify item can be equipped
-	// - Check for rapid equip/unequip exploits
+	// B-4 FIX: Verify ownership before acting on the client's equip request.
+	// Without this check a malicious client could equip an item from another player's
+	// inventory by sending a crafted RPC with a foreign UItemInstance pointer.
+	// N-16 NOTE: ContainsItem() previously always returned false on the server because
+	// InventoryManager.Items was not replicated (server array was always empty).
+	// N-04 FIX (InventoryManager replication) resolved this — Items now replicates
+	// COND_OwnerOnly so the server has the authoritative copy and this check works.
+	if (InventoryManager && !InventoryManager->ContainsItem(Item))
+	{
+		UE_LOG(LogEquipmentManager, Warning,
+			TEXT("ServerEquipItem: Rejected equip request for item '%s' — item is not in %s's inventory. "
+				 "Possible cheat attempt."),
+			*GetNameSafe(Item), *GetNameSafe(GetOwner()));
+		return;
+	}
+
+	// Validate the item can actually be equipped (slot compatibility check).
+	if (!CanEquipToSlot(Item, Slot == EEquipmentSlot::ES_None ? DetermineEquipmentSlot(Item) : Slot))
+	{
+		UE_LOG(LogEquipmentManager, Warning,
+			TEXT("ServerEquipItem: Rejected equip request — item '%s' cannot be equipped to slot %d."),
+			*GetNameSafe(Item), static_cast<int32>(Slot));
+		return;
+	}
 
 	EquipItem(Item, Slot, bSwapToBag);
 }
@@ -817,10 +1005,28 @@ void UEquipmentManager::ServerUnequipItem_Implementation(EEquipmentSlot Slot, bo
 	UnequipItem(Slot, bMoveToBag);
 }
 
+void UEquipmentManager::ServerBeginPrimaryItemAction_Implementation(EEquipmentSlot Slot)
+{
+	if (AEquippedItemRuntimeActor* RuntimeItemActor = GetActiveRuntimeItemActor(Slot))
+	{
+		RuntimeItemActor->BeginPrimaryAction();
+	}
+}
+
+void UEquipmentManager::ServerEndPrimaryItemAction_Implementation(EEquipmentSlot Slot)
+{
+	if (AEquippedItemRuntimeActor* RuntimeItemActor = GetActiveRuntimeItemActor(Slot))
+	{
+		RuntimeItemActor->EndPrimaryAction();
+	}
+}
+
 void UEquipmentManager::MulticastEquipmentChanged_Implementation(EEquipmentSlot Slot, UItemInstance* NewItem, UItemInstance* OldItem)
 {
-	// Broadcast to all clients for UI/visual updates
-	OnEquipmentChanged.Broadcast(Slot, NewItem, OldItem);
+	// I-06 FIX: No-op. Client-side equipment change notifications are now delivered
+	// exclusively via the OnRep_EquippedItems diff broadcast, which fires correctly
+	// whenever the replicated EquippedItemsArray changes. Keeping this stub so
+	// existing Blueprint callers compile without modification.
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -868,11 +1074,17 @@ void UEquipmentManager::RemoveEquipment(EEquipmentSlot Slot)
 		return;
 	}
 
-	// Remove from array
-	EquippedItemsArray.RemoveAll([Slot](const FEquipmentSlotEntry& Entry)
+	// OPT: Use index-based RemoveAtSwap (O(1)) instead of RemoveAll with a lambda
+	// (O(n)). Each slot appears at most once in the array, so a single pass find + swap
+	// is sufficient. Order is not meaningful for the replicated flat array.
+	for (int32 i = EquippedItemsArray.Num() - 1; i >= 0; --i)
 	{
-		return Entry.Slot == Slot;
-	});
+		if (EquippedItemsArray[i].Slot == Slot)
+		{
+			EquippedItemsArray.RemoveAtSwap(i, 1, EAllowShrinking::No);
+			break;
+		}
+	}
 
 	// Remove from map
 	EquippedItemsMap.Remove(Slot);

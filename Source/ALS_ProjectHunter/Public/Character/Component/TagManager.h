@@ -55,9 +55,25 @@ private:
 	bool ComputeFullResourceState(float CurrentValue, float MaxValue) const;
 	const UHunterAttributeSet* GetHunterAttributeSet() const;
 
+	/** Refresh ONLY movement/sprint tags (called by tick at reduced cadence). */
+	void RefreshMovementConditionTags();
+
+	/** Bind GAS attribute-change delegates so resource-based tags update reactively.
+	 *  N-06 FIX: Replaces per-frame attribute polling with event-driven updates. */
+	void BindAttributeChangeDelegates();
+
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> ASC;
 
 	TMap<FGameplayTag, bool> PendingTagStates;
 	bool bPendingBaseRefresh = false;
+
+	// OPT-TAG: Dirty flag for coalescing multiple attribute-change callbacks
+	// into a single RefreshBaseConditionTags() call per tick. During heavy combat,
+	// Health/Mana/Stamina can change many times in a single frame — the delegate
+	// sets this flag and the tick performs the actual refresh once.
+	bool bBaseConditionsDirty = false;
+
+	// N-06 FIX: accumulator for reduced-rate movement/sprint tick
+	float ConditionRefreshAccumulator = 0.f;
 };
