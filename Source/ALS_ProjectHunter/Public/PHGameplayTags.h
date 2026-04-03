@@ -464,6 +464,7 @@ public:
 	static FGameplayTag Data_Recovery_Health;
 	static FGameplayTag Data_Recovery_Mana;
 	static FGameplayTag Data_Recovery_Stamina;
+	static FGameplayTag Data_Recovery_ArcaneShield;
 
 	/* ===================== */
 	/* ===    Effects    === */

@@ -4,6 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "Character/PHBaseCharacter.h"
+#include "Character/Component/TagDebugManager.h"
 #include "GameFramework/Character.h"
 #include "PHGameplayTags.h"
 
@@ -38,11 +39,75 @@ void UTagManager::BeginPlay()
 
 	if (!ASC)
 	{
+		// ── Duplicate-component guard ─────────────────────────────────────────
+		// PHBaseCharacter creates a TagManager via CreateDefaultSubobject and
+		// initializes it from InitializeAbilitySystem() BEFORE Super::BeginPlay().
+		// If this BeginPlay is firing with a null ASC it usually means a second
+		// TagManager was added in Blueprint's Components panel on top of the C++
+		// one.  Detect that case: if the owner already has an initialized TagManager
+		// that is NOT this instance, we're the duplicate — bail and warn.
+		{
+			TArray<UTagManager*> AllManagers;
+			if (GetOwner())
+			{
+				GetOwner()->GetComponents<UTagManager>(AllManagers);
+			}
+
+			bool bAnotherIsInitialized = false;
+			for (UTagManager* Other : AllManagers)
+			{
+				if (Other != this && Other && Other->IsInitialized())
+				{
+					bAnotherIsInitialized = true;
+					break;
+				}
+			}
+
+			if (bAnotherIsInitialized)
+			{
+				UE_LOG(LogTagManager, Warning,
+					TEXT("TagManager::BeginPlay: '%s' has multiple TagManager components "
+					     "and this one (%s) is NOT the initialized instance. "
+					     "Open '%s' in the Blueprint Editor → Components panel and remove "
+					     "the extra TagManager — only the C++ one (from PHBaseCharacter) "
+					     "should exist."),
+					*GetNameSafe(GetOwner()),
+					*GetName(),
+					*GetNameSafe(GetOwner()->GetClass()));
+				// Disable tick and bail — this instance should never run
+				SetComponentTickEnabled(false);
+				return;
+			}
+		}
+
+
 		if (IAbilitySystemInterface* AbilitySystemInterface = Cast<IAbilitySystemInterface>(GetOwner()))
 		{
-			Initialize(AbilitySystemInterface->GetAbilitySystemComponent());
+			UAbilitySystemComponent* OwnerASC = AbilitySystemInterface->GetAbilitySystemComponent();
+			if (OwnerASC)
+			{
+				Initialize(OwnerASC);
+			}
+			else
+			{
+				UE_LOG(LogTagManager, Verbose,
+					TEXT("TagManager::BeginPlay: '%s' ASC not available yet "
+					     "(PlayerState-based ASC or deferred init). "
+					     "Tags will initialize via PossessedBy / OnRep_PlayerState."),
+					*GetNameSafe(GetOwner()));
+			}
 		}
 	}
+
+#if !UE_BUILD_SHIPPING
+	// If bEnableDebug is set in the Details panel before play-in-editor,
+	// make sure tick is running so the "No ASC" diagnostic is visible even
+	// when Initialize() was not yet called with a valid ASC.
+	if (DebugManager.bEnableDebug)
+	{
+		SetComponentTickEnabled(true);
+	}
+#endif
 }
 
 void UTagManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -51,6 +116,16 @@ void UTagManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComp
 
 	(void)TickType;
 	(void)ThisTickFunction;
+
+#if !UE_BUILD_SHIPPING
+	// Draw BEFORE the ASC null check so the panel shows a "No ASC" diagnostic
+	// even when Initialize() hasn't been called yet with a valid ASC.
+	// This lets developers see immediately whether the TagManager is wired up.
+	if (DebugManager.bEnableDebug)
+	{
+		DebugManager.DrawDebug(this, this);
+	}
+#endif
 
 	if (!ASC)
 	{
@@ -81,8 +156,21 @@ void UTagManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComp
 
 void UTagManager::Initialize(UAbilitySystemComponent* InASC)
 {
+	if (InASC == NULL)
+	{
+		return;
+	}
 	ASC = InASC;
+
+	// Enable tick when ASC is valid for normal operation.
+	// Also keep tick enabled when debug is active so the panel can display a
+	// "No ASC available" diagnostic even before the ASC is wired up — this
+	// makes misconfigured characters immediately visible instead of silent.
+#if UE_BUILD_SHIPPING
 	SetComponentTickEnabled(ASC != nullptr);
+#else
+	SetComponentTickEnabled(ASC != nullptr || DebugManager.bEnableDebug);
+#endif
 
 	if (!ASC)
 	{
@@ -155,6 +243,7 @@ void UTagManager::SetTagState(const FGameplayTag& Tag, const bool bEnabled)
 	if (bEnabled)
 	{
 		AddTag(Tag);
+		
 	}
 	else
 	{
@@ -340,6 +429,42 @@ const UHunterAttributeSet* UTagManager::GetHunterAttributeSet() const
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Debug helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+void UTagManager::SetTagDebugEnabled(bool bEnable)
+{
+#if UE_BUILD_SHIPPING
+	DebugManager.bEnableDebug = false;
+	(void)bEnable;
+#else
+	const bool bWasEnabled = DebugManager.bEnableDebug;
+	DebugManager.bEnableDebug = bEnable;
+
+	// Keep tick alive whenever debug is on, even when ASC hasn't been set yet.
+	// When debug is turned off, fall back to ASC-driven tick control.
+	SetComponentTickEnabled(bEnable || ASC != nullptr);
+
+	// One extra DrawDebug pass with bEnableDebug=false clears stale messages.
+	if (bWasEnabled && !DebugManager.bEnableDebug)
+	{
+		DebugManager.DrawDebug(this, this);
+	}
+#endif
+}
+
+bool UTagManager::GetOwnedTags(FGameplayTagContainer& OutTags) const
+{
+	if (!ASC)
+	{
+		return false;
+	}
+
+	ASC->GetOwnedGameplayTags(OutTags);
+	return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // N-06 FIX: Event-driven attribute refresh helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -379,22 +504,12 @@ void UTagManager::RefreshMovementConditionTags()
 
 void UTagManager::BindAttributeChangeDelegates()
 {
-	// N-06 FIX: Bind to GAS attribute change callbacks so resource-based condition
-	// tags (low/full health, mana, stamina, arcane shield) are updated reactively
-	// rather than being re-evaluated every frame in Tick.
-	//
-	// This uses a single lambda that calls RefreshBaseConditionTags() on any of
-	// the tracked attribute changes.  The ASC throttles these internally: they only
-	// fire when the value actually changes.
-
 	if (!ASC)
 	{
 		return;
 	}
 
-	// OPT-TAG: Instead of calling RefreshBaseConditionTags() directly from each
-	// delegate (which can fire many times per frame during combat), set a dirty
-	// flag. The tick flushes it once per frame — same result, fraction of the cost.
+
 	auto OnResourceChanged = [this](const FOnAttributeChangeData& Data)
 	{
 		bBaseConditionsDirty = true;
@@ -426,5 +541,7 @@ void UTagManager::BindAttributeChangeDelegates()
 	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxArcaneShieldAttribute()).AddLambda(OnResourceChanged);
 	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxEffectiveArcaneShieldAttribute()).AddLambda(OnResourceChanged);
 
-	UE_LOG(LogTagManager, Verbose, TEXT("BindAttributeChangeDelegates: bound resource delegates for owner %s"), *GetNameSafe(GetOwner()));
+	UE_LOG(LogTagManager, Verbose,
+		TEXT("BindAttributeChangeDelegates: bound resource delegates for owner %s (Health/Mana/Stamina/ArcaneShield x3 each = 12 bindings)."),
+		*GetNameSafe(GetOwner()));
 }

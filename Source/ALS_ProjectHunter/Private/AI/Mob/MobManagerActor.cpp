@@ -3,6 +3,7 @@
 #include "AI/Mob/MobPoolSubsystem.h"
 #include "AI/Mob/MobWanderInterface.h"
 #include "Character/Component/MonsterModifierComponent.h"
+#include "Character/Component/StatsManager.h"
 #include "Components/BoxComponent.h"
 #include "NavigationSystem.h"
 #include "Kismet/GameplayStatics.h"
@@ -1163,6 +1164,28 @@ void AMobManagerActor::FinalizeSpawn(APHBaseCharacter* Mob, const FVector& Spawn
 	}
 
 	ApplyModifierComponent(Mob);
+
+	// ── 3b. Dev-build sanity: warn if stats were never initialized ────────
+	// Fresh spawns initialize stats during BeginPlay (PHBaseCharacter::
+	// InitializeAbilitySystem → StatsManager::NotifyAbilitySystemReady).
+	// Pool-recycled mobs re-initialize inside PrepareMobForReuse.
+	// If neither ran, the mob will have MaxHealth=0 and fight at 0 HP.
+	// Root cause is almost always a missing StatsData asset on the Blueprint's
+	// StatsManager component — configure it in the actor's Details panel.
+#if !UE_BUILD_SHIPPING
+	if (UStatsManager* Stats = Mob->FindComponentByClass<UStatsManager>())
+	{
+		if (!Stats->HasInitializedStats())
+		{
+			UE_LOG(LogMobManager, Warning,
+				TEXT("FinalizeSpawn: '%s' (class=%s) has a StatsManager but stats "
+				     "were NOT initialized.  Assign a StatsData asset to the "
+				     "StatsManager component in the mob's Blueprint, or the mob "
+				     "will spawn with MaxHealth=0."),
+				*Mob->GetName(), *GetNameSafe(Mob->GetClass()));
+		}
+	}
+#endif
 
 	// ── 4. NOW make the mob live — visible, collidable, moving, thinking ──
 	Mob->SetActorHiddenInGame(false);

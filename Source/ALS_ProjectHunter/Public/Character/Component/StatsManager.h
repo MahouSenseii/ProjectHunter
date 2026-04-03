@@ -35,6 +35,22 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	void NotifyAbilitySystemReady();
 
+	/**
+	 * Clear the one-time initialization guard so that the next call to
+	 * NotifyAbilitySystemReady() fully re-runs InitializeFromDataAsset.
+	 *
+	 * Call this on a pool-recycled mob BEFORE NotifyAbilitySystemReady().
+	 * Without it, TryInitializeConfiguredStats() short-circuits on the
+	 * bHasInitializedConfiguredStats flag and Health/Mana/Stamina are
+	 * never restored from their death-state (0) values.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void ResetStatsInitialization();
+
+	/** Returns true once InitializeFromDataAsset has run successfully. */
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	bool HasInitializedStats() const { return bHasInitializedConfiguredStats; }
+
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* EQUIPMENT INTEGRATION (Required by EquipmentManager)                    */
 	/* ═══════════════════════════════════════════════════════════════════════ */

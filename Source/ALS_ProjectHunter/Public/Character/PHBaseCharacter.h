@@ -7,6 +7,7 @@
 #include "AbilitySystemInterface.h"
 #include "Character/ALSCharacter.h"
 #include "Combat/Library/CombatStruct.h"
+#include "AbilitySystem/HunterAbilitySystemComponent.h"
 #include "PHBaseCharacter.generated.h"
 
 struct FGameplayAbilitySpecHandle;
@@ -42,6 +43,7 @@ class ALS_PROJECTHUNTER_API APHBaseCharacter : public AALSCharacter, public IAbi
 public:
 	APHBaseCharacter(const FObjectInitializer& ObjectInitializer);
 
+	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
@@ -111,7 +113,31 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
 	{
-		return AbilitySystemComponent;
+		// Fast path: member pointer is valid (normal case).
+		if (AbilitySystemComponent)
+		{
+			return AbilitySystemComponent;
+		}
+
+		// Safety net: the member was cleared, which happens when a Blueprint child
+		// class adds a component with the same display name as the C++ CreateDefaultSubobject
+		// ("AbilitySystemComponent"). UE5 evicts the C++ component from the TObjectPtr
+		// during Blueprint component reconciliation, but the component object itself
+		// survives on the actor. FindComponentByClass recovers it.
+		//
+		// ROOT FIX: open the Blueprint's Components panel, right-click the "Ability
+		// System Component" entry, and if Delete is available it is Blueprint-added
+		// and must be removed. The C++ CreateDefaultSubobject is the authoritative one.
+		UHunterAbilitySystemComponent* FoundASC = FindComponentByClass<UHunterAbilitySystemComponent>();
+
+		UE_LOG(LogTemp, Warning,
+			TEXT("GetAbilitySystemComponent: '%s' member pointer is null — "
+			     "recovered via FindComponentByClass (ASC=%s). "
+			     "A Blueprint child class likely has a duplicate 'Ability System Component' "
+			     "in its Components panel. Delete the Blueprint-added one."),
+			*GetName(), *GetNameSafe(FoundASC));
+
+		return FoundASC;
 	}
 
 	UFUNCTION(BlueprintPure, Category = "Abilities")

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
+#include "Character/Component/TagDebugManager.h"
 #include "TagManager.generated.h"
 
 class UAbilitySystemComponent;
@@ -47,6 +48,34 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Tags|Debug")
 	void PrintActiveTags() const;
+
+	/**
+	 * Enable or disable the on-screen tag debug panel at runtime.
+	 * Mirrors UStatsManager::SetStatsDebugEnabled — clears stale messages when
+	 * turned off and forces an immediate redraw on the first re-enable.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Tags|Debug")
+	void SetTagDebugEnabled(bool bEnable);
+
+	/**
+	 * Returns the full set of gameplay tags currently owned by the ASC.
+	 * Returns false (and leaves OutTags unchanged) when the ASC is not ready.
+	 * Used by FTagDebugManager; prefer HasTag / HasAnyTags for game logic.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Tags|Debug")
+	bool GetOwnedTags(FGameplayTagContainer& OutTags) const;
+
+	/**
+	 * True once Initialize() has been called with a valid ASC.
+	 * Use this to detect whether this specific instance is the authoritative one
+	 * (e.g., to guard against duplicate Blueprint-added components).
+	 */
+	UFUNCTION(BlueprintPure, Category = "Tags")
+	bool IsInitialized() const { return ASC != nullptr; }
+
+	/** On-screen tag-state visualiser.  Toggle bEnableDebug in the Details panel. */
+	UPROPERTY(EditAnywhere, Category = "Debug")
+	FTagDebugManager DebugManager;
 
 private:
 	void ApplyPendingStates();

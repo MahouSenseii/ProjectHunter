@@ -3,6 +3,10 @@
 
 #include "AbilitySystem/HunterAbilitySystemComponent.h"
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystem/Effects/HunterGE_HealthRegen.h"
+#include "AbilitySystem/Effects/HunterGE_ManaRegen.h"
+#include "AbilitySystem/Effects/HunterGE_StaminaRegen.h"
+#include "AbilitySystem/Effects/HunterGE_ArcaneShieldRegen.h"
 #include "Character/Component/TagManager.h"
 #include "Character/PHBaseCharacter.h"
 #include "Engine/Engine.h"
@@ -11,6 +15,9 @@
 namespace HunterAbilitySystemComponentPrivate
 {
 	constexpr float SprintStaminaDegenTickInterval = 0.1f;
+
+	/** Base tick interval for passive regen accumulators (seconds). */
+	constexpr float PassiveRegenBaseTickInterval = 0.1f;
 
 	UTagManager* ResolveTagManager(const UAbilitySystemComponent* ASC)
 	{
@@ -61,6 +68,13 @@ UHunterAbilitySystemComponent::UHunterAbilitySystemComponent()
 {
 	SetIsReplicatedByDefault(true);
 	ReplicationMode = EGameplayEffectReplicationMode::Mixed;
+
+	// Default regen GEs — overridable in a Blueprint subclass via the
+	// "Passive Regen" category if custom behavior is needed.
+	HealthRegenGE       = UHunterGE_HealthRegen::StaticClass();
+	ManaRegenGE         = UHunterGE_ManaRegen::StaticClass();
+	StaminaRegenGE      = UHunterGE_StaminaRegen::StaticClass();
+	ArcaneShieldRegenGE = UHunterGE_ArcaneShieldRegen::StaticClass();
 }
 
 void UHunterAbilitySystemComponent::AbilityActorInfoSet()
@@ -79,6 +93,8 @@ void UHunterAbilitySystemComponent::AbilityActorInfoSet()
 		bSprintingTagDelegateBound = true;
 		HandleSprintingTagChanged(SprintingTag, GetTagCount(SprintingTag));
 	}
+
+	StartPassiveRegen();
 
 	UE_LOG(
 		LogHunterGAS,
@@ -275,6 +291,302 @@ void UHunterAbilitySystemComponent::TickSprintStaminaDegen()
 	}
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Passive Regen  (Health / Mana / Stamina)
+//
+// Design:
+//   RegenRate   = seconds between heals  (Rate IS the period, set by the user)
+//   RegenAmount = how much to restore each time the accumulator fires
+//
+// A single 0.1 s base timer drives all three stats.  Per-stat accumulators
+// track elapsed time; a heal fires when accumulator >= RegenRate.  Using
+// accumulator -= Rate (not = 0) carries over any overshoot so long-rate
+// stats stay accurate.
+//
+// Routing: if a GE class is assigned (EditDefaultsOnly on a BP subclass of
+// the ASC) the heal goes through the full GAS pipeline via SetByCaller.
+// If no GE is assigned, falls back to SetNumericAttributeBase — same
+// pattern as the sprint-degen legacy path.
+// ─────────────────────────────────────────────────────────────────────────────
+
+void UHunterAbilitySystemComponent::StartPassiveRegen()
+{
+	if (bPassiveRegenStarted)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// Pre-build one Instant+SetByCaller spec per GE class.
+	// If the class is null the handle stays invalid and TickPassiveRegen
+	// falls back to SetNumericAttributeBase for that stat.
+	auto MakeSpec = [this](TSubclassOf<UGameplayEffect> GEClass) -> FGameplayEffectSpecHandle
+	{
+		if (!GEClass)
+		{
+			return FGameplayEffectSpecHandle();
+		}
+		FGameplayEffectContextHandle Context = MakeEffectContext();
+		Context.AddSourceObject(GetOwner());
+		return MakeOutgoingSpec(GEClass, 1.f, Context);
+	};
+
+	CachedHealthRegenSpec       = MakeSpec(HealthRegenGE);
+	CachedManaRegenSpec         = MakeSpec(ManaRegenGE);
+	CachedStaminaRegenSpec      = MakeSpec(StaminaRegenGE);
+	CachedArcaneShieldRegenSpec = MakeSpec(ArcaneShieldRegenGE);
+
+	// Reset accumulators so the first heal fires after exactly one Rate interval.
+	HealthRegenAccumulator       = 0.f;
+	ManaRegenAccumulator         = 0.f;
+	StaminaRegenAccumulator      = 0.f;
+	ArcaneShieldRegenAccumulator = 0.f;
+
+	// Grant all four RegenActive tags on startup so regen is ON by default.
+	// External systems (status effects, abilities) can remove a tag to pause regen
+	// and add it back to resume — the timer gate checks these each tick.
+	const FPHGameplayTags& PHT = FPHGameplayTags::Get();
+	AddLooseGameplayTag(PHT.Effect_Health_RegenActive);
+	AddLooseGameplayTag(PHT.Effect_Mana_RegenActive);
+	AddLooseGameplayTag(PHT.Effect_Stamina_RegenActive);
+	AddLooseGameplayTag(PHT.Effect_ArcaneShield_RegenActive);
+
+	World->GetTimerManager().SetTimer(
+		PassiveRegenTimerHandle,
+		this,
+		&UHunterAbilitySystemComponent::TickPassiveRegen,
+		HunterAbilitySystemComponentPrivate::PassiveRegenBaseTickInterval,
+		/*bLoop=*/true);
+
+	bPassiveRegenStarted = true;
+	UE_LOG(LogHunterGAS, Verbose, TEXT("StartPassiveRegen: ASC=%s — RegenActive tags granted"), *GetName());
+}
+
+void UHunterAbilitySystemComponent::StopPassiveRegen()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(PassiveRegenTimerHandle);
+	}
+
+	CachedHealthRegenSpec       = FGameplayEffectSpecHandle();
+	CachedManaRegenSpec         = FGameplayEffectSpecHandle();
+	CachedStaminaRegenSpec      = FGameplayEffectSpecHandle();
+	CachedArcaneShieldRegenSpec = FGameplayEffectSpecHandle();
+
+	HealthRegenAccumulator       = 0.f;
+	ManaRegenAccumulator         = 0.f;
+	StaminaRegenAccumulator      = 0.f;
+	ArcaneShieldRegenAccumulator = 0.f;
+
+	// Remove the RegenActive loose tags that were added in StartPassiveRegen.
+	const FPHGameplayTags& PHT = FPHGameplayTags::Get();
+	RemoveLooseGameplayTag(PHT.Effect_Health_RegenActive);
+	RemoveLooseGameplayTag(PHT.Effect_Mana_RegenActive);
+	RemoveLooseGameplayTag(PHT.Effect_Stamina_RegenActive);
+	RemoveLooseGameplayTag(PHT.Effect_ArcaneShield_RegenActive);
+
+	bPassiveRegenStarted = false;
+	UE_LOG(LogHunterGAS, Verbose, TEXT("StopPassiveRegen: ASC=%s — RegenActive tags removed"), *GetName());
+}
+
+void UHunterAbilitySystemComponent::TickPassiveRegen()
+{
+	const AActor* AvatarActorInstance = GetAvatarActor();
+	if (!AvatarActorInstance || !AvatarActorInstance->HasAuthority())
+	{
+		return;
+	}
+
+	const UHunterAttributeSet* AS = GetHunterAttributeSet();
+	if (!AS)
+	{
+		return;
+	}
+
+	const FPHGameplayTags& Tags  = FPHGameplayTags::Get();
+	constexpr float        DeltaT = HunterAbilitySystemComponentPrivate::PassiveRegenBaseTickInterval;
+	bool bAnyChanged = false;
+
+	// ── Helper: apply a heal via GE or fallback ───────────────────────────
+	// RecoveryName must match the DataName used in the GE constructor (FName overload).
+	// Tag and Name are stored in separate maps inside FGameplayEffectSpec — they are
+	// NOT interchangeable, even if the string value is identical.
+	auto ApplyHeal = [this, &bAnyChanged](
+		float                     Amount,
+		float                     CurValue,
+		float                     MaxValue,
+		FGameplayEffectSpecHandle& Spec,
+		FName                     RecoveryName,
+		FGameplayAttribute         Attribute) -> void
+	{
+		if (Amount <= 0.f || CurValue >= MaxValue)
+		{
+			return;
+		}
+
+		if (Spec.IsValid())
+		{
+			Spec.Data->SetSetByCallerMagnitude(RecoveryName, Amount);
+			ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+		}
+		else
+		{
+			// Legacy fallback: bypasses PostGameplayEffectExecute but
+			// PreAttributeChange / PostAttributeChange still fire.
+			const float NewValue = FMath::Min(CurValue + Amount, MaxValue);
+			SetNumericAttributeBase(Attribute, NewValue);
+		}
+		bAnyChanged = true;
+	};
+
+	// ── Health ────────────────────────────────────────────────────────────
+	// Gated by Effect.Health.RegenActive. Remove the tag to pause regen
+	// (e.g. a "CannotRegenHP" status GE can simply remove this loose tag).
+	if (HasMatchingGameplayTag(Tags.Effect_Health_RegenActive))
+	{
+		const float Rate = AS->GetHealthRegenRate();
+		if (Rate > 0.f)
+		{
+			HealthRegenAccumulator += DeltaT;
+			if (HealthRegenAccumulator >= Rate)
+			{
+				HealthRegenAccumulator -= Rate; // carry overshoot for precision
+
+				const float Amount    = FMath::Max(AS->GetHealthRegenAmount(), 0.f);
+				const float CurHealth = FMath::Max(AS->GetHealth(), 0.f);
+				const float MaxHealth = FMath::Max(AS->GetMaxEffectiveHealth(), 0.f);
+
+				// Do not regen a dead character.
+				if (CurHealth > 0.f)
+				{
+					ApplyHeal(Amount, CurHealth, MaxHealth,
+						CachedHealthRegenSpec, FName("Data.Recovery.Health"),
+						UHunterAttributeSet::GetHealthAttribute());
+				}
+			}
+		}
+		else
+		{
+			HealthRegenAccumulator = 0.f;
+		}
+	}
+	else
+	{
+		HealthRegenAccumulator = 0.f;
+	}
+
+	// ── Mana ──────────────────────────────────────────────────────────────
+	// Gated by Effect.Mana.RegenActive.
+	if (HasMatchingGameplayTag(Tags.Effect_Mana_RegenActive))
+	{
+		const float Rate = AS->GetManaRegenRate();
+		if (Rate > 0.f)
+		{
+			ManaRegenAccumulator += DeltaT;
+			if (ManaRegenAccumulator >= Rate)
+			{
+				ManaRegenAccumulator -= Rate;
+
+				const float Amount  = FMath::Max(AS->GetManaRegenAmount(), 0.f);
+				const float CurMana = FMath::Max(AS->GetMana(), 0.f);
+				const float MaxMana = FMath::Max(AS->GetMaxEffectiveMana(), 0.f);
+
+				ApplyHeal(Amount, CurMana, MaxMana,
+					CachedManaRegenSpec, FName("Data.Recovery.Mana"),
+					UHunterAttributeSet::GetManaAttribute());
+			}
+		}
+		else
+		{
+			ManaRegenAccumulator = 0.f;
+		}
+	}
+	else
+	{
+		ManaRegenAccumulator = 0.f;
+	}
+
+	// ── Stamina ───────────────────────────────────────────────────────────
+	// Gated by Effect.Stamina.RegenActive AND suppressed while sprinting
+	// (the degen timer is running and regen would fight it).
+	if (HasMatchingGameplayTag(Tags.Effect_Stamina_RegenActive) &&
+	    !HasMatchingGameplayTag(Tags.Condition_Sprinting))
+	{
+		const float Rate = AS->GetStaminaRegenRate();
+		if (Rate > 0.f)
+		{
+			StaminaRegenAccumulator += DeltaT;
+			if (StaminaRegenAccumulator >= Rate)
+			{
+				StaminaRegenAccumulator -= Rate;
+
+				const float Amount     = FMath::Max(AS->GetStaminaRegenAmount(), 0.f);
+				const float CurStamina = FMath::Max(AS->GetStamina(), 0.f);
+				const float MaxStamina = FMath::Max(AS->GetMaxEffectiveStamina(), 0.f);
+
+				ApplyHeal(Amount, CurStamina, MaxStamina,
+					CachedStaminaRegenSpec, FName("Data.Recovery.Stamina"),
+					UHunterAttributeSet::GetStaminaAttribute());
+			}
+		}
+		else
+		{
+			StaminaRegenAccumulator = 0.f;
+		}
+	}
+	else
+	{
+		// Reset accumulator when suppressed so regen doesn't fire immediately
+		// on the first tick after the block is lifted — player earns the full interval.
+		StaminaRegenAccumulator = 0.f;
+	}
+
+	// ── ArcaneShield ──────────────────────────────────────────────────────
+	// Gated by Effect.ArcaneShield.RegenActive.
+	if (HasMatchingGameplayTag(Tags.Effect_ArcaneShield_RegenActive))
+	{
+		const float Rate = AS->GetArcaneShieldRegenRate();
+		if (Rate > 0.f)
+		{
+			ArcaneShieldRegenAccumulator += DeltaT;
+			if (ArcaneShieldRegenAccumulator >= Rate)
+			{
+				ArcaneShieldRegenAccumulator -= Rate;
+
+				const float Amount        = FMath::Max(AS->GetArcaneShieldRegenAmount(), 0.f);
+				const float CurAS         = FMath::Max(AS->GetArcaneShield(), 0.f);
+				const float MaxAS         = FMath::Max(AS->GetMaxEffectiveArcaneShield(), 0.f);
+
+				ApplyHeal(Amount, CurAS, MaxAS,
+					CachedArcaneShieldRegenSpec, FName("Data.Recovery.ArcaneShield"),
+					UHunterAttributeSet::GetArcaneShieldAttribute());
+			}
+		}
+		else
+		{
+			ArcaneShieldRegenAccumulator = 0.f;
+		}
+	}
+	else
+	{
+		ArcaneShieldRegenAccumulator = 0.f;
+	}
+
+	if (bAnyChanged)
+	{
+		if (UTagManager* TagManager = HunterAbilitySystemComponentPrivate::ResolveTagManager(this))
+		{
+			TagManager->RefreshBaseConditionTags();
+		}
+	}
+}
+
 const UHunterAttributeSet* UHunterAbilitySystemComponent::GetHunterAttributeSet() const
 {
 	return GetSet<UHunterAttributeSet>();
@@ -336,3 +648,4 @@ void UHunterAbilitySystemComponent::ShowEffectDebug(const FGameplayEffectSpec& E
 	}
 }
 #endif
+ 

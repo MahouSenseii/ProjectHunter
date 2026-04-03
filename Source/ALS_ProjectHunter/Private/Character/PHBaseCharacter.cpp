@@ -57,10 +57,11 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 
 	// Create Stats Manager
 	StatsManager = CreateDefaultSubobject<UStatsManager>(TEXT("Stats Manager"));
-
+	
 	// Create Tag Manager
 	TagManager = CreateDefaultSubobject<UTagManager>(TEXT("TagManager"));
-
+	
+	
 	// Create DoT Manager — assign GE classes in Blueprint defaults
 	DoTManager = CreateDefaultSubobject<UDoTManager>(TEXT("DoTManager"));
 
@@ -83,17 +84,89 @@ void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 }
 
 
+void APHBaseCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	// BLUEPRINT-CDO RECOVERY
+	// ─────────────────────────────────────────────────────────────────────────
+	// PostInitializeComponents fires AFTER the Blueprint CDO has stamped its
+	// serialized property overrides onto this instance. If any Blueprint in the
+	// hierarchy (ALS_BaseCharacterBP, ALS_PlayerCharacterBP, etc.) was saved
+	// before these UPROPERTY members existed on PHBaseCharacter — or was saved
+	// during a class reparent — the CDO carries null for those properties and
+	// overwrites the valid TObjectPtrs the C++ constructor just set.
+	//
+	// The underlying UObjects still exist (CreateDefaultSubobject creates them
+	// and registers them regardless), so we can recover the pointers here:
+	//   • UActorComponents  → FindComponentByClass
+	//   • Plain UObject subobjects (AttributeSet) → FindObject with outer = this
+	//
+	// PERMANENT FIX: Open every Blueprint child of PHBaseCharacter in the editor,
+	// click Compile, then Save. The Blueprint CDO will regenerate from the current
+	// C++ defaults and stop serializing null for these members. Once all Blueprints
+	// are resaved these recovery blocks become permanent no-ops.
+
+#define PH_RECOVER_COMPONENT(Member, Type) \
+	if (!Member) \
+	{ \
+		Member = FindComponentByClass<Type>(); \
+		UE_LOG(LogPHBaseCharacterAbilitySystem, Warning, \
+			TEXT("PostInitializeComponents: '%s' " #Member " was null after Blueprint CDO " \
+			     "application — recovered (%s). Compile + Save this Blueprint."), \
+			*GetName(), *GetNameSafe(Member)); \
+	}
+
+	// UActorComponent subobjects — FindComponentByClass recovers each one.
+	PH_RECOVER_COMPONENT(AbilitySystemComponent, UHunterAbilitySystemComponent)
+	PH_RECOVER_COMPONENT(ProgressionManager,     UCharacterProgressionManager)
+	PH_RECOVER_COMPONENT(EquipmentManager,       UEquipmentManager)
+	PH_RECOVER_COMPONENT(StatsManager,           UStatsManager)
+	PH_RECOVER_COMPONENT(TagManager,             UTagManager)
+	PH_RECOVER_COMPONENT(DoTManager,             UDoTManager)
+	PH_RECOVER_COMPONENT(MovesetManager,         UMovesetManager)
+
+#undef PH_RECOVER_COMPONENT
+
+	// AttributeSet is a plain UObject subobject (not UActorComponent), so
+	// FindObject<T>(outer, name) is used with the exact CreateDefaultSubobject name.
+	if (!AttributeSet)
+	{
+		AttributeSet = FindObject<UHunterAttributeSet>(this, TEXT("AttributeSet"));
+		if (AttributeSet)
+		{
+			UE_LOG(LogPHBaseCharacterAbilitySystem, Warning,
+				TEXT("PostInitializeComponents: '%s' AttributeSet was null after "
+				     "Blueprint CDO application — recovered (%s). Compile + Save this Blueprint."),
+				*GetName(), *GetNameSafe(AttributeSet));
+		}
+		else
+		{
+			UE_LOG(LogPHBaseCharacterAbilitySystem, Error,
+				TEXT("PostInitializeComponents: '%s' AttributeSet is null AND could not be "
+				     "recovered via FindObject. GAS will not initialize correctly. "
+				     "This indicates a more serious class hierarchy problem."),
+				*GetName());
+		}
+	}
+}
+
 void APHBaseCharacter::BeginPlay()
 {
-	Super::BeginPlay();
-
-	// This character owns the ASC directly, so we can safely initialize actor info here
-	// before component BeginPlay. That guarantees StatsManager sees a live ASC-backed
-	// AttributeSet instead of only class metadata.
+	// TAGFIX: InitializeAbilitySystem MUST run BEFORE Super::BeginPlay().
+	// Super::BeginPlay() propagates to every component's BeginPlay(), including
+	// TagManager::BeginPlay(). TagManager::BeginPlay tries to self-initialize via
+	// IAbilitySystemInterface — but if the ASC member was null (Blueprint CDO issue,
+	// now fixed in PostInitializeComponents) or actor-info not yet set, it gets null
+	// and movement tags are never applied.
+	// Running InitializeAbilitySystem first ensures TagManager::Initialize(ASC) is
+	// called with a valid ASC before any component's BeginPlay executes.
 	if (AbilitySystemComponent)
 	{
 		InitializeAbilitySystem();
 	}
+
+	Super::BeginPlay();
 }
 
 void APHBaseCharacter::PossessedBy(AController* NewController)
@@ -103,6 +176,16 @@ void APHBaseCharacter::PossessedBy(AController* NewController)
 	if (AbilitySystemComponent)
 	{
 		InitializeAbilitySystem();
+
+		// Safety net: if TagManager still has no ASC after InitializeAbilitySystem
+		// (e.g., EnsureAttributeSetRegisteredWithAbilitySystem returned false on a
+		// prior BeginPlay attempt, or the character's BeginPlay fired before
+		// possession so InitAbilityActorInfo wasn't ready), wire it up now.
+		// This is the reliable late-init point for player-controlled characters.
+		if (TagManager && !TagManager->IsInitialized())
+		{
+			TagManager->Initialize(AbilitySystemComponent);
+		}
 	}
 }
 
@@ -127,6 +210,13 @@ void APHBaseCharacter::OnRep_PlayerState()
 	if (AbilitySystemComponent)
 	{
 		InitializeAbilitySystem();
+
+		// Same safety net as PossessedBy — for clients where PlayerState replication
+		// is what makes the ASC available.
+		if (TagManager && !TagManager->IsInitialized())
+		{
+			TagManager->Initialize(AbilitySystemComponent);
+		}
 	}
 }
 
@@ -183,8 +273,7 @@ bool APHBaseCharacter::EnsureAttributeSetRegisteredWithAbilitySystem()
 	}
 	else if (!RegisteredAttributeSet)
 	{
-		// Explicitly register the actor-owned default subobject with the ASC so runtime
-		// attribute queries always resolve against a live ASC-owned instance.
+
 		AbilitySystemComponent->AddAttributeSetSubobject(AttributeSet.Get());
 
 		for (const UAttributeSet* Candidate : AbilitySystemComponent->GetSpawnedAttributes())
@@ -221,9 +310,7 @@ void APHBaseCharacter::InitializeAbilitySystem()
 		return;
 	}
 
-	// I-04 FIX: Always refresh actor info and level when possession or controller
-	// state changes. These calls are cheap, idempotent, and required on every
-	// invocation to keep the ASC up-to-date after re-possession.
+
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
 
 	if (UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(AbilitySystemComponent))
@@ -240,9 +327,7 @@ void APHBaseCharacter::InitializeAbilitySystem()
 			static_cast<float>(CachedLevel));
 	}
 
-	// I-04 FIX: Early-out for re-possession path. Everything below this guard is
-	// one-time setup; running it again would re-register delegates, re-grant
-	// abilities, and re-apply startup effects — all incorrect.
+
 	if (bAbilitySystemInitialized)
 	{
 		if (TagManager)
@@ -267,9 +352,6 @@ void APHBaseCharacter::InitializeAbilitySystem()
 
 	// --- First-time initialization from here down ---
 
-	// I-04 FIX: EnsureAttributeSetRegisteredWithAbilitySystem and TagManager->Initialize
-	// are now placed here (after the guard) so they only run once, not on every
-	// possession/controller change event.
 	const bool bHasLiveAttributeSet = EnsureAttributeSetRegisteredWithAbilitySystem();
 
 	if (!bHasLiveAttributeSet)

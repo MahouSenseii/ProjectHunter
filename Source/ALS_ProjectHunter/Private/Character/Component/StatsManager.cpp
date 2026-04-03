@@ -8,6 +8,8 @@
 #include "Data/BaseStatsData.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
+#include "Character/PHBaseCharacter.h"
+#include "Character/Component/TagManager.h"
 #include "Item/ItemInstance.h"
 #include "Item/Library/ItemStructs.h"
 #include "Item/Library/AffixEnums.h"
@@ -97,6 +99,14 @@ void UStatsManager::NotifyAbilitySystemReady()
 	SetStatsDebugEnabled(DebugManager.bEnableDebug);
 }
 
+void UStatsManager::ResetStatsInitialization()
+{
+	// Clear the one-time guard so the next NotifyAbilitySystemReady() call
+	// fully re-runs InitializeFromDataAsset.  Required for pool-recycled mobs
+	// whose first life already set bHasInitializedConfiguredStats = true.
+	bHasInitializedConfiguredStats = false;
+}
+
 void UStatsManager::SetStatsDebugEnabled(bool bEnable)
 {
 #if UE_BUILD_SHIPPING
@@ -155,7 +165,7 @@ const UAttributeSet* UStatsManager::GetLiveSourceAttributeSet(UAbilitySystemComp
 					*GetNameSafe(DesiredClassPtr),
 					AttributeName.IsNone() ? TEXT("None") : *AttributeName.ToString()));
 		}
-
+		
 		return nullptr;
 	}
 

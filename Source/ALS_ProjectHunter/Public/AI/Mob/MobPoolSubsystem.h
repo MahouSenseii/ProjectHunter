@@ -111,6 +111,6 @@ protected:
 		const FVector& Location, const FRotator& Rotation) const;
 
 private:
-	/** Per-class pool of inactive actors (weak pointers to avoid preventing GC). */
+	/** Per-class pool of inactive actors */
 	TMap<UClass*, TArray<TWeakObjectPtr<APHBaseCharacter>>> Pool;
 };

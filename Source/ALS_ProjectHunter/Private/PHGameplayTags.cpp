@@ -367,6 +367,7 @@ DEFINE_GAMEPLAY_TAG(Data_Damage_Stamina)
 DEFINE_GAMEPLAY_TAG(Data_Recovery_Health)
 DEFINE_GAMEPLAY_TAG(Data_Recovery_Mana)
 DEFINE_GAMEPLAY_TAG(Data_Recovery_Stamina)
+DEFINE_GAMEPLAY_TAG(Data_Recovery_ArcaneShield)
 
 #undef DEFINE_GAMEPLAY_TAG
 
@@ -871,9 +872,10 @@ void FPHGameplayTags::RegisterSetByCallerDamageTags()
 
 	// N-20 FIX: Register recovery (healing) SetByCaller tags.
 	// HealingApplicationGE uses these as SetByCaller keys — pass positive magnitudes.
-	Data_Recovery_Health  = T.AddNativeGameplayTag("Data.Recovery.Health",  TEXT("SetByCaller key for health recovery in HealingApplicationGE."));
-	Data_Recovery_Mana    = T.AddNativeGameplayTag("Data.Recovery.Mana",    TEXT("SetByCaller key for mana recovery in HealingApplicationGE."));
-	Data_Recovery_Stamina = T.AddNativeGameplayTag("Data.Recovery.Stamina", TEXT("SetByCaller key for stamina recovery in HealingApplicationGE."));
+	Data_Recovery_Health        = T.AddNativeGameplayTag("Data.Recovery.Health",        TEXT("SetByCaller key for health recovery in HealingApplicationGE."));
+	Data_Recovery_Mana          = T.AddNativeGameplayTag("Data.Recovery.Mana",          TEXT("SetByCaller key for mana recovery in HealingApplicationGE."));
+	Data_Recovery_Stamina       = T.AddNativeGameplayTag("Data.Recovery.Stamina",       TEXT("SetByCaller key for stamina recovery in HealingApplicationGE."));
+	Data_Recovery_ArcaneShield  = T.AddNativeGameplayTag("Data.Recovery.ArcaneShield",  TEXT("SetByCaller key for arcane shield recovery in HealingApplicationGE."));
 }
 
 void FPHGameplayTags::RegisterAttributeToTagMappings()

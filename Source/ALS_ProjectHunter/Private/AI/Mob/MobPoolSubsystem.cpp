@@ -4,6 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
 #include "Character/Component/MonsterModifierComponent.h"
+#include "Character/Component/StatsManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AIController.h"
 #include "BrainComponent.h"
@@ -314,6 +315,27 @@ void UMobPoolSubsystem::PrepareMobForReuse(
 	Mob->InitializeAttributes();
 	Mob->GiveDefaultAbilities();
 	Mob->ApplyStartupEffects();
+
+	// POOL-FIX: Restore Health / Mana / Stamina to their authored initial values.
+	//
+	// The problem: ResetMobState() stripped every active GE (including
+	// HunterGE_DerivedPrimaryVitals which sets MaxHealth/MaxStamina via MMC) and
+	// left current attribute values at their death-state (0).
+	// ApplyStartupEffects() above re-applies the GE modifiers so MaxHealth etc.
+	// are correct again, but the CURRENT Health is still 0.
+	//
+	// The fix: call NotifyAbilitySystemReady() which runs InitializeFromDataAsset,
+	// which re-sets attribute bases AND re-applies the Instant "set Health=MaxHealth"
+	// initialization effects, bringing the mob back to full vitals.
+	//
+	// Why ResetStatsInitialization() first: bHasInitializedConfiguredStats is
+	// already true from the mob's first life.  Without clearing it,
+	// TryInitializeConfiguredStats() short-circuits and the call is a no-op.
+	if (UStatsManager* Stats = Mob->FindComponentByClass<UStatsManager>())
+	{
+		Stats->ResetStatsInitialization();
+		Stats->NotifyAbilitySystemReady();
+	}
 
 	// The mob remains hidden/inert — the caller (MobManager::FinalizeSpawn)
 	// will handle making it visible, enabling collision, and starting AI.
