@@ -2,7 +2,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Loot/Library/LootStruct.h"
+#include "Systems/Loot/Library/LootStructs.h"
 #include "LootGenerator.generated.h"
 
 // Forward declarations
@@ -14,14 +14,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogLootGenerator, Log, All);
 
 /**
  * FLootGenerator - Pure loot generation logic
- * 
- * SINGLE RESPONSIBILITY: Roll loot from tables and create items
- * 
- * CORRUPTION SYSTEM:
- * - Corruption = NEGATIVE AFFIXES (ERankPoints < 0)
- * - CorruptionChance = probability per affix to be negative
- * - bForceCorrupted = guarantee at least one negative affix
- * - Corrupted affixes hurt the player (curses)
  */
 USTRUCT(BlueprintType)
 struct ALS_PROJECTHUNTER_API FLootGenerator
@@ -156,6 +148,5 @@ FORCEINLINE const FLootTable* FLootGenerator::GetLootTableFromHandle(const FData
 	{
 		return nullptr;
 	}
-	
 	return Handle.DataTable->FindRow<FLootTable>(Handle.RowName, TEXT("FLootGenerator::GetLootTableFromHandle"));
 }

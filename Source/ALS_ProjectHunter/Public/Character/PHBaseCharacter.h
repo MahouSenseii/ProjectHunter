@@ -5,8 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
+#include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Character/ALSCharacter.h"
-#include "Combat/Library/CombatStruct.h"
+#include "Systems/Character/Library/PHCharacterLog.h"
+#include "Systems/Combat/Library/CombatStructs.h"
 #include "AbilitySystem/HunterAbilitySystemComponent.h"
 #include "PHBaseCharacter.generated.h"
 
@@ -16,7 +18,10 @@ class UAbilitySystemComponent;
 class UHunterAttributeSet;
 class UHunterAbilitySystemComponent;
 class UCharacterProgressionManager;
+class UCombatManager;
 class UEquipmentManager;
+class UEquipmentPresentationComponent;
+class UCharacterSystemCoordinatorComponent;
 class UStatsManager;
 class UTagManager;
 class UDoTManager;
@@ -84,6 +89,15 @@ public:
 	/** Tag Manager - Central runtime gameplay tag state for this character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tags", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UTagManager> TagManager;
+	
+
+	/**
+	 * Combat Manager — resolves all hit/damage interactions for this character.
+	 * Weapons (and fists) report hits here; the manager owns the damage pipeline.
+	 * Configure DamageApplicationGE and RecoveryApplicationGE in Blueprint defaults.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCombatManager> CombatManager;
 
 	/**
 	 * DoT Manager — apply and track Bleed, Ignite, Poison, Chill, Freeze, Shock.
@@ -100,12 +114,18 @@ public:
 	TObjectPtr<UMovesetManager> MovesetManager;
 
 	/**
-	 * Base stats data asset
-	 * Defines starting attribute values for this character
-	 * Set in subclasses or Blueprint (e.g., DA_WarriorBaseStats, DA_GoblinBaseStats)
+	 * Equipment Presentation Component — owns visual weapon actors and mesh
+	 * attachment. Bound to EquipmentManager::OnEquipmentChanged by the coordinator.
 	 */
-	/*UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats")
-	TObjectPtr<UBaseStatsData> BaseStatsData;*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UEquipmentPresentationComponent> EquipmentPresentation;
+
+	/**
+	 * Character System Coordinator — single point of cross-system listener wiring.
+	 * PH-0.4: APHBaseCharacter is a composition root only; orchestration lives here.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Coordinator", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCharacterSystemCoordinatorComponent> SystemCoordinator;
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* ABILITY SYSTEM INTERFACE */
@@ -130,12 +150,7 @@ public:
 		// and must be removed. The C++ CreateDefaultSubobject is the authoritative one.
 		UHunterAbilitySystemComponent* FoundASC = FindComponentByClass<UHunterAbilitySystemComponent>();
 
-		UE_LOG(LogTemp, Warning,
-			TEXT("GetAbilitySystemComponent: '%s' member pointer is null — "
-			     "recovered via FindComponentByClass (ASC=%s). "
-			     "A Blueprint child class likely has a duplicate 'Ability System Component' "
-			     "in its Components panel. Delete the Blueprint-added one."),
-			*GetName(), *GetNameSafe(FoundASC));
+		PH_LOG_WARNING(LogPHBaseCharacter, "GetAbilitySystemComponent recovered a null member pointer for Character=%s via ASC=%s. A Blueprint child class likely has a duplicate Ability System Component in its Components panel.", *GetName(), *GetNameSafe(FoundASC));
 
 		return FoundASC;
 	}
@@ -168,6 +183,12 @@ public:
 	UTagManager* GetTagManager() const
 	{
 		return TagManager;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	UCombatManager* GetCombatManager() const
+	{
+		return CombatManager;
 	}
 
 	UFUNCTION(BlueprintPure, Category = "Combat")

@@ -7,7 +7,7 @@
 #include "AbilitySystem/Effects/HunterGE_ManaRegen.h"
 #include "AbilitySystem/Effects/HunterGE_StaminaRegen.h"
 #include "AbilitySystem/Effects/HunterGE_ArcaneShieldRegen.h"
-#include "Character/Component/TagManager.h"
+#include "Systems/Tags/Components/TagManager.h"
 #include "Character/PHBaseCharacter.h"
 #include "Engine/Engine.h"
 #include "PHGameplayTags.h"
@@ -68,9 +68,6 @@ UHunterAbilitySystemComponent::UHunterAbilitySystemComponent()
 {
 	SetIsReplicatedByDefault(true);
 	ReplicationMode = EGameplayEffectReplicationMode::Mixed;
-
-	// Default regen GEs — overridable in a Blueprint subclass via the
-	// "Passive Regen" category if custom behavior is needed.
 	HealthRegenGE       = UHunterGE_HealthRegen::StaticClass();
 	ManaRegenGE         = UHunterGE_ManaRegen::StaticClass();
 	StaminaRegenGE      = UHunterGE_StaminaRegen::StaticClass();
@@ -228,10 +225,6 @@ void UHunterAbilitySystemComponent::TickSprintStaminaDegen()
 		StopSprintStaminaDegen();
 		return;
 	}
-
-	// N-13 FIX: Use cached degen parameters (set in StartSprintStaminaDegen) to avoid
-	// a redundant AttributeSet query every 0.1 s.  We still need the AttributeSet only
-	// for the current Stamina value, which must be live.
 	if (CachedDegenRate <= 0.f || CachedDegenAmount <= 0.f)
 	{
 		StopSprintStaminaDegen();
@@ -255,14 +248,6 @@ void UHunterAbilitySystemComponent::TickSprintStaminaDegen()
 	const float NewStamina = FMath::Max(0.f, CurrentStamina - DrainAmount);
 	if (!FMath::IsNearlyEqual(CurrentStamina, NewStamina))
 	{
-		// C-1 FIX: Route stamina drain through the GAS pipeline so that
-		// PreAttributeChange / PostAttributeChange clamps fire and the
-		// change is properly replicated through the attribute replication
-		// system.  SprintStaminaDrainGE must be an Instant GE with a
-		// SetByCaller modifier on Data.Damage.Stamina (negative = drain).
-		//
-		// OPT-SPRINT: Reuse the spec cached in StartSprintStaminaDegen —
-		// only the SetByCaller magnitude changes per tick.
 		bool bAppliedViaGE = false;
 		if (CachedSprintDrainSpec.IsValid())
 		{
@@ -291,23 +276,6 @@ void UHunterAbilitySystemComponent::TickSprintStaminaDegen()
 	}
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Passive Regen  (Health / Mana / Stamina)
-//
-// Design:
-//   RegenRate   = seconds between heals  (Rate IS the period, set by the user)
-//   RegenAmount = how much to restore each time the accumulator fires
-//
-// A single 0.1 s base timer drives all three stats.  Per-stat accumulators
-// track elapsed time; a heal fires when accumulator >= RegenRate.  Using
-// accumulator -= Rate (not = 0) carries over any overshoot so long-rate
-// stats stay accurate.
-//
-// Routing: if a GE class is assigned (EditDefaultsOnly on a BP subclass of
-// the ASC) the heal goes through the full GAS pipeline via SetByCaller.
-// If no GE is assigned, falls back to SetNumericAttributeBase — same
-// pattern as the sprint-degen legacy path.
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UHunterAbilitySystemComponent::StartPassiveRegen()
 {
@@ -321,10 +289,7 @@ void UHunterAbilitySystemComponent::StartPassiveRegen()
 	{
 		return;
 	}
-
-	// Pre-build one Instant+SetByCaller spec per GE class.
-	// If the class is null the handle stays invalid and TickPassiveRegen
-	// falls back to SetNumericAttributeBase for that stat.
+	
 	auto MakeSpec = [this](TSubclassOf<UGameplayEffect> GEClass) -> FGameplayEffectSpecHandle
 	{
 		if (!GEClass)
@@ -346,10 +311,7 @@ void UHunterAbilitySystemComponent::StartPassiveRegen()
 	ManaRegenAccumulator         = 0.f;
 	StaminaRegenAccumulator      = 0.f;
 	ArcaneShieldRegenAccumulator = 0.f;
-
-	// Grant all four RegenActive tags on startup so regen is ON by default.
-	// External systems (status effects, abilities) can remove a tag to pause regen
-	// and add it back to resume — the timer gate checks these each tick.
+	
 	const FPHGameplayTags& PHT = FPHGameplayTags::Get();
 	AddLooseGameplayTag(PHT.Effect_Health_RegenActive);
 	AddLooseGameplayTag(PHT.Effect_Mana_RegenActive);
@@ -412,11 +374,7 @@ void UHunterAbilitySystemComponent::TickPassiveRegen()
 	const FPHGameplayTags& Tags  = FPHGameplayTags::Get();
 	constexpr float        DeltaT = HunterAbilitySystemComponentPrivate::PassiveRegenBaseTickInterval;
 	bool bAnyChanged = false;
-
-	// ── Helper: apply a heal via GE or fallback ───────────────────────────
-	// RecoveryName must match the DataName used in the GE constructor (FName overload).
-	// Tag and Name are stored in separate maps inside FGameplayEffectSpec — they are
-	// NOT interchangeable, even if the string value is identical.
+	
 	auto ApplyHeal = [this, &bAnyChanged](
 		float                     Amount,
 		float                     CurValue,

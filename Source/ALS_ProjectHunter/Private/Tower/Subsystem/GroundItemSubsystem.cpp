@@ -1,13 +1,14 @@
 // Tower/Subsystem/GroundItemSubsystem.cpp
 
 #include "Tower/Subsystem/GroundItemSubsystem.h"
+#include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Tower/Actors/ISMContainerActor.h"
 #include "Item/ItemInstance.h"
+#include "Item/Library/ItemStructs.h"
 #include "Engine/World.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "DrawDebugHelpers.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogGroundItemSubsystem, Log, All);
 DEFINE_LOG_CATEGORY(LogGroundItemSubsystem);
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -53,13 +54,13 @@ void UGroundItemSubsystem::EnsureISMContainerExists()
 	UWorld* World = GetWorld();
 	if (!World)
 	{
-		UE_LOG(LogGroundItemSubsystem, Error, TEXT("EnsureISMContainerExists: World is null!"));
+		PH_LOG_ERROR(LogGroundItemSubsystem, "EnsureISMContainerExists failed: World was null.");
 		return;
 	}
 
 	if (!World->HasBegunPlay())
 	{
-		UE_LOG(LogGroundItemSubsystem, Warning, TEXT("EnsureISMContainerExists: World hasn't begun play yet"));
+		PH_LOG_WARNING(LogGroundItemSubsystem, "EnsureISMContainerExists deferred because the world has not begun play yet.");
 		return;
 	}
 
@@ -81,7 +82,7 @@ void UGroundItemSubsystem::EnsureISMContainerExists()
 	}
 	else
 	{
-		UE_LOG(LogGroundItemSubsystem, Error, TEXT("GroundItemSubsystem: Failed to spawn ISM container actor!"));
+		PH_LOG_ERROR(LogGroundItemSubsystem, "EnsureISMContainerExists failed: Could not spawn the ISM container actor.");
 	}
 }
 
@@ -129,25 +130,26 @@ UInstancedStaticMeshComponent* UGroundItemSubsystem::GetOrCreateISMComponent(USt
 void UGroundItemSubsystem::UpdateIndexAfterSwap(UInstancedStaticMeshComponent* ISMComponent,
                                                 int32 RemovedIndex, int32 LastIndex)
 {
-	// P-3 FIX: After the manual swap-and-pop, the instance that was at LastIndex now
-	// sits at RemovedIndex. Only that one entry needs its stored index updated.
 	if (RemovedIndex == LastIndex)
 	{
 		// The removed instance WAS the last one; no swap occurred, nothing to update.
 		return;
 	}
-
-	// OPT-ISM: The old linear scan over ItemISMData was O(n) in the number of
-	// ground items.  This is fine for single removals but adds up during batch
-	// operations.  We still do a linear scan here (since we don't maintain an
-	// ISM-index→ItemID reverse map) but break early, keeping it O(n) worst case
-	// with typically very fast early exits.
+	
 	for (TPair<int32, FGroundItemISMData>& Pair : ItemISMData)
 	{
 		FGroundItemISMData& Data = Pair.Value;
 		if (Data.ISMComponent == ISMComponent && Data.InstanceIndex == LastIndex)
 		{
 			Data.InstanceIndex = RemovedIndex;
+
+			// Keep the animation bookkeeping in sync so Tick addresses the
+			// correct ISM slot after the swap-pop.
+			if (ISMContainerActor.IsValid())
+			{
+				ISMContainerActor->UpdateItemAnimationIndex(Pair.Key, RemovedIndex);
+			}
+
 			UE_LOG(LogGroundItemSubsystem, Verbose,
 				TEXT("UpdateIndexAfterSwap: Item %d moved from ISM index %d to %d after swap removal"),
 				Pair.Key, LastIndex, RemovedIndex);
@@ -166,36 +168,50 @@ int32 UGroundItemSubsystem::AddItemToGround(UItemInstance* Item, FVector Locatio
 
 	if (!ISMContainerActor.IsValid())
 	{
-		UE_LOG(LogGroundItemSubsystem, Error, TEXT("AddItemToGround: Cannot add item - no container actor!"));
+		PH_LOG_ERROR(LogGroundItemSubsystem, "AddItemToGround failed: The ISM container actor was unavailable.");
 		return -1;
 	}
 
 	if (!Item || !Item->HasValidBaseData())
 	{
-		UE_LOG(LogGroundItemSubsystem, Warning, TEXT("AddItemToGround: Invalid item!"));
+		PH_LOG_WARNING(LogGroundItemSubsystem, "AddItemToGround failed: Item was invalid.");
 		return -1;
 	}
 
 	UStaticMesh* Mesh = Item->GetGroundMesh();
 	if (!Mesh)
 	{
-		UE_LOG(LogGroundItemSubsystem, Warning, TEXT("AddItemToGround: Item has no ground mesh!"));
+		PH_LOG_WARNING(LogGroundItemSubsystem, "AddItemToGround failed: Item=%s had no ground mesh.", *Item->GetDisplayName().ToString());
 		return -1;
 	}
 
 	UInstancedStaticMeshComponent* ISM = GetOrCreateISMComponent(Mesh);
 	if (!ISM)
 	{
-		UE_LOG(LogGroundItemSubsystem, Error, TEXT("AddItemToGround: Failed to get/create ISM component!"));
+		PH_LOG_ERROR(LogGroundItemSubsystem, "AddItemToGround failed: Could not get or create an ISM component for Mesh=%s.", *GetNameSafe(Mesh));
 		return -1;
 	}
 
-	FTransform Transform(Rotation, Location, FVector::OneVector);
+	// Build the final rotation: start from the caller's rotation, then apply
+	// per-item overrides defined on the FItemBase DataTable row.
+	FRotator FinalRotation = Rotation;
+	if (const FItemBase* BaseData = Item->GetBaseData())
+	{
+		if (BaseData->bFlipGroundMeshRotation)
+		{
+			// 180° pitch flip — turns a "blade-up" mesh so the blade faces down
+			FinalRotation.Pitch += 180.0f;
+		}
+		// Additive offset on top of any flip (fine-tunes per-item resting angle)
+		FinalRotation += BaseData->GroundMeshRotationOffset;
+	}
+
+	FTransform Transform(FinalRotation, Location, FVector::OneVector);
 	int32 ISMInstanceIndex = ISM->AddInstance(Transform);
 
 	if (ISMInstanceIndex == INDEX_NONE)
 	{
-		UE_LOG(LogGroundItemSubsystem, Error, TEXT("AddItemToGround: Failed to add instance to ISM!"));
+		PH_LOG_ERROR(LogGroundItemSubsystem, "AddItemToGround failed: Could not add an instance to the ISM for Item=%s.", *Item->GetDisplayName().ToString());
 		return -1;
 	}
 
@@ -207,6 +223,12 @@ int32 UGroundItemSubsystem::AddItemToGround(UItemInstance* Item, FVector Locatio
 
 	// P-3 FIX: Keep the reverse map in sync for O(1) GetInstanceID lookups.
 	InstanceToIDMap.Add(Item, ItemID);
+
+	// Register with the container actor so it can drive spin + bob animation.
+	if (ISMContainerActor.IsValid())
+	{
+		ISMContainerActor->RegisterItemForAnimation(ItemID, ISM, ISMInstanceIndex, Location, FinalRotation);
+	}
 
 	UE_LOG(LogGroundItemSubsystem, Log, TEXT("AddItemToGround: Added item '%s' (ID: %d, ISMIndex: %d) at %s"),
 		*Item->GetDisplayName().ToString(), ItemID, ISMInstanceIndex, *Location.ToString());
@@ -221,8 +243,7 @@ UItemInstance* UGroundItemSubsystem::RemoveItemFromGround(int32 ItemID)
 	// ═══════════════════════════════════════════════
 	if (bIsProcessingRemoval)
 	{
-		UE_LOG(LogGroundItemSubsystem, Warning,
-			TEXT("RemoveItemFromGround: Already processing a removal, queuing item %d"), ItemID);
+		PH_LOG_WARNING(LogGroundItemSubsystem, "RemoveItemFromGround deferred ItemID=%d because a removal was already in progress.", ItemID);
 
 		// WS-1 FIX: Lock before touching PendingRemovals — async loaders or
 		// parallel-for tasks could call RemoveItemFromGround concurrently.
@@ -255,7 +276,7 @@ UItemInstance* UGroundItemSubsystem::RemoveItemFromGroundInternal(int32 ItemID)
 	UItemInstance** FoundItem = GroundItems.Find(ItemID);
 	if (!FoundItem)
 	{
-		UE_LOG(LogGroundItemSubsystem, Warning, TEXT("RemoveItemFromGround: Item ID %d not found"), ItemID);
+		PH_LOG_WARNING(LogGroundItemSubsystem, "RemoveItemFromGround failed: ItemID=%d was not found.", ItemID);
 		return nullptr;
 	}
 
@@ -297,20 +318,24 @@ UItemInstance* UGroundItemSubsystem::RemoveItemFromGroundInternal(int32 ItemID)
 		}
 		else
 		{
-			UE_LOG(LogGroundItemSubsystem, Error,
-				TEXT("RemoveItemFromGround: Invalid ISM index %d for item %d (ISM has %d instances)"),
-				InstanceIndex, ItemID, ISM->GetInstanceCount());
+			PH_LOG_ERROR(LogGroundItemSubsystem, "RemoveItemFromGround failed: ItemID=%d had invalid ISMIndex=%d while the component had %d instances.", ItemID, InstanceIndex, ISM->GetInstanceCount());
 		}
 	}
 	else
 	{
-		UE_LOG(LogGroundItemSubsystem, Warning, TEXT("RemoveItemFromGround: No valid ISM data for item ID %d"), ItemID);
+		PH_LOG_WARNING(LogGroundItemSubsystem, "RemoveItemFromGround found no valid ISM data for ItemID=%d.", ItemID);
 	}
 
 	// P-3 FIX: Remove from reverse lookup map to keep it in sync.
 	if (Item)
 	{
 		InstanceToIDMap.Remove(Item);
+	}
+
+	// Unregister from animation so the container stops animating this instance.
+	if (ISMContainerActor.IsValid())
+	{
+		ISMContainerActor->UnregisterItemFromAnimation(ItemID);
 	}
 
 	GroundItems.Remove(ItemID);
@@ -473,12 +498,34 @@ int32 UGroundItemSubsystem::GetInstanceID(UItemInstance* Item) const
 	return -1;
 }
 
+int32 UGroundItemSubsystem::FindItemByISMInstance(UInstancedStaticMeshComponent* ISMComponent, int32 InstanceIndex) const
+{
+	if (!ISMComponent || InstanceIndex == INDEX_NONE)
+	{
+		return INDEX_NONE;
+	}
+
+	// Linear scan over ItemISMData. Ground item counts are typically small (< a few
+	// hundred per area), so this is acceptable. A reverse TMap<(ISM,idx)→ID> would
+	// be O(1) but requires maintaining a composite-key map across add/remove/swap —
+	// the current O(n) scan keeps the bookkeeping simpler for now.
+	for (const TPair<int32, FGroundItemISMData>& Pair : ItemISMData)
+	{
+		if (Pair.Value.ISMComponent == ISMComponent && Pair.Value.InstanceIndex == InstanceIndex)
+		{
+			return Pair.Key;
+		}
+	}
+
+	return INDEX_NONE;
+}
+
 void UGroundItemSubsystem::UpdateItemLocation(int32 ItemID, FVector NewLocation)
 {
 	FGroundItemISMData* ISMData = ItemISMData.Find(ItemID);
 	if (!ISMData || !ISMData->IsValid())
 	{
-		UE_LOG(LogGroundItemSubsystem, Warning, TEXT("UpdateItemLocation: No valid ISM data for item ID %d"), ItemID);
+		PH_LOG_WARNING(LogGroundItemSubsystem, "UpdateItemLocation failed: No valid ISM data was found for ItemID=%d.", ItemID);
 		return;
 	}
 
@@ -498,6 +545,12 @@ void UGroundItemSubsystem::UpdateItemLocation(int32 ItemID, FVector NewLocation)
 
 void UGroundItemSubsystem::ClearAllItems()
 {
+	// Clear animation bookkeeping first (before ISM instances are destroyed)
+	if (ISMContainerActor.IsValid())
+	{
+		ISMContainerActor->ClearAllAnimationState();
+	}
+
 	for (TPair<UStaticMesh*, UInstancedStaticMeshComponent*>& Pair : MeshToISM)
 	{
 		if (Pair.Value && IsValid(Pair.Value))

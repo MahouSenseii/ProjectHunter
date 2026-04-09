@@ -87,6 +87,20 @@ public:
 	UItemInstance* FindNearestGroundItem(int32& OutItemID);
 
 	/**
+	 * Line-trace detection for ground items — mirrors how actor interactables
+	 * (loot chests, portals) are detected. Performs a visibility trace and checks
+	 * whether the hit component is an InstancedStaticMeshComponent; if so, uses
+	 * FHitResult::Item (the ISM instance index) to reverse-look up the ItemID.
+	 *
+	 * This gives ground items the same "look-at" UX as actor interactables, as
+	 * opposed to the proximity fallback (FindNearestGroundItem) which is
+	 * direction-agnostic.
+	 *
+	 * @return ItemID of the ground item the player is looking at, or INDEX_NONE
+	 */
+	int32 FindGroundItemByTrace();
+
+	/**
 	 * Get camera view point with ALS-style offsets
 	 * @param OutLocation - Camera location
 	 * @param OutRotation - Camera rotation

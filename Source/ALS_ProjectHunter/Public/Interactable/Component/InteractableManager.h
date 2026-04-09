@@ -19,13 +19,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FMashProgressEvent, AActor*, Inte
  * Add this component to ANY actor to make it interactable
  * Handles all IInteractable interface implementation
  * Configure in Blueprint per-actor
- * 
- * SUPPORTS:
- * - Tap interactions (instant)
- * - Hold interactions (with progress bar)
- * - Mash interactions (button mashing)
- * - Tap OR Hold (ground items: tap=inventory, hold=equip)
- * - Camera-facing widgets (always visible from any angle)
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UInteractableManager : public UActorComponent, public IInteractable

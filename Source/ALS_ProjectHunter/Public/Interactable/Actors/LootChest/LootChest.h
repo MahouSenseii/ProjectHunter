@@ -3,13 +3,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Loot/Library/LootStruct.h"
+#include "Systems/Loot/Library/LootStructs.h"
 #include "LootChest.generated.h"
 
 // Forward declarations
 class UInteractableManager;
 class UStaticMeshComponent;
 class USkeletalMeshComponent;
+class UBoxComponent;
 class UAnimSequence;
 class UItemInstance;
 class ULootComponent;
@@ -269,12 +270,20 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UInteractableManager* InteractableManager;
 
-	/** 
+	/**
 	 * Loot component - handles loot generation and spawning
 	 * Configure SourceID here (e.g., "Chest_Common", "Chest_Rare")
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	ULootComponent* LootComponent;
+
+	/**
+	 * Optional box that defines the area items are scattered into when looted.
+	 * If placed and has non-zero extent, overrides SpawnConfig scatter radius.
+	 * Visible in editor so designers can resize it per-chest in the viewport.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UBoxComponent* SpawnAreaBox;
 
 	// ═══════════════════════════════════════════════
 	// CONFIGURATION (Split by responsibility)
@@ -442,6 +451,9 @@ protected:
 
 	void GetPlayerLootStats(AActor* Player, float& OutLuck, float& OutMagicFind) const;
 	void GenerateAndSpawnLoot(AActor* Opener);
+	void FinalizeOpenSequence();
+	void PreloadLootSourceIfPossible();
+	void ResetOpenSequenceTracking();
 
 	// ═══════════════════════════════════════════════
 	// ANIMATION (Timer-based, not Tick-based)
@@ -497,4 +509,10 @@ protected:
 	FTimerHandle OpenAnimationTimer;
 	FTimerHandle CloseAnimationTimer;
 	FTimerHandle RespawnTimer;
+
+	/** Guards against duplicate world spawns while an open animation is still running. */
+	bool bLootSpawnedForCurrentOpen = false;
+
+	/** Guards against duplicate post-animation finalization. */
+	bool bOpenSequenceFinalizedForCurrentOpen = false;
 };

@@ -1,23 +1,32 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Combat/Library/CombatStruct.h"
+#include "Components/SplineComponent.h"
+#include "Systems/Combat/Library/CombatStructs.h"
 #include "GameFramework/Actor.h"
 #include "Item/Library/ItemEnums.h"
 #include "EquippedItemRuntimeActor.generated.h"
 
+class APHBaseCharacter;
 class APawn;
+struct FPropertyChangedEvent;
 class UCombatManager;
 class UItemInstance;
 class USceneComponent;
+class USplineComponent;
+class UStaticMesh;
+class UStaticMeshComponent;
+class USkeletalMesh;
+class USkeletalMeshComponent;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogEquippedItemRuntimeActor, Log, All);
 
 /**
- * Shared runtime host for equipped items that need active behavior.
- * Blueprint children should own presentation/timing, while this base class owns common runtime state.
+ * Runtime actor for equipped items.
+ * Owns the visual mesh preview used by Blueprint children and the spline used
+ * to author weapon damage traces.
  */
-UCLASS(Blueprintable)
+UCLASS(Blueprintable, BlueprintType)
 class ALS_PROJECTHUNTER_API AEquippedItemRuntimeActor : public AActor
 {
 	GENERATED_BODY()
@@ -25,124 +34,76 @@ class ALS_PROJECTHUNTER_API AEquippedItemRuntimeActor : public AActor
 public:
 	AEquippedItemRuntimeActor();
 
+	virtual void OnConstruction(const FTransform& Transform) override;
+	virtual void PostLoad() override;
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
+	/** Called by EquipmentManager after spawning. Sets owner data for the lifetime of this actor. */
 	UFUNCTION(BlueprintCallable, Category = "Runtime Item")
 	void InitializeFromItem(UItemInstance* Item, APawn* OwnerPawn, EEquipmentSlot Slot);
-
-	UFUNCTION(BlueprintCallable, Category = "Runtime Item")
-	void OnEquipped();
-
-	UFUNCTION(BlueprintCallable, Category = "Runtime Item")
-	void OnUnequipped();
-
-	UFUNCTION(BlueprintCallable, Category = "Runtime Item")
-	bool BeginPrimaryAction();
-
-	UFUNCTION(BlueprintCallable, Category = "Runtime Item")
-	void EndPrimaryAction();
 
 	UFUNCTION(BlueprintPure, Category = "Runtime Item")
 	UItemInstance* GetItemInstance() const { return ItemInstance; }
 
 	UFUNCTION(BlueprintPure, Category = "Runtime Item")
-	APawn* GetOwningPawn() const { return OwningPawn; }
+	APHBaseCharacter* GetOwningPawn() const { return OwnerActor; }
 
-	UFUNCTION(BlueprintPure, Category = "Runtime Item")
-	EEquipmentSlot GetEquippedSlot() const { return EquippedSlot; }
-
-	UFUNCTION(BlueprintPure, Category = "Runtime Item")
-	bool IsRuntimeItemEquipped() const { return bIsEquipped; }
-
-	UFUNCTION(BlueprintPure, Category = "Runtime Item")
-	bool IsPrimaryActionActive() const { return bPrimaryActionActive; }
-
-	UFUNCTION(BlueprintPure, Category = "Runtime Item")
-	bool CanBeginPrimaryAction() const;
-
+	/** Resolves CombatManager from the owning pawn. Works unarmed too. */
 	UFUNCTION(BlueprintPure, Category = "Runtime Item|Combat")
-	bool HasAuthorityToApplyDamage() const;
+	UCombatManager* GetCombatManager() const;
 
-	UFUNCTION(BlueprintPure, Category = "Runtime Item|Combat")
-	AActor* GetCombatSourceActor() const;
+	UFUNCTION(BlueprintPure, Category = "Runtime Item|Components")
+	UStaticMeshComponent* GetStaticMeshComponent() const { return StaticMeshComponent; }
 
-	UFUNCTION(BlueprintPure, Category = "Runtime Item|Combat")
-	UCombatManager* GetCombatManager() const { return CombatManager; }
+	UFUNCTION(BlueprintPure, Category = "Runtime Item|Components")
+	USkeletalMeshComponent* GetSkeletalMeshComponent() const { return SkeletalMeshComponent; }
 
-	UFUNCTION(BlueprintCallable, Category = "Runtime Item|Combat")
-	void ResetHitActorsForCurrentAction();
+	UFUNCTION(BlueprintPure, Category = "Runtime Item|Components")
+	USplineComponent* GetDamageTrace() const { return DamageTrace; }
 
-	UFUNCTION(BlueprintPure, Category = "Runtime Item|Combat")
-	bool HasActorBeenHitThisAction(const AActor* TargetActor) const;
+	UFUNCTION(BlueprintPure, Category = "Runtime Item|Preview")
+	UStaticMesh* GetStaticMeshMesh() const { return StaticMesh; }
 
-	UFUNCTION(BlueprintCallable, Category = "Runtime Item|Combat")
-	bool MarkActorHitThisAction(AActor* TargetActor);
+	UFUNCTION(BlueprintCallable, Category = "Runtime Item|Preview")
+	void SetStaticMesh(UStaticMesh* NewMesh);
 
-	UFUNCTION(BlueprintCallable, Category = "Runtime Item|Combat")
-	bool ResolveHitOnActor(AActor* TargetActor, FCombatResolveResult& OutResult);
+	UFUNCTION(BlueprintPure, Category = "Runtime Item|Preview")
+	USkeletalMesh* GetSkeletalMesh() const { return SkeletalMesh; }
 
-	UFUNCTION(BlueprintCallable, Category = "Runtime Item|Combat")
-	int32 ResolveHitResults(const TArray<FHitResult>& HitResults, TArray<FCombatResolveResult>& OutResults);
+	UFUNCTION(BlueprintCallable, Category = "Runtime Item|Preview")
+	void SetSkeletalMesh(USkeletalMesh* NewMesh);
 
-	UFUNCTION(BlueprintCallable, Category = "Runtime Item|Combat")
-	bool PerformSphereTrace(
-		FVector Start,
-		FVector End,
-		float Radius,
-		TArray<FHitResult>& OutHits,
-		TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Pawn,
-		bool bIgnoreOwner = true) const;
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Runtime Item|Preview")
+	void RefreshVisualPreview();
 
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Runtime Item")
 	TObjectPtr<USceneComponent> SceneRoot;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Runtime Item|Combat")
-	TObjectPtr<UCombatManager> CombatManager;
-
 	UPROPERTY(BlueprintReadOnly, Category = "Runtime Item")
 	TObjectPtr<UItemInstance> ItemInstance = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Runtime Item")
-	TObjectPtr<APawn> OwningPawn = nullptr;
+	TObjectPtr<APHBaseCharacter> OwnerActor = nullptr;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Runtime Item")
-	EEquipmentSlot EquippedSlot = EEquipmentSlot::ES_None;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Runtime Item|Components")
+	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Runtime Item|Combat", meta = (ClampMin = "0.0"))
-	float PrimaryActionCooldown = 0.0f;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Runtime Item|Components")
+	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Runtime Item|Combat")
-	TEnumAsByte<ECollisionChannel> DefaultTraceChannel = ECC_Pawn;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Runtime Item|Components")
+	TObjectPtr<USplineComponent> DamageTrace;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Runtime Item")
-	bool bIsEquipped = false;
+	/** Blueprint child preview mesh for static-mesh weapons/items. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Runtime Item|Preview")
+	TObjectPtr<UStaticMesh> StaticMesh = nullptr;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Runtime Item")
-	bool bPrimaryActionActive = false;
+	/** Blueprint child preview mesh for skeletal-mesh weapons/items. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Runtime Item|Preview")
+	TObjectPtr<USkeletalMesh> SkeletalMesh = nullptr;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Runtime Item")
-	float LastPrimaryActionEndTime = -1.0f;
-
-	virtual void HandleItemInitialized();
-	virtual void HandleEquipped();
-	virtual void HandleUnequipped();
-	virtual void HandlePrimaryActionStarted();
-	virtual void HandlePrimaryActionEnded();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Runtime Item", meta = (DisplayName = "On Runtime Item Initialized"))
-	void K2_OnRuntimeItemInitialized(UItemInstance* Item, APawn* OwnerPawn, EEquipmentSlot Slot);
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Runtime Item", meta = (DisplayName = "On Equipped"))
-	void K2_OnEquipped();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Runtime Item", meta = (DisplayName = "On Unequipped"))
-	void K2_OnUnequipped();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Runtime Item", meta = (DisplayName = "On Primary Action Started"))
-	void K2_OnPrimaryActionStarted();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Runtime Item", meta = (DisplayName = "On Primary Action Ended"))
-	void K2_OnPrimaryActionEnded();
-
-private:
-	TSet<TWeakObjectPtr<AActor>> HitActorsThisAction;
+	void ApplyConfiguredPreviewMeshes();
 };

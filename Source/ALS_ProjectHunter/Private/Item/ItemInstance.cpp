@@ -1,10 +1,15 @@
 // Item/ItemInstance.cpp
 
 #include "Item/ItemInstance.h"
-#include "Item/Generation/AffixGenerator.h"
-#include "AbilitySystemComponent.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogItemInstance, Log, All);
+#include "Item/ItemInitializationHandler.h"
+#include "Item/ItemNameBuilder.h"
+#include "Item/ItemStackingHandler.h"
+#include "Item/ItemUsageHandler.h"
+#include "Item/ItemValueCalculator.h"
+#include "Systems/Item/Library/ItemLog.h"
+
+DEFINE_LOG_CATEGORY(LogItemInstance);
 
 UItemInstance::UItemInstance()
 {
@@ -12,439 +17,50 @@ UItemInstance::UItemInstance()
 	Seed = FMath::Rand();
 }
 
-// ═══════════════════════════════════════════════
-// SERIALIZATION / MIGRATION
-// ═══════════════════════════════════════════════
-
 bool UItemInstance::MigrateToCurrentVersion()
 {
-	if (SerializationVersion >= ITEM_CURRENT_VERSION)
-	{
-		return false; // Already current
-	}
-
-	bool bMigrated = false;
-
-	// ── Version 0 → 1 ───────────────────────────────────────────────────
-	// Items saved before the version field existed will have the default
-	// value 0 (zero-initialized by UObject).  Treat them as version 1
-	// since the field layout hasn't actually changed yet.
-	if (SerializationVersion < 1)
-	{
-		// Future migration steps go here.
-		// Example:
-		//   if (SomeOldField_DEPRECATED != DefaultValue)
-		//   {
-		//       NewField = ConvertOldToNew(SomeOldField_DEPRECATED);
-		//   }
-		SerializationVersion = 1;
-		bMigrated = true;
-	}
-
-	// ── Add future migration blocks here in ascending order ──────────────
-	// if (SerializationVersion < 2)
-	// {
-	//     // Migrate from v1 → v2
-	//     SerializationVersion = 2;
-	//     bMigrated = true;
-	// }
-
-	if (bMigrated)
-	{
-		UE_LOG(LogItemInstance, Log,
-			TEXT("MigrateToCurrentVersion: item '%s' migrated to version %d"),
-			*UniqueID.ToString(), SerializationVersion);
-	}
-
-	return bMigrated;
+	return FItemInitializationHandler::MigrateToCurrentVersion(*this);
 }
 
 void UItemInstance::PostLoadInit()
 {
-	// Step 1: Run version migration
-	MigrateToCurrentVersion();
-
-	// IS-1 FIX: Invalidate base data cache so deserialized items pick up
-	// any DataTable changes made since the save was written.
-	InvalidateBaseCache();
+	FItemInitializationHandler::PostLoadInit(*this);
 }
 
-// ═══════════════════════════════════════════════
-// INITIALIZATION (Uses AffixGenerator)
-// ═══════════════════════════════════════════════
-
-void UItemInstance::Initialize(
-	FDataTableRowHandle InBaseItemHandle,
-	int32 InItemLevel,
-	EItemRarity InRarity,
-	bool bGenerateAffixes)
+void UItemInstance::Initialize(FDataTableRowHandle InBaseItemHandle, int32 InItemLevel, EItemRarity InRarity, bool bGenerateAffixes)
 {
-	// Call corruption version with no corruption
-	InitializeWithCorruption(
-		InBaseItemHandle,
-		InItemLevel,
-		InRarity,
-		bGenerateAffixes,
-		0.0f,   // No corruption chance
-		false   // Don't force corrupted
-	);
+	FItemInitializationHandler::Initialize(*this, InBaseItemHandle, InItemLevel, InRarity, bGenerateAffixes);
 }
 
-void UItemInstance::InitializeWithCorruption(
-	FDataTableRowHandle InBaseItemHandle,
-	int32 InItemLevel,
-	EItemRarity InRarity,
-	bool bGenerateAffixes,
-	float CorruptionChance,
-	bool bForceCorrupted)
+void UItemInstance::InitializeWithCorruption(FDataTableRowHandle InBaseItemHandle, int32 InItemLevel, EItemRarity InRarity, bool bGenerateAffixes, float CorruptionChance, bool bForceCorrupted)
 {
-	BaseItemHandle = InBaseItemHandle;
-	ItemLevel = FMath::Clamp(InItemLevel, 1, 100);
-	Rarity = InRarity;
-
-	// IS-2 FIX: Clamp corruption chance at the API boundary
-	CorruptionChance = FMath::Clamp(CorruptionChance, 0.0f, 1.0f);
-	
-	// Validate base data
-	if (!HasValidBaseData())
-	{
-		UE_LOG(LogItemInstance, Error, TEXT("ItemInstance: Invalid base item handle: %s"),
-			*InBaseItemHandle.RowName.ToString());
-		return;
-	}
-	
-	FItemBase* Base = GetBaseData();
-	
-	// Set rarity
-	if (Rarity == EItemRarity::IR_None)
-	{
-		Rarity = Base->ItemRarity;
-	}
-	
-	// Initialize by type
-	EItemType Type = Base->ItemType;
-	
-	switch (Type)
-	{
-		case EItemType::IT_Weapon:
-		case EItemType::IT_Armor:
-		case EItemType::IT_Accessory:
-		{
-			// EQUIPMENT: Durability + Affixes
-			Durability = FItemDurability();
-			Durability.SetMaxDurability(Base->MaxDurability);
-			
-			// Generate affixes for Grade E and above (Grade F has no affixes)
-			if (bGenerateAffixes && Rarity > EItemRarity::IR_GradeF)
-			{
-				FAffixGenerator Generator;
-				
-				// ═══════════════════════════════════════════════
-				// CORRUPTION: Pass corruption params to generator
-				// ═══════════════════════════════════════════════
-				Stats = Generator.GenerateAffixes(
-					*Base, 
-					ItemLevel, 
-					Rarity, 
-					Seed,
-					CorruptionChance,    // Per-affix corruption chance
-					bForceCorrupted      // Force at least one corrupted
-				);
-				
-				// Calculate corruption state from generated affixes
-				CalculateCorruptionState();
-			}
-			else
-			{
-				// Copy implicits only
-				Stats.Implicits = Base->ImplicitMods;
-				for (FPHAttributeData& Implicit : Stats.Implicits)
-				{
-					Implicit.RollValue();
-					Implicit.GenerateUID();
-				}
-			}
-			
-			bIdentified = !(Base->bCanBeIdentified);
-			break;
-		}
-		
-		case EItemType::IT_Consumable:
-		{
-			// CONSUMABLE: Uses + Cooldown
-			Quantity = 1;
-			RemainingUses = Base->ConsumableData.MaxUses > 0 ? Base->ConsumableData.MaxUses : 1;
-			bIdentified = true;
-			break;
-		}
-		
-		case EItemType::IT_Material:
-		case EItemType::IT_Currency:
-		{
-			// MATERIAL/CURRENCY: Stackable
-			Quantity = 1;
-			bIdentified = true;
-			break;
-		}
-		
-		case EItemType::IT_Quest:
-		case EItemType::IT_Key:
-		{
-			// QUEST/KEY: Key item
-			Quantity = 1;
-			bIsKeyItem = true;
-			bIsTradeable = false;
-			bIsSoulbound = true;
-			bIdentified = true;
-			break;
-		}
-		
-		default:
-			Quantity = 1;
-			bIdentified = true;
-			break;
-	}
-	
-	// C-3 FIX: Only propagate Base->bIsTradeable for non-quest/non-key items.
-	// IT_Quest and IT_Key cases already set bIsTradeable = false inside the
-	// switch above.  Unconditionally overwriting here would silently undo that
-	// and allow quest items to be traded if the DataTable row had bIsTradeable=true.
-	const EItemType ResolvedType = Base->ItemType;
-	if (ResolvedType != EItemType::IT_Quest && ResolvedType != EItemType::IT_Key)
-	{
-		bIsTradeable = Base->bIsTradeable;
-	}
-	
-	// Update weight
-	UpdateTotalWeight();
-	
-	bCacheDirty = true;
+	FItemInitializationHandler::InitializeWithCorruption(*this, InBaseItemHandle, InItemLevel, InRarity, bGenerateAffixes, CorruptionChance, bForceCorrupted);
 }
-
-// ═══════════════════════════════════════════════
-// CORRUPTION SYSTEM
-// ═══════════════════════════════════════════════
 
 void UItemInstance::CalculateCorruptionState()
 {
-	bHasCorruptedAffixes = false;
-	TotalCorruptionPoints = 0;
-	
-	// Check prefixes for negative rank points
-	for (const FPHAttributeData& Affix : Stats.Prefixes)
-	{
-		int32 Points = Affix.GetRankPointValue();
-		if (Points < 0)
-		{
-			bHasCorruptedAffixes = true;
-			TotalCorruptionPoints += Points;
-		}
-	}
-	
-	// Check suffixes for negative rank points
-	for (const FPHAttributeData& Affix : Stats.Suffixes)
-	{
-		int32 Points = Affix.GetRankPointValue();
-		if (Points < 0)
-		{
-			bHasCorruptedAffixes = true;
-			TotalCorruptionPoints += Points;
-		}
-	}
-	
-	// Check crafted mods
-	for (const FPHAttributeData& Affix : Stats.Crafted)
-	{
-		int32 Points = Affix.GetRankPointValue();
-		if (Points < 0)
-		{
-			bHasCorruptedAffixes = true;
-			TotalCorruptionPoints += Points;
-		}
-	}
-	
-	// Corrupted items cannot be modified further
-	if (bHasCorruptedAffixes)
-	{
-		bCanBeModified = false;
-		
-		UE_LOG(LogItemInstance, Log, TEXT("ItemInstance: Corruption detected! Points: %d"), TotalCorruptionPoints);
-	}
+	FItemInitializationHandler::CalculateCorruptionState(*this);
 }
 
 TArray<FPHAttributeData> UItemInstance::GetCorruptedAffixes() const
 {
-	TArray<FPHAttributeData> Corrupted;
-	
-	// Check prefixes
-	for (const FPHAttributeData& Affix : Stats.Prefixes)
-	{
-		if (Affix.IsCorruptedAffix())
-		{
-			Corrupted.Add(Affix);
-		}
-	}
-	
-	// Check suffixes
-	for (const FPHAttributeData& Affix : Stats.Suffixes)
-	{
-		if (Affix.IsCorruptedAffix())
-		{
-			Corrupted.Add(Affix);
-		}
-	}
-	
-	// Check crafted
-	for (const FPHAttributeData& Affix : Stats.Crafted)
-	{
-		if (Affix.IsCorruptedAffix())
-		{
-			Corrupted.Add(Affix);
-		}
-	}
-	
-	return Corrupted;
+	return FItemInitializationHandler::GetCorruptedAffixes(*this);
 }
-
-// ═══════════════════════════════════════════════
-// NAME GENERATION (Hunter Manga Style)
-// ═══════════════════════════════════════════════
 
 FText UItemInstance::GetDisplayName()
 {
-	if (bHasNameBeenGenerated && !bCacheDirty)
-	{
-		return DisplayName;
-	}
-	
-	FItemBase* Base = GetBaseData();
-	if (!Base)
-	{
-		return FText::FromString("Unknown Item");
-	}
-	
-	// Quest items and Grade SS (EX-Rank) use base name
-	if (IsQuestItem() || Rarity == EItemRarity::IR_GradeSS || (IsEquipment() && Base->bIsUnique))
-	{
-		// EX-Rank items get special formatting
-		if (Rarity == EItemRarity::IR_GradeSS)
-		{
-			DisplayName = FText::Format(
-				FText::FromString("[{0}]"),
-				Base->ItemName
-			);
-		}
-		else
-		{
-			DisplayName = Base->ItemName;
-		}
-		
-		bHasNameBeenGenerated = true;
-		bCacheDirty = false;
-		return DisplayName;
-	}
-	
-	// Non-equipment uses base name
-	if (!IsEquipment())
-	{
-		DisplayName = Base->ItemName;
-		bHasNameBeenGenerated = true;
-		bCacheDirty = false;
-		return DisplayName;
-	}
-	
-	// ═══════════════════════════════════════════════
-	// CORRUPTION: Add "Corrupted" prefix for corrupted items
-	// ═══════════════════════════════════════════════
-	FString NamePrefix = "";
-	if (bHasCorruptedAffixes)
-	{
-		NamePrefix = "Corrupted ";
-	}
-	
-	// Equipment: Generate based on identification and rarity
-	if (!bIdentified)
-	{
-		DisplayName = FText::Format(
-			FText::FromString("Unidentified {0}{1}"),
-			FText::FromString(NamePrefix),
-			Base->ItemName
-		);
-	}
-	else
-	{
-		switch (Rarity)
-		{
-			case EItemRarity::IR_GradeF:
-			case EItemRarity::IR_GradeE:
-				// Grade F/E: "Iron Sword" or "Corrupted Iron Sword"
-				DisplayName = FText::Format(
-					FText::FromString("{0}{1}"),
-					FText::FromString(NamePrefix),
-					Base->ItemName
-				);
-				break;
-				
-			case EItemRarity::IR_GradeD:
-			case EItemRarity::IR_GradeC:
-			case EItemRarity::IR_GradeB:
-				// Grade D/C/B: "Flaming Iron Sword of Power"
-				// TODO: Generate from affixes
-				DisplayName = FText::Format(
-					FText::FromString("{0}{1}"),
-					FText::FromString(NamePrefix),
-					Base->ItemName
-				);
-				break;
-				
-			case EItemRarity::IR_GradeA:
-			case EItemRarity::IR_GradeS:
-				// Grade A/S: "Demon-Slaying Blade"
-				DisplayName = FText::Format(
-					FText::FromString("{0}{1}"),
-					FText::FromString(NamePrefix),
-					GenerateRareName()
-				);
-				break;
-				
-			default:
-				DisplayName = FText::Format(
-					FText::FromString("{0}{1}"),
-					FText::FromString(NamePrefix),
-					Base->ItemName
-				);
-				break;
-		}
-	}
-	
-	bHasNameBeenGenerated = true;
-	bCacheDirty = false;
-	
-	return DisplayName;
+	return FItemNameBuilder::GetDisplayName(*this);
 }
 
 void UItemInstance::RegenerateDisplayName()
 {
-	bHasNameBeenGenerated = false;
-	bCacheDirty = true;
-	GetDisplayName();
+	FItemNameBuilder::RegenerateDisplayName(*this);
 }
 
 FText UItemInstance::GenerateRareName() const
 {
-	// TODO: Implement procedural legendary name generation
-	// Hunter Manga style names like:
-	// - "Demon-Slaying Blade"
-	// - "Dragon's Wrath"
-	// - "Eternal Frost"
-	
-	FItemBase* Base = GetBaseData();
-	return Base ? Base->ItemName : FText::FromString("Legendary Item");
+	return FItemNameBuilder::GenerateRareName(*this);
 }
-
-// ═══════════════════════════════════════════════
-// VISUAL GETTERS
-// ═══════════════════════════════════════════════
 
 UStaticMesh* UItemInstance::GetGroundMesh() const
 {
@@ -466,19 +82,13 @@ UMaterialInstance* UItemInstance::GetInventoryIcon() const
 
 FLinearColor UItemInstance::GetRarityColor() const
 {
-	// Corrupted items have a special color tint
 	if (bHasCorruptedAffixes)
 	{
-		// Dark purple/red tint for corrupted items
 		return FLinearColor(0.5f, 0.0f, 0.3f, 1.0f);
 	}
-	
+
 	return GetItemRarityColor(Rarity);
 }
-
-// ═══════════════════════════════════════════════
-// CONVENIENCE GETTERS
-// ═══════════════════════════════════════════════
 
 FText UItemInstance::GetBaseItemName() const
 {
@@ -518,270 +128,54 @@ float UItemInstance::GetBaseWeight() const
 
 bool UItemInstance::bIsTwoHanded() const
 {
-	// C-2 FIX: Guard against null Base before dereferencing.
 	FItemBase* Base = GetBaseData();
 	if (!Base)
 	{
 		return false;
 	}
+
 	return Base->WeaponHandle == EWeaponHandle::WH_TwoHanded;
 }
 
-// ═══════════════════════════════════════════════
-// WEIGHT CALCULATION (Hunter Manga Style)
-// ═══════════════════════════════════════════════
-
 void UItemInstance::UpdateTotalWeight()
 {
-	float BaseWeight = GetBaseWeight();
-	TotalWeight = BaseWeight * Quantity;
+	FItemStackingHandler::UpdateTotalWeight(*this);
 }
-
-// ═══════════════════════════════════════════════
-// AFFIX OPERATIONS (Equipment)
-// ═══════════════════════════════════════════════
 
 void UItemInstance::ApplyAffixesToCharacter(UAbilitySystemComponent* ASC)
 {
-	if (!ASC || !IsEquipment())
-	{
-		return;
-	}
-	
-	RemoveAffixesFromCharacter(ASC);
-	
-	TArray<FPHAttributeData> AllAffixes = Stats.GetAllStats();
-	
-	for (const FPHAttributeData& Affix : AllAffixes)
-	{
-		// Skip unidentified affixes
-		if (!Affix.bIsIdentified)
-		{
-			continue;
-		}
-		
-		// Skip local weapon stats (applied to weapon directly, not character)
-		if (Affix.bIsLocalToWeapon || Affix.bAffectsBaseWeaponStatsDirectly)
-		{
-			continue;
-		}
-		
-		// Skip if no valid attribute
-		if (!Affix.ModifiedAttribute.IsValid())
-		{
-			continue;
-		}
-		
-		// ═══════════════════════════════════════════════
-		// CORRUPTION: Corrupted affixes have NEGATIVE effects
-		// They should still be applied - that's the point!
-		// ═══════════════════════════════════════════════
-		
-		// TODO: Create and apply GameplayEffect for this affix
-		
-		UE_LOG(LogItemInstance, Log, TEXT("Applied affix: %s = %f (Corrupted: %s)"),
-			*Affix.AttributeName.ToString(), 
-			Affix.RolledStatValue,
-			Affix.IsCorruptedAffix() ? TEXT("YES") : TEXT("NO"));
-	}
-	
-	bEffectsActive = true;
+	FItemUsageHandler::ApplyAffixesToCharacter(*this, ASC);
 }
 
 void UItemInstance::RemoveAffixesFromCharacter(UAbilitySystemComponent* ASC)
 {
-	if (!ASC)
-	{
-		return;
-	}
-	
-	for (const FActiveGameplayEffectHandle& Handle : AppliedEffectHandles)
-	{
-		ASC->RemoveActiveGameplayEffect(Handle);
-	}
-	
-	AppliedEffectHandles.Empty();
-	bEffectsActive = false;
+	FItemUsageHandler::RemoveAffixesFromCharacter(*this, ASC);
 }
-
-// ═══════════════════════════════════════════════
-// CONSUMABLE OPERATIONS
-// ═══════════════════════════════════════════════
 
 bool UItemInstance::UseConsumable(AActor* Target)
 {
-	if (!CanUseConsumable() || !Target)
-	{
-		return false;
-	}
-	
-	FItemBase* Base = GetBaseData();
-	if (!Base)
-	{
-		return false;
-	}
-	
-	// Apply effects
-	if (!ApplyConsumableEffects(Target))
-	{
-		return false;
-	}
-	
-	// C-5 FIX: Record wall-clock timestamp; CanUseConsumable() computes the
-	// remaining cooldown from this without needing a tick driver.
-	LastUseTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
-	
-	// Reduce uses or quantity
-	if (Base->ConsumableData.MaxUses > 1)
-	{
-		ReduceUses(1);
-	}
-	else
-	{
-		RemoveFromStack(1);
-	}
-	
-	return true;
+	return FItemUsageHandler::UseConsumable(*this, Target);
 }
 
 bool UItemInstance::CanUseConsumable() const
 {
-	if (!IsConsumable())
-	{
-		return false;
-	}
-
-	// C-5 FIX: UItemInstance is a UObject and has no tick, so CooldownRemaining
-	// was never decremented and the cooldown never expired.  Replace the mutable
-	// countdown field with a stateless wall-clock check against LastUseTime.
-	FItemBase* Base = GetBaseData();
-	if (!Base)
-	{
-		return false;
-	}
-
-	if (Base->ConsumableData.Cooldown > 0.0f && LastUseTime > 0.0f)
-	{
-		const UWorld* World = GetWorld();
-		if (World)
-		{
-			const float Elapsed = World->GetTimeSeconds() - LastUseTime;
-			if (Elapsed < Base->ConsumableData.Cooldown)
-			{
-				return false;
-			}
-		}
-	}
-
-	if (Base->ConsumableData.MaxUses > 1 && RemainingUses <= 0)
-	{
-		return false;
-	}
-
-	if (Quantity <= 0)
-	{
-		return false;
-	}
-
-	return true;
+	return FItemUsageHandler::CanUseConsumable(*this);
 }
 
 float UItemInstance::GetCooldownProgress() const
 {
-	FItemBase* Base = GetBaseData();
-	if (!Base || Base->ConsumableData.Cooldown <= 0.0f)
-	{
-		return 1.0f;
-	}
-
-	// C-5 FIX: Compute progress from wall-clock time, not from the stale
-	// CooldownRemaining field that was never ticked down.
-	if (LastUseTime <= 0.0f)
-	{
-		return 1.0f;
-	}
-
-	const UWorld* World = GetWorld();
-	if (!World)
-	{
-		return 1.0f;
-	}
-
-	const float Elapsed = World->GetTimeSeconds() - LastUseTime;
-	return FMath::Clamp(Elapsed / Base->ConsumableData.Cooldown, 0.0f, 1.0f);
+	return FItemUsageHandler::GetCooldownProgress(*this);
 }
 
 bool UItemInstance::ReduceUses(int32 Amount)
 {
-	RemainingUses = FMath::Max(0, RemainingUses - Amount);
-	return RemainingUses <= 0;
+	return FItemUsageHandler::ReduceUses(*this, Amount);
 }
 
 bool UItemInstance::ApplyConsumableEffects(AActor* Target)
 {
-	// C-4 FIX: Actually apply ConsumableData.EffectsToApply via GAS.
-	FItemBase* Base = GetBaseData();
-	if (!Base)
-	{
-		return false;
-	}
-
-	if (Base->ConsumableData.EffectsToApply.IsEmpty())
-	{
-		// No effects configured – treat as success (item still consumed).
-		UE_LOG(LogItemInstance, Warning,
-			TEXT("ItemInstance::ApplyConsumableEffects: '%s' has no EffectsToApply configured."),
-			*GetBaseItemName().ToString());
-		return true;
-	}
-
-	UAbilitySystemComponent* TargetASC = Target->FindComponentByClass<UAbilitySystemComponent>();
-
-	if (!TargetASC)
-	{
-		UE_LOG(LogItemInstance, Warning,
-			TEXT("ItemInstance::ApplyConsumableEffects: Target '%s' has no AbilitySystemComponent."),
-			*Target->GetName());
-		return false;
-	}
-
-	// Apply every GE in the consumable's effect list.
-	bool bAllApplied = true;
-	for (const TSubclassOf<UGameplayEffect>& GEClass : Base->ConsumableData.EffectsToApply)
-	{
-		if (!GEClass)
-		{
-			UE_LOG(LogItemInstance, Warning,
-				TEXT("ItemInstance::ApplyConsumableEffects: Null GE class in '%s' EffectsToApply – skipping."),
-				*GetBaseItemName().ToString());
-			continue;
-		}
-
-		FGameplayEffectContextHandle Context = TargetASC->MakeEffectContext();
-		FGameplayEffectSpecHandle Spec = TargetASC->MakeOutgoingSpec(GEClass, ItemLevel, Context);
-		if (Spec.IsValid())
-		{
-			FActiveGameplayEffectHandle Handle = TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-			if (!Handle.IsValid())
-			{
-				UE_LOG(LogItemInstance, Warning,
-					TEXT("ItemInstance::ApplyConsumableEffects: Failed to apply '%s' to '%s'."),
-					*GEClass->GetName(), *Target->GetName());
-				bAllApplied = false;
-			}
-		}
-		else
-		{
-			bAllApplied = false;
-		}
-	}
-
-	return bAllApplied;
+	return FItemUsageHandler::ApplyConsumableEffects(*this, Target);
 }
-
-// ═══════════════════════════════════════════════
-// IDENTIFICATION (Equipment)
-// ═══════════════════════════════════════════════
 
 void UItemInstance::Identify()
 {
@@ -789,29 +183,29 @@ void UItemInstance::Identify()
 	{
 		return;
 	}
-	
+
 	bIdentified = true;
-	
+
 	for (FPHAttributeData& Affix : Stats.Prefixes)
 	{
 		Affix.bIsIdentified = true;
 	}
-	
+
 	for (FPHAttributeData& Affix : Stats.Suffixes)
 	{
 		Affix.bIsIdentified = true;
 	}
-	
+
 	for (FPHAttributeData& Affix : Stats.Implicits)
 	{
 		Affix.bIsIdentified = true;
 	}
-	
+
 	for (FPHAttributeData& Affix : Stats.Crafted)
 	{
 		Affix.bIsIdentified = true;
 	}
-	
+
 	RegenerateDisplayName();
 }
 
@@ -820,16 +214,12 @@ bool UItemInstance::HasUnidentifiedAffixes() const
 	return IsEquipment() && Stats.HasUnidentifiedStats();
 }
 
-// ═══════════════════════════════════════════════
-// ITEM TYPE CHECKS
-// ═══════════════════════════════════════════════
-
 bool UItemInstance::IsEquipment() const
 {
-	EItemType Type = GetItemType();
-	return Type == EItemType::IT_Weapon 
-	    || Type == EItemType::IT_Armor 
-	    || Type == EItemType::IT_Accessory;
+	const EItemType Type = GetItemType();
+	return Type == EItemType::IT_Weapon ||
+		Type == EItemType::IT_Armor ||
+		Type == EItemType::IT_Accessory;
 }
 
 bool UItemInstance::IsConsumable() const
@@ -857,10 +247,6 @@ bool UItemInstance::IsKeyItem() const
 	return GetItemType() == EItemType::IT_Key || bIsKeyItem;
 }
 
-// ═══════════════════════════════════════════════
-// ITEM STATE CHECKS
-// ═══════════════════════════════════════════════
-
 bool UItemInstance::CanBeEquipped() const
 {
 	return IsEquipment() && !IsBroken();
@@ -868,209 +254,48 @@ bool UItemInstance::CanBeEquipped() const
 
 bool UItemInstance::IsStackable() const
 {
-	FItemBase* Base = GetBaseData();
-	return Base ? Base->bStackable : false;
+	return FItemStackingHandler::IsStackable(*this);
 }
 
 bool UItemInstance::CanStackWith(const UItemInstance* Other) const
 {
-	if (!Other || !IsStackable())
-	{
-		return false;
-	}
-	
-	if (BaseItemHandle != Other->BaseItemHandle)
-	{
-		return false;
-	}
-	
-	// Equipment with affixes cannot stack
-	if (IsEquipment() && Stats.bAffixesGenerated)
-	{
-		return false;
-	}
-	
-	// Consumables with different uses cannot stack
-	if (IsConsumable() && RemainingUses != Other->RemainingUses)
-	{
-		return false;
-	}
-	
-	return true;
+	return FItemStackingHandler::CanStackWith(*this, Other);
 }
 
 bool UItemInstance::IsConsumed() const
 {
-	if (IsConsumable())
-	{
-		return RemainingUses <= 0 || Quantity <= 0;
-	}
-	
-	return Quantity <= 0;
+	return FItemStackingHandler::IsConsumed(*this);
 }
-
-// ═══════════════════════════════════════════════
-// STACKING
-// ═══════════════════════════════════════════════
 
 int32 UItemInstance::AddToStack(int32 Amount)
 {
-	if (!IsStackable() || Amount <= 0)
-	{
-		return Amount;
-	}
-	
-	int32 MaxStack = GetMaxStackSize();
-	int32 Available = MaxStack - Quantity;
-	int32 ToAdd = FMath::Min(Amount, Available);
-	
-	Quantity += ToAdd;
-	UpdateTotalWeight();
-	
-	return Amount - ToAdd;
+	return FItemStackingHandler::AddToStack(*this, Amount);
 }
 
 int32 UItemInstance::RemoveFromStack(int32 Amount)
 {
-	if (Amount <= 0)
-	{
-		return 0;
-	}
-	
-	int32 ToRemove = FMath::Min(Amount, Quantity);
-	Quantity -= ToRemove;
-	UpdateTotalWeight();
-	
-	return ToRemove;
+	return FItemStackingHandler::RemoveFromStack(*this, Amount);
 }
 
 UItemInstance* UItemInstance::SplitStack(int32 Amount)
 {
-	if (!IsStackable() || Amount <= 0 || Amount >= Quantity)
-	{
-		return nullptr;
-	}
-	
-	// FIX: Use the same outer as the original item instead of GetTransientPackage().
-	// Objects created under GetTransientPackage() have no stable UPROPERTY reference
-	// chain keeping them alive, so a GC sweep that runs between SplitStack() and
-	// InventoryManager::AddItem() could collect the new instance before it is stored.
-	// Using GetOuter() makes the new item's lifetime mirror the original's — it is
-	// rooted through the same owner chain and cannot be collected prematurely.
-	UItemInstance* NewInstance = NewObject<UItemInstance>(GetOuter(), GetClass());
-	
-	NewInstance->BaseItemHandle = BaseItemHandle;
-	NewInstance->ItemLevel = ItemLevel;
-	NewInstance->Rarity = Rarity;
-	NewInstance->Quantity = Amount;
-	NewInstance->RemainingUses = RemainingUses;
-	NewInstance->UniqueID = FGuid::NewGuid();
-	
-	// Copy corruption state
-	NewInstance->bHasCorruptedAffixes = bHasCorruptedAffixes;
-	NewInstance->TotalCorruptionPoints = TotalCorruptionPoints;
-	NewInstance->bCanBeModified = bCanBeModified;
-	
-	RemoveFromStack(Amount);
-	NewInstance->UpdateTotalWeight();
-	
-	return NewInstance;
+	return FItemStackingHandler::SplitStack(*this, Amount);
 }
 
 int32 UItemInstance::GetRemainingStackSpace() const
 {
-	if (!IsStackable())
-	{
-		return 0;
-	}
-	
-	return FMath::Max(0, GetMaxStackSize() - Quantity);
+	return FItemStackingHandler::GetRemainingStackSpace(*this);
 }
-
-// ═══════════════════════════════════════════════
-// VALUE & ECONOMY (Hunter Manga Style)
-// ═══════════════════════════════════════════════
 
 int32 UItemInstance::GetCalculatedValue() const
 {
-	FItemBase* Base = GetBaseData();
-	if (!Base)
-	{
-		return 0;
-	}
-	
-	float Value = Base->Value;
-	
-	// Multiply by quantity for stackables
-	if (IsStackable())
-	{
-		Value *= Quantity;
-	}
-	
-	// Add value from affixes (equipment only)
-	if (IsEquipment())
-	{
-		Value += Stats.GetTotalAffixValue() * 10.0f;
-		
-		// Hunter Manga: Exponential value increase by grade
-		switch (Rarity)
-		{
-			case EItemRarity::IR_GradeF: Value *= 1.0f; break;
-			case EItemRarity::IR_GradeE: Value *= 1.5f; break;
-			case EItemRarity::IR_GradeD: Value *= 2.5f; break;
-			case EItemRarity::IR_GradeC: Value *= 5.0f; break;
-			case EItemRarity::IR_GradeB: Value *= 10.0f; break;
-			case EItemRarity::IR_GradeA: Value *= 25.0f; break;
-			case EItemRarity::IR_GradeS: Value *= 100.0f; break;
-			case EItemRarity::IR_GradeSS: Value *= 1000.0f; break;  // EX-Rank!
-			default: break;
-		}
-		
-		// ═══════════════════════════════════════════════
-		// CORRUPTION: Corrupted items worth LESS
-		// ═══════════════════════════════════════════════
-		if (bHasCorruptedAffixes)
-		{
-			// Reduce value based on corruption severity
-			float CorruptionPenalty = FMath::Clamp(
-				FMath::Abs(TotalCorruptionPoints) * 0.05f, 
-				0.0f, 
-				0.5f
-			);
-			Value *= (1.0f - CorruptionPenalty);
-		}
-		
-		// Broken items worth 10%
-		if (IsBroken())
-		{
-			Value *= 0.1f;
-		}
-	}
-	
-	// Apply value modifier
-	Value *= (1.0f + ValueModifier);
-	
-	// Reduce value for partially used consumables
-	if (IsConsumable())
-	{
-		FItemBase* BaseData = GetBaseData();
-		if (BaseData && BaseData->ConsumableData.MaxUses > 1)
-		{
-			Value *= (float)RemainingUses / (float)BaseData->ConsumableData.MaxUses;
-		}
-	}
-	
-	return FMath::Max(0, FMath::RoundToInt(Value));
+	return FItemValueCalculator::GetCalculatedValue(*this);
 }
 
 int32 UItemInstance::GetSellValue(float SellPercentage) const
 {
-	return FMath::RoundToInt(GetCalculatedValue() * FMath::Clamp(SellPercentage, 0.0f, 1.0f));
+	return FItemValueCalculator::GetSellValue(*this, SellPercentage);
 }
-
-// ═══════════════════════════════════════════════
-// BASE DATA ACCESS (Cached)
-// ═══════════════════════════════════════════════
 
 FItemBase* UItemInstance::GetBaseData() const
 {
@@ -1078,14 +303,14 @@ FItemBase* UItemInstance::GetBaseData() const
 	{
 		return CachedBaseData;
 	}
-	
+
 	if (!BaseItemHandle.IsNull())
 	{
 		CachedBaseData = BaseItemHandle.GetRow<FItemBase>("GetBaseData");
 		bCacheDirty = false;
 		return CachedBaseData;
 	}
-	
+
 	return nullptr;
 }
 
@@ -1097,6 +322,7 @@ bool UItemInstance::GetBaseDataBP(FItemBase& OutBaseData) const
 		OutBaseData = *Base;
 		return true;
 	}
+
 	return false;
 }
 
@@ -1111,28 +337,12 @@ void UItemInstance::InvalidateBaseCache()
 	CachedBaseData = nullptr;
 }
 
-// ═══════════════════════════════════════════════
-// SERIALIZATION HELPERS
-// ═══════════════════════════════════════════════
-
 void UItemInstance::PrepareForSave()
 {
-	AppliedEffectHandles.Empty();
-	bEffectsActive = false;
-	InvalidateBaseCache();
+	FItemInitializationHandler::PrepareForSave(*this);
 }
 
 void UItemInstance::PostLoadInitialize()
 {
-	bCacheDirty = true;
-	InvalidateBaseCache();
-	
-	if (!HasValidBaseData())
-	{
-		UE_LOG(LogItemInstance, Error, TEXT("ItemInstance: Base data no longer exists for %s!"),
-			*UniqueID.ToString());
-	}
-	
-	// Recalculate corruption state after load
-	CalculateCorruptionState();
+	FItemInitializationHandler::PostLoadInitialize(*this);
 }

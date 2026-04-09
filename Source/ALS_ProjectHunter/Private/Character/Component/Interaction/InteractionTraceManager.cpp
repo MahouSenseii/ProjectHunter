@@ -5,6 +5,7 @@
 #include "Interactable/Component/InteractableManager.h"
 #include "Tower/Subsystem/GroundItemSubsystem.h"
 #include "Item/ItemInstance.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "Camera/PlayerCameraManager.h"
@@ -119,6 +120,49 @@ TScriptInterface<IInteractable> FInteractionTraceManager::TraceForActorInteracta
 	LastTraceResult = HitResult;
 
 	return Result;
+}
+
+int32 FInteractionTraceManager::FindGroundItemByTrace()
+{
+	if (!CachedGroundItemSubsystem)
+	{
+		return INDEX_NONE;
+	}
+
+	// Get camera view
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	if (!GetCameraViewPoint(CameraLocation, CameraRotation))
+	{
+		return INDEX_NONE;
+	}
+
+	// Reuse the same trace geometry as TraceForActorInteractable so the
+	// interaction feel is identical to looking at a loot chest.
+	const FVector TraceStart = GetTraceStartLocation(CameraLocation, CameraRotation);
+	const FVector TraceEnd   = GetTraceEndLocation(CameraLocation, CameraRotation);
+
+	FHitResult HitResult;
+	if (!PerformLineTrace(TraceStart, TraceEnd, HitResult))
+	{
+		return INDEX_NONE;
+	}
+
+	// Ground items are rendered via UInstancedStaticMeshComponent.
+	// FHitResult::Item is the ISM instance index when an ISMC is hit.
+	UInstancedStaticMeshComponent* HitISM = Cast<UInstancedStaticMeshComponent>(HitResult.Component.Get());
+	if (!HitISM)
+	{
+		return INDEX_NONE;
+	}
+
+	const int32 InstanceIndex = HitResult.Item;
+	if (InstanceIndex == INDEX_NONE)
+	{
+		return INDEX_NONE;
+	}
+
+	return CachedGroundItemSubsystem->FindItemByISMInstance(HitISM, InstanceIndex);
 }
 
 UItemInstance* FInteractionTraceManager::FindNearestGroundItem(int32& OutItemID)

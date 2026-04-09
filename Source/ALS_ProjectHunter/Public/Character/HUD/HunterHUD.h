@@ -7,6 +7,7 @@
 #include "HunterHUD.generated.h"
 
 class UItemTooltipWidget;
+class UItemInstance;
 class APawn;
 
 class UHunterHUD_HealthWidget;
@@ -15,6 +16,8 @@ class UHunterHUD_ManaWidget;
 class UHunterHUD_XPWidget;
 class UStatusEffectHUDWidget;
 class APHBaseCharacter;
+
+DECLARE_LOG_CATEGORY_EXTERN(LogHunterHUD, Log, All);
 
 /**
  * AHunterHUD — root HUD actor for the player.

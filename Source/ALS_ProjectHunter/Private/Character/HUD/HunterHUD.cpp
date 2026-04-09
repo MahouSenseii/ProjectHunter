@@ -2,6 +2,7 @@
 
 #include "Character/HUD/HunterHUD.h"
 
+#include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Interactable/Widget/ItemTooltipWidget.h"
 #include "Character/HUD/HunterHUD_HealthWidget.h"
 #include "Character/HUD/HunterHUD_StaminaWidget.h"
@@ -10,6 +11,8 @@
 #include "Character/HUD/StatusEffect/StatusEffectHUDWidget.h"
 #include "Character/PHBaseCharacter.h"
 #include "GameFramework/PlayerController.h"
+
+DEFINE_LOG_CATEGORY(LogHunterHUD);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AHUD overrides
@@ -90,10 +93,10 @@ void AHunterHUD::CreateStatWidgets()
 	}
 
 	// UI-1 FIX: Warn if any essential widget class is unset in Blueprint defaults.
-	if (!HealthWidgetClass)  { UE_LOG(LogTemp, Warning, TEXT("HunterHUD: HealthWidgetClass not set in Blueprint")); }
-	if (!StaminaWidgetClass) { UE_LOG(LogTemp, Warning, TEXT("HunterHUD: StaminaWidgetClass not set in Blueprint")); }
-	if (!ManaWidgetClass)    { UE_LOG(LogTemp, Warning, TEXT("HunterHUD: ManaWidgetClass not set in Blueprint")); }
-	if (!XPWidgetClass)      { UE_LOG(LogTemp, Warning, TEXT("HunterHUD: XPWidgetClass not set in Blueprint")); }
+	if (!HealthWidgetClass)  { PH_LOG_WARNING(LogHunterHUD, "CreateStatWidgets: HealthWidgetClass was not set in Blueprint defaults."); }
+	if (!StaminaWidgetClass) { PH_LOG_WARNING(LogHunterHUD, "CreateStatWidgets: StaminaWidgetClass was not set in Blueprint defaults."); }
+	if (!ManaWidgetClass)    { PH_LOG_WARNING(LogHunterHUD, "CreateStatWidgets: ManaWidgetClass was not set in Blueprint defaults."); }
+	if (!XPWidgetClass)      { PH_LOG_WARNING(LogHunterHUD, "CreateStatWidgets: XPWidgetClass was not set in Blueprint defaults."); }
 
 	// Create each widget (if the class was assigned in Blueprint defaults) and
 	// add it to the viewport at Z-order 10 — above the world, below the tooltip.

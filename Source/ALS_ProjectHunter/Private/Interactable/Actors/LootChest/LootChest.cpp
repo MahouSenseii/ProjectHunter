@@ -2,9 +2,10 @@
 
 #include "Interactable/Actors/LootChest/LootChest.h"
 #include "Interactable/Component/InteractableManager.h"
+#include "Components/BoxComponent.h"
 #include "Loot/Component/LootComponent.h"
 #include "Loot/Subsystem/LootSubsystem.h"
-#include "Character/Component/StatsManager.h"
+#include "Systems/Stats/Components/StatsManager.h"
 #include "Item/ItemInstance.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -51,9 +52,20 @@ ALootChest::ALootChest()
 	// Create loot component
 	LootComponent = CreateDefaultSubobject<ULootComponent>(TEXT("LootComponent"));
 
+	// Optional spawn area box — resize in the editor viewport per chest.
+	// Collision is disabled; it's purely a visual/data volume.
+	SpawnAreaBox = CreateDefaultSubobject<UBoxComponent>(TEXT("SpawnAreaBox"));
+	SpawnAreaBox->SetupAttachment(RootComponent);
+	SpawnAreaBox->SetBoxExtent(FVector(150.f, 150.f, 0.f));
+	SpawnAreaBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SpawnAreaBox->SetHiddenInGame(true);
+	SpawnAreaBox->ShapeColor = FColor::Cyan;
+
 	// Initialize state
 	ChestState = EChestState::CS_Closed;
 	LastInteractor = nullptr;
+	bLootSpawnedForCurrentOpen = false;
+	bOpenSequenceFinalizedForCurrentOpen = false;
 	
 	ConfigureMeshVisibilityAndCollision();
 }
@@ -81,6 +93,7 @@ void ALootChest::BeginPlay()
 	SetupInteraction();
 	SetupVisuals();
 	SetupLootComponent();
+	PreloadLootSourceIfPossible();
 
 	// Validate source
 	if (!IsSourceValid())
@@ -327,8 +340,23 @@ void ALootChest::SetupLootComponent()
 		return;
 	}
 
-	// Configure spawn settings from our config
-	LootComponent->DefaultSpawnSettings = SpawnConfig.ToSpawnSettings(GetActorLocation());
+	// Base settings from SpawnConfig
+	FLootSpawnSettings Settings = SpawnConfig.ToSpawnSettings(GetActorLocation());
+
+	// If a SpawnAreaBox is present with non-zero extent, use box mode
+	if (SpawnAreaBox)
+	{
+		const FVector Extent = SpawnAreaBox->GetScaledBoxExtent();
+		if (!Extent.IsNearlyZero())
+		{
+			Settings.bUseSpawnBox = true;
+			Settings.SpawnBoxExtent = Extent;
+			// Use the box's world centre as the spawn origin
+			Settings.SpawnLocation = SpawnAreaBox->GetComponentLocation();
+		}
+	}
+
+	LootComponent->DefaultSpawnSettings = Settings;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -367,6 +395,8 @@ void ALootChest::OpenChest(AActor* Opener)
 	}
 
 	LastInteractor = Opener;
+	LastLootBatch = FLootResultBatch();
+	ResetOpenSequenceTracking();
 
 	// Change state to opening
 	SetChestState(EChestState::CS_Opening);
@@ -379,6 +409,11 @@ void ALootChest::OpenChest(AActor* Opener)
 		PlayOpenVFX();
 	}
 
+	GenerateAndSpawnLoot(Opener);
+
+	// Broadcast event before any immediate finalization path runs.
+	OnChestOpened(Opener);
+
 	// Start animation (timer-based, not tick-based!)
 	if (AnimationConfig.bPlayOpenAnimation)
 	{
@@ -389,9 +424,6 @@ void ALootChest::OpenChest(AActor* Opener)
 		// Skip animation, go directly to open
 		OnOpenAnimationComplete();
 	}
-
-	// Broadcast event
-	OnChestOpened(Opener);
 
 	UE_LOG(LogLootChest, Log, TEXT("%s: Opened by %s"),
 		*GetName(), Opener ? *Opener->GetName() : TEXT("Unknown"));
@@ -415,6 +447,7 @@ void ALootChest::ResetChest()
 	GetWorldTimerManager().ClearTimer(OpenAnimationTimer);
 	GetWorldTimerManager().ClearTimer(CloseAnimationTimer);
 	GetWorldTimerManager().ClearTimer(RespawnTimer);
+	ResetOpenSequenceTracking();
 
 	// If using skeletal mesh with animation, play reverse animation
 	if (!VisualConfig.bUseStaticMesh && AnimationConfig.bPlayOpenAnimation && VisualConfig.OpenAnimation)
@@ -607,6 +640,13 @@ void ALootChest::GetPlayerLootStats(AActor* Player, float& OutLuck, float& OutMa
 
 void ALootChest::GenerateAndSpawnLoot(AActor* Opener)
 {
+	if (bLootSpawnedForCurrentOpen)
+	{
+		return;
+	}
+
+	bLootSpawnedForCurrentOpen = true;
+
 	if (!LootComponent)
 	{
 		UE_LOG(LogLootChest, Error, TEXT("%s: Cannot generate loot - LootComponent unavailable"),
@@ -619,8 +659,8 @@ void ALootChest::GenerateAndSpawnLoot(AActor* Opener)
 	float MagicFind = 0.0f;
 	GetPlayerLootStats(Opener, Luck, MagicFind);
 
-	// Update spawn location (in case chest moved)
-	LootComponent->DefaultSpawnSettings = SpawnConfig.ToSpawnSettings(GetActorLocation());
+	// Refresh spawn settings (updates location and box in case chest moved)
+	SetupLootComponent();
 
 	// Generate and spawn loot via component
 	LastLootBatch = LootComponent->DropLoot(Luck, MagicFind);
@@ -630,8 +670,19 @@ void ALootChest::GenerateAndSpawnLoot(AActor* Opener)
 
 	UE_LOG(LogLootChest, Log, TEXT("%s: Generated %d items, %d currency"),
 		*GetName(), LastLootBatch.TotalItemCount, LastLootBatch.CurrencyDropped);
+}
+
+void ALootChest::FinalizeOpenSequence()
+{
+	if (bOpenSequenceFinalizedForCurrentOpen)
+	{
+		return;
+	}
+
+	bOpenSequenceFinalizedForCurrentOpen = true;
 
 	// Transition to looted state
+	SetChestState(EChestState::CS_Open);
 	SetChestState(EChestState::CS_Looted);
 
 	// Broadcast looted event
@@ -642,6 +693,30 @@ void ALootChest::GenerateAndSpawnLoot(AActor* Opener)
 	{
 		StartRespawnTimer();
 	}
+}
+
+void ALootChest::PreloadLootSourceIfPossible()
+{
+	if (!LootComponent || LootComponent->SourceID.IsNone())
+	{
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		if (ULootSubsystem* LootSubsystem = World->GetSubsystem<ULootSubsystem>())
+		{
+			TArray<FName> SourceIDs;
+			SourceIDs.Add(LootComponent->SourceID);
+			LootSubsystem->PreloadLootTables(SourceIDs);
+		}
+	}
+}
+
+void ALootChest::ResetOpenSequenceTracking()
+{
+	bLootSpawnedForCurrentOpen = false;
+	bOpenSequenceFinalizedForCurrentOpen = false;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -687,11 +762,7 @@ void ALootChest::StartOpenAnimation()
 
 void ALootChest::OnOpenAnimationComplete()
 {
-	// Animation complete - transition to open state
-	SetChestState(EChestState::CS_Open);
-
-	// Now generate and spawn the loot
-	GenerateAndSpawnLoot(LastInteractor);
+	FinalizeOpenSequence();
 
 	UE_LOG(LogLootChest, Verbose, TEXT("%s: Open animation complete"), *GetName());
 }
@@ -724,6 +795,7 @@ void ALootChest::OnCloseAnimationComplete()
 	// Reset state data
 	LastInteractor = nullptr;
 	LastLootBatch = FLootResultBatch();
+	ResetOpenSequenceTracking();
 
 	// Transition to closed state
 	SetChestState(EChestState::CS_Closed);
@@ -872,6 +944,7 @@ void ALootChest::HandleRespawn()
 		// Immediate respawn
 		LastInteractor = nullptr;
 		LastLootBatch = FLootResultBatch();
+		ResetOpenSequenceTracking();
 		SetChestState(EChestState::CS_Closed);
 	}
 

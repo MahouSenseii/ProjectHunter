@@ -1,24 +1,28 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Character/PHBaseCharacter.h"
+#include "Core/Logging/ProjectHunterLogMacros.h"
 #include "AbilitySystem/HunterAbilitySystemComponent.h"
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystem/Effects/HunterGE_DerivedPrimaryVitals.h"
 #include "AbilitySystemComponent.h"
-#include "Character/Component/CharacterProgressionManager.h"
-#include "Character/Component/StatsManager.h"
-#include "Character/Component/TagManager.h"
-#include "Character/Component/DoTManager.h"
-#include "Character/Component/MovesetManager.h"
+#include "Systems/Progression/Components/CharacterProgressionManager.h"
+#include "Systems/Stats/Components/StatsManager.h"
+#include "Systems/Tags/Components/TagManager.h"
+#include "Systems/Combat/Components/DoTManager.h"
+#include "Systems/Moveset/Components/MovesetManager.h"
+#include "Combat/CombatManager.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
-#include "Character/Component/EquipmentManager.h"
+#include "Systems/Equipment/Components/EquipmentManager.h"
+#include "Systems/Equipment/Components/EquipmentPresentationComponent.h"
+#include "Systems/Character/Components/CharacterSystemCoordinatorComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "PHGameplayTags.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogPHBaseCharacterAbilitySystem, Log, All);
+DEFINE_LOG_CATEGORY(LogPHBaseCharacter);
 
 namespace PHBaseCharacterPrivate
 {
@@ -62,12 +66,25 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 	TagManager = CreateDefaultSubobject<UTagManager>(TEXT("TagManager"));
 	
 	
+	// Create Combat Manager — owns the damage pipeline for this character.
+	// Weapons and unarmed hits both route through this. Assign DamageApplicationGE
+	// and RecoveryApplicationGE in Blueprint defaults.
+	CombatManager = CreateDefaultSubobject<UCombatManager>(TEXT("CombatManager"));
+
 	// Create DoT Manager — assign GE classes in Blueprint defaults
 	DoTManager = CreateDefaultSubobject<UDoTManager>(TEXT("DoTManager"));
 
 	// Create Moveset Manager — weapon skill socket system
 	MovesetManager = CreateDefaultSubobject<UMovesetManager>(TEXT("MovesetManager"));
 	MovesetManager->SetIsReplicated(true);
+
+	// PH-0.4: Equipment Presentation Component — visual weapon actors and mesh attachment.
+	// Does not replicate; each machine rebuilds presentation from replicated slot state.
+	EquipmentPresentation = CreateDefaultSubobject<UEquipmentPresentationComponent>(TEXT("EquipmentPresentation"));
+
+	// PH-0.4: Character System Coordinator — single wiring layer for cross-manager listeners.
+	// APHBaseCharacter is a composition root; orchestration logic must NOT live inline here.
+	SystemCoordinator = CreateDefaultSubobject<UCharacterSystemCoordinatorComponent>(TEXT("SystemCoordinator"));
 }
 
 void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -110,11 +127,8 @@ void APHBaseCharacter::PostInitializeComponents()
 #define PH_RECOVER_COMPONENT(Member, Type) \
 	if (!Member) \
 	{ \
-		Member = FindComponentByClass<Type>(); \
-		UE_LOG(LogPHBaseCharacterAbilitySystem, Warning, \
-			TEXT("PostInitializeComponents: '%s' " #Member " was null after Blueprint CDO " \
-			     "application — recovered (%s). Compile + Save this Blueprint."), \
-			*GetName(), *GetNameSafe(Member)); \
+			Member = FindComponentByClass<Type>(); \
+			PH_LOG_WARNING(LogPHBaseCharacter, "PostInitializeComponents recovered a null %s pointer on Character=%s with RecoveredComponent=%s. Compile and save this Blueprint.", TEXT(#Member), *GetName(), *GetNameSafe(Member)); \
 	}
 
 	// UActorComponent subobjects — FindComponentByClass recovers each one.
@@ -135,18 +149,11 @@ void APHBaseCharacter::PostInitializeComponents()
 		AttributeSet = FindObject<UHunterAttributeSet>(this, TEXT("AttributeSet"));
 		if (AttributeSet)
 		{
-			UE_LOG(LogPHBaseCharacterAbilitySystem, Warning,
-				TEXT("PostInitializeComponents: '%s' AttributeSet was null after "
-				     "Blueprint CDO application — recovered (%s). Compile + Save this Blueprint."),
-				*GetName(), *GetNameSafe(AttributeSet));
+			PH_LOG_WARNING(LogPHBaseCharacter, "PostInitializeComponents recovered a null AttributeSet pointer on Character=%s with AttributeSet=%s. Compile and save this Blueprint.", *GetName(), *GetNameSafe(AttributeSet));
 		}
 		else
 		{
-			UE_LOG(LogPHBaseCharacterAbilitySystem, Error,
-				TEXT("PostInitializeComponents: '%s' AttributeSet is null AND could not be "
-				     "recovered via FindObject. GAS will not initialize correctly. "
-				     "This indicates a more serious class hierarchy problem."),
-				*GetName());
+			PH_LOG_ERROR(LogPHBaseCharacter, "PostInitializeComponents failed: Character=%s had a null AttributeSet and recovery via FindObject also failed.", *GetName());
 		}
 	}
 }
@@ -238,13 +245,13 @@ bool APHBaseCharacter::EnsureAttributeSetRegisteredWithAbilitySystem()
 {
 	if (!AbilitySystemComponent)
 	{
-		UE_LOG(LogPHBaseCharacterAbilitySystem, Error, TEXT("EnsureAttributeSetRegisteredWithAbilitySystem: %s has no ASC"), *GetName());
+		PH_LOG_ERROR(LogPHBaseCharacter, "EnsureAttributeSetRegisteredWithAbilitySystem failed: %s has no ASC.", *GetName());
 		return false;
 	}
 
 	if (!AttributeSet)
 	{
-		UE_LOG(LogPHBaseCharacterAbilitySystem, Error, TEXT("EnsureAttributeSetRegisteredWithAbilitySystem: %s has no AttributeSet"), *GetName());
+		PH_LOG_ERROR(LogPHBaseCharacter, "EnsureAttributeSetRegisteredWithAbilitySystem failed: %s has no AttributeSet.", *GetName());
 		return false;
 	}
 
@@ -260,14 +267,7 @@ bool APHBaseCharacter::EnsureAttributeSetRegisteredWithAbilitySystem()
 
 	if (RegisteredAttributeSet && RegisteredAttributeSet != AttributeSet)
 	{
-		UE_LOG(
-			LogPHBaseCharacterAbilitySystem,
-			Warning,
-			TEXT("EnsureAttributeSetRegisteredWithAbilitySystem: %s already has live AttributeSet %s on ASC %s. Adopting that live instance instead of stale pointer %s."),
-			*GetName(),
-			*GetNameSafe(RegisteredAttributeSet),
-			*GetNameSafe(AbilitySystemComponent),
-			*GetNameSafe(AttributeSet));
+		PH_LOG_WARNING(LogPHBaseCharacter, "EnsureAttributeSetRegisteredWithAbilitySystem adopted LiveAttributeSet=%s on ASC=%s for Character=%s instead of stale AttributeSet=%s.", *GetNameSafe(RegisteredAttributeSet), *GetNameSafe(AbilitySystemComponent), *GetName(), *GetNameSafe(AttributeSet));
 
 		AttributeSet = Cast<UHunterAttributeSet>(const_cast<UAttributeSet*>(RegisteredAttributeSet));
 	}
@@ -289,14 +289,7 @@ bool APHBaseCharacter::EnsureAttributeSetRegisteredWithAbilitySystem()
 	const bool bRegisteredCorrectly = (RegisteredAttributeSet == AttributeSet);
 	if (!bRegisteredCorrectly)
 	{
-		UE_LOG(
-			LogPHBaseCharacterAbilitySystem,
-			Error,
-			TEXT("EnsureAttributeSetRegisteredWithAbilitySystem: Failed to register AttributeSet for %s. ASC=%s AttributeSet=%s LiveAttributeSet=%s"),
-			*GetName(),
-			*GetNameSafe(AbilitySystemComponent),
-			*GetNameSafe(AttributeSet),
-			*GetNameSafe(RegisteredAttributeSet));
+		PH_LOG_ERROR(LogPHBaseCharacter, "EnsureAttributeSetRegisteredWithAbilitySystem failed for Character=%s. ASC=%s AttributeSet=%s LiveAttributeSet=%s.", *GetName(), *GetNameSafe(AbilitySystemComponent), *GetNameSafe(AttributeSet), *GetNameSafe(RegisteredAttributeSet));
 	}
 
 	return bRegisteredCorrectly;
@@ -306,7 +299,7 @@ void APHBaseCharacter::InitializeAbilitySystem()
 {
 	if (!AbilitySystemComponent)
 	{
-		UE_LOG(LogPHBaseCharacterAbilitySystem, Error, TEXT("InitializeAbilitySystem: %s has no ASC"), *GetName());
+		PH_LOG_ERROR(LogPHBaseCharacter, "InitializeAbilitySystem failed: %s has no ASC.", *GetName());
 		return;
 	}
 
@@ -341,7 +334,7 @@ void APHBaseCharacter::InitializeAbilitySystem()
 		}
 
 		UE_LOG(
-			LogPHBaseCharacterAbilitySystem,
+			LogPHBaseCharacter,
 			Verbose,
 			TEXT("InitializeAbilitySystem: Refreshed actor info for %s. ASC=%s LiveAttributeSet=%s"),
 			*GetName(),
@@ -356,12 +349,7 @@ void APHBaseCharacter::InitializeAbilitySystem()
 
 	if (!bHasLiveAttributeSet)
 	{
-		UE_LOG(
-			LogPHBaseCharacterAbilitySystem,
-			Error,
-			TEXT("InitializeAbilitySystem: %s cannot finish GAS setup because the live AttributeSet is missing. ASC=%s"),
-			*GetName(),
-			*GetNameSafe(AbilitySystemComponent));
+		PH_LOG_ERROR(LogPHBaseCharacter, "InitializeAbilitySystem failed for Character=%s because the live AttributeSet was missing on ASC=%s.", *GetName(), *GetNameSafe(AbilitySystemComponent));
 		return;
 	}
 
@@ -399,7 +387,7 @@ void APHBaseCharacter::InitializeAbilitySystem()
 	}
 
 	UE_LOG(
-		LogPHBaseCharacterAbilitySystem,
+			LogPHBaseCharacter,
 		Log,
 		TEXT("Ability System initialized for %s. ASC=%s LiveAttributeSet=%s"),
 		*GetName(),
@@ -564,7 +552,7 @@ void APHBaseCharacter::OnDeath_Implementation(AController* Killer, AActor* Damag
 	bIsDead = true;
 	LastKillerActor = DamageCauser;
 
-	UE_LOG(LogPHBaseCharacterAbilitySystem, Log, TEXT("%s died"), *GetName());
+	UE_LOG(LogPHBaseCharacter, Log, TEXT("%s died"), *GetName());
 
 	// Apply physics/movement changes immediately on the server
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -731,3 +719,4 @@ bool APHBaseCharacter::IsHostile(const APHBaseCharacter* OtherCharacter) const
 
 	return TeamID != OtherCharacter->TeamID;
 }
+

@@ -17,6 +17,8 @@ class APHBaseCharacter;
 class APHPlayerState;
 class APHGameState;
 
+DECLARE_LOG_CATEGORY_EXTERN(LogPHGameMode, Log, All);
+
 UCLASS()
 class ALS_PROJECTHUNTER_API APHGameMode : public AGameMode
 {

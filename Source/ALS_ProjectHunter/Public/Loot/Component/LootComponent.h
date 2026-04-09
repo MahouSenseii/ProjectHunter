@@ -3,7 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Loot/Library/LootStruct.h"
+#include "Systems/Loot/Library/LootStructs.h"
 #include "LootComponent.generated.h"
 
 // Forward declarations

@@ -4,7 +4,7 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Loot/Library/LootEnum.h"
-#include "Loot/Library/LootStruct.h"
+#include "Systems/Loot/Library/LootStructs.h"
 #include "LootFunctionLibrary.generated.h"
 
 /**

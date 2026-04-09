@@ -1,6 +1,7 @@
 ﻿// Loot/Subsystem/LootSubsystem.cpp
 
 #include "Loot/Subsystem/LootSubsystem.h"
+#include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Tower/Subsystem/GroundItemSubsystem.h"
 #include "Item/ItemInstance.h"
 #include "Engine/AssetManager.h"
@@ -22,7 +23,7 @@ void ULootSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	if (LootSourceRegistryPath.IsNull())
 	{
 		LootSourceRegistryPath = TSoftObjectPtr<UDataTable>(
-			FSoftObjectPath(TEXT("/Game/Data/Loot/DT_LootSourceRegistry"))
+			FSoftObjectPath(TEXT("/Game/ProjectHunter/World/LootTables/DT_LootSourceEntry.DT_LootSourceEntry"))
 		);
 	}
 	
@@ -64,15 +65,13 @@ FLootResultBatch ULootSubsystem::GenerateLoot(const FLootRequest& Request)
 	FLootSourceEntry Source;
 	if (!GetSourceEntry(Request.SourceID, Source))
 	{
-		UE_LOG(LogLootSubsystem, Warning, TEXT("GenerateLoot: Source '%s' not found in registry"),
-			*Request.SourceID.ToString());
+		PH_LOG_WARNING(LogLootSubsystem, "GenerateLoot failed: SourceID=%s was not found in the registry.", *Request.SourceID.ToString());
 		return Batch;
 	}
 	
 	if (!Source.IsValid())
 	{
-		UE_LOG(LogLootSubsystem, Warning, TEXT("GenerateLoot: Source '%s' is disabled or invalid"),
-			*Request.SourceID.ToString());
+		PH_LOG_WARNING(LogLootSubsystem, "GenerateLoot rejected SourceID=%s because the source entry was disabled or invalid.", *Request.SourceID.ToString());
 		return Batch;
 	}
 	
@@ -80,8 +79,7 @@ FLootResultBatch ULootSubsystem::GenerateLoot(const FLootRequest& Request)
 	const FLootTable* LootTable = GetLootTableFromSource(Source, Source.LootTableRowName);
 	if (!LootTable)
 	{
-		UE_LOG(LogLootSubsystem, Warning, TEXT("GenerateLoot: Failed to load loot table for '%s'"),
-			*Request.SourceID.ToString());
+		PH_LOG_WARNING(LogLootSubsystem, "GenerateLoot failed: Could not load the loot table for SourceID=%s.", *Request.SourceID.ToString());
 		return Batch;
 	}
 	
@@ -123,7 +121,7 @@ bool ULootSubsystem::SpawnLootAtLocation(const FLootResultBatch& Batch, FVector 
 {
 	if (!EnsureGroundItemSubsystem())
 	{
-		UE_LOG(LogLootSubsystem, Error, TEXT("SpawnLootAtLocation: GroundItemSubsystem not available"));
+		PH_LOG_ERROR(LogLootSubsystem, "SpawnLootAtLocation failed: GroundItemSubsystem was unavailable.");
 		return false;
 	}
 	
@@ -164,13 +162,68 @@ bool ULootSubsystem::SpawnLootAtLocation(const FLootResultBatch& Batch, FVector 
 	return true;
 }
 
+bool ULootSubsystem::SpawnLootWithSettings(const FLootResultBatch& Batch, const FLootSpawnSettings& SpawnSettings)
+{
+	if (!EnsureGroundItemSubsystem())
+	{
+		PH_LOG_ERROR(LogLootSubsystem, "SpawnLootWithSettings failed: GroundItemSubsystem was unavailable.");
+		return false;
+	}
+
+	if (Batch.Results.Num() == 0)
+	{
+		return true;
+	}
+
+	FRandomStream SpreadRandom(GetTypeHash(SpawnSettings.SpawnLocation));
+
+	for (const FLootResult& Result : Batch.Results)
+	{
+		if (!Result.IsValid())
+		{
+			continue;
+		}
+
+		FVector SpawnLocation = SpawnSettings.SpawnLocation;
+		SpawnLocation.Z += SpawnSettings.HeightOffset;
+
+		if (SpawnSettings.bUseSpawnBox)
+		{
+			// Random point inside the box extents (XY plane; Z uses HeightOffset only)
+			const FVector Extent = SpawnSettings.SpawnBoxExtent;
+			SpawnLocation.X += SpreadRandom.FRandRange(-Extent.X, Extent.X);
+			SpawnLocation.Y += SpreadRandom.FRandRange(-Extent.Y, Extent.Y);
+			if (Extent.Z > 0.f)
+			{
+				SpawnLocation.Z += SpreadRandom.FRandRange(-Extent.Z, Extent.Z);
+			}
+		}
+		else if (SpawnSettings.ScatterRadius > 0.f)
+		{
+			// Circular scatter (original behaviour)
+			FVector RandomDir = SpreadRandom.VRand();
+			RandomDir.Z = 0.f;
+			RandomDir.Normalize();
+			SpawnLocation += RandomDir * SpreadRandom.FRandRange(0.f, SpawnSettings.ScatterRadius);
+		}
+
+		const int32 GroundItemID = CachedGroundItemSubsystem->AddItemToGround(Result.Item, SpawnLocation);
+		if (GroundItemID != INDEX_NONE)
+		{
+			OnLootSpawned.Broadcast(Result.Item, SpawnLocation, GroundItemID);
+		}
+	}
+
+	return true;
+}
+
 FLootResultBatch ULootSubsystem::GenerateAndSpawnLoot(const FLootRequest& Request, FLootSpawnSettings SpawnSettings)
 {
 	FLootResultBatch Batch = GenerateLoot(Request);
 	
 	if (Batch.Results.Num() > 0)
 	{
-		SpawnLootAtLocation(Batch, SpawnSettings.SpawnLocation, SpawnSettings.ScatterRadius);
+		SpawnLootWithSettings(Batch, SpawnSettings);
 	}
 	
 	return Batch;
@@ -184,15 +237,11 @@ void ULootSubsystem::LoadRegistry()
 {
 	if (LootSourceRegistryPath.IsNull())
 	{
-		UE_LOG(LogLootSubsystem, Warning, TEXT("LoadRegistry: No registry path configured"));
+		PH_LOG_WARNING(LogLootSubsystem, "LoadRegistry failed: LootSourceRegistryPath was not configured.");
 		return;
 	}
 
-	// P-2 FIX: The original code called LoadSynchronous() during Initialize(),
-	// which blocks the game thread at level-load time and causes a hitch.
-	// Instead, kick off an async request.  Any GenerateLoot() call that arrives
-	// before the registry is ready will log a warning and return an empty batch –
-	// a safe graceful-degradation path that avoids stalling the loading screen.
+
 	FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
 	RegistryStreamHandle = Streamable.RequestAsyncLoad(
 		LootSourceRegistryPath.ToSoftObjectPath(),
@@ -208,7 +257,8 @@ void ULootSubsystem::LoadRegistry()
 
 void ULootSubsystem::OnRegistryLoaded()
 {
-	CachedRegistry = LootSourceRegistryPath.Get();
+
+	CachedRegistry = LootSourceRegistryPath.LoadSynchronous();
 
 	if (CachedRegistry)
 	{
@@ -218,13 +268,18 @@ void ULootSubsystem::OnRegistryLoaded()
 	}
 	else
 	{
-		UE_LOG(LogLootSubsystem, Error,
-			TEXT("OnRegistryLoaded: Asset loaded but cast to UDataTable failed for '%s'"),
-			*LootSourceRegistryPath.ToString());
+		PH_LOG_ERROR(LogLootSubsystem, "OnRegistryLoaded failed: Asset=%s did not resolve to a UDataTable.", *LootSourceRegistryPath.ToString());
 	}
 
 	// Release the handle; the subsystem owns CachedRegistry via UPROPERTY now.
 	RegistryStreamHandle.Reset();
+
+	if (CachedRegistry && PendingPreloadSourceIDs.Num() > 0)
+	{
+		const TArray<FName> DeferredPreloadSourceIDs = PendingPreloadSourceIDs;
+		PendingPreloadSourceIDs.Reset();
+		PreloadLootTables(DeferredPreloadSourceIDs);
+	}
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -235,15 +290,11 @@ const FLootTable* ULootSubsystem::GetLootTableFromSource(const FLootSourceEntry&
 {
 	if (Source.LootTable.IsNull())
 	{
-		UE_LOG(LogLootSubsystem, Warning, TEXT("GetLootTableFromSource: Source has null LootTable reference"));
+		PH_LOG_WARNING(LogLootSubsystem, "GetLootTableFromSource failed: Source had a null LootTable reference.");
 		return nullptr;
 	}
 	
-	// ═══════════════════════════════════════════════
-	// FIX: Use DataTable path as cache key, NOT row name
-	// This prevents cache collisions when multiple sources
-	// reference different DataTables with the same row names
-	// ═══════════════════════════════════════════════
+
 	FName CacheKey = FName(*Source.LootTable.ToString());
 	
 	UDataTable* CachedTable = nullptr;
@@ -261,19 +312,11 @@ const FLootTable* ULootSubsystem::GetLootTableFromSource(const FLootSourceEntry&
 	
 	if (!CachedTable)
 	{
-		// N-14 FIX: Prefer the already-resident asset to avoid a synchronous load hitch.
-		// LoadSynchronous() stalls the game thread for the full asset load time when the
-		// DataTable is not yet in memory.  Check Get() first so the common in-memory case
-		// is free.  The synchronous fallback is kept as a safety net but now emits a
-		// warning so designers know to pre-load hot loot tables via UAssetManager or a
-		// Primary Asset label before the first chest interaction.
+
 		CachedTable = Source.LootTable.Get();
 		if (!CachedTable)
 		{
-			UE_LOG(LogLootSubsystem, Warning,
-				TEXT("GetLootTableFromSource: '%s' is not in memory — falling back to synchronous load. "
-				     "Pre-load this DataTable to avoid a frame hitch."),
-				*Source.LootTable.ToString());
+			PH_LOG_WARNING(LogLootSubsystem, "GetLootTableFromSource fell back to a synchronous load for LootTable=%s because it was not already in memory.", *Source.LootTable.ToString());
 			CachedTable = Source.LootTable.LoadSynchronous();
 		}
 
@@ -287,7 +330,7 @@ const FLootTable* ULootSubsystem::GetLootTableFromSource(const FLootSourceEntry&
 		else
 		{
 			OnLootTableLoaded.Broadcast(RowName, false);
-			UE_LOG(LogLootSubsystem, Error, TEXT("Failed to load loot table: %s"), *Source.LootTable.ToString());
+			PH_LOG_ERROR(LogLootSubsystem, "GetLootTableFromSource failed: Could not load LootTable=%s.", *Source.LootTable.ToString());
 			return nullptr;
 		}
 	}
@@ -303,7 +346,7 @@ const FLootTable* ULootSubsystem::GetLootTableFromSource(const FLootSourceEntry&
 		return CachedTable->FindRow<FLootTable>(RowNames[0], TEXT("GetLootTableFromSource_FirstRow"));
 	}
 	
-	UE_LOG(LogLootSubsystem, Warning, TEXT("GetLootTableFromSource: DataTable has no rows"));
+	PH_LOG_WARNING(LogLootSubsystem, "GetLootTableFromSource failed: The DataTable had no rows.");
 	return nullptr;
 }
 
@@ -445,6 +488,24 @@ TArray<FName> ULootSubsystem::GetSourceIDsByCategory(ELootSourceType Category) c
 
 void ULootSubsystem::PreloadLootTables(const TArray<FName>& SourceIDs)
 {
+	if (SourceIDs.Num() == 0)
+	{
+		return;
+	}
+
+	if (!CachedRegistry)
+	{
+		for (const FName SourceID : SourceIDs)
+		{
+			PendingPreloadSourceIDs.AddUnique(SourceID);
+		}
+
+		UE_LOG(LogLootSubsystem, Verbose,
+			TEXT("PreloadLootTables: Deferred %d source(s) until the loot registry is ready."),
+			SourceIDs.Num());
+		return;
+	}
+
 	for (const FName& SourceID : SourceIDs)
 	{
 		FLootSourceEntry Source;

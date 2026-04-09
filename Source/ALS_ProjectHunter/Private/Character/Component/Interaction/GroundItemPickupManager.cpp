@@ -1,14 +1,73 @@
 ﻿// Character/Component/GroundItemPickupManager.cpp
 
 #include "Character/Component/Interaction/GroundItemPickupManager.h"
-#include "Character/Component/InventoryManager.h"
-#include "Character/Component/EquipmentManager.h"
+#include "Systems/Inventory/Components/InventoryManager.h"
+#include "Systems/Inventory/InventoryGroundDropResolver.h"
+#include "Systems/Equipment/Components/EquipmentManager.h"
+#include "Systems/Equipment/Library/EquipmentFunctionLibrary.h"
 #include "Tower/Subsystem/GroundItemSubsystem.h"
 #include "Item/ItemInstance.h"
-#include "Item/Library/ItemFunctionLibrary.h"
 #include "Engine/World.h"
 
 DEFINE_LOG_CATEGORY(LogGroundItemPickupManager);
+
+namespace GroundItemPickupManagerPrivate
+{
+	bool IsMainHandWeaponPickup(const UItemInstance* Item)
+	{
+		return UEquipmentFunctionLibrary::IsOneHandedWeapon(Item)
+			&& UEquipmentFunctionLibrary::DetermineSlotForItem(Item) == EEquipmentSlot::ES_MainHand;
+	}
+
+	bool TryForceReplaceMainHand(UEquipmentManager* EquipmentManager, UWorld* WorldContext, UItemInstance* Item,
+		const FVector& DropLocation, EEquipmentSlot& OutEquippedSlot)
+	{
+		OutEquippedSlot = EEquipmentSlot::ES_None;
+
+		if (!EquipmentManager || !WorldContext || !Item)
+		{
+			return false;
+		}
+
+		UItemInstance* OldMainHandItem = EquipmentManager->GetEquippedItem(EEquipmentSlot::ES_MainHand);
+		if (!OldMainHandItem)
+		{
+			return false;
+		}
+
+		if (!UEquipmentFunctionLibrary::CanGroundPickupEquipToSlot(Item, EEquipmentSlot::ES_MainHand))
+		{
+			return false;
+		}
+
+		UItemInstance* UnequippedMainHandItem = EquipmentManager->UnequipItem(EEquipmentSlot::ES_MainHand, false);
+		if (UnequippedMainHandItem != OldMainHandItem)
+		{
+			if (UnequippedMainHandItem)
+			{
+				EquipmentManager->EquipItem(UnequippedMainHandItem, EEquipmentSlot::ES_MainHand, false);
+			}
+			return false;
+		}
+
+		EquipmentManager->EquipItem(Item, EEquipmentSlot::ES_MainHand, false);
+		if (EquipmentManager->GetEquippedItem(EEquipmentSlot::ES_MainHand) != Item)
+		{
+			EquipmentManager->EquipItem(UnequippedMainHandItem, EEquipmentSlot::ES_MainHand, false);
+			return false;
+		}
+
+		if (!FInventoryGroundDropResolver::DropItem(WorldContext, UnequippedMainHandItem, DropLocation))
+		{
+			EquipmentManager->UnequipItem(EEquipmentSlot::ES_MainHand, false);
+			EquipmentManager->EquipItem(UnequippedMainHandItem, EEquipmentSlot::ES_MainHand, false);
+			return false;
+		}
+
+		OutEquippedSlot = EEquipmentSlot::ES_MainHand;
+		return true;
+	}
+}
 
 FGroundItemPickupManager::FGroundItemPickupManager()
 	: PickupRadius(500.0f)
@@ -60,9 +119,6 @@ bool FGroundItemPickupManager::PickupToInventory(int32 ItemID)
 		return false;
 	}
 
-	// OPT-RPC: Authority routing is now handled by InteractionManager's
-	// Server RPCs.  By the time this method is called the code is already
-	// executing on the authority (or in a single-player context).
 	const FVector ClientLocation = OwnerActor->GetActorLocation();
 	return PickupToInventoryInternal(ItemID, ClientLocation);
 }
@@ -80,8 +136,6 @@ bool FGroundItemPickupManager::PickupAndEquip(int32 ItemID)
 		return false;
 	}
 
-	// OPT-RPC: Same as PickupToInventory — authority routing lives in
-	// InteractionManager::Server_PickupAndEquip.
 	const FVector ClientLocation = OwnerActor->GetActorLocation();
 	return PickupAndEquipInternal(ItemID, ClientLocation);
 }
@@ -231,6 +285,9 @@ void FGroundItemPickupManager::CacheComponents()
 
 bool FGroundItemPickupManager::PickupToInventoryInternal(int32 ItemID, FVector ClientLocation)
 {
+	const FVector OriginalLocation = CachedGroundItemSubsystem->GetInstanceLocations().FindRef(ItemID);
+	const bool bHadOriginalLocation = CachedGroundItemSubsystem->GetInstanceLocations().Contains(ItemID);
+
 	// Remove item from ground
 	UItemInstance* Item = CachedGroundItemSubsystem->RemoveItemFromGround(ItemID);
 	if (!Item)
@@ -247,11 +304,8 @@ bool FGroundItemPickupManager::PickupToInventoryInternal(int32 ItemID, FVector C
 	}
 
 	// Failed to add - return to ground
-	const FVector* OriginalLocation = CachedGroundItemSubsystem->GetInstanceLocations().Find(ItemID);
-	if (OriginalLocation)
-	{
-		CachedGroundItemSubsystem->AddItemToGround(Item, *OriginalLocation);
-	}
+	const FVector ReturnLocation = bHadOriginalLocation ? OriginalLocation : ClientLocation;
+	CachedGroundItemSubsystem->AddItemToGround(Item, ReturnLocation);
 
 	UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: Inventory full, item returned to ground"));
 	return false;
@@ -259,6 +313,9 @@ bool FGroundItemPickupManager::PickupToInventoryInternal(int32 ItemID, FVector C
 
 bool FGroundItemPickupManager::PickupAndEquipInternal(int32 ItemID, FVector ClientLocation)
 {
+	const FVector OriginalLocation = CachedGroundItemSubsystem->GetInstanceLocations().FindRef(ItemID);
+	const bool bHadOriginalLocation = CachedGroundItemSubsystem->GetInstanceLocations().Contains(ItemID);
+
 	// Remove item from ground
 	UItemInstance* Item = CachedGroundItemSubsystem->RemoveItemFromGround(ItemID);
 	if (!Item)
@@ -267,37 +324,36 @@ bool FGroundItemPickupManager::PickupAndEquipInternal(int32 ItemID, FVector Clie
 		return false;
 	}
 
-	// Determine equipment slot
-	EEquipmentSlot TargetSlot = DetermineEquipmentSlot(Item);
-	if (TargetSlot == EEquipmentSlot::ES_None)
+	const bool bIsMainHandWeaponPickup = GroundItemPickupManagerPrivate::IsMainHandWeaponPickup(Item);
+	EEquipmentSlot EquippedSlot = EEquipmentSlot::ES_None;
+	if (CachedEquipmentManager->TryEquipGroundPickupItem(Item, EquippedSlot, true))
 	{
-		UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: Cannot determine equipment slot for %s"), 
+		UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Equipped %s to %s"),
+			*Item->GetDisplayName().ToString(), *UEnum::GetValueAsString(EquippedSlot));
+		return true;
+	}
+
+	if (CachedInventoryManager && CachedInventoryManager->AddItem(Item))
+	{
+		UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Sent %s to inventory after equip fallback"),
 			*Item->GetDisplayName().ToString());
-		
-		// Fallback: try inventory instead
-		if (CachedInventoryManager->AddItem(Item))
-		{
-			return true;
-		}
-		return false;
+		return true;
 	}
 
-	// Try to equip (will swap to inventory if slot occupied and bSwapToBag = true)
-	CachedEquipmentManager->EquipItem(Item, TargetSlot, true);
-	
-	UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Equipped %s to %s"), 
-		*Item->GetDisplayName().ToString(), *UEnum::GetValueAsString(TargetSlot));
-	
-	return true;
-}
-
-EEquipmentSlot FGroundItemPickupManager::DetermineEquipmentSlot(UItemInstance* Item) const
-{
-	if (!Item)
+	if (bIsMainHandWeaponPickup
+		&& GroundItemPickupManagerPrivate::TryForceReplaceMainHand(CachedEquipmentManager, WorldContext, Item, ClientLocation, EquippedSlot))
 	{
-		return EEquipmentSlot::ES_None;
+		UE_LOG(LogGroundItemPickupManager, Log,
+			TEXT("GroundItemPickupManager: Dropped current main hand and equipped %s to %s"),
+			*Item->GetDisplayName().ToString(), *UEnum::GetValueAsString(EquippedSlot));
+		return true;
 	}
 
-	// Use ItemFunctionLibrary to determine slot
-	return Item->GetEquipmentSlot();
+	const FVector ReturnLocation = bHadOriginalLocation ? OriginalLocation : ClientLocation;
+	CachedGroundItemSubsystem->AddItemToGround(Item, ReturnLocation);
+
+	UE_LOG(LogGroundItemPickupManager, Warning,
+		TEXT("GroundItemPickupManager: Could not equip or inventory %s, returned item to ground"),
+		*Item->GetDisplayName().ToString());
+	return false;
 }

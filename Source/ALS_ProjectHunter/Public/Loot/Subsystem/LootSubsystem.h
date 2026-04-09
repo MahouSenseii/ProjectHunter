@@ -4,7 +4,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Engine/StreamableManager.h"
-#include "Loot/Library/LootStruct.h"
+#include "Systems/Loot/Library/LootStructs.h"
 #include "Loot/Generation/LootGenerator.h"
 #include "LootSubsystem.generated.h"
 
@@ -112,7 +112,7 @@ public:
 	// ═══════════════════════════════════════════════
 
 	/**
-	 * Spawn already-generated loot at location
+	 * Spawn already-generated loot at location (circular scatter)
 	 * @param Batch - Pre-generated loot batch
 	 * @param Location - World location
 	 * @param SpreadRadius - Spread radius
@@ -120,6 +120,15 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Loot|Spawning")
 	bool SpawnLootAtLocation(const FLootResultBatch& Batch, FVector Location, float SpreadRadius = 50.0f);
+
+	/**
+	 * Spawn already-generated loot using full spawn settings (supports box area)
+	 * @param Batch - Pre-generated loot batch
+	 * @param SpawnSettings - Full spawn settings including optional box area
+	 * @return True if spawn successful
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Loot|Spawning")
+	bool SpawnLootWithSettings(const FLootResultBatch& Batch, const FLootSpawnSettings& SpawnSettings);
 
 	// ═══════════════════════════════════════════════
 	// REGISTRY QUERIES
@@ -234,6 +243,9 @@ protected:
 	 * in-flight request before the registry DataTable finishes loading.
 	 */
 	TSharedPtr<FStreamableHandle> RegistryStreamHandle;
+
+	/** Source IDs that asked for preload before the registry finished loading. */
+	TArray<FName> PendingPreloadSourceIDs;
 };
 
 // ═══════════════════════════════════════════════════════════════════════

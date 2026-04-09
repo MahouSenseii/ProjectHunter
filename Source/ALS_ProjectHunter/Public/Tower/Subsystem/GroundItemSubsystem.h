@@ -12,6 +12,8 @@ class AISMContainerActor;
 class UInstancedStaticMeshComponent;
 class UStaticMesh;
 
+DECLARE_LOG_CATEGORY_EXTERN(LogGroundItemSubsystem, Log, All);
+
 /**
  * Struct to track ISM instance data
  */
@@ -90,6 +92,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Ground Items")
 	int32 GetInstanceID(UItemInstance* Item) const;
+	
+	int32 FindItemByISMInstance(UInstancedStaticMeshComponent* ISMComponent, int32 InstanceIndex) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Ground Items")
 	void UpdateItemLocation(int32 ItemID, FVector NewLocation);
@@ -118,12 +122,7 @@ protected:
 
 	void EnsureISMContainerExists();
 	UInstancedStaticMeshComponent* GetOrCreateISMComponent(UStaticMesh* Mesh);
-
-	/**
-	 * P-3 FIX (was ReindexAfterRemoval): After RemoveInstanceSwap, only the single item
-	 * whose instance was at LastIndex needs its stored index updated to RemovedIndex.
-	 * O(1) — no full-table scan required.
-	 */
+	
 	void UpdateIndexAfterSwap(UInstancedStaticMeshComponent* ISMComponent,
 	                          int32 RemovedIndex, int32 LastIndex);
 
@@ -137,16 +136,10 @@ private:
 	// ═══════════════════════════════════════════════
 	// DATA
 	// ═══════════════════════════════════════════════
-
-	// WS-2 FIX: TWeakObjectPtr so we never hold a dangling reference if the
-	// container actor is destroyed externally (e.g. seamless travel, GC).
+	
 	UPROPERTY()
 	TWeakObjectPtr<AISMContainerActor> ISMContainerActor;
-
-	/*
-	 *TMap cannot be used in anything Online related
-	 */
-	
+		
 	UPROPERTY()
 	TMap<int32, UItemInstance*> GroundItems;
 
@@ -158,11 +151,7 @@ private:
 
 	UPROPERTY()
 	TMap<UStaticMesh*, UInstancedStaticMeshComponent*> MeshToISM;
-
-	/**
-	 * P-3 FIX: Reverse lookup — maps an UItemInstance* directly to its ItemID.
-	 * Makes GetInstanceID() O(1) instead of O(n) linear scan over GroundItems.
-	 */
+	
 	UPROPERTY()
 	TMap<UItemInstance*, int32> InstanceToIDMap;
 
@@ -173,10 +162,7 @@ private:
 	// ═══════════════════════════════════════════════
 
 	bool bIsProcessingRemoval = false;
-
-	// WS-1 FIX: FCriticalSection guards PendingRemovals against concurrent
-	// access from async loading callbacks or parallel-for tasks that might
-	// trigger item removal outside the game thread.
+	
 	FCriticalSection PendingRemovalsCS;
 	TArray<int32> PendingRemovals;
 };

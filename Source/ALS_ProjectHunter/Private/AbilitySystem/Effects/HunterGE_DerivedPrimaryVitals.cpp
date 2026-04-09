@@ -42,11 +42,8 @@ UHunterGE_DerivedPrimaryVitals::UHunterGE_DerivedPrimaryVitals()
 		UHunterAttributeSet::GetMaxStaminaAttribute(),
 		EGameplayModOp::Override,
 		UHunterMMC_EnduranceMaxStamina::StaticClass()));
-	// BUG FIX: ManaRegenRate must NOT also scale with Intelligence.
-	// The regen tick formula is Rate * Amount * dt.  If BOTH Rate and Amount add
-	// +Intelligence, the result is Intelligence^2 * dt — quadratic scaling.
-	// Mirror the StaminaDegen fix: keep Rate at a stable 1.0 via Override so only
-	// ManaRegenAmount scales linearly with Intelligence.
+
+	
 	{
 		FGameplayModifierInfo RateModifier;
 		RateModifier.Attribute   = UHunterAttributeSet::GetManaRegenRateAttribute();
@@ -58,11 +55,7 @@ UHunterGE_DerivedPrimaryVitals::UHunterGE_DerivedPrimaryVitals()
 		UHunterAttributeSet::GetManaRegenAmountAttribute(),
 		EGameplayModOp::Additive,
 		UHunterMMC_IntelligenceManaRegen::StaticClass()));
-	// StaminaDegenRate is a fixed multiplier (1.0) — it must not use the Endurance MMC
-	// alongside StaminaDegenAmount, because the drain formula is Rate * Amount * dt,
-	// giving Endurance^2 * dt (quadratic) if both attributes scale with Endurance.
-	// Using Override here ensures the rate stays at a stable 1.0 regardless of stats,
-	// while only StaminaDegenAmount scales linearly with Endurance.
+
 	{
 		FGameplayModifierInfo RateModifier;
 		RateModifier.Attribute   = UHunterAttributeSet::GetStaminaDegenRateAttribute();

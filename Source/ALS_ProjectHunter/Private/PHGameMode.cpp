@@ -8,6 +8,8 @@
 #include "GameFramework/PlayerStart.h"
 #include "TimerManager.h"
 
+DEFINE_LOG_CATEGORY(LogPHGameMode);
+
 APHGameMode::APHGameMode()
 {
 	// N-01/N-02 FIX: Wire custom PlayerState and GameState classes
@@ -48,7 +50,7 @@ void APHGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewP
 		HunterChar->GiveDefaultAbilities();
 		HunterChar->ApplyStartupEffects();
 
-		UE_LOG(LogTemp, Log,
+		UE_LOG(LogPHGameMode, Log,
 			TEXT("HandleStartingNewPlayer: initialized %s for %s"),
 			*HunterChar->GetName(), *NewPlayer->GetName());
 	}
@@ -76,7 +78,7 @@ void APHGameMode::OnPlayerDied(AController* DeadPlayer, AController* Killer)
 		return;
 	}
 
-	UE_LOG(LogTemp, Log,
+	UE_LOG(LogPHGameMode, Log,
 		TEXT("OnPlayerDied: %s killed by %s"),
 		*GetNameSafe(DeadPlayer),
 		*GetNameSafe(Killer));
@@ -126,6 +128,6 @@ void APHGameMode::RespawnPlayer(AController* Controller)
 	// Use the engine's restart flow which calls ChoosePlayerStart + SpawnDefaultPawnFor
 	RestartPlayer(Controller);
 
-	UE_LOG(LogTemp, Log,
+	UE_LOG(LogPHGameMode, Log,
 		TEXT("RespawnPlayer: respawned %s"), *Controller->GetName());
 }

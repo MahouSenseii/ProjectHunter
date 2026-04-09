@@ -124,7 +124,6 @@ private:
 	void CacheComponents();
 	bool PickupToInventoryInternal(int32 ItemID, FVector ClientLocation);
 	bool PickupAndEquipInternal(int32 ItemID, FVector ClientLocation);
-	EEquipmentSlot DetermineEquipmentSlot(UItemInstance* Item) const;
 
 	// ═══════════════════════════════════════════════
 	// CACHED REFERENCES

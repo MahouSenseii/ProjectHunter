@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Combat/Library/CombatStruct.h"
+#include "Systems/Combat/Library/CombatStructs.h"
 #include "GameplayEffect.h"
 #include "CombatManager.generated.h"
 

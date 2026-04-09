@@ -2,11 +2,13 @@
 
 #pragma once
 
+#include "Core/Logging/ProjectHunterLogMacros.h"
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
 #include "Item/Runtime/EquippedItemRuntimeActor.h"
 #include "Item/Library/ItemEnums.h"
 #include "Item/Library/AffixEnums.h"
+#include "Systems/Item/Library/ItemStructsLog.h"
 #include "AttributeSet.h"
 #include "ItemStructs.generated.h"
 
@@ -381,9 +383,6 @@ struct FConsumableData
 
 /**
  * Single attribute modification (used for affixes)
- * PoE2-Style: Each affix has ONE name (either prefix or suffix)
- * 
- * Can be used as DataTable row for DT_Affixes
  */
 USTRUCT(BlueprintType)
 struct FPHAttributeData : public FTableRowBase
@@ -414,8 +413,6 @@ struct FPHAttributeData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Affix")
 	ERankPoints RankPoints = ERankPoints::RP_0;
 
-	
-
 	// ═══════════════════════════════════════════════
 	// ITEM TYPE FILTERING 
 	// ═══════════════════════════════════════════════
@@ -427,13 +424,7 @@ struct FPHAttributeData : public FTableRowBase
 	/** Allowed item subtypes (empty = all subtypes allowed) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Filtering")
 	TArray<EItemSubType> AllowedSubTypes;
-
-	// N-17 FIX: Dedicated item-level range fields so IsValidForItemLevel() does not
-	// reuse MinValue/MaxValue (which hold the affix magnitude range).  Reusing the
-	// magnitude range for level gating caused level checks to silently use wrong bounds
-	// whenever the affix had a non-integer magnitude (e.g. 0.05 – 0.20 for a 5-20%
-	// modifier) — those items would only appear on items of level 0.
-	/** Minimum item level required for this affix to be rolled (inclusive, 1 = any) */
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Filtering",
 		meta = (ClampMin = "1", ClampMax = "100"))
 	int32 MinItemLevel = 1;
@@ -628,11 +619,6 @@ struct FPHAttributeData : public FTableRowBase
 
 /**
  * All stats/affixes on an item
- * 
- * OPTIMIZATIONS:
- * - GetAllStats() pre-allocates with Reserve()
- * - ForEachStat() for zero-allocation iteration
- * - Early-exit in HasUnidentifiedStats()
  */
 USTRUCT(BlueprintType)
 struct FPHItemStats
@@ -838,12 +824,12 @@ struct FItemBase : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Visual")
 	UMaterialInstance* ItemImage = nullptr;
 
-	/** Spawn a runtime actor for active/special equipment instead of using only a mesh representation. */
+	/** Spawn a runtime actor for active/special equipment instead of using only a mesh representation. Weapons always use a runtime actor. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Visual",
 		meta = (EditCondition = "ItemType == EItemType::IT_Weapon || ItemType == EItemType::IT_Armor || ItemType == EItemType::IT_Accessory", EditConditionHides))
 	bool bUseRuntimeActor = false;
 
-	/** Runtime actor class used for active/special equipment behavior. Prefer a Blueprint child of AEquippedItemRuntimeActor. */
+	/** Runtime actor class used for active/special equipment behavior. Prefer a Blueprint child of AEquippedItemRuntimeActor. Weapons fall back to AEquippedItemRuntimeActor if unset. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Visual",
 		meta = (EditCondition = "bUseRuntimeActor && (ItemType == EItemType::IT_Weapon || ItemType == EItemType::IT_Armor || ItemType == EItemType::IT_Accessory)", EditConditionHides))
 	TSubclassOf<AEquippedItemRuntimeActor> RuntimeActorClass = nullptr;
@@ -855,6 +841,26 @@ struct FItemBase : public FTableRowBase
 	/** Legacy compatibility for older weapon rows. Prefer RuntimeActorClass. */
 	UPROPERTY()
 	TSubclassOf<AActor> WeaponActorClass = nullptr;
+
+	// ═══════════════════════════════════════════════
+	// GROUND ITEM DISPLAY
+	// ═══════════════════════════════════════════════
+
+	/**
+	 * Flip the mesh 180° on the Pitch axis when displayed on the ground.
+	 * Enable for items (e.g. swords) whose static mesh naturally points upward
+	 * when placed at ZeroRotator, so they rest blade-down correctly.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|GroundDisplay")
+	bool bFlipGroundMeshRotation = false;
+
+	/**
+	 * Additional rotation offset applied when the item is placed on the ground,
+	 * on top of any flip. Use to fine-tune the resting orientation per-item.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|GroundDisplay",
+		meta = (EditCondition = "!bFlipGroundMeshRotation || true"))
+	FRotator GroundMeshRotationOffset = FRotator::ZeroRotator;
 
 	// ═══════════════════════════════════════════════
 	// WEIGHT & STACKING
@@ -927,7 +933,8 @@ struct FItemBase : public FTableRowBase
 	// ═══════════════════════════════════════════════
 	// BASE STATS (Equipment Only)
 	// ═══════════════════════════════════════════════
-
+	
+	
 	/** Only show for weapons */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Stats",
 		meta = (EditCondition = "ItemType == EItemType::IT_Weapon", EditConditionHides))
@@ -1000,11 +1007,7 @@ struct FItemBase : public FTableRowBase
 	/** Check if base data is valid */
 	bool IsValid() const
 	{
-		// N-15 FIX: Removed !ItemName.IsEmpty() requirement.
-		// Non-unique items (consumables, materials, currency) intentionally have an
-		// empty ItemName — they derive their display name from the base item template.
-		// Requiring a non-empty name incorrectly blocked those items from passing
-		// validation, causing them to fail inventory adds and equipment checks.
+
 		const bool bHasVisualRepresentation =
 			(StaticMesh != nullptr) ||
 			(SkeletalMesh != nullptr) ||
@@ -1021,7 +1024,7 @@ struct FItemBase : public FTableRowBase
 		// Equipment should never be stackable
 		if (IsEquippable() && bStackable)
 		{
-			UE_LOG(LogTemp, Error, TEXT("ItemBase: Equipment '%s' has bStackable=true! This is invalid."), *ItemID.ToString());
+			PH_LOG_ERROR(LogItemStructs, "IsValidForInventory failed: Equipment '%s' had bStackable=true.", *ItemID.ToString());
 			return false;
 		}
 		
@@ -1049,7 +1052,7 @@ struct FItemBase : public FTableRowBase
 			|| ItemType == EItemType::IT_Accessory;
 	}
 
-	/** Check if this is a consumable */
+	/** Check if this is consumable */
 	bool IsConsumable() const { return ItemType == EItemType::IT_Consumable; }
 
 	/** Check if this is a material */
@@ -1061,7 +1064,7 @@ struct FItemBase : public FTableRowBase
 	/** Check if this item should spawn a runtime actor when equipped. */
 	bool UsesRuntimeActor() const
 	{
-		return bUseRuntimeActor || bUseWeaponActor;
+		return IsWeapon() || bUseRuntimeActor || bUseWeaponActor;
 	}
 
 	/** Get the runtime actor class, including legacy weapon-actor fallback support. */

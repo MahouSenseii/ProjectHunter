@@ -61,10 +61,14 @@ FLootResultBatch ULootComponent::DropLootAtLocation(
 		return FLootResultBatch();
 	}
 	
-	// Build spawn settings
+	// Build spawn settings — preserve box config from DefaultSpawnSettings
 	FLootSpawnSettings SpawnSettings = DefaultSpawnSettings;
-	SpawnSettings.SpawnLocation = Location;
-	
+	// Only override SpawnLocation if box mode isn't driving it already
+	if (!SpawnSettings.bUseSpawnBox)
+	{
+		SpawnSettings.SpawnLocation = Location;
+	}
+
 	// Build and execute a request
 	FLootRequest Request = BuildRequest(PlayerLuck, PlayerMagicFind);
 	return CachedLootSubsystem->GenerateAndSpawnLoot(Request, SpawnSettings);
@@ -109,7 +113,7 @@ void ULootComponent::SpawnLoot(const FLootResultBatch& Results, FVector Location
 		SpawnSettings.SpawnLocation = Location;
 	}
 	
-	CachedLootSubsystem->SpawnLootAtLocation(Results, SpawnSettings.SpawnLocation, SpawnSettings.ScatterRadius);
+	CachedLootSubsystem->SpawnLootWithSettings(Results, SpawnSettings);
 }
 
 // ═══════════════════════════════════════════════════════════════════════

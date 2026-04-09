@@ -68,9 +68,6 @@ public:
 	 * Increment ITEM_CURRENT_VERSION whenever the serialized layout changes
 	 * (new fields, renamed fields, changed semantics).  The save/load system
 	 * can branch on this value to upgrade old items without data loss.
-	 *
-	 * Version history:
-	 *   1  — Initial version (all fields up to this point).
 	 */
 	static constexpr int32 ITEM_CURRENT_VERSION = 1;
 
@@ -120,6 +117,7 @@ public:
 	/** All item stats (implicits + generated affixes) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item|Affixes")
 	FPHItemStats Stats;
+
 
 	// ═══════════════════════════════════════════════
 	// CONSUMABLE PROPERTIES
@@ -610,6 +608,7 @@ public:
 	/** Post-load initialization (after deserialization) */
 	UFUNCTION(BlueprintCallable, Category = "Item|Serialization")
 	void PostLoadInitialize();
+
 
 private:
 	/** Generate rare/legendary name for high-grade items */
