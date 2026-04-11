@@ -154,3 +154,24 @@ void UEquipmentManager::RemoveEquipment(EEquipmentSlot Slot)
 {
 	FEquipmentReplicationHelper::RemoveEquipment(*this, Slot);
 }
+
+UItemInstance* UEquipmentManager::Debug_EquipItemFromTable(
+	FDataTableRowHandle ItemRowHandle,
+	EEquipmentSlot Slot,
+	int32 ItemLevel,
+	EItemRarity Rarity)
+{
+	if (ItemRowHandle.IsNull())
+	{
+		UE_LOG(LogEquipmentManager, Warning,
+			TEXT("Debug_EquipItemFromTable: ItemRowHandle is null — nothing equipped."));
+		return nullptr;
+	}
+
+	UItemInstance* NewItem = NewObject<UItemInstance>(GetOwner());
+	NewItem->Initialize(ItemRowHandle, ItemLevel, Rarity, /*bGenerateAffixes=*/true);
+
+	// Pass bSwapToBag=false: the item is not coming from inventory so we don't
+	// want the mutation helper trying to move a non-existent displaced item there.
+	return EquipItem(NewItem, Slot, /*bSwapToBag=*/false);
+}

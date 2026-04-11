@@ -21,6 +21,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Engine/DataTable.h"
 #include "Systems/Equipment/Library/EquipmentLog.h"
 #include "Systems/Equipment/Library/EquipmentStructs.h"
 #include "EquipmentManager.generated.h"
@@ -126,6 +127,24 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	AEquippedItemRuntimeActor* GetActiveRuntimeItemActor(EEquipmentSlot Slot) const;
+
+	/**
+	 * Debug helper: create an item from a DataTable row and equip it directly.
+	 * Intended for Begin Play testing in Blueprints — bypasses the inventory requirement.
+	 *
+	 * @param ItemRowHandle  Row handle pointing to the FItemBase DataTable entry.
+	 * @param Slot           Target slot (ES_None = auto-determine from item type).
+	 * @param ItemLevel      Item level used for affix tier rolls (1-100).
+	 * @param Rarity         Item grade (F-SS) determining affix count.
+	 * @return               The newly created and equipped UItemInstance, or nullptr on failure.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Equipment|Debug",
+		meta = (DevelopmentOnly))
+	UItemInstance* Debug_EquipItemFromTable(
+		FDataTableRowHandle ItemRowHandle,
+		EEquipmentSlot Slot = EEquipmentSlot::ES_None,
+		int32 ItemLevel = 1,
+		EItemRarity Rarity = EItemRarity::IR_GradeF);
 
 	// ═══════════════════════════════════════════════
 	// REPLICATED STATE
