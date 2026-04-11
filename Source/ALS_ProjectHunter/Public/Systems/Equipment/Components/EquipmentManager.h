@@ -219,15 +219,16 @@ protected:
 	// ═══════════════════════════════════════════════
 
 	UItemInstance* EquipItemInternal(UItemInstance* Item, EEquipmentSlot Slot, bool bSwapToBag,
-	                                 bool bUseGroundPickupRules = false);
+									 bool bUseGroundPickupRules = false);
 	bool HandleTwoHandedWeapon(UItemInstance* Item, bool bSwapToBag,
-	                           UItemInstance*& OutOldMainHand, UItemInstance*& OutOldOffHand,
-	                           UItemInstance*& OutOldTwoHand);
+							   UItemInstance*& OutOldMainHand, UItemInstance*& OutOldOffHand,
+							   UItemInstance*& OutOldTwoHand);
 
 	EEquipmentSlot GetNextAvailableRingSlot() const;
 	bool IsRingSlot(EEquipmentSlot Slot) const;
 
 	void CacheComponents();
+	void MulticastEquipmentChanged_Implementation(EEquipmentSlot Slot, UItemInstance* NewItem, UItemInstance* OldItem);
 	void RebuildEquipmentMap();
 	void AddEquipment(EEquipmentSlot Slot, UItemInstance* Item);
 	void RemoveEquipment(EEquipmentSlot Slot);
@@ -262,5 +263,4 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void ServerUnequipItem(EEquipmentSlot Slot, bool bMoveToBag);
-
-	/** Kept a
+};
