@@ -21,6 +21,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Engine/DataTable.h"
+#include "Item/Library/ItemEnums.h"
 #include "Systems/Equipment/Library/EquipmentLog.h"
 #include "Systems/Equipment/Library/EquipmentStructs.h"
 #include "EquipmentManager.generated.h"
@@ -118,6 +120,37 @@ public:
 	/** Unequip all slots. */
 	UFUNCTION(BlueprintCallable, Category = "Equipment")
 	void UnequipAll(bool bMoveToBag = true);
+
+	// ═══════════════════════════════════════════════
+	// RAPID-TEST HELPERS
+	// ═══════════════════════════════════════════════
+
+	/**
+	 * One-shot helper for rapid weapon testing from Blueprint.
+	 *
+	 * Constructs a fresh UItemInstance from the supplied DataTable row, initializes
+	 * it with the given level/rarity/affix settings, and equips it.  Slot selection
+	 * is automatic via DetermineEquipmentSlot — a one-handed weapon goes to MainHand,
+	 * a two-hander goes to TwoHand, etc.  Any item already in the resolved slot is
+	 * displaced to the bag (matching EquipItem's bSwapToBag = true behaviour).
+	 *
+	 * Intended for testing — wire it to a debug key in the player BP and you can
+	 * spawn-and-equip any item from the DataTable in one node.
+	 *
+	 * @param BaseItemHandle  Row handle pointing at an FItemBase row in your item DataTable.
+	 * @param ItemLevel       Item level (1–100) used for affix tier rolls.
+	 * @param Rarity          Item grade (F–SS) — determines affix count.
+	 * @param bGenerateAffixes True to roll affixes (only meaningful for Grade E+ equipment).
+	 * @return The freshly created item instance, or nullptr if the row handle was
+	 *         invalid or the resulting item could not be equipped.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Equipment|Debug",
+		meta = (AutoCreateRefTerm = "BaseItemHandle"))
+	UItemInstance* GiveWeapon(
+		const FDataTableRowHandle& BaseItemHandle,
+		int32 ItemLevel = 1,
+		EItemRarity Rarity = EItemRarity::IR_GradeF,
+		bool bGenerateAffixes = true);
 
 	/**
 	 * Return the active runtime actor for a slot, forwarded from
@@ -230,8 +263,4 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerUnequipItem(EEquipmentSlot Slot, bool bMoveToBag);
 
-	/** Kept as a no-op stub so existing Blueprint callers compile. Clients receive
-	 *  changes via OnRep_EquippedItems only. */
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastEquipmentChanged(EEquipmentSlot Slot, UItemInstance* NewItem, UItemInstance* OldItem);
-};
+	/** Kept a

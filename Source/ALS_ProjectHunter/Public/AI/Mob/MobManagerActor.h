@@ -30,6 +30,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "AI/Mob/MobSpawnTypes.h"
+#include "AI/Mob/MobSpawnRules.h"
+#include "Data/MonsterModifierData.h"
 #include "MobManagerActor.generated.h"
 
 class UBoxComponent;
@@ -52,6 +54,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMobSpawned,  APHBaseCharacter*, M
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMobDied,     APHBaseCharacter*, Mob);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpawnFailed, EMobSpawnFailReason, Reason);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnManagerFull);
+
+/** Fired when a special spawn rule triggers and its action is executed. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSpecialSpawnExecuted,
+	FName, RuleId, APHBaseCharacter*, SpawnedMob);
 
 // ─────────────────────────────────────────────────────────────────────────────
 UCLASS()
@@ -253,6 +259,24 @@ public:
 	float NearbyMagicFind = 0.0f;
 
 	// ─────────────────────────────────────────────────────────────────────────
+	// ═══ SPECIAL / EVENT SPAWN RULES ═════════════════════════════════════════
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Designer-authored rules that trigger special spawns based on gameplay state
+	 * (player holds a key item, total kills of a mob class reached a threshold, …).
+	 *
+	 * Rules are evaluated at the top of every SpawnTick. When a rule is ready,
+	 * its action runs (force-spawn a specific mob, or boost the tier of the next
+	 * normal spawn). See UMobSpawnConditionEvaluator for evaluation logic.
+	 *
+	 * Runtime state on the rule rows (bHasFired, LastFireTime) is Transient and
+	 * resets every time this actor is constructed.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mob Manager|Special Spawns")
+	TArray<FMobSpecialSpawnRule> SpecialSpawnRules;
+
+	// ─────────────────────────────────────────────────────────────────────────
 	// ═══ DEBUG ════════════════════════════════════════════════════════════════
 	// ─────────────────────────────────────────────────────────────────────────
 
@@ -383,6 +407,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Mob Manager|Events")
 	FOnManagerFull OnManagerFull;
 
+	/** Fired whenever a special spawn rule successfully executes its action. */
+	UPROPERTY(BlueprintAssignable, Category = "Mob Manager|Events")
+	FOnSpecialSpawnExecuted OnSpecialSpawnExecuted;
+
 	// ─────────────────────────────────────────────────────────────────────────
 	// ═══ PUBLIC API ═══════════════════════════════════════════════════════════
 	// ─────────────────────────────────────────────────────────────────────────
@@ -429,6 +457,45 @@ public:
 	/** Clear all stale (destroyed/invalid) pointers from ActiveMobs. */
 	UFUNCTION(BlueprintCallable, Category = "Mob Manager")
 	void CleanActiveMobs();
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// ═══ SPECIAL SPAWN / KILL-COUNT API ══════════════════════════════════════
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * BlueprintNativeEvent — returns true if ANY tracked player currently has
+	 * the item identified by KeyItemId in their inventory.
+	 *
+	 * The C++ default returns false so rule systems can't spuriously trigger
+	 * on a manager that doesn't know about an inventory system. Override this
+	 * in the child BP to query your InventoryManager / InventoryComponent.
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Mob Manager|Special Spawns")
+	bool DoesAnyPlayerHaveKeyItem(FName KeyItemId);
+	virtual bool DoesAnyPlayerHaveKeyItem_Implementation(FName KeyItemId);
+
+	/**
+	 * Force-run the action for the rule with the given ID (bypasses trigger checks,
+	 * still respects bEnabled and lifetime/cooldown state).
+	 * Returns true if the action ran successfully.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Mob Manager|Special Spawns")
+	bool ForceSpawnSpecial(FName RuleId);
+
+	/**
+	 * Number of kills tracked for the given class (or any of its subclasses).
+	 * Pass null to get the total across every class.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Mob Manager|Special Spawns")
+	int32 GetKillCountForClass(TSubclassOf<APHBaseCharacter> MobClass) const;
+
+	/** Total kills tracked by this manager, ignoring class. */
+	UFUNCTION(BlueprintPure, Category = "Mob Manager|Special Spawns")
+	int32 GetTotalKillCount() const;
+
+	/** Reset all tracked kill counts to zero (does not reset rule lifetime state). */
+	UFUNCTION(BlueprintCallable, Category = "Mob Manager|Special Spawns")
+	void ResetKillCounts();
 
 	/** Read-only access to the debug history (for custom visualisation in BP). */
 	UFUNCTION(BlueprintPure, Category = "Mob Manager|Debug")
@@ -549,8 +616,18 @@ protected:
 	/**
 	 * Configure UMonsterModifierComponent if the mob has one.
 	 * Called during FinalizeSpawn.
+	 *
+	 * Not const — consumes PendingForcedTier if a special rule has queued a
+	 * tier boost for the next spawn.
 	 */
-	void ApplyModifierComponent(APHBaseCharacter* Mob) const;
+	void ApplyModifierComponent(APHBaseCharacter* Mob);
+
+	/**
+	 * Walks SpecialSpawnRules, firing any whose triggers are satisfied.
+	 * Called at the top of SpawnTick, after CacheTickValues but before the
+	 * capacity check so force-spawns can slot in even near the cap.
+	 */
+	virtual void EvaluateSpecialSpawnRules();
 
 	// ── Death tracking ────────────────────────────────────────────────────────
 
@@ -624,4 +701,17 @@ private:
 	 * a Release() call on an already-destroyed actor.
 	 */
 	TArray<FTimerHandle> PendingRecycleTimers;
+
+	/**
+	 * Tier queued by a special spawn rule (Action = BoostNextSpawnTier) or set
+	 * internally before a force-spawn. Consumed and reset to MT_Normal the next
+	 * time ApplyModifierComponent runs.
+	 */
+	EMonsterTier PendingForcedTier = EMonsterTier::MT_Normal;
+
+	/** Kill counters grouped by exact spawned class. Summed via IsChildOf lookups. */
+	TMap<TSubclassOf<APHBaseCharacter>, int32> KillsByClass;
+
+	/** Running total of every kill this manager has recorded. */
+	int32 TotalKills = 0;
 };

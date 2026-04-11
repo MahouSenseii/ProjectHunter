@@ -58,6 +58,11 @@ void UMonsterModifierComponent::RollAndApplyMods()
 		return;
 	}
 
+	// Roll per-instance base-stat variation BEFORE the Normal-tier early return.
+	// This is what makes two Normal Goblins mechanically different — every mob
+	// gets a small randomised HP/damage/resist/movespeed spread regardless of tier.
+	RollBaseStatVariation();
+
 	// Determine tier
 	if (ForcedTier != EMonsterTier::MT_Normal || AssignedTier != EMonsterTier::MT_Normal)
 	{
@@ -70,7 +75,8 @@ void UMonsterModifierComponent::RollAndApplyMods()
 
 	if (AssignedTier == EMonsterTier::MT_Normal)
 	{
-		// Normal monsters get no mods
+		// Normal monsters get no mod rows, but still benefit from the base-stat
+		// variation rolled above — so they're never identical clones.
 		FullDisplayName = GetOwner()->GetClass()->GetDisplayNameText();
 		OnMonsterModsApplied.Broadcast(AssignedTier, FullDisplayName);
 		return;
@@ -153,11 +159,71 @@ void UMonsterModifierComponent::RerollMods()
 	AppliedGEHandles.Empty();
 	AppliedMods.Empty();
 
+	// Reset the per-instance variation so the reroll also re-rolls base stats.
+	// Without this, a pooled mob keeps its previous life's variation.
+	BaseStatVariation = FMonsterStatVariation();
+
 	// Reset the idempotency guard so RollAndApplyMods runs fresh
 	bModsApplied = false;
 	AssignedTier = (ForcedTier != EMonsterTier::MT_Normal) ? ForcedTier : EMonsterTier::MT_Normal;
 
 	RollAndApplyMods();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-instance base-stat variation
+// ─────────────────────────────────────────────────────────────────────────────
+
+void UMonsterModifierComponent::RollBaseStatVariation()
+{
+	if (BaseStatVariation.bRolled)
+	{
+		return; // Idempotent — already rolled this life
+	}
+
+	if (!bEnableBaseStatVariation)
+	{
+		// Mark as rolled so we don't re-enter; leave multipliers at 1.0.
+		BaseStatVariation.bRolled = true;
+		return;
+	}
+
+	auto RollSymmetric = [](const float VariancePct) -> float
+	{
+		if (VariancePct <= 0.0f) { return 1.0f; }
+		return 1.0f + FMath::FRandRange(-VariancePct, VariancePct);
+	};
+
+	BaseStatVariation.HPMultiplier        = RollSymmetric(HPVariancePct);
+	BaseStatVariation.DamageMultiplier    = RollSymmetric(DamageVariancePct);
+	BaseStatVariation.MoveSpeedMultiplier = RollSymmetric(MoveSpeedVariancePct);
+	BaseStatVariation.ResistBonusPct      = (ResistVariancePct > 0.0f)
+		? FMath::FRandRange(-ResistVariancePct, ResistVariancePct)
+		: 0.0f;
+	BaseStatVariation.bRolled = true;
+
+	// Apply movespeed variation directly to CharacterMovement — mirrors how
+	// ApplyMod handles the per-mod MoveSpeedMultiplier.
+	if (!FMath::IsNearlyEqual(BaseStatVariation.MoveSpeedMultiplier, 1.0f))
+	{
+		if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
+		{
+			if (UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement())
+			{
+				MoveComp->MaxWalkSpeed *= BaseStatVariation.MoveSpeedMultiplier;
+			}
+		}
+	}
+
+	UE_LOG(LogMonsterModifier, Verbose,
+		TEXT("RollBaseStatVariation: %s HP=x%.3f Dmg=x%.3f Spd=x%.3f Resist=%+.2f%%"),
+		GetOwner() ? *GetOwner()->GetName() : TEXT("<null>"),
+		BaseStatVariation.HPMultiplier,
+		BaseStatVariation.DamageMultiplier,
+		BaseStatVariation.MoveSpeedMultiplier,
+		BaseStatVariation.ResistBonusPct);
+
+	OnBaseStatVariationRolled.Broadcast(BaseStatVariation);
 }
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -338,7 +404,9 @@ FText UMonsterModifierComponent::BuildDisplayName(const TArray<FMonsterModRow>& 
 
 float UMonsterModifierComponent::GetCombinedHPMultiplier() const
 {
-	float Combined = 1.0f;
+	// Per-instance variation is folded in so Normal-tier mobs (which have no
+	// AppliedMods) still get a non-1.0 HP multiplier.
+	float Combined = BaseStatVariation.HPMultiplier;
 	for (const FMonsterModRow& Mod : AppliedMods)
 	{
 		Combined *= Mod.HPMultiplier;
@@ -348,7 +416,7 @@ float UMonsterModifierComponent::GetCombinedHPMultiplier() const
 
 float UMonsterModifierComponent::GetCombinedDamageMultiplier() const
 {
-	float Combined = 1.0f;
+	float Combined = BaseStatVariation.DamageMultiplier;
 	for (const FMonsterModRow& Mod : AppliedMods)
 	{
 		Combined *= Mod.DamageMultiplier;

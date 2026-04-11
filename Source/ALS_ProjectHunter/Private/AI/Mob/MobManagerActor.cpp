@@ -2,7 +2,9 @@
 #include "AI/Mob/MobManagerActor.h"
 #include "AI/Mob/MobPoolSubsystem.h"
 #include "AI/Mob/MobWanderInterface.h"
+#include "AI/Mob/MobSpawnConditionEvaluator.h"
 #include "Systems/AI/Components/MonsterModifierComponent.h"
+#include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Systems/Stats/Components/StatsManager.h"
 #include "Components/BoxComponent.h"
 #include "NavigationSystem.h"
@@ -13,6 +15,7 @@
 #include "Engine/OverlapResult.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "BrainComponent.h"
 #include "AIController.h"
 #include "GameFramework/PlayerController.h"
@@ -337,7 +340,18 @@ void AMobManagerActor::SpawnTick()
 	// ── 1. Remove stale pointers ───────────────────────────────────────────
 	CleanActiveMobs();
 
-	// ── 2. Population check ────────────────────────────────────────────────
+	// ── 2. Cache per-tick values ONCE ──────────────────────────────────────
+	// Moved ABOVE the capacity check so EvaluateSpecialSpawnRules sees fresh
+	// player locations and nav/box data — force-spawns can fire even near cap.
+	CacheTickValues();
+
+	// ── 3. Evaluate special / event spawn rules ────────────────────────────
+	// Rules with ForceSpawnSpecialMob will actually slot a new mob in here.
+	// Rules with BoostNextSpawnTier only set PendingForcedTier; the boost is
+	// consumed by ApplyModifierComponent on the next spawn below.
+	EvaluateSpecialSpawnRules();
+
+	// ── 4. Population check ────────────────────────────────────────────────
 	const int32 Current = GetActiveCount();
 
 	if (Current >= MaxNumOfMobs)
@@ -355,10 +369,7 @@ void AMobManagerActor::SpawnTick()
 
 	bFullEventFired = false;
 
-	// ── 3. Cache per-tick values ONCE ───────────────────────────────────────
-	CacheTickValues();
-
-	// ── 4. Spawn mobs ──────────────────────────────────────────────────────
+	// ── 5. Spawn mobs ──────────────────────────────────────────────────────
 	if (bSpawnInPacks)
 	{
 		// Pack mode: spawn a full cluster of mobs around a leader location.
@@ -1127,10 +1138,26 @@ APHBaseCharacter* AMobManagerActor::HiddenSpawn(
 		}
 	}
 
-	// Stop movement so the hidden actor doesn't drift
+	// Stop movement so the hidden actor doesn't drift.
+	//
+	// IMPORTANT: Do NOT call DisableMovement() here.  DisableMovement() sets
+	// MovementMode = MOVE_None, and the symmetric SetMovementMode(MOVE_Walking)
+	// in FinalizeSpawn re-runs FindFloor() from the capsule's current location.
+	// Because collision was OFF during the inert phase, the capsule never
+	// settled onto the floor — so FindFloor frequently misses the walkable
+	// surface (especially with the +CapsuleHalfHeight+2cm Z margin added at
+	// line ~495), and CMC drops into MOVE_Falling instead of MOVE_Walking.
+	// A falling pawn cannot register on the navmesh and AI Move To silently
+	// fails to project the destination — symptom: spawned mobs do not move.
+	//
+	// Instead: zero velocity and disable the CMC tick.  This freezes the
+	// component without touching its mode, so FinalizeSpawn can simply
+	// re-enable the tick and let CMC continue in its natural MOVE_Walking
+	// state with a valid floor underneath it.
 	if (UCharacterMovementComponent* Move = Mob->GetCharacterMovement())
 	{
-		Move->DisableMovement();
+		Move->StopMovementImmediately();
+		Move->SetComponentTickEnabled(false);
 	}
 
 	return Mob;
@@ -1191,9 +1218,68 @@ void AMobManagerActor::FinalizeSpawn(APHBaseCharacter* Mob, const FVector& Spawn
 	Mob->SetActorHiddenInGame(false);
 	Mob->SetActorEnableCollision(true);
 
+	// ── 4a. Snap the capsule to a valid floor BEFORE re-enabling movement ──
+	//
+	// HiddenSpawn deliberately leaves the CMC in its natural MOVE_Walking
+	// state (see comment block in HiddenSpawn).  But because collision was
+	// off during the inert phase, the capsule never settled — it is still
+	// sitting at exactly the spawn Z, which is normally a few cm above the
+	// floor.  If we just re-enable the CMC tick now, the first walking
+	// update may not find a floor within MaxFloorDistance and CMC will fall
+	// through to MOVE_Falling, which breaks navmesh registration and makes
+	// AI Move To fail silently.
+	//
+	// Run an explicit floor probe and adjust the capsule's Z so the bottom
+	// of the capsule sits exactly on the floor.  As a belt-and-suspenders
+	// step, also project to the navmesh — if projection succeeds we know
+	// the navigation system can see this point, and AI Move To paths from
+	// here will resolve.
 	if (UCharacterMovementComponent* Move = Mob->GetCharacterMovement())
 	{
-		Move->SetMovementMode(MOVE_Walking);
+		FFindFloorResult Floor;
+		Move->FindFloor(Mob->GetActorLocation(), Floor, /*bCanUseCachedLocation*/ false);
+
+		if (Floor.IsWalkableFloor() && Mob->GetCapsuleComponent())
+		{
+			const float HalfHeight = Mob->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			FVector Adjusted = Mob->GetActorLocation();
+			Adjusted.Z = Floor.HitResult.ImpactPoint.Z + HalfHeight;
+			Mob->SetActorLocation(Adjusted, /*bSweep*/ false, nullptr, ETeleportType::TeleportPhysics);
+		}
+		else if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+		{
+			// Floor probe missed (uneven geo, edge of nav, etc.) — fall back
+			// to projecting onto the navmesh.  This guarantees the mob ends
+			// up on a navigable point even if the local floor query fails.
+			FNavLocation Projected;
+			if (NavSys->ProjectPointToNavigation(
+					Mob->GetActorLocation(),
+					Projected,
+					FVector(200.f, 200.f, 400.f)))
+			{
+				if (Mob->GetCapsuleComponent())
+				{
+					const float HalfHeight = Mob->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+					FVector Adjusted = Projected.Location;
+					Adjusted.Z += HalfHeight;
+					Mob->SetActorLocation(Adjusted, false, nullptr, ETeleportType::TeleportPhysics);
+				}
+			}
+			else
+			{
+				UE_LOG(LogMobManager, Warning,
+					TEXT("FinalizeSpawn: '%s' could not be projected to navmesh "
+					     "from %s — pathfinding will likely fail."),
+					*Mob->GetName(), *Mob->GetActorLocation().ToString());
+			}
+		}
+
+		// Re-enable the CMC tick we disabled in HiddenSpawn.  Do NOT call
+		// SetMovementMode here — the CMC is still in its natural MOVE_Walking
+		// state from spawn, and forcing a mode flip would re-trigger the
+		// FindFloor race we just worked around.
+		Move->SetComponentTickEnabled(true);
+		Move->StopMovementImmediately();
 	}
 
 	if (AAIController* AIC = Cast<AAIController>(Mob->GetController()))
@@ -1209,7 +1295,7 @@ void AMobManagerActor::FinalizeSpawn(APHBaseCharacter* Mob, const FVector& Spawn
 	BP_OnMobSpawned(Mob);
 }
 
-void AMobManagerActor::ApplyModifierComponent(APHBaseCharacter* Mob) const
+void AMobManagerActor::ApplyModifierComponent(APHBaseCharacter* Mob)
 {
 	if (!Mob) { return; }
 
@@ -1229,6 +1315,18 @@ void AMobManagerActor::ApplyModifierComponent(APHBaseCharacter* Mob) const
 	// manager's AreaLevel.
 	ModComp->AreaLevel = AreaLevel;
 	ModComp->NearbyPlayerMagicFind = NearbyMagicFind;
+
+	// Consume any pending forced tier queued by a special spawn rule.
+	// ForcedTier on the component is read by RerollMods/RollAndApplyMods.
+	if (PendingForcedTier != EMonsterTier::MT_Normal)
+	{
+		ModComp->ForcedTier = PendingForcedTier;
+		UE_LOG(LogMobManager, Verbose,
+			TEXT("[%s] ApplyModifierComponent: consumed PendingForcedTier=%d for '%s'"),
+			*GetName(), static_cast<int32>(PendingForcedTier), *Mob->GetName());
+		PendingForcedTier = EMonsterTier::MT_Normal;
+	}
+
 	ModComp->RerollMods();
 }
 
@@ -1254,6 +1352,14 @@ void AMobManagerActor::OnMobDeathEvent(APHBaseCharacter* DeadMob, AActor* Killer
 	{
 		return !Weak.IsValid() || Weak.Get() == DeadMob;
 	});
+
+	// Track kill counts for event-driven spawn rules (KillCountReached trigger).
+	if (UClass* DeadClass = DeadMob->GetClass())
+	{
+		const TSubclassOf<APHBaseCharacter> DeadAsSub(DeadClass);
+		KillsByClass.FindOrAdd(DeadAsSub)++;
+		++TotalKills;
+	}
 
 	OnMobDied.Broadcast(DeadMob);
 	BP_OnMobDied(DeadMob);
@@ -1446,4 +1552,204 @@ void AMobManagerActor::DrawDebugVisuals() const
 			*GetName(), GetActiveCount(), MaxNumOfMobs),
 		nullptr, FColor::White, DebugLifetime, false, 1.2f);
 #endif
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Special / event-driven spawn rules
+// ─────────────────────────────────────────────────────────────────────────────
+
+bool AMobManagerActor::DoesAnyPlayerHaveKeyItem_Implementation(FName KeyItemId)
+{
+	// Default C++ implementation returns false. Designers override in BP to
+	// query whatever inventory system the project actually uses — this keeps
+	// the mob spawn system from hard-depending on InventoryManager.
+	return false;
+}
+
+int32 AMobManagerActor::GetKillCountForClass(TSubclassOf<APHBaseCharacter> MobClass) const
+{
+	if (!MobClass)
+	{
+		return TotalKills;
+	}
+
+	int32 Count = 0;
+	for (const TPair<TSubclassOf<APHBaseCharacter>, int32>& Pair : KillsByClass)
+	{
+		if (Pair.Key && Pair.Key->IsChildOf(MobClass))
+		{
+			Count += Pair.Value;
+		}
+	}
+	return Count;
+}
+
+int32 AMobManagerActor::GetTotalKillCount() const
+{
+	return TotalKills;
+}
+
+void AMobManagerActor::ResetKillCounts()
+{
+	KillsByClass.Empty();
+	TotalKills = 0;
+}
+
+void AMobManagerActor::EvaluateSpecialSpawnRules()
+{
+	if (!HasAuthority() || SpecialSpawnRules.Num() == 0)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World) { return; }
+
+	const float Now = World->GetTimeSeconds();
+
+	for (FMobSpecialSpawnRule& Rule : SpecialSpawnRules)
+	{
+		if (!UMobSpawnConditionEvaluator::IsRuleReady(Rule, this, Now))
+		{
+			continue;
+		}
+
+		APHBaseCharacter* SpawnedMob = nullptr;
+
+		switch (Rule.Action)
+		{
+		case EMobSpawnRuleAction::ForceSpawnSpecialMob:
+		{
+			if (!Rule.SpecialMobClass)
+			{
+				PH_LOG_WARNING(LogMobManager,
+					TEXT("Rule '%s' ForceSpawnSpecialMob has no SpecialMobClass set"),
+					*Rule.RuleId.ToString());
+				continue;
+			}
+
+			// Pipe the rule's ForcedTier through so ApplyModifierComponent
+			// picks it up during FinalizeSpawn below.
+			PendingForcedTier = Rule.ForcedTier;
+
+			// Get a valid location for the special spawn. Uses the same
+			// placement pipeline as normal spawns so nav/collision/distance
+			// rules still apply.
+			FVector Location;
+			if (!GetRandomSpawnLocation(Location))
+			{
+				PH_LOG_WARNING(LogMobManager,
+					TEXT("Rule '%s' could not find a valid spawn location"),
+					*Rule.RuleId.ToString());
+				PendingForcedTier = EMonsterTier::MT_Normal;
+				continue;
+			}
+
+			const FRotator Rotation(0.0f, FMath::FRandRange(0.0f, 360.0f), 0.0f);
+			SpawnedMob = HiddenSpawn(Rule.SpecialMobClass, Location, Rotation);
+			if (!SpawnedMob)
+			{
+				PH_LOG_WARNING(LogMobManager,
+					TEXT("Rule '%s' HiddenSpawn failed"), *Rule.RuleId.ToString());
+				PendingForcedTier = EMonsterTier::MT_Normal;
+				continue;
+			}
+
+			FinalizeSpawn(SpawnedMob, Location);
+			break;
+		}
+
+		case EMobSpawnRuleAction::BoostNextSpawnTier:
+		{
+			// No immediate spawn — just queue the tier boost. The next normal
+			// SpawnTick iteration (later in this same call) will consume it.
+			PendingForcedTier = Rule.ForcedTier;
+			break;
+		}
+
+		default:
+			PH_LOG_WARNING(LogMobManager,
+				TEXT("Rule '%s' has unknown Action"), *Rule.RuleId.ToString());
+			continue;
+		}
+
+		UMobSpawnConditionEvaluator::MarkRuleFired(Rule, Now);
+		OnSpecialSpawnExecuted.Broadcast(Rule.RuleId, SpawnedMob);
+
+		UE_LOG(LogMobManager, Log,
+			TEXT("[%s] Special spawn rule '%s' fired (Action=%d, Mob=%s)"),
+			*GetName(), *Rule.RuleId.ToString(),
+			static_cast<int32>(Rule.Action),
+			SpawnedMob ? *SpawnedMob->GetName() : TEXT("<none>"));
+	}
+}
+
+bool AMobManagerActor::ForceSpawnSpecial(FName RuleId)
+{
+	if (!HasAuthority()) { return false; }
+
+	for (FMobSpecialSpawnRule& Rule : SpecialSpawnRules)
+	{
+		if (Rule.RuleId != RuleId) { continue; }
+		if (!Rule.bEnabled)        { return false; }
+
+		UWorld* World = GetWorld();
+		if (!World) { return false; }
+		const float Now = World->GetTimeSeconds();
+
+		// Respect lifetime state — OneShot rules that already fired stay fired,
+		// cooldowns still apply. Only the trigger check is bypassed.
+		switch (Rule.Lifetime)
+		{
+		case EMobSpawnRuleLifetime::OneShot:
+			if (Rule.bHasFired) { return false; }
+			break;
+		case EMobSpawnRuleLifetime::RepeatableWithCooldown:
+			if (Rule.LastFireTime >= 0.0f &&
+			    (Now - Rule.LastFireTime) < Rule.CooldownSeconds)
+			{
+				return false;
+			}
+			break;
+		}
+
+		APHBaseCharacter* SpawnedMob = nullptr;
+
+		if (Rule.Action == EMobSpawnRuleAction::ForceSpawnSpecialMob)
+		{
+			if (!Rule.SpecialMobClass) { return false; }
+			PendingForcedTier = Rule.ForcedTier;
+
+			// Cache tick values so the spawn pipeline has fresh player locations.
+			CacheTickValues();
+
+			FVector Location;
+			if (!GetRandomSpawnLocation(Location))
+			{
+				PendingForcedTier = EMonsterTier::MT_Normal;
+				return false;
+			}
+
+			const FRotator Rotation(0.0f, FMath::FRandRange(0.0f, 360.0f), 0.0f);
+			SpawnedMob = HiddenSpawn(Rule.SpecialMobClass, Location, Rotation);
+			if (!SpawnedMob)
+			{
+				PendingForcedTier = EMonsterTier::MT_Normal;
+				return false;
+			}
+			FinalizeSpawn(SpawnedMob, Location);
+		}
+		else // BoostNextSpawnTier
+		{
+			PendingForcedTier = Rule.ForcedTier;
+		}
+
+		UMobSpawnConditionEvaluator::MarkRuleFired(Rule, Now);
+		OnSpecialSpawnExecuted.Broadcast(Rule.RuleId, SpawnedMob);
+		return true;
+	}
+
+	PH_LOG_WARNING(LogMobManager,
+		TEXT("ForceSpawnSpecial: no rule found with ID '%s'"), *RuleId.ToString());
+	return false;
 }

@@ -18,10 +18,47 @@ class UMonsterSpawnConfig;
 class UDataTable;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// FMonsterStatVariation — per-instance random multipliers rolled once at spawn.
+//
+// This is what makes two Normal Goblins mechanically different. Every mob —
+// regardless of tier — rolls one of these so nothing is ever perfectly identical.
+// Tier-based mods are still applied on top for Magic / Rare / Unique.
+// ─────────────────────────────────────────────────────────────────────────────
+USTRUCT(BlueprintType)
+struct FMonsterStatVariation
+{
+	GENERATED_BODY()
+
+	/** 1.0 = no change. Rolled in [1 - HPVariancePct, 1 + HPVariancePct]. */
+	UPROPERTY(BlueprintReadOnly, Category = "Variation")
+	float HPMultiplier = 1.0f;
+
+	/** 1.0 = no change. Rolled in [1 - DamageVariancePct, 1 + DamageVariancePct]. */
+	UPROPERTY(BlueprintReadOnly, Category = "Variation")
+	float DamageMultiplier = 1.0f;
+
+	/** 1.0 = no change. Applied directly to MaxWalkSpeed. */
+	UPROPERTY(BlueprintReadOnly, Category = "Variation")
+	float MoveSpeedMultiplier = 1.0f;
+
+	/** Additive bonus to all resistances in percent. E.g. +3.0 = +3% to all resists. */
+	UPROPERTY(BlueprintReadOnly, Category = "Variation")
+	float ResistBonusPct = 0.0f;
+
+	/** True if this struct has been rolled (so we don't double-roll on reroll). */
+	UPROPERTY(BlueprintReadOnly, Category = "Variation")
+	bool bRolled = false;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Delegate — broadcast after all mods are applied so UI can refresh the name
 // ─────────────────────────────────────────────────────────────────────────────
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMonsterModsApplied,
 	EMonsterTier, Tier, const FText&, FullDisplayName);
+
+/** Broadcast after the per-instance base-stat variation has been rolled. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMonsterBaseStatVariationRolled,
+	const FMonsterStatVariation&, Variation);
 
 // ─────────────────────────────────────────────────────────────────────────────
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -68,6 +105,34 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
 	EMonsterTier ForcedTier = EMonsterTier::MT_Normal;
 
+	// ── Per-instance base-stat variation ─────────────────────────────────────
+	// Every mob — even Normal-tier — rolls a small random variation on base stats
+	// so no two mobs are ever mechanically identical. Set variances to 0 to disable.
+
+	/** Master toggle for per-instance variation. Turn off for cinematic / fixed encounters. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variation")
+	bool bEnableBaseStatVariation = true;
+
+	/** Max symmetric HP variance fraction. 0.15 = ±15% HP. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variation",
+		meta = (EditCondition = "bEnableBaseStatVariation", ClampMin = 0.0f, ClampMax = 1.0f))
+	float HPVariancePct = 0.15f;
+
+	/** Max symmetric damage variance fraction. 0.10 = ±10% damage. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variation",
+		meta = (EditCondition = "bEnableBaseStatVariation", ClampMin = 0.0f, ClampMax = 1.0f))
+	float DamageVariancePct = 0.10f;
+
+	/** Max symmetric move speed variance fraction. 0.08 = ±8% walk speed. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variation",
+		meta = (EditCondition = "bEnableBaseStatVariation", ClampMin = 0.0f, ClampMax = 1.0f))
+	float MoveSpeedVariancePct = 0.08f;
+
+	/** Max symmetric additive resist bonus in percent. 5.0 = ±5% flat resist. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variation",
+		meta = (EditCondition = "bEnableBaseStatVariation", ClampMin = 0.0f, ClampMax = 25.0f))
+	float ResistVariancePct = 5.0f;
+
 	// ── Runtime state ─────────────────────────────────────────────────────────
 
 	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
@@ -75,6 +140,10 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
 	TArray<FMonsterModRow> AppliedMods;
+
+	/** Per-instance base-stat variation rolled at spawn. Folded into combined getters. */
+	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
+	FMonsterStatVariation BaseStatVariation;
 
 	/** Full display name built from base name + prefix/suffix labels */
 	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
@@ -107,6 +176,16 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Modifier")
 	void RerollMods();
 
+	/**
+	 * Roll the per-instance base-stat variation struct. Idempotent — only rolls
+	 * the first time it's called; subsequent calls are no-ops unless the struct
+	 * has been reset (e.g. via RerollMods).
+	 * Called automatically at the top of RollAndApplyMods, so designers usually
+	 * don't need to invoke it directly.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Modifier")
+	void RollBaseStatVariation();
+
 	/** Returns the total HP multiplier from all applied mods combined. */
 	UFUNCTION(BlueprintPure, Category = "Modifier")
 	float GetCombinedHPMultiplier() const;
@@ -119,6 +198,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Modifier|Events")
 	FOnMonsterModsApplied OnMonsterModsApplied;
+
+	UPROPERTY(BlueprintAssignable, Category = "Modifier|Events")
+	FOnMonsterBaseStatVariationRolled OnBaseStatVariationRolled;
 
 protected:
 	bool bModsApplied = false;
