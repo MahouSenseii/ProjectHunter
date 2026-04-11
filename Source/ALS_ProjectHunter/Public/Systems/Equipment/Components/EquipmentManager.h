@@ -263,4 +263,11 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerUnequipItem(EEquipmentSlot Slot, bool bMoveToBag);
 
-	/** Kept a
+	/**
+	 * Kept around to mirror equipment changes to all clients.
+	 * Server invokes this after a successful equip/unequip mutation so that
+	 * remote-client UIs and listeners can react via OnEquipmentChanged.
+	 */
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastEquipmentChanged(EEquipmentSlot Slot, UItemInstance* NewItem, UItemInstance* OldItem);
+};

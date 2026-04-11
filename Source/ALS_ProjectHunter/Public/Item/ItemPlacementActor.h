@@ -1,6 +1,6 @@
-// Item/WeaponPlacementActor.h
+// Item/ItemPlacementActor.h
 //
-// Editor-placeable item for "this weapon always lives at this exact spot."
+// Editor-placeable item for "this item always lives at this exact spot."
 //
 // Drop one of these in a level, point its BaseItemHandle at any row in your
 // item DataTable, and on BeginPlay it will create a fresh UItemInstance and
@@ -9,9 +9,13 @@
 // item — same ISM rendering, same spin/bob, same pickup flow through
 // FGroundItemPickupManager.
 //
+// Works for ANY item type — weapons, armor, consumables, materials, quest
+// items, currency.  The DataTable row determines the mesh, type, and pickup
+// behaviour automatically.
+//
 // Use this for fixed-location pickups (tutorial weapons, quest rewards,
-// shrine offerings, etc.) without needing a chest, container, or any custom
-// pickup logic.
+// shrine offerings, vendor stock, set dressing, etc.) without needing a
+// chest, container, or any custom pickup logic.
 
 #pragma once
 
@@ -19,24 +23,24 @@
 #include "GameFramework/Actor.h"
 #include "Engine/DataTable.h"
 #include "Item/Library/ItemEnums.h"
-#include "WeaponPlacementActor.generated.h"
+#include "ItemPlacementActor.generated.h"
 
 class UItemInstance;
 class UBillboardComponent;
 class USceneComponent;
 
 /**
- * AWeaponPlacementActor — places a single item in the world via the
+ * AItemPlacementActor — places a single item in the world via the
  * existing UGroundItemSubsystem (ISM-backed ground items).
  */
 UCLASS(Blueprintable, BlueprintType,
-       meta = (DisplayName = "Weapon Placement (Ground Item)"))
-class ALS_PROJECTHUNTER_API AWeaponPlacementActor : public AActor
+       meta = (DisplayName = "Item Placement (Ground Item)"))
+class ALS_PROJECTHUNTER_API AItemPlacementActor : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	AWeaponPlacementActor();
+	AItemPlacementActor();
 
 	// ═══════════════════════════════════════════════
 	// CONFIG (set in editor or Blueprint)
@@ -59,6 +63,11 @@ public:
 	/** Roll affixes on spawn (only meaningful for Grade E+ equipment). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	bool bGenerateAffixes = true;
+
+	/** Stack quantity (only meaningful for stackable items: consumables, materials, currency). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item",
+	          meta = (ClampMin = "1"))
+	int32 Quantity = 1;
 
 	/** Auto-spawn the item into the GroundItemSubsystem on BeginPlay. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
@@ -101,6 +110,15 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	/**
+	 * Deferred spawn hook.  Bound to UWorld::OnWorldBeginPlay when this actor's
+	 * own BeginPlay runs before the world has finished its BeginPlay dispatch
+	 * phase.  Fires exactly once, after HasBegunPlay() has flipped, which is
+	 * when UGroundItemSubsystem::EnsureISMContainerExists can actually spawn
+	 * the ISM container.
+	 */
+	void HandleWorldBeginPlay();
+
 	/** Editor-only billboard so designers can find the placement in viewport. */
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<USceneComponent> SceneRoot;
@@ -114,4 +132,7 @@ private:
 	/** Cached ID returned by AddItemToGround.  INDEX_NONE until SpawnIntoWorld runs. */
 	UPROPERTY(Transient)
 	int32 RegisteredItemID = INDEX_NONE;
+
+	/** Handle for the OnWorldBeginPlay subscription so we can unbind in EndPlay. */
+	FDelegateHandle WorldBeginPlayHandle;
 };
