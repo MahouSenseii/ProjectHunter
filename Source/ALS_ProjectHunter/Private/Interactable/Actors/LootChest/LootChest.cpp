@@ -537,10 +537,64 @@ void ALootChest::UpdateMeshForState()
 			}
 			break;
 		}
+		return;
 	}
 
-	// For skeletal mesh, animation handles the visual state
-	// (No mesh swap needed)
+	// ─────────────────────────────────────────────
+	// SKELETAL MESH: drive animation from state so that BOTH the server
+	// (via SetChestState) and remote clients (via OnRep_ChestState) play
+	// the OpenAnimation. Previously only the server called
+	// PlaySkeletalAnimation() from StartOpenAnimation(), which meant
+	// clients never saw the chest open. This also pins the mesh to the
+	// correct pose for terminal states so a non-looping single-node
+	// animation doesn't snap back to frame 0 when playback ends.
+	// ─────────────────────────────────────────────
+	if (!Skeletal_ChestMesh)
+	{
+		return;
+	}
+
+	const bool bCanAnimate = AnimationConfig.bPlayOpenAnimation && VisualConfig.OpenAnimation != nullptr;
+
+	switch (ChestState)
+	{
+	case EChestState::CS_Opening:
+		if (bCanAnimate)
+		{
+			PlaySkeletalAnimation(false);
+		}
+		else if (VisualConfig.OpenAnimation)
+		{
+			SetSkeletalAnimationPosition(1.0f);
+		}
+		break;
+
+	case EChestState::CS_Open:
+	case EChestState::CS_Looted:
+		// Pin fully-open pose so the non-looping animation doesn't
+		// rest back on frame 0 once PlayLength is reached.
+		if (VisualConfig.OpenAnimation)
+		{
+			SetSkeletalAnimationPosition(1.0f);
+		}
+		break;
+
+	case EChestState::CS_Closing:
+	case EChestState::CS_Respawning:
+		if (bCanAnimate)
+		{
+			PlaySkeletalAnimation(true);
+		}
+		break;
+
+	case EChestState::CS_Closed:
+		// Ensure closed pose (frame 0) after reset / initial spawn.
+		if (VisualConfig.OpenAnimation)
+		{
+			SetSkeletalAnimationPosition(0.0f);
+		}
+		break;
+	}
 }
 
 void ALootChest::UpdateInteractionForState()
@@ -741,11 +795,11 @@ void ALootChest::StartOpenAnimation()
 {
 	const float Duration = GetAnimationDuration();
 
-	// Start animation based on mesh type
-	if (!VisualConfig.bUseStaticMesh)
-	{
-		PlaySkeletalAnimation(false);
-	}
+	// NOTE: The actual skeletal animation is now kicked off by
+	// UpdateMeshForState() in response to the state transition
+	// (CS_Closed -> CS_Opening). This guarantees remote clients
+	// play it too via OnRep_ChestState. The server only needs the
+	// completion timer below so FinalizeOpenSequence() runs.
 
 	// Set timer for completion callback
 	GetWorldTimerManager().SetTimer(
@@ -771,11 +825,9 @@ void ALootChest::StartCloseAnimation()
 {
 	const float Duration = GetAnimationDuration();
 
-	// Start reverse animation
-	if (!VisualConfig.bUseStaticMesh)
-	{
-		PlaySkeletalAnimation(true); // Reverse
-	}
+	// NOTE: Reverse playback is driven by UpdateMeshForState() when the
+	// state transitions to CS_Closing / CS_Respawning, so clients play it
+	// too. The server only needs the completion timer below.
 
 	// Set timer for completion callback
 	GetWorldTimerManager().SetTimer(
@@ -816,16 +868,38 @@ void ALootChest::PlaySkeletalAnimation(bool bReverse)
 		return;
 	}
 
-	const float PlayRate = AnimationConfig.AnimationPlayRate * (bReverse ? -1.0f : 1.0f);
-	const float StartPosition = bReverse ? VisualConfig.OpenAnimation->GetPlayLength() : 0.0f;
+	// Ensure we're in single-node mode (ConfigureMeshVisibilityAndCollision
+	// may have set rate to 0 via SetSkeletalAnimationPosition; we must
+	// fully re-drive the instance or it will appear "stuck" / "reset").
+	Skeletal_ChestMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 
-	// Play animation with specified rate and start position
-	Skeletal_ChestMesh->PlayAnimation(VisualConfig.OpenAnimation, false);
-	Skeletal_ChestMesh->SetPlayRate(PlayRate);
-	Skeletal_ChestMesh->SetPosition(StartPosition);
-	
+	// SetAnimation() guarantees a valid UAnimSingleNodeInstance is attached
+	// to the mesh's current asset before we poke at it.
+	Skeletal_ChestMesh->SetAnimation(VisualConfig.OpenAnimation);
+
+	UAnimSingleNodeInstance* SingleNode = Skeletal_ChestMesh->GetSingleNodeInstance();
+	if (!SingleNode)
+	{
+		UE_LOG(LogLootChest, Warning, TEXT("%s: Skeletal mesh has no single-node instance; cannot play OpenAnimation"),
+			*GetName());
+		return;
+	}
+
+	const float AbsRate     = FMath::Max(AnimationConfig.AnimationPlayRate, 0.01f);
+	const float PlayRate    = bReverse ? -AbsRate : AbsRate;
+	const float AnimLength  = VisualConfig.OpenAnimation->GetPlayLength();
+	const float StartPos    = bReverse ? AnimLength : 0.0f;
+
+	// Order matters: set asset + position BEFORE toggling Playing, and set
+	// the signed PlayRate last so Play() (which resets rate to +1) can't
+	// clobber us.
+	SingleNode->SetLooping(false);
+	SingleNode->SetPosition(StartPos, /*bFireNotifies*/ false);
+	SingleNode->SetPlaying(true);
+	SingleNode->SetPlayRate(PlayRate);
+
 	UE_LOG(LogLootChest, Verbose, TEXT("%s: Playing skeletal animation (Rate: %.2f, Start: %.2f, Reverse: %s)"),
-		*GetName(), PlayRate, StartPosition, bReverse ? TEXT("Yes") : TEXT("No"));
+		*GetName(), PlayRate, StartPos, bReverse ? TEXT("Yes") : TEXT("No"));
 }
 
 void ALootChest::StopSkeletalAnimation()

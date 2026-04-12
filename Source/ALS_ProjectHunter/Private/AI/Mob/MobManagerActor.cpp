@@ -1290,44 +1290,6 @@ void AMobManagerActor::FinalizeSpawn(APHBaseCharacter* Mob, const FVector& Spawn
 		}
 	}
 
-	// ── DIAGNOSTIC: dump everything that determines whether AI Move To works
-	// Remove once spawned-mob movement is verified working in PIE.
-	// Look for: MovementMode (1=Walking, 3=Falling, 0=None), Controller != None,
-	// Brain != None, OnNav=1, BTRunning=1.
-#if !UE_BUILD_SHIPPING
-	{
-		const int32 MoveMode = Mob->GetCharacterMovement()
-			? (int32)Mob->GetCharacterMovement()->MovementMode : -1;
-		const bool bMoveTickEnabled = Mob->GetCharacterMovement()
-			? Mob->GetCharacterMovement()->IsComponentTickEnabled() : false;
-		AAIController* DebugAIC = Cast<AAIController>(Mob->GetController());
-		UBrainComponent* DebugBrain = DebugAIC ? DebugAIC->GetBrainComponent() : nullptr;
-		const bool bBrainRunning = DebugBrain ? DebugBrain->IsRunning() : false;
-		const bool bBrainPaused  = DebugBrain ? DebugBrain->IsPaused()  : false;
-
-		bool bOnNav = false;
-		if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
-		{
-			FNavLocation Projected;
-			bOnNav = NavSys->ProjectPointToNavigation(
-				Mob->GetActorLocation(), Projected, FVector(200.f, 200.f, 400.f));
-		}
-
-		UE_LOG(LogMobManager, Warning,
-			TEXT("[SpawnDiag] Mob=%s Loc=%s MoveMode=%d MoveTick=%d "
-			     "Controller=%s Brain=%s BrainRunning=%d BrainPaused=%d OnNav=%d"),
-			*Mob->GetName(),
-			*Mob->GetActorLocation().ToString(),
-			MoveMode,
-			bMoveTickEnabled ? 1 : 0,
-			*GetNameSafe(Mob->GetController()),
-			*GetNameSafe(DebugBrain),
-			bBrainRunning ? 1 : 0,
-			bBrainPaused ? 1 : 0,
-			bOnNav ? 1 : 0);
-	}
-#endif
-
 	// ── 5. Notify ─────────────────────────────────────────────────────────
 	OnMobSpawned.Broadcast(Mob);
 	BP_OnMobSpawned(Mob);

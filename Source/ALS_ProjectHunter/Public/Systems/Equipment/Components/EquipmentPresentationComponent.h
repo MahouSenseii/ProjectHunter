@@ -111,7 +111,7 @@ protected:
 	static FName GetSocketContextForSlot(EEquipmentSlot Slot);
 
 	/** Resolve the attachment socket from item data for the given slot. */
-	FName ResolveSocketForSlot(EEquipmentSlot Slot, const FItemBase* BaseData) const;
+	static FName ResolveSocketForSlot(EEquipmentSlot Slot, const FItemBase* BaseData);
 
 	/** Convert item-level attachment rules to the engine attachment rule struct. */
 	static FAttachmentTransformRules ConvertAttachmentRules(const FItemAttachmentRules& ItemRules);

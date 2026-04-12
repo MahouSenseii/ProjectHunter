@@ -76,7 +76,22 @@ EEquipmentSlot FEquipmentSlotResolver::DetermineEquipmentSlot(const UEquipmentMa
 
 bool FEquipmentSlotResolver::CanEquipToSlot(const UEquipmentManager& Manager, UItemInstance* Item, EEquipmentSlot Slot)
 {
-	return UEquipmentFunctionLibrary::IsItemCompatibleWithSlot(Item, Slot);
+	if (UEquipmentFunctionLibrary::IsItemCompatibleWithSlot(Item, Slot))
+	{
+		return true;
+	}
+
+	// Allow a one-handed weapon to be placed into the off hand via the
+	// normal (non-ground-pickup) EquipItem() path. Without this, any UI
+	// drag-drop onto the off-hand slot or any BP/code call of the form
+	// EquipmentManager::EquipItem(sword, ES_OffHand) is silently rejected
+	// by EquipItemInternal because the sword's canonical slot is MainHand.
+	if (Slot == EEquipmentSlot::ES_OffHand && UEquipmentFunctionLibrary::IsOneHandedWeapon(Item))
+	{
+		return true;
+	}
+
+	return false;
 }
 
 bool FEquipmentSlotResolver::TryEquipGroundPickupItem(UEquipmentManager& Manager, UItemInstance* Item, EEquipmentSlot& OutEquippedSlot, bool bSwapToBag)
@@ -104,13 +119,45 @@ bool FEquipmentSlotResolver::TryEquipGroundPickupItem(UEquipmentManager& Manager
 
 	if (UEquipmentFunctionLibrary::IsOneHandedWeapon(Item))
 	{
-		if (EquipmentSlotResolverPrivate::CanEquipGroundPickupToSlot(Manager, Item, EEquipmentSlot::ES_MainHand, bSwapToBag))
+		// Dual-wield-friendly priority:
+		//   1. Empty main hand  -> main hand
+		//   2. Empty off hand   -> off hand   (this was unreachable before)
+		//   3. Swap main hand into the bag (displacement) -> main hand
+		//   4. Swap off hand into the bag -> off hand
+		// Previously we checked CanEquipGroundPickupToSlot(MainHand) first,
+		// which returns true whenever the bag has room to absorb the old
+		// main hand item. That meant a 1H weapon *always* displaced main
+		// hand and the off-hand branch was effectively dead code whenever
+		// the player had any free bag space.
+		const bool bMainHandEmpty = !Manager.IsSlotOccupied(EEquipmentSlot::ES_MainHand);
+		const bool bOffHandEmpty  = !Manager.IsSlotOccupied(EEquipmentSlot::ES_OffHand);
+
+		// Two-handed weapon currently equipped blocks either hand slot
+		// regardless, because CanEquipGroundPickupToSlot will still need
+		// to swap the two-hand item to the bag. Keep that check via the
+		// helper below.
+		auto CanUseSlot = [&](EEquipmentSlot Slot) -> bool
+		{
+			return EquipmentSlotResolverPrivate::CanEquipGroundPickupToSlot(Manager, Item, Slot, bSwapToBag);
+		};
+
+		if (bMainHandEmpty && CanUseSlot(EEquipmentSlot::ES_MainHand))
 		{
 			ChosenSlot = EEquipmentSlot::ES_MainHand;
 		}
-		else if (!Manager.IsSlotOccupied(EEquipmentSlot::ES_OffHand)
-			&& EquipmentSlotResolverPrivate::CanEquipGroundPickupToSlot(Manager, Item, EEquipmentSlot::ES_OffHand, bSwapToBag))
+		else if (bOffHandEmpty && CanUseSlot(EEquipmentSlot::ES_OffHand))
 		{
+			ChosenSlot = EEquipmentSlot::ES_OffHand;
+		}
+		else if (CanUseSlot(EEquipmentSlot::ES_MainHand))
+		{
+			// Both hands occupied (or main hand occupied + off hand
+			// unusable): displace main hand to bag.
+			ChosenSlot = EEquipmentSlot::ES_MainHand;
+		}
+		else if (CanUseSlot(EEquipmentSlot::ES_OffHand))
+		{
+			// Last resort: displace off hand to bag.
 			ChosenSlot = EEquipmentSlot::ES_OffHand;
 		}
 		else

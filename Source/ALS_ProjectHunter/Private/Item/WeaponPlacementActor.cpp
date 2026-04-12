@@ -1,6 +1,6 @@
-// Item/ItemPlacementActor.cpp
+// Item/WeaponPlacementActor.cpp
 
-#include "Item/ItemPlacementActor.h"
+#include "Item/WeaponPlacementActor.h"
 
 #include "Item/ItemInstance.h"
 #include "Tower/Subsystem/GroundItemSubsystem.h"
@@ -11,7 +11,7 @@
 #include "Components/BillboardComponent.h"
 #endif
 
-AItemPlacementActor::AItemPlacementActor()
+AWeaponPlacementActor::AWeaponPlacementActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -29,70 +29,18 @@ AItemPlacementActor::AItemPlacementActor()
 #endif
 }
 
-void AItemPlacementActor::BeginPlay()
+void AWeaponPlacementActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!bSpawnOnBeginPlay)
-	{
-		return;
-	}
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	// ── Order-of-BeginPlay fix ────────────────────────────────────────────
-	// UGroundItemSubsystem::EnsureISMContainerExists refuses to spawn its
-	// ISM container actor until World->HasBegunPlay() is true.  That flag
-	// is set AFTER every actor's BeginPlay has fired, so calling
-	// SpawnIntoWorld() directly here would fail for any placement actor
-	// that was placed in the level at design time (which is all of them).
-	//
-	// UWorld::OnWorldBeginPlay is broadcast exactly once, at the end of
-	// UWorld::BeginPlay(), after HasBegunPlay() has flipped.  That's the
-	// correct hook for "run this after everyone is alive."
-	//
-	// For placement actors spawned AT RUNTIME (after the world has already
-	// begun play — e.g. streamed levels, quest rewards), HasBegunPlay() is
-	// already true, so we can spawn immediately without deferring.
-	if (World->HasBegunPlay())
+	if (bSpawnOnBeginPlay)
 	{
 		SpawnIntoWorld();
 	}
-	else
-	{
-		WorldBeginPlayHandle = World->OnWorldBeginPlay.AddUObject(
-			this, &AItemPlacementActor::HandleWorldBeginPlay);
-	}
 }
 
-void AItemPlacementActor::HandleWorldBeginPlay()
+void AWeaponPlacementActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// Unbind first so we're safe against any future re-broadcast.
-	if (UWorld* World = GetWorld())
-	{
-		World->OnWorldBeginPlay.Remove(WorldBeginPlayHandle);
-	}
-	WorldBeginPlayHandle.Reset();
-
-	SpawnIntoWorld();
-}
-
-void AItemPlacementActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	// Unbind the deferred hook in case we're destroyed before it ever fired.
-	if (WorldBeginPlayHandle.IsValid())
-	{
-		if (UWorld* World = GetWorld())
-		{
-			World->OnWorldBeginPlay.Remove(WorldBeginPlayHandle);
-		}
-		WorldBeginPlayHandle.Reset();
-	}
-
 	if (bRemoveOnDestroyed && RegisteredItemID != INDEX_NONE)
 	{
 		RemoveFromWorld();
@@ -101,7 +49,7 @@ void AItemPlacementActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-int32 AItemPlacementActor::SpawnIntoWorld()
+int32 AWeaponPlacementActor::SpawnIntoWorld()
 {
 	// Idempotent — if we already registered an item, do nothing.
 	if (RegisteredItemID != INDEX_NONE)
@@ -113,7 +61,7 @@ int32 AItemPlacementActor::SpawnIntoWorld()
 	if (BaseItemHandle.IsNull() || BaseItemHandle.DataTable == nullptr)
 	{
 		UE_LOG(LogTemp, Warning,
-			TEXT("ItemPlacementActor '%s': BaseItemHandle is null or has no "
+			TEXT("WeaponPlacementActor '%s': BaseItemHandle is null or has no "
 			     "DataTable assigned — nothing will be placed."),
 			*GetName());
 		return INDEX_NONE;
@@ -129,7 +77,7 @@ int32 AItemPlacementActor::SpawnIntoWorld()
 	if (!GroundItems)
 	{
 		UE_LOG(LogTemp, Warning,
-			TEXT("ItemPlacementActor '%s': UGroundItemSubsystem is unavailable."),
+			TEXT("WeaponPlacementActor '%s': UGroundItemSubsystem is unavailable."),
 			*GetName());
 		return INDEX_NONE;
 	}
@@ -151,17 +99,10 @@ int32 AItemPlacementActor::SpawnIntoWorld()
 	if (!NewItem->HasValidBaseData())
 	{
 		UE_LOG(LogTemp, Warning,
-			TEXT("ItemPlacementActor '%s': Initialized item has no valid base "
+			TEXT("WeaponPlacementActor '%s': Initialized item has no valid base "
 			     "data — row handle probably points at a row that doesn't exist."),
 			*GetName());
 		return INDEX_NONE;
-	}
-
-	// Apply quantity for stackable items.
-	if (Quantity > 1)
-	{
-		NewItem->SetQuantity(Quantity);
-		NewItem->UpdateTotalWeight();
 	}
 
 	// ── Register with the ground subsystem at our transform ──────────────
@@ -173,20 +114,14 @@ int32 AItemPlacementActor::SpawnIntoWorld()
 	if (RegisteredItemID == INDEX_NONE)
 	{
 		UE_LOG(LogTemp, Warning,
-			TEXT("ItemPlacementActor '%s': AddItemToGround returned INDEX_NONE."),
+			TEXT("WeaponPlacementActor '%s': AddItemToGround returned INDEX_NONE."),
 			*GetName());
-	}
-	else
-	{
-		UE_LOG(LogTemp, Log,
-			TEXT("ItemPlacementActor '%s': spawned item ID %d at %s."),
-			*GetName(), RegisteredItemID, *GetActorLocation().ToString());
 	}
 
 	return RegisteredItemID;
 }
 
-UItemInstance* AItemPlacementActor::RemoveFromWorld()
+UItemInstance* AWeaponPlacementActor::RemoveFromWorld()
 {
 	if (RegisteredItemID == INDEX_NONE)
 	{

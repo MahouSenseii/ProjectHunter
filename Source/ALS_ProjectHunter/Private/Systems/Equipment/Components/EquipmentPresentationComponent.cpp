@@ -166,7 +166,7 @@ void UEquipmentPresentationComponent::AttachItemVisual(EEquipmentSlot Slot, UIte
 
 void UEquipmentPresentationComponent::DetachItemVisual(EEquipmentSlot Slot)
 {
-	// Destroy runtime actor if present.
+	// Destroy a runtime actor if present.
 	if (TObjectPtr<AEquippedItemRuntimeActor>* FoundActor = SpawnedActors.Find(Slot))
 	{
 		if (AEquippedItemRuntimeActor* Actor = FoundActor->Get())
@@ -319,7 +319,7 @@ FName UEquipmentPresentationComponent::GetSocketContextForSlot(EEquipmentSlot Sl
 	}
 }
 
-FName UEquipmentPresentationComponent::ResolveSocketForSlot(EEquipmentSlot Slot, const FItemBase* BaseData) const
+FName UEquipmentPresentationComponent::ResolveSocketForSlot(EEquipmentSlot Slot, const FItemBase* BaseData)
 {
 	if (!BaseData)
 	{

@@ -101,6 +101,7 @@ UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Ma
 		return nullptr;
 	}
 
+	
 	if (!BaseData->IsEquippable())
 	{
 		PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal rejected Item=%s because it is not equippable.", *GetNameSafe(Item));
