@@ -102,7 +102,8 @@ APHBaseCharacter* UMobPoolSubsystem::Acquire(
 	}
 	if (UCharacterMovementComponent* Move = Mob->GetCharacterMovement())
 	{
-		Move->DisableMovement();
+		Move->StopMovementImmediately();
+		Move->SetComponentTickEnabled(false);
 	}
 
 	UE_LOG(LogMobPool, Verbose,
@@ -281,14 +282,14 @@ void UMobPoolSubsystem::DeactivateMob(APHBaseCharacter* Mob) const
 	{
 		if (UBrainComponent* Brain = AIC->GetBrainComponent())
 		{
-			Brain->StopLogic(TEXT("MobPoolRelease"));
+			Brain->PauseLogic(TEXT("MobPoolRelease"));
 		}
 	}
 
 	if (UCharacterMovementComponent* Move = Mob->GetCharacterMovement())
 	{
 		Move->StopMovementImmediately();
-		Move->DisableMovement();
+		Move->SetComponentTickEnabled(false);
 	}
 
 
@@ -344,6 +345,7 @@ void UMobPoolSubsystem::PrepareMobForReuse(
 
 	if (UCharacterMovementComponent* Move = Mob->GetCharacterMovement())
 	{
-		Move->DisableMovement();
+		Move->StopMovementImmediately();
+		Move->SetComponentTickEnabled(false);
 	}
 }

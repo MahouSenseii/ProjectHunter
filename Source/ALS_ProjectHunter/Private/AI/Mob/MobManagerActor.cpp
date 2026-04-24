@@ -3,6 +3,7 @@
 #include "AI/Mob/MobPoolSubsystem.h"
 #include "AI/Mob/MobWanderInterface.h"
 #include "AI/Mob/MobSpawnConditionEvaluator.h"
+#include "AI/ALSAIController.h"
 #include "Systems/AI/Components/MonsterModifierComponent.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Systems/Stats/Components/StatsManager.h"
@@ -1128,6 +1129,7 @@ APHBaseCharacter* AMobManagerActor::HiddenSpawn(
 	// ── Make invisible and inert for the validation phase ─────────────────
 	Mob->SetActorHiddenInGame(true);
 	Mob->SetActorEnableCollision(false);
+	Mob->AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
 	// Pause any AI controller that may have auto-started
 	if (AAIController* AIC = Cast<AAIController>(Mob->GetController()))
@@ -1246,16 +1248,20 @@ void AMobManagerActor::FinalizeSpawn(APHBaseCharacter* Mob, const FVector& Spawn
 			Adjusted.Z = Floor.HitResult.ImpactPoint.Z + HalfHeight;
 			Mob->SetActorLocation(Adjusted, /*bSweep*/ false, nullptr, ETeleportType::TeleportPhysics);
 		}
-		else if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+		if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
 		{
-			// Floor probe missed (uneven geo, edge of nav, etc.) — fall back
-			// to projecting onto the navmesh.  This guarantees the mob ends
-			// up on a navigable point even if the local floor query fails.
+			// A walkable floor is not enough for AI movement: MoveTo and random
+			// reachable-point queries still fail if the pawn is off-nav. Always
+			// do a final navmesh projection here so placed spawners with
+			// bUseNavCheck disabled still land mobs on a navigable origin.
 			FNavLocation Projected;
 			if (NavSys->ProjectPointToNavigation(
 					Mob->GetActorLocation(),
 					Projected,
-					FVector(200.f, 200.f, 400.f)))
+					FVector(
+						FMath::Max(200.0f, NavProjectionExtent),
+						FMath::Max(200.0f, NavProjectionExtent),
+						FMath::Max(400.0f, NavProjectionVerticalExtent))))
 			{
 				if (Mob->GetCapsuleComponent())
 				{
@@ -1279,15 +1285,45 @@ void AMobManagerActor::FinalizeSpawn(APHBaseCharacter* Mob, const FVector& Spawn
 		// state from spawn, and forcing a mode flip would re-trigger the
 		// FindFloor race we just worked around.
 		Move->SetComponentTickEnabled(true);
+		if (Move->MovementMode == MOVE_None)
+		{
+			Move->SetMovementMode(MOVE_Walking);
+		}
 		Move->StopMovementImmediately();
 	}
 
-	if (AAIController* AIC = Cast<AAIController>(Mob->GetController()))
+	if (HasAuthority() && !Mob->GetController())
+	{
+		Mob->SpawnDefaultController();
+	}
+
+	if (AALSAIController* ALSAIC = Cast<AALSAIController>(Mob->GetController()))
+	{
+		UBrainComponent* Brain = ALSAIC->GetBrainComponent();
+		if ((!Brain || !Brain->IsRunning()) && ALSAIC->Behaviour)
+		{
+			ALSAIC->RunBehaviorTree(ALSAIC->Behaviour);
+			Brain = ALSAIC->GetBrainComponent();
+		}
+
+		if (Brain)
+		{
+			Brain->ResumeLogic(TEXT("MobManagerFinalized"));
+		}
+	}
+	else if (AAIController* AIC = Cast<AAIController>(Mob->GetController()))
 	{
 		if (UBrainComponent* Brain = AIC->GetBrainComponent())
 		{
 			Brain->ResumeLogic(TEXT("MobManagerFinalized"));
 		}
+	}
+	else
+	{
+		UE_LOG(LogMobManager, Warning,
+			TEXT("FinalizeSpawn: '%s' has no AIController after spawn finalization. "
+			     "Assign an AIControllerClass on the mob Blueprint so possession can start."),
+			*Mob->GetName());
 	}
 
 	// ── 5. Notify ─────────────────────────────────────────────────────────
