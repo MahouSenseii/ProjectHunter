@@ -41,6 +41,11 @@ void ULootComponent::BeginPlay()
 
 FLootResultBatch ULootComponent::DropLoot(float PlayerLuck, float PlayerMagicFind)
 {
+	if (!HasLootAuthority(TEXT("DropLoot")))
+	{
+		return FLootResultBatch();
+	}
+
 	return DropLootAtLocation(GetOwner()->GetActorLocation(), PlayerLuck, PlayerMagicFind);
 }
 
@@ -49,6 +54,11 @@ FLootResultBatch ULootComponent::DropLootAtLocation(
 	float PlayerLuck,
 	float PlayerMagicFind)
 {
+	if (!HasLootAuthority(TEXT("DropLootAtLocation")))
+	{
+		return FLootResultBatch();
+	}
+
 	if (!EnsureSubsystem())
 	{
 		UE_LOG(LogLootComponent, Error, TEXT("DropLoot: LootSubsystem unavailable"));
@@ -76,6 +86,11 @@ FLootResultBatch ULootComponent::DropLootAtLocation(
 
 FLootResultBatch ULootComponent::GenerateLoot(float PlayerLuck, float PlayerMagicFind)
 {
+	if (!HasLootAuthority(TEXT("GenerateLoot")))
+	{
+		return FLootResultBatch();
+	}
+
 	if (!EnsureSubsystem())
 	{
 		UE_LOG(LogLootComponent, Error, TEXT("GenerateLoot: LootSubsystem unavailable"));
@@ -95,6 +110,11 @@ FLootResultBatch ULootComponent::GenerateLoot(float PlayerLuck, float PlayerMagi
 
 void ULootComponent::SpawnLoot(const FLootResultBatch& Results, FVector Location)
 {
+	if (!HasLootAuthority(TEXT("SpawnLoot")))
+	{
+		return;
+	}
+
 	if (!EnsureSubsystem())
 	{
 		UE_LOG(LogLootComponent, Error, TEXT("SpawnLoot: LootSubsystem unavailable"));
@@ -186,4 +206,19 @@ bool ULootComponent::EnsureSubsystem() const
 	}
 
 	return CachedLootSubsystem != nullptr;
+}
+
+bool ULootComponent::HasLootAuthority(const TCHAR* FunctionName) const
+{
+	const AActor* OwnerActor = GetOwner();
+	if (OwnerActor && OwnerActor->HasAuthority())
+	{
+		return true;
+	}
+
+	UE_LOG(LogLootComponent, Warning,
+		TEXT("%s rejected: loot generation and spawning must run on the server for Owner=%s."),
+		FunctionName ? FunctionName : TEXT("LootOperation"),
+		*GetNameSafe(OwnerActor));
+	return false;
 }

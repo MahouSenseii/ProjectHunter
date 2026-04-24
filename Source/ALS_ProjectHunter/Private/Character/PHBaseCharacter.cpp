@@ -303,6 +303,12 @@ void APHBaseCharacter::InitializeAbilitySystem()
 		return;
 	}
 
+	const bool bHasLiveAttributeSet = EnsureAttributeSetRegisteredWithAbilitySystem();
+	if (!bHasLiveAttributeSet)
+	{
+		PH_LOG_ERROR(LogPHBaseCharacter, "InitializeAbilitySystem failed for Character=%s because the live AttributeSet was missing on ASC=%s.", *GetName(), *GetNameSafe(AbilitySystemComponent));
+		return;
+	}
 
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
 
@@ -344,14 +350,6 @@ void APHBaseCharacter::InitializeAbilitySystem()
 	}
 
 	// --- First-time initialization from here down ---
-
-	const bool bHasLiveAttributeSet = EnsureAttributeSetRegisteredWithAbilitySystem();
-
-	if (!bHasLiveAttributeSet)
-	{
-		PH_LOG_ERROR(LogPHBaseCharacter, "InitializeAbilitySystem failed for Character=%s because the live AttributeSet was missing on ASC=%s.", *GetName(), *GetNameSafe(AbilitySystemComponent));
-		return;
-	}
 
 	if (TagManager)
 	{

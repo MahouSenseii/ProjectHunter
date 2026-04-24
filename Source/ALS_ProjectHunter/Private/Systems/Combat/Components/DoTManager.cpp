@@ -52,6 +52,18 @@ FDoTApplyResult UDoTManager::ApplyPoison(AActor* Target, float DamagePerTick,
 		DamagePerTick, DoTSetByCallerTags::Poison_DamagePerTick, Duration, Instigator);
 }
 
+FDoTApplyResult UDoTManager::ApplyCorruption(AActor* Target, float DamagePerTick,
+	float Duration, AActor* Instigator)
+{
+	if (!CorruptionEffectClass)
+	{
+		PH_LOG_WARNING(LogDoTManager, "ApplyCorruption failed: CorruptionEffectClass was not configured.");
+		return {};
+	}
+	return ApplyDoTEffect(CorruptionEffectClass, Target,
+		DamagePerTick, DoTSetByCallerTags::Corruption_DamagePerTick, Duration, Instigator);
+}
+
 FDoTApplyResult UDoTManager::ApplyChill(AActor* Target, float SlowFraction,
 	float Duration, AActor* Instigator)
 {
@@ -75,6 +87,18 @@ FDoTApplyResult UDoTManager::ApplyFreeze(AActor* Target, float Duration,
 	}
 	// Freeze uses no SetByCaller — it's a pure CC, magnitude is always 1
 	return ApplyDoTEffect(FreezeEffectClass, Target,
+		1.0f, NAME_None, Duration, Instigator);
+}
+
+FDoTApplyResult UDoTManager::ApplyPetrify(AActor* Target, float Duration,
+	AActor* Instigator)
+{
+	if (!PetrifyEffectClass)
+	{
+		PH_LOG_WARNING(LogDoTManager, "ApplyPetrify failed: PetrifyEffectClass was not configured.");
+		return {};
+	}
+	return ApplyDoTEffect(PetrifyEffectClass, Target,
 		1.0f, NAME_None, Duration, Instigator);
 }
 
@@ -120,6 +144,11 @@ int32 UDoTManager::GetPoisonStacks(AActor* Target) const
 	return ASC->GetGameplayEffectCount(PoisonEffectClass, nullptr);
 }
 
+bool UDoTManager::IsCorrupted(AActor* Target) const
+{
+	return CorruptionEffectClass && HasActiveEffect(Target, CorruptionEffectClass);
+}
+
 bool UDoTManager::IsChilled(AActor* Target) const
 {
 	return ChillEffectClass && HasActiveEffect(Target, ChillEffectClass);
@@ -128,6 +157,11 @@ bool UDoTManager::IsChilled(AActor* Target) const
 bool UDoTManager::IsFrozen(AActor* Target) const
 {
 	return FreezeEffectClass && HasActiveEffect(Target, FreezeEffectClass);
+}
+
+bool UDoTManager::IsPetrified(AActor* Target) const
+{
+	return PetrifyEffectClass && HasActiveEffect(Target, PetrifyEffectClass);
 }
 
 bool UDoTManager::IsShocked(AActor* Target) const
@@ -163,6 +197,14 @@ void UDoTManager::CurePoison(AActor* Target)
 	}
 }
 
+void UDoTManager::CureCorruption(AActor* Target)
+{
+	if (CorruptionEffectClass)
+	{
+		RemoveEffectByClass(Target, CorruptionEffectClass);
+	}
+}
+
 void UDoTManager::RemoveChill(AActor* Target)
 {
 	if (ChillEffectClass)
@@ -179,6 +221,14 @@ void UDoTManager::RemoveFreeze(AActor* Target)
 	}
 }
 
+void UDoTManager::RemovePetrify(AActor* Target)
+{
+	if (PetrifyEffectClass)
+	{
+		RemoveEffectByClass(Target, PetrifyEffectClass);
+	}
+}
+
 void UDoTManager::RemoveShock(AActor* Target)
 {
 	if (ShockEffectClass)
@@ -192,8 +242,10 @@ void UDoTManager::CleanseAll(AActor* Target)
 	CureBleed(Target);
 	CureIgnite(Target);
 	CurePoison(Target);
+	CureCorruption(Target);
 	RemoveChill(Target);
 	RemoveFreeze(Target);
+	RemovePetrify(Target);
 	RemoveShock(Target);
 }
 
@@ -253,9 +305,17 @@ FDoTApplyResult UDoTManager::ApplyDoTEffect(
 	// Set magnitude via SetByCaller (skip if no tag provided — e.g., Freeze)
 	if (SetByCallerTag != NAME_None && SetByCallerValue != 0.0f)
 	{
-		SpecHandle.Data->SetSetByCallerMagnitude(
-			FGameplayTag::RequestGameplayTag(SetByCallerTag),
-			SetByCallerValue);
+		const FGameplayTag GameplayTag = FGameplayTag::RequestGameplayTag(SetByCallerTag, false);
+		if (GameplayTag.IsValid())
+		{
+			SpecHandle.Data->SetSetByCallerMagnitude(GameplayTag, SetByCallerValue);
+		}
+		else
+		{
+			UE_LOG(LogDoTManager, Warning,
+				TEXT("ApplyDoTEffect: SetByCaller tag '%s' is not registered."),
+				*SetByCallerTag.ToString());
+		}
 	}
 
 	// Apply to target.

@@ -9,6 +9,7 @@
 #include "Systems/Equipment/Components/EquipmentManager.h"
 #include "Systems/Stats/Components/StatsManager.h"
 #include "Systems/Stats/StatsAttributeResolver.h"
+#include "Systems/Stats/StatsModifierMath.h"
 
 void FEquipmentStatsApplier::ApplyEquipmentStats(UStatsManager& Manager, UItemInstance* Item)
 {
@@ -234,42 +235,22 @@ bool FEquipmentStatsApplier::ApplyStatModifier(UGameplayEffect* Effect, const FP
 		return false;
 	}
 
-	EGameplayModOp::Type ModOp;
-	float FinalValue = Stat.RolledStatValue;
-
-	switch (Stat.ModifyType)
+	FResolvedStatModifier ResolvedModifier;
+	if (!FStatsModifierMath::ResolveGameplayModifier(Stat.ModifyType, Stat.RolledStatValue, ResolvedModifier)
+		|| !ResolvedModifier.bCreatesGameplayModifier)
 	{
-	case EModifyType::MT_Add:
-		ModOp = EGameplayModOp::Additive;
-		break;
-
-	case EModifyType::MT_Multiply:
-		ModOp = EGameplayModOp::Multiplicitive;
-		FinalValue = 1.0f + (FinalValue / 100.0f);
-		break;
-
-	case EModifyType::MT_More:
-		ModOp = EGameplayModOp::Multiplicitive;
-		FinalValue = 1.0f + (FinalValue / 100.0f);
-		break;
-
-	case EModifyType::MT_Override:
-		ModOp = EGameplayModOp::Override;
-		break;
-
-	default:
-		PH_LOG_WARNING(LogStatsManager, "ApplyStatModifier failed: Unsupported ModifyType=%d for Attribute=%s.", static_cast<int32>(Stat.ModifyType), *Attribute.GetName());
+		PH_LOG_WARNING(LogStatsManager, "ApplyStatModifier skipped: Unsupported ModifyType=%d for Attribute=%s.", static_cast<int32>(Stat.ModifyType), *Attribute.GetName());
 		return false;
 	}
 
 	FGameplayModifierInfo Modifier;
 	Modifier.Attribute = Attribute;
-	Modifier.ModifierOp = ModOp;
-	Modifier.ModifierMagnitude = FScalableFloat(FinalValue);
+	Modifier.ModifierOp = ResolvedModifier.ModOp;
+	Modifier.ModifierMagnitude = FScalableFloat(ResolvedModifier.Magnitude);
 	Effect->Modifiers.Add(Modifier);
 
 	UE_LOG(LogStatsManager, VeryVerbose, TEXT("StatsManager: Added modifier: %s (%s) = %.2f [Op: %d]"),
-		*Attribute.GetName(), *Stat.AttributeName.ToString(), FinalValue, static_cast<int32>(ModOp));
+		*Attribute.GetName(), *Stat.AttributeName.ToString(), ResolvedModifier.Magnitude, static_cast<int32>(ResolvedModifier.ModOp));
 
 	return true;
 }

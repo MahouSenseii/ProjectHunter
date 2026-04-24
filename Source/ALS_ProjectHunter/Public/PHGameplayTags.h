@@ -283,6 +283,7 @@ public:
 	static FGameplayTag Attributes_Secondary_Misc_MovementSpeed;
 	static FGameplayTag Attributes_Secondary_Misc_CoolDown;
 	static FGameplayTag Attributes_Secondary_Misc_ManaCostChanges;
+	static FGameplayTag Attributes_Secondary_Misc_HealthCostChanges;
 	static FGameplayTag Attributes_Secondary_Misc_LifeLeech;
 	static FGameplayTag Attributes_Secondary_Misc_ManaLeech;
 	static FGameplayTag Attributes_Secondary_Misc_LifeOnHit;
@@ -429,6 +430,52 @@ public:
 	static FGameplayTag Condition_CannotBeSlowed;
 	static FGameplayTag Condition_CannotBeInterrupted;
 	static FGameplayTag Condition_CannotBeKnockedBack;
+
+	// ── Parry / Stagger (PoE2 + Elden Ring hybrid) ────────────────────────────
+	// Condition_Self_IsParrying       — tight window GE set by parry animation notify state.
+	//                                   CombatManager checks this to route EHitResponse::Parry.
+	// Condition_Self_RecentlyParried  — granted after a successful parry (~2s). Enables
+	//                                   "after parrying" conditional modifiers on skills/passives.
+	// Condition_Self_IsStaggered      — set when bShouldStagger fires. Cleared on recovery.
+	// Condition_Self_StaminaDepleted  — set when Stamina reaches 0. Drives stagger eligibility
+	//                                   and "while stamina is low" conditional modifiers.
+	// Condition_Self_IsInvincible     — i-frames / divine blessings. Routes EHitResponse::Invincible.
+	//                                   Negates both damage and ailments.
+	// State_Self_ExecutingSkill       — set by skill start notify, cleared on skill end.
+	//                                   While active, stagger cannot trigger even at 0 stamina.
+	static FGameplayTag Condition_Self_IsParrying;
+	static FGameplayTag Condition_Self_RecentlyParried;
+	static FGameplayTag Condition_Self_IsStaggered;
+	static FGameplayTag Condition_Self_StaminaDepleted;
+	static FGameplayTag Condition_Self_IsInvincible;
+	static FGameplayTag State_Self_ExecutingSkill;
+
+	// ── More / Increased damage modifier tags (PoE2 style) ───────────────────
+	// These are used as SetByCaller tags on GEs that apply temporary damage bonuses.
+	// "More" = multiplicative — each source is a separate multiplier.
+	// "Increased" = additive — all sources pool before applying as one multiplier.
+	static FGameplayTag Data_More_Physical;
+	static FGameplayTag Data_More_Fire;
+	static FGameplayTag Data_More_Ice;
+	static FGameplayTag Data_More_Lightning;
+	static FGameplayTag Data_More_Light;
+	static FGameplayTag Data_More_Corruption;
+	static FGameplayTag Data_More_Elemental;
+	static FGameplayTag Data_More_Global;
+
+	static FGameplayTag Data_Increased_Physical;
+	static FGameplayTag Data_Increased_Fire;
+	static FGameplayTag Data_Increased_Ice;
+	static FGameplayTag Data_Increased_Lightning;
+	static FGameplayTag Data_Increased_Light;
+	static FGameplayTag Data_Increased_Corruption;
+	static FGameplayTag Data_Increased_Elemental;
+	static FGameplayTag Data_Increased_Global;
+
+	// ── Skill resource cost tags (SetByCaller on cost GEs) ───────────────────
+	static FGameplayTag Data_Cost_Stamina;
+	static FGameplayTag Data_Cost_Mana;
+	static FGameplayTag Data_Cost_Health;
 
 	/* ===================== */
 	/* ===   Triggers    === */

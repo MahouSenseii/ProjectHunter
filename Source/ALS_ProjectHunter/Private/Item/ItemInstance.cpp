@@ -7,6 +7,7 @@
 #include "Item/ItemStackingHandler.h"
 #include "Item/ItemUsageHandler.h"
 #include "Item/ItemValueCalculator.h"
+#include "Net/UnrealNetwork.h"
 #include "Systems/Item/Library/ItemLog.h"
 
 DEFINE_LOG_CATEGORY(LogItemInstance);
@@ -15,6 +16,36 @@ UItemInstance::UItemInstance()
 {
 	UniqueID = FGuid::NewGuid();
 	Seed = FMath::Rand();
+}
+
+void UItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UItemInstance, BaseItemHandle);
+	DOREPLIFETIME(UItemInstance, UniqueID);
+	DOREPLIFETIME(UItemInstance, Seed);
+	DOREPLIFETIME(UItemInstance, SerializationVersion);
+	DOREPLIFETIME(UItemInstance, Quantity);
+	DOREPLIFETIME(UItemInstance, TotalWeight);
+	DOREPLIFETIME(UItemInstance, ItemLevel);
+	DOREPLIFETIME(UItemInstance, Rarity);
+	DOREPLIFETIME(UItemInstance, bIdentified);
+	DOREPLIFETIME(UItemInstance, DisplayName);
+	DOREPLIFETIME(UItemInstance, bHasNameBeenGenerated);
+	DOREPLIFETIME(UItemInstance, Stats);
+	DOREPLIFETIME(UItemInstance, RemainingUses);
+	DOREPLIFETIME(UItemInstance, LastUseTime);
+	DOREPLIFETIME(UItemInstance, Durability);
+	DOREPLIFETIME(UItemInstance, bHasCorruptedAffixes);
+	DOREPLIFETIME(UItemInstance, TotalCorruptionPoints);
+	DOREPLIFETIME(UItemInstance, bCanBeModified);
+	DOREPLIFETIME(UItemInstance, RuneCraftingData);
+	DOREPLIFETIME(UItemInstance, QuestID);
+	DOREPLIFETIME(UItemInstance, bIsKeyItem);
+	DOREPLIFETIME(UItemInstance, bIsTradeable);
+	DOREPLIFETIME(UItemInstance, bIsSoulbound);
+	DOREPLIFETIME(UItemInstance, ValueModifier);
 }
 
 bool UItemInstance::MigrateToCurrentVersion()

@@ -109,6 +109,17 @@ void FEquipmentReplicationHelper::AddEquipment(UEquipmentManager& Manager, EEqui
 
 	RemoveEquipment(Manager, Slot);
 
+	if (Item)
+	{
+		if (AActor* OwnerActor = Manager.GetOwner())
+		{
+			if (Item->GetOuter() != OwnerActor)
+			{
+				Item->Rename(nullptr, OwnerActor, REN_DontCreateRedirectors | REN_NonTransactional);
+			}
+		}
+	}
+
 	Manager.EquippedItemsArray.Add(FEquipmentSlotEntry(Slot, Item));
 	Manager.EquippedItemsMap.Add(Slot, Item);
 }

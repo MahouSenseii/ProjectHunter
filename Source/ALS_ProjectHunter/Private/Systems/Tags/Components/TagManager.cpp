@@ -110,6 +110,12 @@ void UTagManager::BeginPlay()
 #endif
 }
 
+void UTagManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UnbindAttributeChangeDelegates();
+	Super::EndPlay(EndPlayReason);
+}
+
 void UTagManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -160,6 +166,12 @@ void UTagManager::Initialize(UAbilitySystemComponent* InASC)
 	{
 		return;
 	}
+
+	if (ASC)
+	{
+		UnbindAttributeChangeDelegates();
+	}
+
 	ASC = InASC;
 
 	// Enable tick when ASC is valid for normal operation.
@@ -229,13 +241,15 @@ void UTagManager::RemoveTag(const FGameplayTag& Tag)
 
 	PendingTagStates.Remove(Tag);
 
-	if (!ASC->HasMatchingGameplayTag(Tag))
+	const int32 ExistingCount = ASC->GetTagCount(Tag);
+	if (ExistingCount <= 0)
 	{
 		return;
 	}
 
-	ASC->RemoveLooseGameplayTag(Tag);
-	UE_LOG(LogTagManager, VeryVerbose, TEXT("Removed tag %s from owner %s."), *Tag.ToString(), *GetNameSafe(GetOwner()));
+	ASC->RemoveLooseGameplayTag(Tag, ExistingCount);
+	UE_LOG(LogTagManager, VeryVerbose, TEXT("Removed tag %s from owner %s. ClearedCount=%d"),
+		*Tag.ToString(), *GetNameSafe(GetOwner()), ExistingCount);
 }
 
 void UTagManager::SetTagState(const FGameplayTag& Tag, const bool bEnabled)
@@ -346,13 +360,10 @@ void UTagManager::RefreshBaseConditionTags()
 	SetTagState(Tags.Condition_WhileMoving, bMoving);
 	SetTagState(Tags.Condition_WhileStationary, !bMoving);
 
-	bool bSprinting = HasTag(Tags.Condition_Sprinting);
-	if (HunterCharacter)
-	{
-		bSprinting = HunterCharacter->GetGait() == EALSGait::Sprinting
-			|| HunterCharacter->GetDesiredGait() == EALSGait::Sprinting;
-	}
-	SetTagState(Tags.Condition_Sprinting, bSprinting);
+	const bool bSprintRequested = HunterCharacter
+		? HunterCharacter->GetDesiredGait() == EALSGait::Sprinting
+		: HasTag(Tags.Condition_Sprinting);
+	SetTagState(Tags.Condition_Sprinting, bSprintRequested);
 
 	// N-07 FIX: Removed the self-referential "const bool bBlocking = HasTag(...); SetTagState(..., bBlocking);"
 	// pattern — reading the tag and immediately writing the same value back is a pure no-op.
@@ -485,13 +496,10 @@ void UTagManager::RefreshMovementConditionTags()
 	SetTagState(Tags.Condition_WhileMoving, bMoving);
 	SetTagState(Tags.Condition_WhileStationary, !bMoving);
 
-	bool bSprinting = HasTag(Tags.Condition_Sprinting);
-	if (HunterCharacter)
-	{
-		bSprinting = HunterCharacter->GetGait() == EALSGait::Sprinting
-			|| HunterCharacter->GetDesiredGait() == EALSGait::Sprinting;
-	}
-	SetTagState(Tags.Condition_Sprinting, bSprinting);
+	const bool bSprintRequested = HunterCharacter
+		? HunterCharacter->GetDesiredGait() == EALSGait::Sprinting
+		: HasTag(Tags.Condition_Sprinting);
+	SetTagState(Tags.Condition_Sprinting, bSprintRequested);
 
 	// Keep InCombat/OutOfCombat updated here too (relies on tag state, not attribute polling)
 	const bool bInCombat = HasTag(Tags.Condition_TakingDamage)
@@ -509,9 +517,11 @@ void UTagManager::BindAttributeChangeDelegates()
 		return;
 	}
 
+	UnbindAttributeChangeDelegates();
 
 	auto OnResourceChanged = [this](const FOnAttributeChangeData& Data)
 	{
+		(void)Data;
 		bBaseConditionsDirty = true;
 	};
 
@@ -521,27 +531,52 @@ void UTagManager::BindAttributeChangeDelegates()
 		return;
 	}
 
+	auto BindAttributeChange = [this, &OnResourceChanged](const FGameplayAttribute& Attribute)
+	{
+		FDelegateHandle Handle = ASC->GetGameplayAttributeValueChangeDelegate(Attribute).AddLambda(OnResourceChanged);
+		AttributeDelegateBindings.Add({ Attribute, Handle });
+	};
+
 	// Health
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetHealthAttribute()).AddLambda(OnResourceChanged);
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxHealthAttribute()).AddLambda(OnResourceChanged);
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxEffectiveHealthAttribute()).AddLambda(OnResourceChanged);
+	BindAttributeChange(UHunterAttributeSet::GetHealthAttribute());
+	BindAttributeChange(UHunterAttributeSet::GetMaxHealthAttribute());
+	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveHealthAttribute());
 
 	// Mana
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetManaAttribute()).AddLambda(OnResourceChanged);
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxManaAttribute()).AddLambda(OnResourceChanged);
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxEffectiveManaAttribute()).AddLambda(OnResourceChanged);
+	BindAttributeChange(UHunterAttributeSet::GetManaAttribute());
+	BindAttributeChange(UHunterAttributeSet::GetMaxManaAttribute());
+	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveManaAttribute());
 
 	// Stamina
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetStaminaAttribute()).AddLambda(OnResourceChanged);
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxStaminaAttribute()).AddLambda(OnResourceChanged);
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxEffectiveStaminaAttribute()).AddLambda(OnResourceChanged);
+	BindAttributeChange(UHunterAttributeSet::GetStaminaAttribute());
+	BindAttributeChange(UHunterAttributeSet::GetMaxStaminaAttribute());
+	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveStaminaAttribute());
 
 	// Arcane Shield
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetArcaneShieldAttribute()).AddLambda(OnResourceChanged);
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxArcaneShieldAttribute()).AddLambda(OnResourceChanged);
-	ASC->GetGameplayAttributeValueChangeDelegate(UHunterAttributeSet::GetMaxEffectiveArcaneShieldAttribute()).AddLambda(OnResourceChanged);
+	BindAttributeChange(UHunterAttributeSet::GetArcaneShieldAttribute());
+	BindAttributeChange(UHunterAttributeSet::GetMaxArcaneShieldAttribute());
+	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveArcaneShieldAttribute());
 
 	UE_LOG(LogTagManager, Verbose,
 		TEXT("BindAttributeChangeDelegates: bound resource delegates for owner %s (Health/Mana/Stamina/ArcaneShield x3 each = 12 bindings)."),
 		*GetNameSafe(GetOwner()));
+}
+
+void UTagManager::UnbindAttributeChangeDelegates()
+{
+	if (!ASC || AttributeDelegateBindings.Num() == 0)
+	{
+		AttributeDelegateBindings.Reset();
+		return;
+	}
+
+	for (const FTagAttributeDelegateBinding& Binding : AttributeDelegateBindings)
+	{
+		if (Binding.Attribute.IsValid() && Binding.Handle.IsValid())
+		{
+			ASC->GetGameplayAttributeValueChangeDelegate(Binding.Attribute).Remove(Binding.Handle);
+		}
+	}
+
+	AttributeDelegateBindings.Reset();
 }

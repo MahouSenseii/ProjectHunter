@@ -412,8 +412,16 @@ float UStatsManager::GetGoldFind() const
 
 float UStatsManager::GetExperienceBonus() const
 {
-	// Could be derived from Intelligence or a dedicated attribute
-	return 0.0f;
+	const UHunterAttributeSet* AttrSet = GetAttributeSet();
+	if (!AttrSet)
+	{
+		return 0.0f;
+	}
+
+	const float IncreasedMultiplier = 1.0f + (AttrSet->GetGlobalXPGain() + AttrSet->GetLocalXPGain()) / 100.0f;
+	const float MoreMultiplier = FMath::Max(AttrSet->GetXPGainMultiplier(), 1.0f);
+	const float PenaltyMultiplier = FMath::Max(AttrSet->GetXPPenalty(), 0.0f);
+	return (IncreasedMultiplier * MoreMultiplier * PenaltyMultiplier - 1.0f) * 100.0f;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -491,6 +499,302 @@ float UStatsManager::GetAttributeByName(FName AttributeName) const
 	}
 
 	return GetAttributeValue(Attribute);
+}
+
+float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
+{
+	// Direct accessor path — no string lookup, no FGameplayAttribute resolution.
+	// Calls the typed getter on UHunterAttributeSet directly for maximum speed.
+	const UHunterAttributeSet* Attrs = GetAttributeSet();
+	if (!Attrs)
+	{
+		UE_LOG(LogStatsManager, Warning,
+			TEXT("GetAttributeByType: HunterAttributeSet not available on %s."),
+			*GetNameSafe(GetOwner()));
+		return 0.f;
+	}
+
+	switch (AttributeType)
+	{
+	// ── Primary ───────────────────────────────────────────────────────────────
+	case EHunterAttribute::Strength:             return Attrs->GetStrength();
+	case EHunterAttribute::Intelligence:         return Attrs->GetIntelligence();
+	case EHunterAttribute::Dexterity:            return Attrs->GetDexterity();
+	case EHunterAttribute::Endurance:            return Attrs->GetEndurance();
+	case EHunterAttribute::Affliction:           return Attrs->GetAffliction();
+	case EHunterAttribute::Luck:                 return Attrs->GetLuck();
+	case EHunterAttribute::Covenant:             return Attrs->GetCovenant();
+
+	// ── Progression ───────────────────────────────────────────────────────────
+	case EHunterAttribute::PlayerLevel:          return Attrs->GetPlayerLevel();
+
+	// ── Experience ────────────────────────────────────────────────────────────
+	case EHunterAttribute::GlobalXPGain:         return Attrs->GetGlobalXPGain();
+	case EHunterAttribute::LocalXPGain:          return Attrs->GetLocalXPGain();
+	case EHunterAttribute::XPGainMultiplier:     return Attrs->GetXPGainMultiplier();
+	case EHunterAttribute::XPPenalty:            return Attrs->GetXPPenalty();
+
+	// ── Health ────────────────────────────────────────────────────────────────
+	case EHunterAttribute::Health:                      return Attrs->GetHealth();
+	case EHunterAttribute::MaxHealth:                   return Attrs->GetMaxHealth();
+	case EHunterAttribute::MaxEffectiveHealth:          return Attrs->GetMaxEffectiveHealth();
+	case EHunterAttribute::HealthRegenRate:             return Attrs->GetHealthRegenRate();
+	case EHunterAttribute::MaxHealthRegenRate:          return Attrs->GetMaxHealthRegenRate();
+	case EHunterAttribute::HealthRegenAmount:           return Attrs->GetHealthRegenAmount();
+	case EHunterAttribute::MaxHealthRegenAmount:        return Attrs->GetMaxHealthRegenAmount();
+	case EHunterAttribute::ReservedHealth:              return Attrs->GetReservedHealth();
+	case EHunterAttribute::MaxReservedHealth:           return Attrs->GetMaxReservedHealth();
+	case EHunterAttribute::FlatReservedHealth:          return Attrs->GetFlatReservedHealth();
+	case EHunterAttribute::PercentageReservedHealth:    return Attrs->GetPercentageReservedHealth();
+
+	// ── Stamina ───────────────────────────────────────────────────────────────
+	case EHunterAttribute::Stamina:                     return Attrs->GetStamina();
+	case EHunterAttribute::MaxStamina:                  return Attrs->GetMaxStamina();
+	case EHunterAttribute::MaxEffectiveStamina:         return Attrs->GetMaxEffectiveStamina();
+	case EHunterAttribute::StaminaRegenRate:            return Attrs->GetStaminaRegenRate();
+	case EHunterAttribute::StaminaDegenRate:            return Attrs->GetStaminaDegenRate();
+	case EHunterAttribute::MaxStaminaRegenRate:         return Attrs->GetMaxStaminaRegenRate();
+	case EHunterAttribute::StaminaRegenAmount:          return Attrs->GetStaminaRegenAmount();
+	case EHunterAttribute::StaminaDegenAmount:          return Attrs->GetStaminaDegenAmount();
+	case EHunterAttribute::MaxStaminaRegenAmount:       return Attrs->GetMaxStaminaRegenAmount();
+	case EHunterAttribute::ReservedStamina:             return Attrs->GetReservedStamina();
+	case EHunterAttribute::MaxReservedStamina:          return Attrs->GetMaxReservedStamina();
+	case EHunterAttribute::FlatReservedStamina:         return Attrs->GetFlatReservedStamina();
+	case EHunterAttribute::PercentageReservedStamina:   return Attrs->GetPercentageReservedStamina();
+
+	// ── Mana ──────────────────────────────────────────────────────────────────
+	case EHunterAttribute::Mana:                        return Attrs->GetMana();
+	case EHunterAttribute::MaxMana:                     return Attrs->GetMaxMana();
+	case EHunterAttribute::MaxEffectiveMana:            return Attrs->GetMaxEffectiveMana();
+	case EHunterAttribute::ManaRegenRate:               return Attrs->GetManaRegenRate();
+	case EHunterAttribute::MaxManaRegenRate:            return Attrs->GetMaxManaRegenRate();
+	case EHunterAttribute::ManaRegenAmount:             return Attrs->GetManaRegenAmount();
+	case EHunterAttribute::MaxManaRegenAmount:          return Attrs->GetMaxManaRegenAmount();
+	case EHunterAttribute::ReservedMana:                return Attrs->GetReservedMana();
+	case EHunterAttribute::MaxReservedMana:             return Attrs->GetMaxReservedMana();
+	case EHunterAttribute::FlatReservedMana:            return Attrs->GetFlatReservedMana();
+	case EHunterAttribute::PercentageReservedMana:      return Attrs->GetPercentageReservedMana();
+
+	// ── Arcane Shield ─────────────────────────────────────────────────────────
+	case EHunterAttribute::ArcaneShield:                    return Attrs->GetArcaneShield();
+	case EHunterAttribute::MaxArcaneShield:                 return Attrs->GetMaxArcaneShield();
+	case EHunterAttribute::MaxEffectiveArcaneShield:        return Attrs->GetMaxEffectiveArcaneShield();
+	case EHunterAttribute::ArcaneShieldRegenRate:           return Attrs->GetArcaneShieldRegenRate();
+	case EHunterAttribute::MaxArcaneShieldRegenRate:        return Attrs->GetMaxArcaneShieldRegenRate();
+	case EHunterAttribute::ArcaneShieldRegenAmount:         return Attrs->GetArcaneShieldRegenAmount();
+	case EHunterAttribute::MaxArcaneShieldRegenAmount:      return Attrs->GetMaxArcaneShieldRegenAmount();
+	case EHunterAttribute::ReservedArcaneShield:            return Attrs->GetReservedArcaneShield();
+	case EHunterAttribute::MaxReservedArcaneShield:         return Attrs->GetMaxReservedArcaneShield();
+	case EHunterAttribute::FlatReservedArcaneShield:        return Attrs->GetFlatReservedArcaneShield();
+	case EHunterAttribute::PercentageReservedArcaneShield:  return Attrs->GetPercentageReservedArcaneShield();
+
+	// ── Damage — Global ───────────────────────────────────────────────────────
+	case EHunterAttribute::GlobalDamages:           return Attrs->GetGlobalDamages();
+	case EHunterAttribute::GlobalMoreDamage:        return Attrs->GetGlobalMoreDamage();
+	case EHunterAttribute::DamageBonusWhileAtFullHP: return Attrs->GetDamageBonusWhileAtFullHP();
+	case EHunterAttribute::DamageBonusWhileAtLowHP:  return Attrs->GetDamageBonusWhileAtLowHP();
+
+	// ── Damage — Physical ─────────────────────────────────────────────────────
+	case EHunterAttribute::MinPhysicalDamage:       return Attrs->GetMinPhysicalDamage();
+	case EHunterAttribute::MaxPhysicalDamage:       return Attrs->GetMaxPhysicalDamage();
+	case EHunterAttribute::PhysicalFlatDamage:      return Attrs->GetPhysicalFlatDamage();
+	case EHunterAttribute::PhysicalPercentDamage:   return Attrs->GetPhysicalPercentDamage();
+	case EHunterAttribute::PhysicalMoreDamage:      return Attrs->GetPhysicalMoreDamage();
+
+	// ── Damage — Fire ─────────────────────────────────────────────────────────
+	case EHunterAttribute::MinFireDamage:           return Attrs->GetMinFireDamage();
+	case EHunterAttribute::MaxFireDamage:           return Attrs->GetMaxFireDamage();
+	case EHunterAttribute::FireFlatDamage:          return Attrs->GetFireFlatDamage();
+	case EHunterAttribute::FirePercentDamage:       return Attrs->GetFirePercentDamage();
+	case EHunterAttribute::FireMoreDamage:          return Attrs->GetFireMoreDamage();
+
+	// ── Damage — Ice ──────────────────────────────────────────────────────────
+	case EHunterAttribute::MinIceDamage:            return Attrs->GetMinIceDamage();
+	case EHunterAttribute::MaxIceDamage:            return Attrs->GetMaxIceDamage();
+	case EHunterAttribute::IceFlatDamage:           return Attrs->GetIceFlatDamage();
+	case EHunterAttribute::IcePercentDamage:        return Attrs->GetIcePercentDamage();
+	case EHunterAttribute::IceMoreDamage:           return Attrs->GetIceMoreDamage();
+
+	// ── Damage — Lightning ────────────────────────────────────────────────────
+	case EHunterAttribute::MinLightningDamage:      return Attrs->GetMinLightningDamage();
+	case EHunterAttribute::MaxLightningDamage:      return Attrs->GetMaxLightningDamage();
+	case EHunterAttribute::LightningFlatDamage:     return Attrs->GetLightningFlatDamage();
+	case EHunterAttribute::LightningPercentDamage:  return Attrs->GetLightningPercentDamage();
+	case EHunterAttribute::LightningMoreDamage:     return Attrs->GetLightningMoreDamage();
+
+	// ── Damage — Light ────────────────────────────────────────────────────────
+	case EHunterAttribute::MinLightDamage:          return Attrs->GetMinLightDamage();
+	case EHunterAttribute::MaxLightDamage:          return Attrs->GetMaxLightDamage();
+	case EHunterAttribute::LightFlatDamage:         return Attrs->GetLightFlatDamage();
+	case EHunterAttribute::LightPercentDamage:      return Attrs->GetLightPercentDamage();
+	case EHunterAttribute::LightMoreDamage:         return Attrs->GetLightMoreDamage();
+
+	// ── Damage — Corruption ───────────────────────────────────────────────────
+	case EHunterAttribute::MinCorruptionDamage:     return Attrs->GetMinCorruptionDamage();
+	case EHunterAttribute::MaxCorruptionDamage:     return Attrs->GetMaxCorruptionDamage();
+	case EHunterAttribute::CorruptionFlatDamage:    return Attrs->GetCorruptionFlatDamage();
+	case EHunterAttribute::CorruptionPercentDamage: return Attrs->GetCorruptionPercentDamage();
+	case EHunterAttribute::CorruptionMoreDamage:    return Attrs->GetCorruptionMoreDamage();
+
+	// ── Damage — Elemental ────────────────────────────────────────────────────
+	case EHunterAttribute::ElementalMoreDamage:     return Attrs->GetElementalMoreDamage();
+	case EHunterAttribute::ElementalDamage:         return Attrs->GetElementalDamage();
+
+	// ── Offensive Stats ───────────────────────────────────────────────────────
+	case EHunterAttribute::AreaDamage:              return Attrs->GetAreaDamage();
+	case EHunterAttribute::AreaOfEffect:            return Attrs->GetAreaOfEffect();
+	case EHunterAttribute::AttackRange:             return Attrs->GetAttackRange();
+	case EHunterAttribute::AttackSpeed:             return Attrs->GetAttackSpeed();
+	case EHunterAttribute::CastSpeed:               return Attrs->GetCastSpeed();
+	case EHunterAttribute::CritChance:              return Attrs->GetCritChance();
+	case EHunterAttribute::CritMultiplier:          return Attrs->GetCritMultiplier();
+	case EHunterAttribute::DamageOverTime:          return Attrs->GetDamageOverTime();
+	case EHunterAttribute::MeleeDamage:             return Attrs->GetMeleeDamage();
+	case EHunterAttribute::SpellDamage:             return Attrs->GetSpellDamage();
+	case EHunterAttribute::ProjectileCount:         return Attrs->GetProjectileCount();
+	case EHunterAttribute::ProjectileSpeed:         return Attrs->GetProjectileSpeed();
+	case EHunterAttribute::RangedDamage:            return Attrs->GetRangedDamage();
+	case EHunterAttribute::SpellsCritChance:        return Attrs->GetSpellsCritChance();
+	case EHunterAttribute::SpellsCritMultiplier:    return Attrs->GetSpellsCritMultiplier();
+	case EHunterAttribute::ChainCount:              return Attrs->GetChainCount();
+	case EHunterAttribute::ForkCount:               return Attrs->GetForkCount();
+	case EHunterAttribute::ChainDamage:             return Attrs->GetChainDamage();
+
+	// ── Damage Conversion ─────────────────────────────────────────────────────
+	case EHunterAttribute::PhysicalToFire:          return Attrs->GetPhysicalToFire();
+	case EHunterAttribute::PhysicalToIce:           return Attrs->GetPhysicalToIce();
+	case EHunterAttribute::PhysicalToLightning:     return Attrs->GetPhysicalToLightning();
+	case EHunterAttribute::PhysicalToLight:         return Attrs->GetPhysicalToLight();
+	case EHunterAttribute::PhysicalToCorruption:    return Attrs->GetPhysicalToCorruption();
+	case EHunterAttribute::FireToPhysical:          return Attrs->GetFireToPhysical();
+	case EHunterAttribute::FireToIce:               return Attrs->GetFireToIce();
+	case EHunterAttribute::FireToLightning:         return Attrs->GetFireToLightning();
+	case EHunterAttribute::FireToLight:             return Attrs->GetFireToLight();
+	case EHunterAttribute::FireToCorruption:        return Attrs->GetFireToCorruption();
+	case EHunterAttribute::IceToPhysical:           return Attrs->GetIceToPhysical();
+	case EHunterAttribute::IceToFire:               return Attrs->GetIceToFire();
+	case EHunterAttribute::IceToLightning:          return Attrs->GetIceToLightning();
+	case EHunterAttribute::IceToLight:              return Attrs->GetIceToLight();
+	case EHunterAttribute::IceToCorruption:         return Attrs->GetIceToCorruption();
+	case EHunterAttribute::LightningToPhysical:     return Attrs->GetLightningToPhysical();
+	case EHunterAttribute::LightningToFire:         return Attrs->GetLightningToFire();
+	case EHunterAttribute::LightningToIce:          return Attrs->GetLightningToIce();
+	case EHunterAttribute::LightningToLight:        return Attrs->GetLightningToLight();
+	case EHunterAttribute::LightningToCorruption:   return Attrs->GetLightningToCorruption();
+	case EHunterAttribute::LightToPhysical:         return Attrs->GetLightToPhysical();
+	case EHunterAttribute::LightToFire:             return Attrs->GetLightToFire();
+	case EHunterAttribute::LightToIce:              return Attrs->GetLightToIce();
+	case EHunterAttribute::LightToLightning:        return Attrs->GetLightToLightning();
+	case EHunterAttribute::LightToCorruption:       return Attrs->GetLightToCorruption();
+	case EHunterAttribute::CorruptionToPhysical:    return Attrs->GetCorruptionToPhysical();
+	case EHunterAttribute::CorruptionToFire:        return Attrs->GetCorruptionToFire();
+	case EHunterAttribute::CorruptionToIce:         return Attrs->GetCorruptionToIce();
+	case EHunterAttribute::CorruptionToLightning:   return Attrs->GetCorruptionToLightning();
+	case EHunterAttribute::CorruptionToLight:       return Attrs->GetCorruptionToLight();
+
+	// ── Ailment Chances ───────────────────────────────────────────────────────
+	case EHunterAttribute::ChanceToBleed:           return Attrs->GetChanceToBleed();
+	case EHunterAttribute::ChanceToCorrupt:         return Attrs->GetChanceToCorrupt();
+	case EHunterAttribute::ChanceToFreeze:          return Attrs->GetChanceToFreeze();
+	case EHunterAttribute::ChanceToPurify:          return Attrs->GetChanceToPurify();
+	case EHunterAttribute::ChanceToIgnite:          return Attrs->GetChanceToIgnite();
+	case EHunterAttribute::ChanceToKnockBack:       return Attrs->GetChanceToKnockBack();
+	case EHunterAttribute::ChanceToPetrify:         return Attrs->GetChanceToPetrify();
+	case EHunterAttribute::ChanceToShock:           return Attrs->GetChanceToShock();
+	case EHunterAttribute::ChanceToStun:            return Attrs->GetChanceToStun();
+
+	// ── DoT Durations ─────────────────────────────────────────────────────────
+	case EHunterAttribute::BurnDuration:            return Attrs->GetBurnDuration();
+	case EHunterAttribute::BleedDuration:           return Attrs->GetBleedDuration();
+	case EHunterAttribute::FreezeDuration:          return Attrs->GetFreezeDuration();
+	case EHunterAttribute::CorruptionDuration:      return Attrs->GetCorruptionDuration();
+	case EHunterAttribute::ShockDuration:           return Attrs->GetShockDuration();
+	case EHunterAttribute::PetrifyBuildUpDuration:  return Attrs->GetPetrifyBuildUpDuration();
+	case EHunterAttribute::PurifyDuration:          return Attrs->GetPurifyDuration();
+
+	// ── Defense ───────────────────────────────────────────────────────────────
+	case EHunterAttribute::GlobalDefenses:              return Attrs->GetGlobalDefenses();
+	case EHunterAttribute::Armour:                      return Attrs->GetArmour();
+	case EHunterAttribute::ArmourFlatBonus:             return Attrs->GetArmourFlatBonus();
+	case EHunterAttribute::ArmourPercentBonus:          return Attrs->GetArmourPercentBonus();
+	case EHunterAttribute::BlockStrength:               return Attrs->GetBlockStrength();
+	case EHunterAttribute::FlatBlockAmount:             return Attrs->GetFlatBlockAmount();
+	case EHunterAttribute::ChipDamageWhileBlocking:     return Attrs->GetChipDamageWhileBlocking();
+	case EHunterAttribute::BlockStaminaCostMultiplier:  return Attrs->GetBlockStaminaCostMultiplier();
+	case EHunterAttribute::GuardBreakThreshold:         return Attrs->GetGuardBreakThreshold();
+	case EHunterAttribute::BlockAngle:                  return Attrs->GetBlockAngle();
+	case EHunterAttribute::BlockPhysicalMultiplier:     return Attrs->GetBlockPhysicalMultiplier();
+	case EHunterAttribute::BlockElementalMultiplier:    return Attrs->GetBlockElementalMultiplier();
+	case EHunterAttribute::BlockCorruptionMultiplier:   return Attrs->GetBlockCorruptionMultiplier();
+
+	// ── Resistances ───────────────────────────────────────────────────────────
+	case EHunterAttribute::FireResistanceFlatBonus:         return Attrs->GetFireResistanceFlatBonus();
+	case EHunterAttribute::FireResistancePercentBonus:      return Attrs->GetFireResistancePercentBonus();
+	case EHunterAttribute::MaxFireResistance:               return Attrs->GetMaxFireResistance();
+	case EHunterAttribute::IceResistanceFlatBonus:          return Attrs->GetIceResistanceFlatBonus();
+	case EHunterAttribute::IceResistancePercentBonus:       return Attrs->GetIceResistancePercentBonus();
+	case EHunterAttribute::MaxIceResistance:                return Attrs->GetMaxIceResistance();
+	case EHunterAttribute::LightningResistanceFlatBonus:    return Attrs->GetLightningResistanceFlatBonus();
+	case EHunterAttribute::LightningResistancePercentBonus: return Attrs->GetLightningResistancePercentBonus();
+	case EHunterAttribute::MaxLightningResistance:          return Attrs->GetMaxLightningResistance();
+	case EHunterAttribute::LightResistanceFlatBonus:        return Attrs->GetLightResistanceFlatBonus();
+	case EHunterAttribute::LightResistancePercentBonus:     return Attrs->GetLightResistancePercentBonus();
+	case EHunterAttribute::MaxLightResistance:              return Attrs->GetMaxLightResistance();
+	case EHunterAttribute::CorruptionResistanceFlatBonus:   return Attrs->GetCorruptionResistanceFlatBonus();
+	case EHunterAttribute::CorruptionResistancePercentBonus: return Attrs->GetCorruptionResistancePercentBonus();
+	case EHunterAttribute::MaxCorruptionResistance:         return Attrs->GetMaxCorruptionResistance();
+
+	// ── Damage Taken Multipliers ──────────────────────────────────────────────
+	case EHunterAttribute::GlobalDamageTakenMultiplier:     return Attrs->GetGlobalDamageTakenMultiplier();
+	case EHunterAttribute::PhysicalDamageTakenMultiplier:   return Attrs->GetPhysicalDamageTakenMultiplier();
+	case EHunterAttribute::ElementalDamageTakenMultiplier:  return Attrs->GetElementalDamageTakenMultiplier();
+	case EHunterAttribute::FireDamageTakenMultiplier:       return Attrs->GetFireDamageTakenMultiplier();
+	case EHunterAttribute::IceDamageTakenMultiplier:        return Attrs->GetIceDamageTakenMultiplier();
+	case EHunterAttribute::LightningDamageTakenMultiplier:  return Attrs->GetLightningDamageTakenMultiplier();
+	case EHunterAttribute::LightDamageTakenMultiplier:      return Attrs->GetLightDamageTakenMultiplier();
+	case EHunterAttribute::CorruptionDamageTakenMultiplier: return Attrs->GetCorruptionDamageTakenMultiplier();
+
+	// ── Reflect ───────────────────────────────────────────────────────────────
+	case EHunterAttribute::ReflectPhysical:         return Attrs->GetReflectPhysical();
+	case EHunterAttribute::ReflectElemental:        return Attrs->GetReflectElemental();
+	case EHunterAttribute::ReflectChancePhysical:   return Attrs->GetReflectChancePhysical();
+	case EHunterAttribute::ReflectChanceElemental:  return Attrs->GetReflectChanceElemental();
+
+	// ── Piercing ──────────────────────────────────────────────────────────────
+	case EHunterAttribute::ArmourPiercing:          return Attrs->GetArmourPiercing();
+	case EHunterAttribute::FirePiercing:            return Attrs->GetFirePiercing();
+	case EHunterAttribute::IcePiercing:             return Attrs->GetIcePiercing();
+	case EHunterAttribute::LightningPiercing:       return Attrs->GetLightningPiercing();
+	case EHunterAttribute::LightPiercing:           return Attrs->GetLightPiercing();
+	case EHunterAttribute::CorruptionPiercing:      return Attrs->GetCorruptionPiercing();
+
+	// ── Resource & Utility ────────────────────────────────────────────────────
+	case EHunterAttribute::ComboCounter:            return Attrs->GetComboCounter();
+	case EHunterAttribute::Cooldown:                return Attrs->GetCooldown();
+	case EHunterAttribute::Gems:                    return Attrs->GetGems();
+	case EHunterAttribute::LifeLeech:               return Attrs->GetLifeLeech();
+	case EHunterAttribute::ManaLeech:               return Attrs->GetManaLeech();
+	case EHunterAttribute::StaminaLeechPercent:     return Attrs->GetStaminaLeechPercent();
+	case EHunterAttribute::MovementSpeed:           return Attrs->GetMovementSpeed();
+	case EHunterAttribute::Poise:                   return Attrs->GetPoise();
+	case EHunterAttribute::Weight:                  return Attrs->GetWeight();
+	case EHunterAttribute::PoiseResistance:         return Attrs->GetPoiseResistance();
+	case EHunterAttribute::StunRecovery:            return Attrs->GetStunRecovery();
+	case EHunterAttribute::ManaCostChanges:         return Attrs->GetManaCostChanges();
+	case EHunterAttribute::HealthCostChanges:       return Attrs->GetHealthCostChanges();
+	case EHunterAttribute::StaminaCostChanges:      return Attrs->GetStaminaCostChanges();
+	case EHunterAttribute::LifeOnHit:               return Attrs->GetLifeOnHit();
+	case EHunterAttribute::ManaOnHit:               return Attrs->GetManaOnHit();
+	case EHunterAttribute::StaminaOnHit:            return Attrs->GetStaminaOnHit();
+	case EHunterAttribute::AuraEffect:              return Attrs->GetAuraEffect();
+	case EHunterAttribute::AuraRadius:              return Attrs->GetAuraRadius();
+
+	default:
+		UE_LOG(LogStatsManager, Warning,
+			TEXT("GetAttributeByType: Unhandled EHunterAttribute value (%d) on %s."),
+			static_cast<int32>(AttributeType), *GetNameSafe(GetOwner()));
+		return 0.f;
+	}
 }
 
 bool UStatsManager::MeetsStatRequirements(const TMap<FName, float>& Requirements) const

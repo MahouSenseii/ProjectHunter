@@ -246,14 +246,24 @@ bool UMovesetManager::CorruptMoveset(EEquipmentSlot WeaponSlot)
 
 void UMovesetManager::AwardMovesetXP(EEquipmentSlot WeaponSlot, int64 XPAmount)
 {
+	if (!GetOwner() || !GetOwner()->HasAuthority() || XPAmount <= 0)
+	{
+		return;
+	}
+
 	FMovesetInstance* Moveset = SocketedMovesetsMap.Find(WeaponSlot);
-	if (!Moveset || !Moveset->CanLevelUp(0) || !Moveset->IsValid())
+	if (!Moveset || !Moveset->IsValid())
 	{
 		return;
 	}
 
 	UMovesetData* Data = Moveset->MovesetData.LoadSynchronous();
 	if (!Data)
+	{
+		return;
+	}
+
+	if (!Moveset->CanLevelUp(Data->MaxLevel))
 	{
 		return;
 	}
@@ -381,18 +391,18 @@ void UMovesetManager::HandleEquipmentChanged(EEquipmentSlot Slot,
 		return;
 	}
 
-	if (!NewItem)
+	if (OldItem)
 	{
-		// Weapon removed — revoke moveset abilities but keep the moveset data
-		// so it can be re-socketed when a new weapon is equipped.
 		RevokeMovesetAbilities(Slot);
 	}
-	else
+
+	if (NewItem)
 	{
 		// New weapon equipped — re-grant any socketed moveset abilities
 		FMovesetInstance* Moveset = SocketedMovesetsMap.Find(Slot);
 		if (Moveset && Moveset->IsValid())
 		{
+			RevokeMovesetAbilities(Slot);
 			GrantMovesetAbilities(Slot, *Moveset);
 		}
 	}

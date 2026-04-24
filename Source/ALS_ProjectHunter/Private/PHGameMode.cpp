@@ -44,14 +44,13 @@ void APHGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewP
 	}
 
 	// The pawn should already be possessed by now.
-	// Apply startup effects and abilities if the pawn is a PHBaseCharacter.
+	// APHBaseCharacter owns GAS initialization in BeginPlay/PossessedBy.
+	// Do not grant abilities or startup effects here; doing so duplicates the
+	// authoritative initialization path on first player spawn.
 	if (APHBaseCharacter* HunterChar = Cast<APHBaseCharacter>(NewPlayer->GetPawn()))
 	{
-		HunterChar->GiveDefaultAbilities();
-		HunterChar->ApplyStartupEffects();
-
 		UE_LOG(LogPHGameMode, Log,
-			TEXT("HandleStartingNewPlayer: initialized %s for %s"),
+			TEXT("HandleStartingNewPlayer: confirmed initialized pawn %s for %s"),
 			*HunterChar->GetName(), *NewPlayer->GetName());
 	}
 }

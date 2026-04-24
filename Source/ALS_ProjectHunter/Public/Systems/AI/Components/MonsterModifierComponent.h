@@ -7,6 +7,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Data/MonsterModifierData.h"
+#include "GameplayAbilitySpec.h"
 #include "GameplayEffectTypes.h"
 #include "MonsterModifierComponent.generated.h"
 
@@ -219,10 +220,23 @@ protected:
 	/** Apply a single mod row to the owning character's ASC. */
 	void ApplyMod(const FMonsterModRow& Mod, UAbilitySystemComponent* ASC);
 
+	void ClearAppliedRuntimeMods(UAbilitySystemComponent* ASC);
+
 	/** Build the full display name from the base name + prefix/suffix labels. */
 	FText BuildDisplayName(const TArray<FMonsterModRow>& Mods) const;
 
 	/** Handles for GEs applied by mods — kept so we could remove them if needed */
 	UPROPERTY(Transient)
 	TArray<FActiveGameplayEffectHandle> AppliedGEHandles;
+
+	UPROPERTY(Transient)
+	TArray<FGameplayAbilitySpecHandle> GrantedAbilityHandles;
+
+	UPROPERTY(Transient)
+	FGameplayTagContainer GrantedLooseTags;
+
+	UPROPERTY(Transient)
+	TArray<FGameplayTagContainer> GrantedLooseTagGrants;
+
+	float AppliedMoveSpeedMultiplier = 1.0f;
 };

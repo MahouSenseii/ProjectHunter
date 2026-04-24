@@ -54,6 +54,7 @@ namespace DoTSetByCallerTags
 	const FName Bleed_DamagePerTick  = TEXT("DoT.Bleed.DamagePerTick");
 	const FName Ignite_DamagePerTick = TEXT("DoT.Ignite.DamagePerTick");
 	const FName Poison_DamagePerTick = TEXT("DoT.Poison.DamagePerTick");
+	const FName Corruption_DamagePerTick = TEXT("DoT.Corruption.DamagePerTick");
 	const FName Chill_SlowFraction   = TEXT("DoT.Chill.Magnitude");
 	const FName Shock_AmpFraction    = TEXT("DoT.Shock.Magnitude");
 }
@@ -98,6 +99,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DoT|Effects")
 	TSubclassOf<UGameplayEffect> PoisonEffectClass;
 
+	/** GE asset for Corruption (dark DoT). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DoT|Effects")
+	TSubclassOf<UGameplayEffect> CorruptionEffectClass;
+
 	/** GE asset for Chill (cold slow, no damage). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DoT|Effects")
 	TSubclassOf<UGameplayEffect> ChillEffectClass;
@@ -105,6 +110,10 @@ public:
 	/** GE asset for Freeze (cold CC, no damage). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DoT|Effects")
 	TSubclassOf<UGameplayEffect> FreezeEffectClass;
+
+	/** GE asset for Petrify (light CC, no damage). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DoT|Effects")
+	TSubclassOf<UGameplayEffect> PetrifyEffectClass;
 
 	/** GE asset for Shock (lightning amp, no damage). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DoT|Effects")
@@ -143,6 +152,15 @@ public:
 		float Duration, AActor* Instigator = nullptr);
 
 	/**
+	 * Apply Corruption to a target.
+	 * @param DamagePerTick   Corruption damage dealt each tick.
+	 * @param Duration        Duration in seconds.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DoT")
+	FDoTApplyResult ApplyCorruption(AActor* Target, float DamagePerTick,
+		float Duration, AActor* Instigator = nullptr);
+
+	/**
 	 * Apply a Chill to a target (movement slow, no damage).
 	 * @param SlowFraction    0.0 = no slow, 1.0 = full stop.  Clamped 0–0.7.
 	 * @param Duration        Duration in seconds.
@@ -157,6 +175,14 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DoT")
 	FDoTApplyResult ApplyFreeze(AActor* Target, float Duration,
+		AActor* Instigator = nullptr);
+
+	/**
+	 * Apply Petrify to a target (CC, no damage).
+	 * @param Duration   Petrify duration in seconds.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DoT")
+	FDoTApplyResult ApplyPetrify(AActor* Target, float Duration,
 		AActor* Instigator = nullptr);
 
 	/**
@@ -182,6 +208,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DoT")
 	int32 GetPoisonStacks(AActor* Target) const;
 
+	/** Returns true if the target currently has an active Corruption GE. */
+	UFUNCTION(BlueprintPure, Category = "DoT")
+	bool IsCorrupted(AActor* Target) const;
+
 	/** Returns true if the target currently has an active Chill GE. */
 	UFUNCTION(BlueprintPure, Category = "DoT")
 	bool IsChilled(AActor* Target) const;
@@ -189,6 +219,10 @@ public:
 	/** Returns true if the target currently has an active Freeze GE. */
 	UFUNCTION(BlueprintPure, Category = "DoT")
 	bool IsFrozen(AActor* Target) const;
+
+	/** Returns true if the target currently has an active Petrify GE. */
+	UFUNCTION(BlueprintPure, Category = "DoT")
+	bool IsPetrified(AActor* Target) const;
 
 	/** Returns true if the target currently has an active Shock GE. */
 	UFUNCTION(BlueprintPure, Category = "DoT")
@@ -208,6 +242,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DoT")
 	void CurePoison(AActor* Target);
 
+	/** Remove Corruption from the target. */
+	UFUNCTION(BlueprintCallable, Category = "DoT")
+	void CureCorruption(AActor* Target);
+
 	/** Remove Chill from the target. */
 	UFUNCTION(BlueprintCallable, Category = "DoT")
 	void RemoveChill(AActor* Target);
@@ -215,6 +253,10 @@ public:
 	/** Remove Freeze from the target. */
 	UFUNCTION(BlueprintCallable, Category = "DoT")
 	void RemoveFreeze(AActor* Target);
+
+	/** Remove Petrify from the target. */
+	UFUNCTION(BlueprintCallable, Category = "DoT")
+	void RemovePetrify(AActor* Target);
 
 	/** Remove Shock from the target. */
 	UFUNCTION(BlueprintCallable, Category = "DoT")

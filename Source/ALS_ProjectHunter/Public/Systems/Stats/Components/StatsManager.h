@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Systems/Stats/Debug/StatsDebugManager.h"
+#include "Systems/Stats/StatsEnumLibrary.h"
 #include "GameplayEffectTypes.h"
 #include "StatsManager.generated.h"
 
@@ -201,9 +202,19 @@ public:
 	/* ═══════════════════════════════════════════════════════════════════════ */
 
 	/**
-	 * Get any attribute by name
-	 * @param AttributeName - Name of the attribute (e.g., "Strength", "MagicFind")
-	 * @return Attribute value, or 0 if not found
+	 * Get any attribute by enum — type-safe, Blueprint-friendly, no string typos.
+	 * Prefer this over GetAttributeByName for all new Blueprint/C++ code.
+	 *
+	 * @param AttributeType - Enum value identifying the attribute to read.
+	 * @return Current attribute value, or 0.f if the AttributeSet is unavailable.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	float GetAttributeByType(EHunterAttribute AttributeType) const;
+
+	/**
+	 * Get any attribute by name (legacy — prefer GetAttributeByType for new code).
+	 * @param AttributeName - Name of the attribute (e.g., "Strength", "Health")
+	 * @return Attribute value, or 0 if not found / AttributeSet unavailable.
 	 */
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	float GetAttributeByName(FName AttributeName) const;
@@ -227,7 +238,6 @@ public:
 
 	const UBaseStatsData* GetStatsDataAsset() const
 	{
-		
 		return StatsData;
 	}
 

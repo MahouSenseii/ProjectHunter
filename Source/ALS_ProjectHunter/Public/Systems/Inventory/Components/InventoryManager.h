@@ -9,6 +9,9 @@
 #include "InventoryManager.generated.h"
 
 class UItemInstance;
+class UActorChannel;
+class FOutBunch;
+struct FReplicationFlags;
 
 /**
  * Event delegates for inventory changes
@@ -44,6 +47,7 @@ public:
 	// the server knows what is in a client's inventory (required for server-side
 	// equip validation, anti-cheat, and authoritative pickup logic).
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
 	// ═══════════════════════════════════════════════
 	// CONFIGURATION (Hunter Manga Style)
@@ -107,7 +111,7 @@ public:
 	 * @param Item - Item to add
 	 * @return True if successfully added (or partially stacked)
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	bool AddItem(UItemInstance* Item);
 
 	/**
@@ -116,7 +120,7 @@ public:
 	 * @param SlotIndex - Target slot index
 	 * @return True if successfully added
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	bool AddItemToSlot(UItemInstance* Item, int32 SlotIndex);
 
 	/**
@@ -124,7 +128,7 @@ public:
 	 * @param Item - Item to remove
 	 * @return True if successfully removed
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	bool RemoveItem(UItemInstance* Item);
 
 	/**
@@ -132,7 +136,7 @@ public:
 	 * @param SlotIndex - Slot index
 	 * @return Removed item (or nullptr)
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	UItemInstance* RemoveItemAtSlot(int32 SlotIndex);
 
 	/**
@@ -141,7 +145,7 @@ public:
 	 * @param Quantity - Amount to remove
 	 * @return True if successfully removed
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	bool RemoveQuantity(UItemInstance* Item, int32 Quantity);
 
 	/**
@@ -150,7 +154,7 @@ public:
 	 * @param SlotB - Second slot
 	 * @return True if successfully swapped
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	bool SwapItems(int32 SlotA, int32 SlotB);
 
 	/**
@@ -158,7 +162,7 @@ public:
 	 * @param Item - Item to drop
 	 * @param DropLocation - Where to drop it
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	void DropItem(UItemInstance* Item, FVector DropLocation);
 
 	/**
@@ -166,7 +170,7 @@ public:
 	 * @param SlotIndex - Slot to drop from
 	 * @param DropLocation - Where to drop it
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	void DropItemAtSlot(int32 SlotIndex, FVector DropLocation);
 
 	// ═══════════════════════════════════════════════
@@ -178,7 +182,7 @@ public:
 	 * @param Item - Item to stack
 	 * @return True if fully stacked (item consumed)
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Stacking")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory|Stacking")
 	bool TryStackItem(UItemInstance* Item);
 
 	/**
@@ -187,7 +191,7 @@ public:
 	 * @param TargetItem - Item to add to
 	 * @return True if stacked
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Stacking")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory|Stacking")
 	bool StackItems(UItemInstance* SourceItem, UItemInstance* TargetItem);
 
 	/**
@@ -196,7 +200,7 @@ public:
 	 * @param Amount - Amount to split off
 	 * @return New item instance with split amount
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Stacking")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory|Stacking")
 	UItemInstance* SplitStack(UItemInstance* Item, int32 Amount);
 
 	// ═══════════════════════════════════════════════
@@ -331,19 +335,19 @@ public:
 	/**
 	 * Sort inventory (by type, rarity, name, etc.)
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Organization")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory|Organization")
 	void SortInventory(ESortMode SortMode = ESortMode::SM_Type);
 
 	/**
 	 * Compact inventory (remove empty slots, stack items)
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Organization")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory|Organization")
 	void CompactInventory();
 
 	/**
 	 * Clear all items
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Organization")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory|Organization")
 	void ClearAll();
 
 	// ═══════════════════════════════════════════════
@@ -354,13 +358,13 @@ public:
 	 * Update max weight based on hunter strength
 	 * @param Strength - Hunter's strength stat
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Weight")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory|Weight")
 	void UpdateMaxWeightFromStrength(int32 Strength);
 
 	/**
 	 * Set max weight directly
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Weight")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory|Weight")
 	void SetMaxWeight(float NewMaxWeight);
 
 	/**
@@ -381,6 +385,8 @@ private:
 
 	/** Remove all null/invalid items */
 	void CleanupInvalidItems();
+
+	bool HasInventoryWriteAuthority(const TCHAR* FunctionName) const;
 
 	// ─────────────────────────────────────────────────────────────────
 	// N-04 FIX: Replication callbacks

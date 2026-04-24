@@ -71,3 +71,22 @@ enum class ECombatStatus : uint8
 	EnteringCombat UMETA(DisplayName = "Entering Combat"),  // Transition state
 	LeavingCombat UMETA(DisplayName = "Leaving Combat")     // Transition state
 };
+
+/**
+ * How an incoming hit was resolved by the target.
+ *
+ * Normal     — full damage + ailments + buildup (standard hit)
+ * Parry      — damage zeroed; ailments still apply by flat chance roll (no buildup).
+ *              Elden Ring style: attacker can still proc bleed/poison on a parried hit.
+ *              Packet result is marked Parry so Blueprint can react from ApplyHit output.
+ * Invincible — damage AND ailments fully negated (i-frames, divine blessings, etc.)
+ * Absorbed   — damage converts to a resource (blood magic absorb, arcane shields, future)
+ */
+UENUM(BlueprintType)
+enum class EHitResponse : uint8
+{
+	Normal      UMETA(DisplayName = "Normal"),
+	Parry       UMETA(DisplayName = "Parry"),
+	Invincible  UMETA(DisplayName = "Invincible"),
+	Absorbed    UMETA(DisplayName = "Absorbed")
+};

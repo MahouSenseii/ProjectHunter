@@ -38,7 +38,7 @@ struct FOnAttributeChangeData; // Add this forward declaration
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatAffiliationChanged, const FCombatAffiliation&, NewAffiliation);
 
 // If APHBaseCharacter please cass for information 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDeath, APHBaseCharacter*, DeadCharacter,AActor*, KillerActor); 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDeath, APHBaseCharacter*, DeadCharacter, AActor*, KillerActor);
 
 UCLASS(Abstract)
 class ALS_PROJECTHUNTER_API APHBaseCharacter : public AALSCharacter, public IAbilitySystemInterface
@@ -58,10 +58,10 @@ public:
 	virtual void SprintAction_Implementation(bool bValue) override;
 	UPROPERTY(BlueprintAssignable, Category="Combat")
 	FOnCombatAffiliationChanged OnCombatAffiliationChanged;
-	
+
 	UPROPERTY(BlueprintAssignable, Category="Combat")
 	FOnDeath OnDeathEvent;
-	
+
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* CORE COMPONENTS (Shared by Players and NPCs) */
 	/* ═══════════════════════════════════════════════════════════════════════ */

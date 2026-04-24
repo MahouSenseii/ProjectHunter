@@ -32,9 +32,12 @@ class UInventoryManager;
 class UCharacterSystemCoordinatorComponent;
 class UEquipmentPresentationComponent;
 class AEquippedItemRuntimeActor;
+class UActorChannel;
+class FOutBunch;
 class FEquipmentMutationHelper;
 class FEquipmentReplicationHelper;
 class FEquipmentSlotResolver;
+struct FReplicationFlags;
 struct FItemBase;
 
 /** Fired whenever an equipment slot changes (equip, unequip, swap). */
@@ -62,6 +65,7 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
 	// ═══════════════════════════════════════════════
 	// PUBLIC API

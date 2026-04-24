@@ -30,6 +30,7 @@ bool FInventoryAdder::AddItem(UInventoryManager& Manager, UItemInstance* Item)
 				*Item->GetDisplayName().ToString());
 
 			Manager.BroadcastInventoryChanged();
+			Manager.UpdateWeight();
 			return true;
 		}
 	}
@@ -67,6 +68,14 @@ bool FInventoryAdder::AddItemToSlot(UInventoryManager& Manager, UItemInstance* I
 	{
 		PH_LOG_WARNING(LogInventoryManager, "AddItemToSlot failed: SlotIndex=%d is already occupied.", SlotIndex);
 		return false;
+	}
+
+	if (AActor* OwnerActor = Manager.GetOwner())
+	{
+		if (Item->GetOuter() != OwnerActor)
+		{
+			Item->Rename(nullptr, OwnerActor, REN_DontCreateRedirectors | REN_NonTransactional);
+		}
 	}
 
 	Manager.Items[SlotIndex] = Item;

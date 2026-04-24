@@ -16,6 +16,17 @@ bool FInventoryStackHandler::TryStackItem(UInventoryManager& Manager, UItemInsta
 		return false;
 	}
 
+	const int32 RemainingSpace = StackTarget->GetRemainingStackSpace();
+	if (RemainingSpace <= 0)
+	{
+		return false;
+	}
+
+	if (Item->Quantity > RemainingSpace && Manager.FindFirstEmptySlot() == INDEX_NONE)
+	{
+		return false;
+	}
+
 	const int32 Overflow = StackTarget->AddToStack(Item->Quantity);
 	if (Overflow > 0)
 	{

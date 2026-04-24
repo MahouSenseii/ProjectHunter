@@ -221,6 +221,7 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_StunRecovery)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_MovementSpeed)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_CoolDown)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_ManaCostChanges)
+DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_HealthCostChanges)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_LifeLeech)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_ManaLeech)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_LifeOnHit)
@@ -368,6 +369,39 @@ DEFINE_GAMEPLAY_TAG(Data_Recovery_Health)
 DEFINE_GAMEPLAY_TAG(Data_Recovery_Mana)
 DEFINE_GAMEPLAY_TAG(Data_Recovery_Stamina)
 DEFINE_GAMEPLAY_TAG(Data_Recovery_ArcaneShield)
+
+// Parry / Stagger / Invincible state tags
+DEFINE_GAMEPLAY_TAG(Condition_Self_IsParrying)
+DEFINE_GAMEPLAY_TAG(Condition_Self_RecentlyParried)
+DEFINE_GAMEPLAY_TAG(Condition_Self_IsStaggered)
+DEFINE_GAMEPLAY_TAG(Condition_Self_StaminaDepleted)
+DEFINE_GAMEPLAY_TAG(Condition_Self_IsInvincible)
+DEFINE_GAMEPLAY_TAG(State_Self_ExecutingSkill)
+
+// More damage modifier SetByCaller tags (multiplicative per source)
+DEFINE_GAMEPLAY_TAG(Data_More_Physical)
+DEFINE_GAMEPLAY_TAG(Data_More_Fire)
+DEFINE_GAMEPLAY_TAG(Data_More_Ice)
+DEFINE_GAMEPLAY_TAG(Data_More_Lightning)
+DEFINE_GAMEPLAY_TAG(Data_More_Light)
+DEFINE_GAMEPLAY_TAG(Data_More_Corruption)
+DEFINE_GAMEPLAY_TAG(Data_More_Elemental)
+DEFINE_GAMEPLAY_TAG(Data_More_Global)
+
+// Increased damage modifier SetByCaller tags (additive pool)
+DEFINE_GAMEPLAY_TAG(Data_Increased_Physical)
+DEFINE_GAMEPLAY_TAG(Data_Increased_Fire)
+DEFINE_GAMEPLAY_TAG(Data_Increased_Ice)
+DEFINE_GAMEPLAY_TAG(Data_Increased_Lightning)
+DEFINE_GAMEPLAY_TAG(Data_Increased_Light)
+DEFINE_GAMEPLAY_TAG(Data_Increased_Corruption)
+DEFINE_GAMEPLAY_TAG(Data_Increased_Elemental)
+DEFINE_GAMEPLAY_TAG(Data_Increased_Global)
+
+// Skill resource cost SetByCaller tags
+DEFINE_GAMEPLAY_TAG(Data_Cost_Stamina)
+DEFINE_GAMEPLAY_TAG(Data_Cost_Mana)
+DEFINE_GAMEPLAY_TAG(Data_Cost_Health)
 
 #undef DEFINE_GAMEPLAY_TAG
 
@@ -573,6 +607,7 @@ void FPHGameplayTags::RegisterMiscAttributes()
 	Attributes_Secondary_Misc_StunRecovery     = T.AddNativeGameplayTag("Attributes.Secondary.Misc.StunRecovery",     TEXT("Stun recovery."));
 	Attributes_Secondary_Misc_CoolDown         = T.AddNativeGameplayTag("Attributes.Secondary.Misc.CoolDown",         TEXT("Cooldown changes."));
 	Attributes_Secondary_Misc_ManaCostChanges  = T.AddNativeGameplayTag("Attributes.Secondary.Misc.ManaCostChanges",  TEXT("Mana cost changes."));
+	Attributes_Secondary_Misc_HealthCostChanges= T.AddNativeGameplayTag("Attributes.Secondary.Misc.HealthCostChanges",TEXT("Health cost changes."));
 	Attributes_Secondary_Misc_LifeLeech        = T.AddNativeGameplayTag("Attributes.Secondary.Misc.LifeLeech",        TEXT("Life leech."));
 	Attributes_Secondary_Misc_ManaLeech        = T.AddNativeGameplayTag("Attributes.Secondary.Misc.ManaLeech",        TEXT("Mana leech."));
 	Attributes_Secondary_Misc_MovementSpeed    = T.AddNativeGameplayTag("Attributes.Secondary.Misc.MovementSpeed",    TEXT("Movement speed."));
@@ -876,6 +911,42 @@ void FPHGameplayTags::RegisterSetByCallerDamageTags()
 	Data_Recovery_Mana          = T.AddNativeGameplayTag("Data.Recovery.Mana",          TEXT("SetByCaller key for mana recovery in HealingApplicationGE."));
 	Data_Recovery_Stamina       = T.AddNativeGameplayTag("Data.Recovery.Stamina",       TEXT("SetByCaller key for stamina recovery in HealingApplicationGE."));
 	Data_Recovery_ArcaneShield  = T.AddNativeGameplayTag("Data.Recovery.ArcaneShield",  TEXT("SetByCaller key for arcane shield recovery in HealingApplicationGE."));
+
+	// ── Parry / Stagger / Invincibility state tags ─────────────────────────
+	// Set as active GE tags — not SetByCaller. Registered here for consistency.
+	Condition_Self_IsParrying      = T.AddNativeGameplayTag("Condition.Self.IsParrying",      TEXT("Character is in the active parry window. CombatManager routes EHitResponse::Parry when this is present."));
+	Condition_Self_RecentlyParried = T.AddNativeGameplayTag("Condition.Self.RecentlyParried", TEXT("Character successfully parried within the last few seconds. Enables 'after parrying' conditional modifiers."));
+	Condition_Self_IsStaggered     = T.AddNativeGameplayTag("Condition.Self.IsStaggered",     TEXT("Character is in a stagger state. Set when bShouldStagger fires; cleared on stagger recovery."));
+	Condition_Self_StaminaDepleted = T.AddNativeGameplayTag("Condition.Self.StaminaDepleted", TEXT("Stamina is at zero. Required condition for stagger on incoming hits."));
+	Condition_Self_IsInvincible    = T.AddNativeGameplayTag("Condition.Self.IsInvincible",    TEXT("Character has invincibility frames active. Routes EHitResponse::Invincible — negates damage and ailments."));
+	State_Self_ExecutingSkill      = T.AddNativeGameplayTag("State.Self.ExecutingSkill",      TEXT("Character is mid-execution of an active skill. Suppresses stagger trigger even at zero stamina."));
+
+	// ── More damage SetByCaller tags (multiplicative per source) ──────────
+	// Apply via temporary instant GE on the source. Each GE is its own More multiplier.
+	Data_More_Physical   = T.AddNativeGameplayTag("Data.More.Physical",   TEXT("SetByCaller: X% more physical damage. Stacks multiplicatively."));
+	Data_More_Fire       = T.AddNativeGameplayTag("Data.More.Fire",       TEXT("SetByCaller: X% more fire damage. Stacks multiplicatively."));
+	Data_More_Ice        = T.AddNativeGameplayTag("Data.More.Ice",        TEXT("SetByCaller: X% more ice damage. Stacks multiplicatively."));
+	Data_More_Lightning  = T.AddNativeGameplayTag("Data.More.Lightning",  TEXT("SetByCaller: X% more lightning damage. Stacks multiplicatively."));
+	Data_More_Light      = T.AddNativeGameplayTag("Data.More.Light",      TEXT("SetByCaller: X% more light damage. Stacks multiplicatively."));
+	Data_More_Corruption = T.AddNativeGameplayTag("Data.More.Corruption", TEXT("SetByCaller: X% more corruption damage. Stacks multiplicatively."));
+	Data_More_Elemental  = T.AddNativeGameplayTag("Data.More.Elemental",  TEXT("SetByCaller: X% more elemental damage (fire/ice/lightning/light). Stacks multiplicatively."));
+	Data_More_Global     = T.AddNativeGameplayTag("Data.More.Global",     TEXT("SetByCaller: X% more damage of all types. Stacks multiplicatively."));
+
+	// ── Increased damage SetByCaller tags (additive pool) ─────────────────
+	// All Increased sources sum together before applying as one multiplier.
+	Data_Increased_Physical   = T.AddNativeGameplayTag("Data.Increased.Physical",   TEXT("SetByCaller: X% increased physical damage. Pools additively with other Increased sources."));
+	Data_Increased_Fire       = T.AddNativeGameplayTag("Data.Increased.Fire",       TEXT("SetByCaller: X% increased fire damage. Pools additively."));
+	Data_Increased_Ice        = T.AddNativeGameplayTag("Data.Increased.Ice",        TEXT("SetByCaller: X% increased ice damage. Pools additively."));
+	Data_Increased_Lightning  = T.AddNativeGameplayTag("Data.Increased.Lightning",  TEXT("SetByCaller: X% increased lightning damage. Pools additively."));
+	Data_Increased_Light      = T.AddNativeGameplayTag("Data.Increased.Light",      TEXT("SetByCaller: X% increased light damage. Pools additively."));
+	Data_Increased_Corruption = T.AddNativeGameplayTag("Data.Increased.Corruption", TEXT("SetByCaller: X% increased corruption damage. Pools additively."));
+	Data_Increased_Elemental  = T.AddNativeGameplayTag("Data.Increased.Elemental",  TEXT("SetByCaller: X% increased elemental damage. Pools additively."));
+	Data_Increased_Global     = T.AddNativeGameplayTag("Data.Increased.Global",     TEXT("SetByCaller: X% increased damage of all types. Pools additively."));
+
+	// ── Skill resource cost SetByCaller tags ──────────────────────────────
+	Data_Cost_Stamina = T.AddNativeGameplayTag("Data.Cost.Stamina", TEXT("SetByCaller: skill stamina cost. Deducted from source on activation."));
+	Data_Cost_Mana    = T.AddNativeGameplayTag("Data.Cost.Mana",    TEXT("SetByCaller: skill mana cost. Deducted from source on activation."));
+	Data_Cost_Health  = T.AddNativeGameplayTag("Data.Cost.Health",  TEXT("SetByCaller: skill health cost (blood magic). Deducted from source on activation."));
 }
 
 void FPHGameplayTags::RegisterAttributeToTagMappings()
@@ -937,6 +1008,7 @@ void FPHGameplayTags::RegisterAttributeToTagMappings()
     // Resource Cost Attributes
     // ===========================
     AttributeToTagMap.Add(UHunterAttributeSet::GetManaCostChangesAttribute(),    Attributes_Secondary_Misc_ManaCostChanges);
+    AttributeToTagMap.Add(UHunterAttributeSet::GetHealthCostChangesAttribute(),  Attributes_Secondary_Misc_HealthCostChanges);
     AttributeToTagMap.Add(UHunterAttributeSet::GetStaminaCostChangesAttribute(), Attributes_Secondary_Misc_StaminaCostChanges);
     
     // ===========================
@@ -1087,6 +1159,9 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Offensive.CritMultiplier")), UHunterAttributeSet::GetCritMultiplierAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Misc.CritChance")), UHunterAttributeSet::GetCritChanceAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Misc.CritMultiplier")), UHunterAttributeSet::GetCritMultiplierAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Misc.ManaCostChanges")), UHunterAttributeSet::GetManaCostChangesAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Misc.HealthCostChanges")), UHunterAttributeSet::GetHealthCostChangesAttribute());
+    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Misc.StaminaCostChanges")), UHunterAttributeSet::GetStaminaCostChangesAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Offensive.SpellDamage")), UHunterAttributeSet::GetSpellDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Piercing.Armour")), UHunterAttributeSet::GetArmourPiercingAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Piercing.Armor")), UHunterAttributeSet::GetArmourPiercingAttribute());
@@ -1457,6 +1532,7 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Misc.MovementSpeed"),   UHunterAttributeSet::GetMovementSpeedAttribute());
 	Add(TEXT("Attributes.Secondary.Misc.CoolDown"),        UHunterAttributeSet::GetCooldownAttribute());
 	Add(TEXT("Attributes.Secondary.Misc.ManaCostChanges"), UHunterAttributeSet::GetManaCostChangesAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.HealthCostChanges"), UHunterAttributeSet::GetHealthCostChangesAttribute());
 	Add(TEXT("Attributes.Secondary.Misc.LifeLeech"),       UHunterAttributeSet::GetLifeLeechAttribute());
 	Add(TEXT("Attributes.Secondary.Misc.ManaLeech"),       UHunterAttributeSet::GetManaLeechAttribute());
 	Add(TEXT("Attributes.Secondary.Misc.LifeOnHit"),       UHunterAttributeSet::GetLifeOnHitAttribute());

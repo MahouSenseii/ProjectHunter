@@ -14,6 +14,62 @@
 
 DEFINE_LOG_CATEGORY(LogInteractionManager);
 
+namespace InteractionManagerPrivate
+{
+	constexpr float MaxClientLocationErrorSq = 800.f * 800.f;
+
+	bool ValidateServerGroundItemPickup(const UInteractionManager* Manager, int32 ItemID,
+		const FVector& ClientLocation, const TCHAR* Context)
+	{
+		if (!Manager)
+		{
+			return false;
+		}
+
+		AActor* Owner = Manager->GetOwner();
+		UWorld* World = Manager->GetWorld();
+		UGroundItemSubsystem* GroundItems = World ? World->GetSubsystem<UGroundItemSubsystem>() : nullptr;
+		if (!Owner || !GroundItems)
+		{
+			UE_LOG(LogInteractionManager, Warning,
+				TEXT("%s: Rejected item %d because owner or GroundItemSubsystem was unavailable."),
+				Context, ItemID);
+			return false;
+		}
+
+		const FVector ServerOwnerLocation = Owner->GetActorLocation();
+		const float ClientErrorSq = FVector::DistSquared(ServerOwnerLocation, ClientLocation);
+		if (ClientErrorSq > MaxClientLocationErrorSq)
+		{
+			UE_LOG(LogInteractionManager, Warning,
+				TEXT("%s: Rejected item %d because client location was %.0f cm from server pawn."),
+				Context, ItemID, FMath::Sqrt(ClientErrorSq));
+			return false;
+		}
+
+		const FVector* ItemLocation = GroundItems->GetInstanceLocations().Find(ItemID);
+		if (!ItemLocation)
+		{
+			UE_LOG(LogInteractionManager, Warning,
+				TEXT("%s: Rejected item %d because the ground item location was not registered."),
+				Context, ItemID);
+			return false;
+		}
+
+		const float MaxPickupDistance = FMath::Max(Manager->PickupManager.PickupRadius, 800.f);
+		const float ItemDistSq = FVector::DistSquared(ServerOwnerLocation, *ItemLocation);
+		if (ItemDistSq > FMath::Square(MaxPickupDistance))
+		{
+			UE_LOG(LogInteractionManager, Warning,
+				TEXT("%s: Rejected item %d because it was %.0f cm from the server pawn."),
+				Context, ItemID, FMath::Sqrt(ItemDistSq));
+			return false;
+		}
+
+		return true;
+	}
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // LIFECYCLE
 // ═══════════════════════════════════════════════════════════════════════
@@ -1171,6 +1227,12 @@ bool UInteractionManager::ShouldUpdatePromptWidgetFromFocus() const
 void UInteractionManager::Server_PickupToInventory_Implementation(
 	int32 ItemID, FVector ClientLocation)
 {
+	if (!InteractionManagerPrivate::ValidateServerGroundItemPickup(
+		this, ItemID, ClientLocation, TEXT("Server_PickupToInventory")))
+	{
+		return;
+	}
+
 	// Basic proximity validation — prevents clients picking up items across the map.
 	constexpr float MaxPickupDistSq = 800.f * 800.f; // ~8 m tolerance
 	if (AActor* Owner = GetOwner())
@@ -1191,6 +1253,12 @@ void UInteractionManager::Server_PickupToInventory_Implementation(
 void UInteractionManager::Server_PickupAndEquip_Implementation(
 	int32 ItemID, FVector ClientLocation)
 {
+	if (!InteractionManagerPrivate::ValidateServerGroundItemPickup(
+		this, ItemID, ClientLocation, TEXT("Server_PickupAndEquip")))
+	{
+		return;
+	}
+
 	constexpr float MaxPickupDistSq = 800.f * 800.f;
 	if (AActor* Owner = GetOwner())
 	{

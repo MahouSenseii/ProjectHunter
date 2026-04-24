@@ -301,7 +301,7 @@ protected:
 	static FGameplayAttribute GetAttributeForStatName(FName StatName);
 
 	/** Apply stat point to attribute via GAS */
-	void ApplyStatPointToAttribute(FName AttributeName);
+	bool ApplyStatPointToAttribute(FName AttributeName);
 
 	/** Remove stat point from attribute via GAS (for respec) */
 	void RemoveStatPointFromAttribute(FName AttributeName, int32 PointsToRemove);

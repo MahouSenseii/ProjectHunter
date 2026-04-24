@@ -146,17 +146,7 @@ void UMonsterModifierComponent::RerollMods()
 	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(GetOwner());
 	UAbilitySystemComponent* ASC = ASCInterface ? ASCInterface->GetAbilitySystemComponent() : nullptr;
 
-	if (ASC)
-	{
-		for (const FActiveGameplayEffectHandle& Handle : AppliedGEHandles)
-		{
-			if (Handle.IsValid())
-			{
-				ASC->RemoveActiveGameplayEffect(Handle);
-			}
-		}
-	}
-	AppliedGEHandles.Empty();
+	ClearAppliedRuntimeMods(ASC);
 	AppliedMods.Empty();
 
 	// Reset the per-instance variation so the reroll also re-rolls base stats.
@@ -211,6 +201,7 @@ void UMonsterModifierComponent::RollBaseStatVariation()
 			if (UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement())
 			{
 				MoveComp->MaxWalkSpeed *= BaseStatVariation.MoveSpeedMultiplier;
+				AppliedMoveSpeedMultiplier *= BaseStatVariation.MoveSpeedMultiplier;
 			}
 		}
 	}
@@ -333,13 +324,19 @@ void UMonsterModifierComponent::ApplyMod(const FMonsterModRow& Mod, UAbilitySyst
 	if (Mod.GrantedAbilityClass)
 	{
 		FGameplayAbilitySpec AbilitySpec(Mod.GrantedAbilityClass, 1);
-		ASC->GiveAbility(AbilitySpec);
+		const FGameplayAbilitySpecHandle Handle = ASC->GiveAbility(AbilitySpec);
+		if (Handle.IsValid())
+		{
+			GrantedAbilityHandles.Add(Handle);
+		}
 	}
 
 	// Apply gameplay tags for AI/behaviour branching
 	if (Mod.GrantedTags.Num() > 0)
 	{
 		ASC->AddLooseGameplayTags(Mod.GrantedTags);
+		GrantedLooseTags.AppendTags(Mod.GrantedTags);
+		GrantedLooseTagGrants.Add(Mod.GrantedTags);
 	}
 
 	// Apply movement speed multiplier (was previously a dead data field)
@@ -350,6 +347,7 @@ void UMonsterModifierComponent::ApplyMod(const FMonsterModRow& Mod, UAbilitySyst
 			if (UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement())
 			{
 				MoveComp->MaxWalkSpeed *= Mod.MoveSpeedMultiplier;
+				AppliedMoveSpeedMultiplier *= Mod.MoveSpeedMultiplier;
 			}
 		}
 	}
@@ -358,6 +356,54 @@ void UMonsterModifierComponent::ApplyMod(const FMonsterModRow& Mod, UAbilitySyst
 		TEXT("ApplyMod: Applied '%s' to %s (MoveSpd=x%.2f, Aggro=x%.2f)"),
 		*Mod.ModID.ToString(), *GetOwner()->GetName(),
 		Mod.MoveSpeedMultiplier, Mod.AggroRangeMultiplier);
+}
+
+void UMonsterModifierComponent::ClearAppliedRuntimeMods(UAbilitySystemComponent* ASC)
+{
+	if (ASC)
+	{
+		for (const FActiveGameplayEffectHandle& Handle : AppliedGEHandles)
+		{
+			if (Handle.IsValid())
+			{
+				ASC->RemoveActiveGameplayEffect(Handle);
+			}
+		}
+
+		for (const FGameplayAbilitySpecHandle& Handle : GrantedAbilityHandles)
+		{
+			if (Handle.IsValid())
+			{
+				ASC->ClearAbility(Handle);
+			}
+		}
+
+		for (const FGameplayTagContainer& GrantedTags : GrantedLooseTagGrants)
+		{
+			if (GrantedTags.Num() > 0)
+			{
+				ASC->RemoveLooseGameplayTags(GrantedTags);
+			}
+		}
+	}
+
+	if (!FMath::IsNearlyEqual(AppliedMoveSpeedMultiplier, 1.0f)
+		&& !FMath::IsNearlyZero(AppliedMoveSpeedMultiplier))
+	{
+		if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
+		{
+			if (UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement())
+			{
+				MoveComp->MaxWalkSpeed /= AppliedMoveSpeedMultiplier;
+			}
+		}
+	}
+
+	AppliedGEHandles.Empty();
+	GrantedAbilityHandles.Empty();
+	GrantedLooseTags.Reset();
+	GrantedLooseTagGrants.Empty();
+	AppliedMoveSpeedMultiplier = 1.0f;
 }
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

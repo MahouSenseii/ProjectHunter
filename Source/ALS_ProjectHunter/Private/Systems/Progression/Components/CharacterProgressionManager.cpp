@@ -326,6 +326,14 @@ bool UCharacterProgressionManager::SpendStatPoint(FName AttributeName)
 		return false;
 	}
 
+	if (!ApplyStatPointToAttribute(AttributeName))
+	{
+		UE_LOG(LogCharacterProgressionManager, Warning,
+			TEXT("SpendStatPoint: Could not apply stat point to '%s'; point was not spent."),
+			*AttributeName.ToString());
+		return false;
+	}
+
 	// Deduct stat point
 	UnspentStatPoints--;
 
@@ -348,9 +356,6 @@ bool UCharacterProgressionManager::SpendStatPoint(FName AttributeName)
 	// --- Update fast-lookup TMap cache ---
 	int32& CachedCount = SpentStatPointsCache.FindOrAdd(AttributeName, 0);
 	CachedCount++;
-
-	// Apply to AttributeSet
-	ApplyStatPointToAttribute(AttributeName);
 
 	// Broadcast event
 	OnStatPointSpent.Broadcast(AttributeName, UnspentStatPoints);
@@ -452,13 +457,13 @@ FGameplayAttribute UCharacterProgressionManager::GetAttributeForStatName(FName S
 //   Infinite with a single +1 Additive modifier on the Strength attribute.
 //   We store every FActiveGameplayEffectHandle so respec can remove them cleanly.
 // ─────────────────────────────────────────────────────────────────────────────
-void UCharacterProgressionManager::ApplyStatPointToAttribute(FName AttributeName)
+bool UCharacterProgressionManager::ApplyStatPointToAttribute(FName AttributeName)
 {
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
 	if (!ASC)
 	{
 		UE_LOG(LogCharacterProgressionManager, Error, TEXT("ApplyStatPointToAttribute: ASC is null"));
-		return;
+		return false;
 	}
 
 	// Validate the attribute name maps to a known FGameplayAttribute
@@ -467,7 +472,7 @@ void UCharacterProgressionManager::ApplyStatPointToAttribute(FName AttributeName
 	{
 		UE_LOG(LogCharacterProgressionManager, Error,
 			TEXT("ApplyStatPointToAttribute: Unknown primary attribute '%s'"), *AttributeName.ToString());
-		return;
+		return false;
 	}
 
 	// Look up the designer-configured GE class for this attribute
@@ -478,7 +483,7 @@ void UCharacterProgressionManager::ApplyStatPointToAttribute(FName AttributeName
 			TEXT("ApplyStatPointToAttribute: No GE class configured for attribute '%s'. "
 				 "Add an entry to StatPointGEClasses in the Blueprint defaults."),
 			*AttributeName.ToString());
-		return;
+		return false;
 	}
 
 	// Apply the Infinite GE; store its handle for later removal (respec)
@@ -495,12 +500,15 @@ void UCharacterProgressionManager::ApplyStatPointToAttribute(FName AttributeName
 		UE_LOG(LogCharacterProgressionManager, Log,
 			TEXT("ApplyStatPointToAttribute: Applied +1 to '%s' (handle %s)"),
 			*AttributeName.ToString(), *Handle.ToString());
+		return true;
 	}
 	else
 	{
 		UE_LOG(LogCharacterProgressionManager, Error,
 			TEXT("ApplyStatPointToAttribute: GE application failed for '%s'"), *AttributeName.ToString());
 	}
+
+	return false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

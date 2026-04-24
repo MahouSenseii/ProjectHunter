@@ -79,7 +79,7 @@ public:
 	 * @param PlayerMagicFind - Killing player's magic find stat
 	 * @return Generated loot batch
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Loot")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Loot")
 	FLootResultBatch DropLoot(float PlayerLuck = 0.0f, float PlayerMagicFind = 0.0f);
 
 	/**
@@ -89,7 +89,7 @@ public:
 	 * @param PlayerMagicFind - Player's magic find stat
 	 * @return Generated loot batch
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Loot")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Loot")
 	FLootResultBatch DropLootAtLocation(
 		FVector Location,
 		float PlayerLuck = 0.0f,
@@ -101,7 +101,7 @@ public:
 	 * @param PlayerMagicFind - Player's magic find stat
 	 * @return Generated loot batch
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Loot")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Loot")
 	FLootResultBatch GenerateLoot(float PlayerLuck = 0.0f, float PlayerMagicFind = 0.0f);
 
 	/**
@@ -109,7 +109,7 @@ public:
 	 * @param Results - Loot to spawn
 	 * @param Location - Where to spawn (uses actor location if zero)
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Loot")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Loot")
 	void SpawnLoot(const FLootResultBatch& Results, FVector Location = FVector::ZeroVector);
 
 	// ═══════════════════════════════════════════════
@@ -152,4 +152,6 @@ protected:
 
 	/** Ensure subsystem is cached */
 	bool EnsureSubsystem() const;
+
+	bool HasLootAuthority(const TCHAR* FunctionName) const;
 };

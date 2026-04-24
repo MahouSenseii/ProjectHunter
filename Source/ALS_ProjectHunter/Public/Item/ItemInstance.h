@@ -24,6 +24,9 @@ class ALS_PROJECTHUNTER_API UItemInstance : public UObject
 public:
 	UItemInstance();
 
+	virtual bool IsSupportedForNetworking() const override { return true; }
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	/**
 	 * Migrate this item from an older serialization version to ITEM_CURRENT_VERSION.
 	 * Call after loading from save data.  Each version bump adds a migration step.
@@ -44,7 +47,7 @@ public:
 	// ═══════════════════════════════════════════════
 	
 	/** Reference to base item data in DataTable */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item")
 	FDataTableRowHandle BaseItemHandle;
 
 	// ═══════════════════════════════════════════════
@@ -52,11 +55,11 @@ public:
 	// ═══════════════════════════════════════════════
 	
 	/** Unique identifier for this item instance */
-	UPROPERTY(SaveGame, BlueprintReadOnly, Category = "Item")
+	UPROPERTY(SaveGame, BlueprintReadOnly, Replicated, Category = "Item")
 	FGuid UniqueID;
 
 	/** Random seed for deterministic generation */
-	UPROPERTY(SaveGame, BlueprintReadOnly, Category = "Item")
+	UPROPERTY(SaveGame, BlueprintReadOnly, Replicated, Category = "Item")
 	int32 Seed;
 
 	// ═══════════════════════════════════════════════
@@ -71,7 +74,7 @@ public:
 	 */
 	static constexpr int32 ITEM_CURRENT_VERSION = 1;
 
-	UPROPERTY(SaveGame, BlueprintReadOnly, Category = "Item")
+	UPROPERTY(SaveGame, BlueprintReadOnly, Replicated, Category = "Item")
 	int32 SerializationVersion = ITEM_CURRENT_VERSION;
 
 	// ═══════════════════════════════════════════════
@@ -79,11 +82,11 @@ public:
 	// ═══════════════════════════════════════════════
 	
 	/** Stack quantity (for stackable items) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item")
 	int32 Quantity = 1;
 
 	/** Total weight (base weight × quantity) - Hunter manga weight limit */
-	UPROPERTY(BlueprintReadOnly, Category = "Item")
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Item")
 	float TotalWeight = 0.0f;
 	
 	// ═══════════════════════════════════════════════
@@ -91,23 +94,23 @@ public:
 	// ═══════════════════════════════════════════════
 	
 	/** Item level (1-100) - Affects affix tier rolls */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item|Hunter")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter")
 	int32 ItemLevel = 1;
 	
 	/** Item rarity grade (F-SS) - Determines affix count */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item|Hunter")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter")
 	EItemRarity Rarity = EItemRarity::IR_GradeF;
 
 	/** Has item been identified? (unidentified items hide affixes) */
-	UPROPERTY(BlueprintReadWrite, SaveGame, Category = "Item|Hunter")
+	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter")
 	bool bIdentified = true;
 
 	/** Generated display name (cached for performance) */
-	UPROPERTY(BlueprintReadOnly, SaveGame, Category = "Item|Hunter")
+	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated, Category = "Item|Hunter")
 	FText DisplayName;
 
 	/** Whether name has been generated yet */
-	UPROPERTY(BlueprintReadOnly, SaveGame, Category = "Item|Hunter")
+	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated, Category = "Item|Hunter")
 	bool bHasNameBeenGenerated = false;
 
 	// ═══════════════════════════════════════════════
@@ -115,7 +118,7 @@ public:
 	// ═══════════════════════════════════════════════
 	
 	/** All item stats (implicits + generated affixes) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item|Affixes")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Affixes")
 	FPHItemStats Stats;
 
 
@@ -124,7 +127,7 @@ public:
 	// ═══════════════════════════════════════════════
 	
 	/** Remaining uses (for multi-use consumables like potions) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item|Consumable")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Consumable")
 	int32 RemainingUses = 1;
 
 	// C-5 FIX: CooldownRemaining was a mutable countdown field that was never ticked down
@@ -132,7 +135,7 @@ public:
 	// removed here to prevent Blueprint misuse. Use GetCooldownProgress() / CanUseConsumable().
 
 	/** Last use timestamp (for cooldown tracking) */
-	UPROPERTY(BlueprintReadWrite, SaveGame, Category = "Item|Consumable")
+	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Consumable")
 	float LastUseTime = 0.0f;
 
 	// ═══════════════════════════════════════════════
@@ -140,7 +143,7 @@ public:
 	// ═══════════════════════════════════════════════
 	
 	/** Durability system (equipment only) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item|Durability")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Durability")
 	FItemDurability Durability;
 
 	// ═══════════════════════════════════════════════
@@ -148,15 +151,15 @@ public:
 	// ═══════════════════════════════════════════════
 
 	/** Does this item have ANY corrupted (negative) affixes? */
-	UPROPERTY(BlueprintReadOnly, SaveGame, Category = "Item|Corruption")
+	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated, Category = "Item|Corruption")
 	bool bHasCorruptedAffixes = false;
 
 	/** Total corruption points (sum of all negative affix rank points) */
-	UPROPERTY(BlueprintReadOnly, SaveGame, Category = "Item|Corruption")
+	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated, Category = "Item|Corruption")
 	int32 TotalCorruptionPoints = 0;
 
 	/** Can this item still be modified? (corrupted items cannot be) */
-	UPROPERTY(BlueprintReadWrite, SaveGame, Category = "Item|State")
+	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|State")
 	bool bCanBeModified = true;
 
 	// ═══════════════════════════════════════════════
@@ -164,7 +167,7 @@ public:
 	// ═══════════════════════════════════════════════
 	
 	/** Rune crafting data (equipment only) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item|Runes")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Runes")
 	FRuneCraftingData RuneCraftingData;
 
 	// ═══════════════════════════════════════════════
@@ -172,11 +175,11 @@ public:
 	// ═══════════════════════════════════════════════
 	
 	/** Quest ID this item belongs to (if quest item) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item|Quest")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Quest")
 	FName QuestID;
 
 	/** Is this a key item? (cannot be dropped/sold) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Item|Quest")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Quest")
 	bool bIsKeyItem = false;
 
 	// ═══════════════════════════════════════════════
@@ -184,15 +187,15 @@ public:
 	// ═══════════════════════════════════════════════
 	
 	/** Can this item be traded with other hunters? */
-	UPROPERTY(BlueprintReadWrite, SaveGame, Category = "Item|Economy")
+	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Economy")
 	bool bIsTradeable = true;
 
 	/** Is this item character-bound? (soulbound) */
-	UPROPERTY(BlueprintReadWrite, SaveGame, Category = "Item|Economy")
+	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Economy")
 	bool bIsSoulbound = false;
 
 	/** Value modifier (from quality, affixes, etc.) */
-	UPROPERTY(BlueprintReadWrite, SaveGame, Category = "Item|Economy")
+	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Economy")
 	float ValueModifier = 0.0f;
 
 	// ═══════════════════════════════════════════════

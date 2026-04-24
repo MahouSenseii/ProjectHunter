@@ -7,6 +7,8 @@
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "PHGameplayTags.h"
+#include "Systems/Combat/Components/DoTManager.h"
+#include "Systems/Stats/StatsModifierMath.h"
 
 DEFINE_LOG_CATEGORY(LogCombatManager);
 
@@ -16,6 +18,17 @@ namespace CombatManagerComponentPrivate
 	constexpr float MinResistancePercent = -100.f;
 	constexpr float DefaultMaxResistancePercent = 90.f;
 	constexpr float DefaultBlockAngleDegrees = 120.f;
+	constexpr float ArmourHitSizeScale = 10.f;
+	constexpr float DefaultBleedDuration = 4.f;
+	constexpr float DefaultIgniteDuration = 4.f;
+	constexpr float DefaultFreezeDuration = 1.5f;
+	constexpr float DefaultShockDuration = 4.f;
+	constexpr float DefaultPetrifyDuration = 2.f;
+	constexpr float DefaultCorruptionDuration = 4.f;
+	constexpr float BleedDamagePerTickPercent = 0.2f;
+	constexpr float IgniteDamagePerTickPercent = 0.25f;
+	constexpr float CorruptionDamagePerTickPercent = 0.2f;
+	constexpr float DefaultShockAmpFraction = 0.2f;
 
 	float GetDamageByType(const FCombatDamagePacket& Packet, const EHunterDamageType DamageType)
 	{
@@ -36,6 +49,81 @@ namespace CombatManagerComponentPrivate
 		default:
 			return 0.f;
 		}
+	}
+
+	float GetValueByType(const FCombatDamageTypeValues& Values, const EHunterDamageType DamageType)
+	{
+		switch (DamageType)
+		{
+		case EHunterDamageType::Physical:
+			return Values.Physical;
+		case EHunterDamageType::Fire:
+			return Values.Fire;
+		case EHunterDamageType::Ice:
+			return Values.Ice;
+		case EHunterDamageType::Lightning:
+			return Values.Lightning;
+		case EHunterDamageType::Light:
+			return Values.Light;
+		case EHunterDamageType::Corruption:
+			return Values.Corruption;
+		default:
+			return 0.f;
+		}
+	}
+
+	float GetMultiplierByType(const FCombatDamageTypeMultipliers& Multipliers, const EHunterDamageType DamageType)
+	{
+		switch (DamageType)
+		{
+		case EHunterDamageType::Physical:
+			return Multipliers.Physical;
+		case EHunterDamageType::Fire:
+			return Multipliers.Fire;
+		case EHunterDamageType::Ice:
+			return Multipliers.Ice;
+		case EHunterDamageType::Lightning:
+			return Multipliers.Lightning;
+		case EHunterDamageType::Light:
+			return Multipliers.Light;
+		case EHunterDamageType::Corruption:
+			return Multipliers.Corruption;
+		default:
+			return 1.f;
+		}
+	}
+
+	const FCombatDamageTypeValues& GetTransformValuesBySource(
+		const FCombatDamageTransformRules& Rules,
+		const EHunterDamageType SourceType)
+	{
+		switch (SourceType)
+		{
+		case EHunterDamageType::Physical:
+			return Rules.FromPhysical;
+		case EHunterDamageType::Fire:
+			return Rules.FromFire;
+		case EHunterDamageType::Ice:
+			return Rules.FromIce;
+		case EHunterDamageType::Lightning:
+			return Rules.FromLightning;
+		case EHunterDamageType::Light:
+			return Rules.FromLight;
+		case EHunterDamageType::Corruption:
+			return Rules.FromCorruption;
+		default:
+			return Rules.FromPhysical;
+		}
+	}
+
+	void AddTransformValues(FCombatDamageTypeValues& Out, const FCombatDamageTypeValues& A, const FCombatDamageTypeValues& B)
+	{
+		Out.Physical = A.Physical + B.Physical;
+		Out.Fire = A.Fire + B.Fire;
+		Out.Ice = A.Ice + B.Ice;
+		Out.Lightning = A.Lightning + B.Lightning;
+		Out.Light = A.Light + B.Light;
+		Out.Corruption = A.Corruption + B.Corruption;
 	}
 
 	void SetDamageByType(FCombatDamagePacket& Packet, const EHunterDamageType DamageType, const float Value)
@@ -209,6 +297,16 @@ namespace CombatManagerComponentPrivate
 	{
 		return BaseValue * (1.f + (IncreasedPct / 100.f));
 	}
+
+	float GetDurationOrDefault(const float ConfiguredDuration, const float DefaultDuration)
+	{
+		return ConfiguredDuration > 0.f ? ConfiguredDuration : DefaultDuration;
+	}
+
+	bool RollPercentChance(const float ChancePercent)
+	{
+		return ChancePercent > 0.f && FMath::FRandRange(0.f, 100.f) < ChancePercent;
+	}
 }
 
 UCombatManager::UCombatManager()
@@ -216,79 +314,128 @@ UCombatManager::UCombatManager()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-bool UCombatManager::ResolveHit(AActor* SourceActor, AActor* TargetActor, FCombatResolveResult& OutResult)
+void UCombatIncomingHitEditContext::RejectHit()
+{
+	bApplyHit = false;
+}
+
+FCombatHitPacket UCombatManager::MakeCombatHitPacket(
+	const FCombatOffensePacket& Offense,
+	const FCombatDefensePacket& Defense,
+	const FCombatCostPacket& Cost,
+	const EHitResponse HitResponse,
+	const bool bCanApplyAilments)
+{
+	FCombatHitPacket Packet;
+	Packet.Offense = Offense;
+	Packet.Defense = Defense;
+	Packet.Cost = Cost;
+	Packet.HitResponse = HitResponse;
+	Packet.bCanApplyAilments = bCanApplyAilments;
+	CombatManagerComponentPrivate::UpdatePacketTotal(Packet.Offense.BaseDamage);
+	return Packet;
+}
+
+bool UCombatManager::ApplyHit(AActor* AttackerActor, AActor* DefenderActor,
+	const FCombatHitPacket& HitPacket, FCombatResolveResult& OutResult)
 {
 	OutResult = FCombatResolveResult{};
 
-	if (!IsValid(SourceActor) || !IsValid(TargetActor))
+	if (!IsValid(AttackerActor) || !IsValid(DefenderActor))
 	{
-		UE_LOG(LogCombatManager, Warning, TEXT("ResolveHit failed because SourceActor or TargetActor was invalid. Source=%s Target=%s"),
-			*GetNameSafe(SourceActor), *GetNameSafe(TargetActor));
+		UE_LOG(LogCombatManager, Warning, TEXT("ApplyHit failed because attacker or defender was invalid. Attacker=%s Defender=%s"),
+			*GetNameSafe(AttackerActor), *GetNameSafe(DefenderActor));
 		return false;
 	}
 
-	const UHunterAttributeSet* SourceAttributes = GetHunterAttributeSetFromActor(SourceActor);
-	const UHunterAttributeSet* TargetAttributes = GetHunterAttributeSetFromActor(TargetActor);
-	if (!SourceAttributes || !TargetAttributes)
+	const UHunterAttributeSet* AttackerAttributes = GetHunterAttributeSetFromActor(AttackerActor);
+	const UHunterAttributeSet* DefenderAttributes = GetHunterAttributeSetFromActor(DefenderActor);
+	if (!DefenderAttributes)
 	{
 		return false;
 	}
 
-	UE_LOG(LogCombatManager, Verbose, TEXT("ResolveHit started. Source=%s Target=%s"), *GetNameSafe(SourceActor), *GetNameSafe(TargetActor));
-
-	FCombatDamagePacket OutgoingPacket = BuildOutgoingDamagePacketFromAttributes(SourceAttributes, SourceActor, TargetActor);
-	UE_LOG(LogCombatManager, Verbose, TEXT("Outgoing packet before conversion: %s"), *CombatManagerComponentPrivate::FormatPacket(OutgoingPacket));
-
-	FCombatDamagePacket ConvertedPacket = ApplyDamageConversionFromAttributes(OutgoingPacket, SourceAttributes, SourceActor);
-	UE_LOG(LogCombatManager, Verbose, TEXT("Outgoing packet after conversion: %s"), *CombatManagerComponentPrivate::FormatPacket(ConvertedPacket));
-
-	OutResult = MitigateDamagePacketAgainstAttributes(ConvertedPacket, SourceActor, TargetActor, SourceAttributes, TargetAttributes);
-	UE_LOG(LogCombatManager, Verbose, TEXT("Mitigated result before application: %s"), *CombatManagerComponentPrivate::FormatResult(OutResult));
-
-	if (!TargetActor->HasAuthority())
+	FCombatHitPacket EffectiveHitPacket = HitPacket;
+	CombatManagerComponentPrivate::UpdatePacketTotal(EffectiveHitPacket.Offense.BaseDamage);
+	if (DefenderActor->HasAuthority() && OnEditIncomingHitPacket.IsBound())
 	{
-		UE_LOG(LogCombatManager, Verbose, TEXT("ResolveHit ran without server authority. Returning preview result only for %s."), *GetNameSafe(TargetActor));
+		UCombatIncomingHitEditContext* EditContext = NewObject<UCombatIncomingHitEditContext>(this);
+		EditContext->AttackerActor = AttackerActor;
+		EditContext->DefenderActor = DefenderActor;
+		EditContext->HitPacket = EffectiveHitPacket;
+
+		OnEditIncomingHitPacket.Broadcast(EditContext);
+
+		if (!EditContext->bApplyHit)
+		{
+			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHit rejected by incoming packet edit. Attacker=%s Defender=%s"),
+				*GetNameSafe(AttackerActor), *GetNameSafe(DefenderActor));
+			return false;
+		}
+
+		EffectiveHitPacket = EditContext->HitPacket;
+		CombatManagerComponentPrivate::UpdatePacketTotal(EffectiveHitPacket.Offense.BaseDamage);
+	}
+
+	if ((EffectiveHitPacket.Offense.bAddAttackerAttributeDamage ||
+		EffectiveHitPacket.Offense.bApplyAttackerDamageConversion ||
+		EffectiveHitPacket.Offense.bApplyAttackerAttributeModifiers ||
+		EffectiveHitPacket.Cost.bPayOnApply) && !AttackerAttributes)
+	{
+		UE_LOG(LogCombatManager, Warning,
+			TEXT("ApplyHit needs attacker attributes for this packet but %s has no UHunterAttributeSet."),
+			*GetNameSafe(AttackerActor));
+		return false;
+	}
+
+	UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHit started. Attacker=%s Defender=%s"),
+		*GetNameSafe(AttackerActor), *GetNameSafe(DefenderActor));
+
+	FCombatDamagePacket OutgoingPacket = BuildOutgoingDamagePacketFromHitPacket(EffectiveHitPacket, AttackerAttributes, AttackerActor);
+	UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHit packet after offense calculation: %s"),
+		*CombatManagerComponentPrivate::FormatPacket(OutgoingPacket));
+
+	OutResult = MitigateDamagePacketAgainstAttributes(
+		OutgoingPacket,
+		AttackerActor,
+		DefenderActor,
+		AttackerAttributes,
+		DefenderAttributes,
+		&EffectiveHitPacket);
+	OutResult.HitResponse = EffectiveHitPacket.HitResponse;
+	OutResult.bShouldApplyAilments = EffectiveHitPacket.bCanApplyAilments;
+
+	if (!DefenderActor->HasAuthority())
+	{
+		UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHit ran without server authority. Returning preview result only for %s."),
+			*GetNameSafe(DefenderActor));
 		return true;
 	}
 
-	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActor(SourceActor);
+	if (EffectiveHitPacket.Cost.bPayOnApply)
+	{
+		FSkillDamagePacket CostPacket;
+		CostPacket.StaminaCost = EffectiveHitPacket.Cost.StaminaCost;
+		CostPacket.ManaCost = EffectiveHitPacket.Cost.ManaCost;
+		CostPacket.HealthCost = EffectiveHitPacket.Cost.HealthCost;
+		ApplySkillCostToSource(AttackerActor, CostPacket);
+	}
 
-	ApplyResolvedDamage(SourceActor, TargetActor, OutResult);
+	EvaluateStagger(DefenderActor, DefenderAttributes, OutResult);
+	ApplyHitResponse(EffectiveHitPacket, OutResult);
 
-	// OPT: Reuse the already-cached TargetAttributes pointer — the object is the same,
-	// only its field values change after ApplyResolvedDamage. Avoids a redundant lookup.
-	OutResult.bKilledTarget = TargetAttributes->GetHealth() <= 0.f;
+	UAbilitySystemComponent* AttackerASC = GetAbilitySystemComponentFromActor(AttackerActor);
 
-	// OPT: Pass pre-fetched SourceASC and SourceAttributes to avoid 2 more lookups inside.
-	ApplyOnHitEffects(SourceActor, TargetActor, OutResult, SourceASC, SourceAttributes);
+	ApplyResolvedDamage(AttackerActor, DefenderActor, OutResult);
+	OutResult.bKilledTarget = DefenderAttributes->GetHealth() <= 0.f;
+	ApplyOnHitEffects(AttackerActor, DefenderActor, OutResult, AttackerASC, AttackerAttributes);
 
-	UE_LOG(LogCombatManager, Verbose, TEXT("ResolveHit completed. Source=%s Target=%s %s"),
-		*GetNameSafe(SourceActor),
-		*GetNameSafe(TargetActor),
+	UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHit completed. Attacker=%s Defender=%s %s"),
+		*GetNameSafe(AttackerActor),
+		*GetNameSafe(DefenderActor),
 		*CombatManagerComponentPrivate::FormatResult(OutResult));
 
 	return true;
-}
-
-FCombatDamagePacket UCombatManager::BuildOutgoingDamagePacket(AActor* SourceActor, AActor* TargetActor) const
-{
-	const UHunterAttributeSet* SourceAttributes = GetHunterAttributeSetFromActor(SourceActor);
-	return SourceAttributes ? BuildOutgoingDamagePacketFromAttributes(SourceAttributes, SourceActor, TargetActor) : FCombatDamagePacket{};
-}
-
-FCombatDamagePacket UCombatManager::ApplyDamageConversion(const FCombatDamagePacket& InPacket, AActor* SourceActor) const
-{
-	const UHunterAttributeSet* SourceAttributes = GetHunterAttributeSetFromActor(SourceActor);
-	return SourceAttributes ? ApplyDamageConversionFromAttributes(InPacket, SourceAttributes, SourceActor) : InPacket;
-}
-
-FCombatResolveResult UCombatManager::MitigateDamagePacket(const FCombatDamagePacket& InPacket, AActor* SourceActor, AActor* TargetActor) const
-{
-	const UHunterAttributeSet* SourceAttributes = GetHunterAttributeSetFromActor(SourceActor);
-	const UHunterAttributeSet* TargetAttributes = GetHunterAttributeSetFromActor(TargetActor);
-	return (SourceAttributes && TargetAttributes)
-		? MitigateDamagePacketAgainstAttributes(InPacket, SourceActor, TargetActor, SourceAttributes, TargetAttributes)
-		: FCombatResolveResult{};
 }
 
 void UCombatManager::ApplyResolvedDamage(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result) const
@@ -439,25 +586,65 @@ const UHunterAttributeSet* UCombatManager::GetHunterAttributeSetFromActor(const 
 	return AttributeSet;
 }
 
-FCombatDamagePacket UCombatManager::BuildOutgoingDamagePacketFromAttributes(const UHunterAttributeSet* SourceAttributes, AActor* SourceActor, AActor* TargetActor) const
+FCombatDamagePacket UCombatManager::BuildOutgoingDamagePacketFromAttributes(
+	const UHunterAttributeSet* SourceAttributes,
+	AActor* SourceActor,
+	AActor* TargetActor,
+	const FSkillDamagePacket* SkillPacket) const
 {
-	FCombatDamagePacket Packet;
+	FCombatDamagePacket BasePacket;
 
 	if (!SourceAttributes)
 	{
-		return Packet;
+		return BasePacket;
 	}
 
-	Packet.Physical = CalculateOutgoingDamageForType(EHunterDamageType::Physical, SourceAttributes);
-	Packet.Fire = CalculateOutgoingDamageForType(EHunterDamageType::Fire, SourceAttributes);
-	Packet.Ice = CalculateOutgoingDamageForType(EHunterDamageType::Ice, SourceAttributes);
-	Packet.Lightning = CalculateOutgoingDamageForType(EHunterDamageType::Lightning, SourceAttributes);
-	Packet.Light = CalculateOutgoingDamageForType(EHunterDamageType::Light, SourceAttributes);
-	Packet.Corruption = CalculateOutgoingDamageForType(EHunterDamageType::Corruption, SourceAttributes);
+	BasePacket.Physical   = CalculateBaseDamageForType(EHunterDamageType::Physical,   SourceAttributes, SkillPacket);
+	BasePacket.Fire       = CalculateBaseDamageForType(EHunterDamageType::Fire,        SourceAttributes, SkillPacket);
+	BasePacket.Ice        = CalculateBaseDamageForType(EHunterDamageType::Ice,         SourceAttributes, SkillPacket);
+	BasePacket.Lightning  = CalculateBaseDamageForType(EHunterDamageType::Lightning,   SourceAttributes, SkillPacket);
+	BasePacket.Light      = CalculateBaseDamageForType(EHunterDamageType::Light,       SourceAttributes, SkillPacket);
+	BasePacket.Corruption = CalculateBaseDamageForType(EHunterDamageType::Corruption,  SourceAttributes, SkillPacket);
+	CombatManagerComponentPrivate::UpdatePacketTotal(BasePacket);
 
+	FCombatDamagePacket ConvertedBasePacket = ApplyDamageConversionFromAttributes(BasePacket, SourceAttributes, SourceActor);
+
+	FCombatDamagePacket Packet;
+	Packet.Physical = CalculateScaledDamageForType(
+		EHunterDamageType::Physical,
+		CombatManagerComponentPrivate::GetDamageByType(ConvertedBasePacket, EHunterDamageType::Physical),
+		SourceAttributes,
+		SkillPacket);
+	Packet.Fire = CalculateScaledDamageForType(
+		EHunterDamageType::Fire,
+		CombatManagerComponentPrivate::GetDamageByType(ConvertedBasePacket, EHunterDamageType::Fire),
+		SourceAttributes,
+		SkillPacket);
+	Packet.Ice = CalculateScaledDamageForType(
+		EHunterDamageType::Ice,
+		CombatManagerComponentPrivate::GetDamageByType(ConvertedBasePacket, EHunterDamageType::Ice),
+		SourceAttributes,
+		SkillPacket);
+	Packet.Lightning = CalculateScaledDamageForType(
+		EHunterDamageType::Lightning,
+		CombatManagerComponentPrivate::GetDamageByType(ConvertedBasePacket, EHunterDamageType::Lightning),
+		SourceAttributes,
+		SkillPacket);
+	Packet.Light = CalculateScaledDamageForType(
+		EHunterDamageType::Light,
+		CombatManagerComponentPrivate::GetDamageByType(ConvertedBasePacket, EHunterDamageType::Light),
+		SourceAttributes,
+		SkillPacket);
+	Packet.Corruption = CalculateScaledDamageForType(
+		EHunterDamageType::Corruption,
+		CombatManagerComponentPrivate::GetDamageByType(ConvertedBasePacket, EHunterDamageType::Corruption),
+		SourceAttributes,
+		SkillPacket);
 	CombatManagerComponentPrivate::UpdatePacketTotal(Packet);
 
-	ResolveCriticalStrike(Packet, SourceAttributes);
+	// Respect the skill's crit flag. If no skill packet, crit is always eligible.
+	const bool bCanCrit = (SkillPacket == nullptr) || SkillPacket->bCanCrit;
+	ResolveCriticalStrike(Packet, SourceAttributes, bCanCrit, SkillPacket);
 
 	UE_LOG(LogCombatManager, Verbose, TEXT("Built outgoing packet. Source=%s Target=%s %s"),
 		*GetNameSafe(SourceActor),
@@ -467,6 +654,87 @@ FCombatDamagePacket UCombatManager::BuildOutgoingDamagePacketFromAttributes(cons
 	return Packet;
 }
 
+FCombatDamagePacket UCombatManager::BuildOutgoingDamagePacketFromHitPacket(
+	const FCombatHitPacket& HitPacket,
+	const UHunterAttributeSet* AttackerAttributes,
+	AActor* AttackerActor) const
+{
+	FCombatDamagePacket Packet = HitPacket.Offense.BaseDamage;
+	CombatManagerComponentPrivate::UpdatePacketTotal(Packet);
+
+	if (HitPacket.Offense.bAddAttackerAttributeDamage && AttackerAttributes)
+	{
+		FSkillDamagePacket AttributeDamagePacket;
+		AttributeDamagePacket.WeaponDamageEffectiveness = FMath::Max(HitPacket.Offense.WeaponDamageEffectiveness, 0.f);
+		AttributeDamagePacket.bLayerCharacterStats = true;
+
+		CombatManagerComponentPrivate::AddDamageByType(Packet, EHunterDamageType::Physical,
+			CalculateBaseDamageForType(EHunterDamageType::Physical, AttackerAttributes, &AttributeDamagePacket));
+		CombatManagerComponentPrivate::AddDamageByType(Packet, EHunterDamageType::Fire,
+			CalculateBaseDamageForType(EHunterDamageType::Fire, AttackerAttributes, &AttributeDamagePacket));
+		CombatManagerComponentPrivate::AddDamageByType(Packet, EHunterDamageType::Ice,
+			CalculateBaseDamageForType(EHunterDamageType::Ice, AttackerAttributes, &AttributeDamagePacket));
+		CombatManagerComponentPrivate::AddDamageByType(Packet, EHunterDamageType::Lightning,
+			CalculateBaseDamageForType(EHunterDamageType::Lightning, AttackerAttributes, &AttributeDamagePacket));
+		CombatManagerComponentPrivate::AddDamageByType(Packet, EHunterDamageType::Light,
+			CalculateBaseDamageForType(EHunterDamageType::Light, AttackerAttributes, &AttributeDamagePacket));
+		CombatManagerComponentPrivate::AddDamageByType(Packet, EHunterDamageType::Corruption,
+			CalculateBaseDamageForType(EHunterDamageType::Corruption, AttackerAttributes, &AttributeDamagePacket));
+		CombatManagerComponentPrivate::UpdatePacketTotal(Packet);
+	}
+
+	FCombatDamageTransformRules ConversionRules;
+	if (HitPacket.Offense.bApplyAttackerDamageConversion && AttackerAttributes)
+	{
+		ConversionRules = BuildDamageConversionRulesFromAttributes(AttackerAttributes);
+	}
+	if (HitPacket.Offense.bApplyPacketDamageConversion)
+	{
+		ConversionRules = CombineDamageTransformRules(ConversionRules, HitPacket.Offense.DamageConversionPercent);
+	}
+
+	const FCombatDamageTransformRules GainAsExtraRules = HitPacket.Offense.bApplyPacketGainAsExtra
+		? HitPacket.Offense.GainAsExtraPercent
+		: FCombatDamageTransformRules{};
+	Packet = ApplyDamageTransformRules(Packet, ConversionRules, GainAsExtraRules);
+
+	FCombatDamagePacket ScaledPacket;
+	ScaledPacket.Physical = CalculateScaledDamageForHitPacketType(
+		EHunterDamageType::Physical,
+		CombatManagerComponentPrivate::GetDamageByType(Packet, EHunterDamageType::Physical),
+		AttackerAttributes,
+		HitPacket);
+	ScaledPacket.Fire = CalculateScaledDamageForHitPacketType(
+		EHunterDamageType::Fire,
+		CombatManagerComponentPrivate::GetDamageByType(Packet, EHunterDamageType::Fire),
+		AttackerAttributes,
+		HitPacket);
+	ScaledPacket.Ice = CalculateScaledDamageForHitPacketType(
+		EHunterDamageType::Ice,
+		CombatManagerComponentPrivate::GetDamageByType(Packet, EHunterDamageType::Ice),
+		AttackerAttributes,
+		HitPacket);
+	ScaledPacket.Lightning = CalculateScaledDamageForHitPacketType(
+		EHunterDamageType::Lightning,
+		CombatManagerComponentPrivate::GetDamageByType(Packet, EHunterDamageType::Lightning),
+		AttackerAttributes,
+		HitPacket);
+	ScaledPacket.Light = CalculateScaledDamageForHitPacketType(
+		EHunterDamageType::Light,
+		CombatManagerComponentPrivate::GetDamageByType(Packet, EHunterDamageType::Light),
+		AttackerAttributes,
+		HitPacket);
+	ScaledPacket.Corruption = CalculateScaledDamageForHitPacketType(
+		EHunterDamageType::Corruption,
+		CombatManagerComponentPrivate::GetDamageByType(Packet, EHunterDamageType::Corruption),
+		AttackerAttributes,
+		HitPacket);
+	CombatManagerComponentPrivate::UpdatePacketTotal(ScaledPacket);
+
+	ResolveHitPacketCriticalStrike(ScaledPacket, AttackerAttributes, HitPacket);
+	return ScaledPacket;
+}
+
 FCombatDamagePacket UCombatManager::ApplyDamageConversionFromAttributes(const FCombatDamagePacket& InPacket, const UHunterAttributeSet* SourceAttributes, AActor* SourceActor) const
 {
 	if (!SourceAttributes)
@@ -474,65 +742,219 @@ FCombatDamagePacket UCombatManager::ApplyDamageConversionFromAttributes(const FC
 		return InPacket;
 	}
 
-	FCombatDamagePacket Packet = InPacket;
-	const float PhysicalDamageBeforeConversion = FMath::Max(Packet.Physical, 0.f);
-	if (PhysicalDamageBeforeConversion <= 0.f)
-	{
-		return Packet;
-	}
-
-	const float RequestedToFire = FMath::Max(SourceAttributes->GetPhysicalToFire(), 0.f);
-	const float RequestedToIce = FMath::Max(SourceAttributes->GetPhysicalToIce(), 0.f);
-	const float RequestedToLightning = FMath::Max(SourceAttributes->GetPhysicalToLightning(), 0.f);
-	const float RequestedToLight = FMath::Max(SourceAttributes->GetPhysicalToLight(), 0.f);
-	const float RequestedToCorruption = FMath::Max(SourceAttributes->GetPhysicalToCorruption(), 0.f);
-
-	const float TotalRequestedConversion = RequestedToFire + RequestedToIce + RequestedToLightning + RequestedToLight + RequestedToCorruption;
-	const float ConversionScale = TotalRequestedConversion > 100.f ? (100.f / TotalRequestedConversion) : 1.f;
-
-	const auto ConvertFromPhysical = [&](const float RequestedPct, const EHunterDamageType DestinationType) -> float
-	{
-		const float AppliedPct = FMath::Clamp(RequestedPct * ConversionScale, 0.f, 100.f);
-		const float ConvertedAmount = PhysicalDamageBeforeConversion * (AppliedPct / 100.f);
-		CombatManagerComponentPrivate::AddDamageByType(Packet, DestinationType, ConvertedAmount);
-		return ConvertedAmount;
-	};
-
-	float TotalConvertedAmount = 0.f;
-	TotalConvertedAmount += ConvertFromPhysical(RequestedToFire, EHunterDamageType::Fire);
-	TotalConvertedAmount += ConvertFromPhysical(RequestedToIce, EHunterDamageType::Ice);
-	TotalConvertedAmount += ConvertFromPhysical(RequestedToLightning, EHunterDamageType::Lightning);
-	TotalConvertedAmount += ConvertFromPhysical(RequestedToLight, EHunterDamageType::Light);
-	TotalConvertedAmount += ConvertFromPhysical(RequestedToCorruption, EHunterDamageType::Corruption);
-
-	Packet.Physical = FMath::Max(0.f, PhysicalDamageBeforeConversion - TotalConvertedAmount);
-	CombatManagerComponentPrivate::UpdatePacketTotal(Packet);
+	const FCombatDamagePacket Packet = ApplyDamageTransformRules(
+		InPacket,
+		BuildDamageConversionRulesFromAttributes(SourceAttributes),
+		FCombatDamageTransformRules{});
 
 	UE_LOG(LogCombatManager, Verbose, TEXT("Applied conversion for %s. %s"), *GetNameSafe(SourceActor), *CombatManagerComponentPrivate::FormatPacket(Packet));
 
 	return Packet;
 }
 
-FCombatResolveResult UCombatManager::MitigateDamagePacketAgainstAttributes(const FCombatDamagePacket& InPacket, AActor* SourceActor, AActor* TargetActor, const UHunterAttributeSet* SourceAttributes, const UHunterAttributeSet* TargetAttributes) const
+FCombatDamageTransformRules UCombatManager::BuildDamageConversionRulesFromAttributes(const UHunterAttributeSet* SourceAttributes) const
+{
+	FCombatDamageTransformRules Rules;
+	if (!SourceAttributes)
+	{
+		return Rules;
+	}
+
+	Rules.FromPhysical.Fire = SourceAttributes->GetPhysicalToFire();
+	Rules.FromPhysical.Ice = SourceAttributes->GetPhysicalToIce();
+	Rules.FromPhysical.Lightning = SourceAttributes->GetPhysicalToLightning();
+	Rules.FromPhysical.Light = SourceAttributes->GetPhysicalToLight();
+	Rules.FromPhysical.Corruption = SourceAttributes->GetPhysicalToCorruption();
+
+	Rules.FromFire.Physical = SourceAttributes->GetFireToPhysical();
+	Rules.FromFire.Ice = SourceAttributes->GetFireToIce();
+	Rules.FromFire.Lightning = SourceAttributes->GetFireToLightning();
+	Rules.FromFire.Light = SourceAttributes->GetFireToLight();
+	Rules.FromFire.Corruption = SourceAttributes->GetFireToCorruption();
+
+	Rules.FromIce.Physical = SourceAttributes->GetIceToPhysical();
+	Rules.FromIce.Fire = SourceAttributes->GetIceToFire();
+	Rules.FromIce.Lightning = SourceAttributes->GetIceToLightning();
+	Rules.FromIce.Light = SourceAttributes->GetIceToLight();
+	Rules.FromIce.Corruption = SourceAttributes->GetIceToCorruption();
+
+	Rules.FromLightning.Physical = SourceAttributes->GetLightningToPhysical();
+	Rules.FromLightning.Fire = SourceAttributes->GetLightningToFire();
+	Rules.FromLightning.Ice = SourceAttributes->GetLightningToIce();
+	Rules.FromLightning.Light = SourceAttributes->GetLightningToLight();
+	Rules.FromLightning.Corruption = SourceAttributes->GetLightningToCorruption();
+
+	Rules.FromLight.Physical = SourceAttributes->GetLightToPhysical();
+	Rules.FromLight.Fire = SourceAttributes->GetLightToFire();
+	Rules.FromLight.Ice = SourceAttributes->GetLightToIce();
+	Rules.FromLight.Lightning = SourceAttributes->GetLightToLightning();
+	Rules.FromLight.Corruption = SourceAttributes->GetLightToCorruption();
+
+	Rules.FromCorruption.Physical = SourceAttributes->GetCorruptionToPhysical();
+	Rules.FromCorruption.Fire = SourceAttributes->GetCorruptionToFire();
+	Rules.FromCorruption.Ice = SourceAttributes->GetCorruptionToIce();
+	Rules.FromCorruption.Lightning = SourceAttributes->GetCorruptionToLightning();
+	Rules.FromCorruption.Light = SourceAttributes->GetCorruptionToLight();
+
+	return Rules;
+}
+
+FCombatDamageTransformRules UCombatManager::CombineDamageTransformRules(
+	const FCombatDamageTransformRules& A,
+	const FCombatDamageTransformRules& B) const
+{
+	FCombatDamageTransformRules Result;
+	CombatManagerComponentPrivate::AddTransformValues(Result.FromPhysical, A.FromPhysical, B.FromPhysical);
+	CombatManagerComponentPrivate::AddTransformValues(Result.FromFire, A.FromFire, B.FromFire);
+	CombatManagerComponentPrivate::AddTransformValues(Result.FromIce, A.FromIce, B.FromIce);
+	CombatManagerComponentPrivate::AddTransformValues(Result.FromLightning, A.FromLightning, B.FromLightning);
+	CombatManagerComponentPrivate::AddTransformValues(Result.FromLight, A.FromLight, B.FromLight);
+	CombatManagerComponentPrivate::AddTransformValues(Result.FromCorruption, A.FromCorruption, B.FromCorruption);
+	return Result;
+}
+
+FCombatDamagePacket UCombatManager::ApplyDamageTransformRules(
+	const FCombatDamagePacket& InPacket,
+	const FCombatDamageTransformRules& ConversionRules,
+	const FCombatDamageTransformRules& GainAsExtraRules) const
+{
+	FCombatDamagePacket OutPacket;
+
+	const auto ApplySource = [&](const EHunterDamageType SourceType)
+	{
+		const float SourceDamage = FMath::Max(CombatManagerComponentPrivate::GetDamageByType(InPacket, SourceType), 0.f);
+		if (SourceDamage <= 0.f)
+		{
+			return;
+		}
+
+		const FCombatDamageTypeValues& ConversionValues =
+			CombatManagerComponentPrivate::GetTransformValuesBySource(ConversionRules, SourceType);
+		const FCombatDamageTypeValues& GainValues =
+			CombatManagerComponentPrivate::GetTransformValuesBySource(GainAsExtraRules, SourceType);
+
+		float RequestedConversionPct = 0.f;
+		for (const EHunterDamageType DestinationType : {
+			EHunterDamageType::Physical,
+			EHunterDamageType::Fire,
+			EHunterDamageType::Ice,
+			EHunterDamageType::Lightning,
+			EHunterDamageType::Light,
+			EHunterDamageType::Corruption })
+		{
+			if (DestinationType != SourceType)
+			{
+				RequestedConversionPct += FMath::Max(
+					CombatManagerComponentPrivate::GetValueByType(ConversionValues, DestinationType),
+					0.f);
+			}
+		}
+
+		const float ConversionScale = RequestedConversionPct > 100.f ? (100.f / RequestedConversionPct) : 1.f;
+		float ConvertedAmount = 0.f;
+
+		for (const EHunterDamageType DestinationType : {
+			EHunterDamageType::Physical,
+			EHunterDamageType::Fire,
+			EHunterDamageType::Ice,
+			EHunterDamageType::Lightning,
+			EHunterDamageType::Light,
+			EHunterDamageType::Corruption })
+		{
+			const float GainPct = FMath::Max(
+				CombatManagerComponentPrivate::GetValueByType(GainValues, DestinationType),
+				0.f);
+			if (GainPct > 0.f)
+			{
+				CombatManagerComponentPrivate::AddDamageByType(OutPacket, DestinationType, SourceDamage * (GainPct / 100.f));
+			}
+
+			if (DestinationType == SourceType)
+			{
+				continue;
+			}
+
+			const float ConversionPct = FMath::Max(
+				CombatManagerComponentPrivate::GetValueByType(ConversionValues, DestinationType),
+				0.f) * ConversionScale;
+			if (ConversionPct <= 0.f)
+			{
+				continue;
+			}
+
+			const float DestinationAmount = SourceDamage * (ConversionPct / 100.f);
+			CombatManagerComponentPrivate::AddDamageByType(OutPacket, DestinationType, DestinationAmount);
+			ConvertedAmount += DestinationAmount;
+		}
+
+		CombatManagerComponentPrivate::AddDamageByType(
+			OutPacket,
+			SourceType,
+			FMath::Max(0.f, SourceDamage - ConvertedAmount));
+	};
+
+	ApplySource(EHunterDamageType::Physical);
+	ApplySource(EHunterDamageType::Fire);
+	ApplySource(EHunterDamageType::Ice);
+	ApplySource(EHunterDamageType::Lightning);
+	ApplySource(EHunterDamageType::Light);
+	ApplySource(EHunterDamageType::Corruption);
+
+	CombatManagerComponentPrivate::UpdatePacketTotal(OutPacket);
+	return OutPacket;
+}
+
+FCombatResolveResult UCombatManager::MitigateDamagePacketAgainstAttributes(
+	const FCombatDamagePacket& InPacket,
+	AActor* SourceActor,
+	AActor* TargetActor,
+	const UHunterAttributeSet* SourceAttributes,
+	const UHunterAttributeSet* TargetAttributes,
+	const FCombatHitPacket* HitPacket) const
 {
 	FCombatResolveResult Result;
 	Result.PreMitigationPacket = InPacket;
 	Result.bWasCrit = InPacket.bCrit;
 
-	if (!SourceAttributes || !TargetAttributes)
+	if (!TargetAttributes)
 	{
 		return Result;
 	}
 
-	const float EffectiveArmour = FMath::Max(
+	float EffectiveArmour = FMath::Max(
 		(TargetAttributes->GetArmour() + TargetAttributes->GetArmourFlatBonus()) * (1.f + (TargetAttributes->GetArmourPercentBonus() / 100.f)),
 		0.f);
-	const float PhysicalMitigationPct = FMath::Clamp(
-		EffectiveArmour / (EffectiveArmour + 100.f),
-		0.f,
-		0.9f);
+	if (HitPacket)
+	{
+		EffectiveArmour = HitPacket->Defense.bOverrideArmour
+			? FMath::Max(HitPacket->Defense.ArmourOverride, 0.f)
+			: EffectiveArmour;
+		EffectiveArmour = FMath::Max(
+			0.f,
+			(EffectiveArmour + HitPacket->Defense.ArmourFlatBonus) *
+			(1.f + (HitPacket->Defense.ArmourPercentBonus / 100.f)));
+	}
+	const float IncomingPhysical = FMath::Max(InPacket.Physical, 0.f);
+	float ArmourPiercingPct = SourceAttributes
+		? FMath::Clamp(SourceAttributes->GetArmourPiercing(), 0.f, 100.f)
+		: 0.f;
+	if (HitPacket)
+	{
+		ArmourPiercingPct += HitPacket->Offense.ArmourPiercingPercent;
+	}
+	ArmourPiercingPct = FMath::Clamp(ArmourPiercingPct, 0.f, 100.f);
+	const float EffectiveArmourAfterPierce = EffectiveArmour * (1.f - (ArmourPiercingPct / 100.f));
+	const float PhysicalMitigationPct = IncomingPhysical > 0.f
+		? FMath::Clamp(
+			EffectiveArmourAfterPierce / (EffectiveArmourAfterPierce + (IncomingPhysical * CombatManagerComponentPrivate::ArmourHitSizeScale)),
+			0.f,
+			0.9f)
+		: 0.f;
 
-	Result.PhysicalTaken = FMath::Max(0.f, InPacket.Physical * (1.f - PhysicalMitigationPct));
+	const float PhysicalAfterArmour = IncomingPhysical * (1.f - PhysicalMitigationPct);
+	Result.PhysicalTaken = IncomingPhysical > 0.f
+		? FMath::Min(IncomingPhysical, FMath::Max(1.f, PhysicalAfterArmour))
+		: 0.f;
 
 	const auto CalculateMitigatedTypedDamage = [&](const EHunterDamageType DamageType) -> float
 	{
@@ -542,7 +964,17 @@ FCombatResolveResult UCombatManager::MitigateDamagePacketAgainstAttributes(const
 			return 0.f;
 		}
 
-		const float EffectiveResistance = GetResistanceValue(DamageType, TargetAttributes) - GetPierceValue(DamageType, SourceAttributes);
+		float DefenderResistance = GetResistanceValue(DamageType, TargetAttributes);
+		float PacketPierce = 0.f;
+		if (HitPacket)
+		{
+			DefenderResistance = HitPacket->Defense.bOverrideResistances
+				? CombatManagerComponentPrivate::GetValueByType(HitPacket->Defense.ResistanceOverride, DamageType)
+				: DefenderResistance;
+			DefenderResistance += CombatManagerComponentPrivate::GetValueByType(HitPacket->Defense.ResistanceBonus, DamageType);
+			PacketPierce = CombatManagerComponentPrivate::GetValueByType(HitPacket->Offense.ResistancePiercingPercent, DamageType);
+		}
+		const float EffectiveResistance = DefenderResistance - GetPierceValue(DamageType, SourceAttributes) - PacketPierce;
 		const float ResistanceCap = GetResistanceCap(DamageType, TargetAttributes);
 		const float ClampedResistance = FMath::Clamp(EffectiveResistance, CombatManagerComponentPrivate::MinResistancePercent, ResistanceCap);
 		return FMath::Max(0.f, IncomingDamage * (1.f - (ClampedResistance / 100.f)));
@@ -563,8 +995,11 @@ FCombatResolveResult UCombatManager::MitigateDamagePacketAgainstAttributes(const
 		Result.CorruptionTaken;
 	Result.TotalDamageAfterBlock = Result.TotalDamageBeforeBlock;
 
-	ApplyBlockingToMitigatedResult(SourceActor, TargetActor, TargetAttributes, Result);
-	ApplyStaminaBlockCost(TargetAttributes, Result);
+	if (!HitPacket || !HitPacket->Defense.bIgnoreBlock)
+	{
+		ApplyBlockingToMitigatedResult(SourceActor, TargetActor, TargetAttributes, Result);
+		ApplyStaminaBlockCost(TargetAttributes, Result);
+	}
 
 	for (const EHunterDamageType DamageType : {
 		EHunterDamageType::Physical,
@@ -575,7 +1010,12 @@ FCombatResolveResult UCombatManager::MitigateDamagePacketAgainstAttributes(const
 		EHunterDamageType::Corruption })
 	{
 		const float DamageAfterBlock = CombatManagerComponentPrivate::GetResultTakenByType(Result, DamageType);
-		const float DamageTakenMultiplier = GetDamageTakenMultiplier(DamageType, TargetAttributes);
+		float DamageTakenMultiplier = GetDamageTakenMultiplier(DamageType, TargetAttributes);
+		if (HitPacket)
+		{
+			DamageTakenMultiplier *= CombatManagerComponentPrivate::GetNeutralMultiplier(
+				CombatManagerComponentPrivate::GetMultiplierByType(HitPacket->Defense.DamageTakenMultiplier, DamageType));
+		}
 		CombatManagerComponentPrivate::SetResultTakenByType(
 			Result,
 			DamageType,
@@ -611,73 +1051,347 @@ float UCombatManager::RollDamageRange(const float MinDamage, const float MaxDama
 	return FMath::FRandRange(SafeMin, SafeMax);
 }
 
-float UCombatManager::CalculateOutgoingDamageForType(const EHunterDamageType DamageType, const UHunterAttributeSet* SourceAttributes) const
+float UCombatManager::CalculateBaseDamageForType(
+	const EHunterDamageType DamageType,
+	const UHunterAttributeSet* SourceAttributes,
+	const FSkillDamagePacket* SkillPacket) const
 {
 	if (!SourceAttributes)
 	{
 		return 0.f;
 	}
 
-	float MinDamage = 0.f;
-	float MaxDamage = 0.f;
+	// ── Character attribute weapon ranges ─────────────────────────────────────
+	float WeaponMin = 0.f;
+	float WeaponMax = 0.f;
 	float FlatDamage = 0.f;
-	float TypeIncreasePct = 0.f;
 
 	switch (DamageType)
 	{
 	case EHunterDamageType::Physical:
-		MinDamage = SourceAttributes->GetMinPhysicalDamage();
-		MaxDamage = SourceAttributes->GetMaxPhysicalDamage();
+		WeaponMin = SourceAttributes->GetMinPhysicalDamage();
+		WeaponMax = SourceAttributes->GetMaxPhysicalDamage();
 		FlatDamage = SourceAttributes->GetPhysicalFlatDamage();
-		TypeIncreasePct = SourceAttributes->GetPhysicalPercentDamage();
 		break;
 	case EHunterDamageType::Fire:
-		MinDamage = SourceAttributes->GetMinFireDamage();
-		MaxDamage = SourceAttributes->GetMaxFireDamage();
+		WeaponMin = SourceAttributes->GetMinFireDamage();
+		WeaponMax = SourceAttributes->GetMaxFireDamage();
 		FlatDamage = SourceAttributes->GetFireFlatDamage();
-		TypeIncreasePct = SourceAttributes->GetFirePercentDamage();
 		break;
 	case EHunterDamageType::Ice:
-		MinDamage = SourceAttributes->GetMinIceDamage();
-		MaxDamage = SourceAttributes->GetMaxIceDamage();
+		WeaponMin = SourceAttributes->GetMinIceDamage();
+		WeaponMax = SourceAttributes->GetMaxIceDamage();
 		FlatDamage = SourceAttributes->GetIceFlatDamage();
-		TypeIncreasePct = SourceAttributes->GetIcePercentDamage();
 		break;
 	case EHunterDamageType::Lightning:
-		MinDamage = SourceAttributes->GetMinLightningDamage();
-		MaxDamage = SourceAttributes->GetMaxLightningDamage();
+		WeaponMin = SourceAttributes->GetMinLightningDamage();
+		WeaponMax = SourceAttributes->GetMaxLightningDamage();
 		FlatDamage = SourceAttributes->GetLightningFlatDamage();
-		TypeIncreasePct = SourceAttributes->GetLightningPercentDamage();
 		break;
 	case EHunterDamageType::Light:
-		MinDamage = SourceAttributes->GetMinLightDamage();
-		MaxDamage = SourceAttributes->GetMaxLightDamage();
+		WeaponMin = SourceAttributes->GetMinLightDamage();
+		WeaponMax = SourceAttributes->GetMaxLightDamage();
 		FlatDamage = SourceAttributes->GetLightFlatDamage();
-		TypeIncreasePct = SourceAttributes->GetLightPercentDamage();
 		break;
 	case EHunterDamageType::Corruption:
-		MinDamage = SourceAttributes->GetMinCorruptionDamage();
-		MaxDamage = SourceAttributes->GetMaxCorruptionDamage();
+		WeaponMin = SourceAttributes->GetMinCorruptionDamage();
+		WeaponMax = SourceAttributes->GetMaxCorruptionDamage();
 		FlatDamage = SourceAttributes->GetCorruptionFlatDamage();
-		TypeIncreasePct = SourceAttributes->GetCorruptionPercentDamage();
 		break;
 	default:
 		return 0.f;
 	}
 
-	const float BaseRolledDamage = RollDamageRange(MinDamage, MaxDamage);
-	const float BaseDamageWithFlatBonus = FMath::Max(0.f, BaseRolledDamage + FlatDamage);
+	// ── Base damage roll ──────────────────────────────────────────────────────
+	// PoE2 model:
+	//   WeaponRoll  = attribute weapon range × WeaponDamageEffectiveness
+	//   SkillRoll   = skill's own min/max range (always 0 if no SkillPacket)
+	//   FlatBonus   = character flat damage modifiers (always applied)
+	//   Base        = WeaponRoll + SkillRoll + FlatBonus
 
-	float TotalIncreasedPct = SourceAttributes->GetGlobalDamages() + TypeIncreasePct;
+	float SkillMin = 0.f;
+	float SkillMax = 0.f;
+	float WeaponEffectiveness = 1.f;
+
+	if (SkillPacket)
+	{
+		// bLayerCharacterStats = false → pure skill damage, ignore weapon stats entirely.
+		WeaponEffectiveness = SkillPacket->bLayerCharacterStats ? SkillPacket->WeaponDamageEffectiveness : 0.f;
+
+		// Per-type skill base ranges and PoE2 multiplier fields
+		switch (DamageType)
+		{
+		case EHunterDamageType::Physical:
+			SkillMin = SkillPacket->MinPhysical;
+			SkillMax = SkillPacket->MaxPhysical;
+			break;
+		case EHunterDamageType::Fire:
+			SkillMin = SkillPacket->MinFire;
+			SkillMax = SkillPacket->MaxFire;
+			break;
+		case EHunterDamageType::Ice:
+			SkillMin = SkillPacket->MinIce;
+			SkillMax = SkillPacket->MaxIce;
+			break;
+		case EHunterDamageType::Lightning:
+			SkillMin = SkillPacket->MinLightning;
+			SkillMax = SkillPacket->MaxLightning;
+			break;
+		case EHunterDamageType::Light:
+			SkillMin = SkillPacket->MinLight;
+			SkillMax = SkillPacket->MaxLight;
+			break;
+		case EHunterDamageType::Corruption:
+			SkillMin = SkillPacket->MinCorruption;
+			SkillMax = SkillPacket->MaxCorruption;
+			break;
+		default:
+			break;
+		}
+	}
+
+	const float WeaponRoll = RollDamageRange(WeaponMin, WeaponMax) * WeaponEffectiveness;
+	const float SkillRoll  = RollDamageRange(SkillMin,  SkillMax);
+	const float BaseDamage = FMath::Max(0.f, WeaponRoll + SkillRoll + FlatDamage);
+
+	return BaseDamage;
+}
+
+float UCombatManager::CalculateScaledDamageForType(
+	const EHunterDamageType DamageType,
+	const float BaseDamage,
+	const UHunterAttributeSet* SourceAttributes,
+	const FSkillDamagePacket* SkillPacket) const
+{
+	if (!SourceAttributes || BaseDamage <= 0.f)
+	{
+		return 0.f;
+	}
+
+	float TypeIncreasePct = 0.f;
+	float SkillIncreasedPct = 0.f;
+	float SkillMore = 1.f;
+
+	switch (DamageType)
+	{
+	case EHunterDamageType::Physical:
+		TypeIncreasePct = SourceAttributes->GetPhysicalPercentDamage();
+		if (SkillPacket)
+		{
+			SkillIncreasedPct = SkillPacket->PhysicalIncreasedPercent;
+			SkillMore = SkillPacket->PhysicalMore;
+		}
+		break;
+	case EHunterDamageType::Fire:
+		TypeIncreasePct = SourceAttributes->GetFirePercentDamage();
+		if (SkillPacket)
+		{
+			SkillIncreasedPct = SkillPacket->FireIncreasedPercent;
+			SkillMore = SkillPacket->FireMore;
+		}
+		break;
+	case EHunterDamageType::Ice:
+		TypeIncreasePct = SourceAttributes->GetIcePercentDamage();
+		if (SkillPacket)
+		{
+			SkillIncreasedPct = SkillPacket->IceIncreasedPercent;
+			SkillMore = SkillPacket->IceMore;
+		}
+		break;
+	case EHunterDamageType::Lightning:
+		TypeIncreasePct = SourceAttributes->GetLightningPercentDamage();
+		if (SkillPacket)
+		{
+			SkillIncreasedPct = SkillPacket->LightningIncreasedPercent;
+			SkillMore = SkillPacket->LightningMore;
+		}
+		break;
+	case EHunterDamageType::Light:
+		TypeIncreasePct = SourceAttributes->GetLightPercentDamage();
+		if (SkillPacket)
+		{
+			SkillIncreasedPct = SkillPacket->LightIncreasedPercent;
+			SkillMore = SkillPacket->LightMore;
+		}
+		break;
+	case EHunterDamageType::Corruption:
+		TypeIncreasePct = SourceAttributes->GetCorruptionPercentDamage();
+		if (SkillPacket)
+		{
+			SkillIncreasedPct = SkillPacket->CorruptionIncreasedPercent;
+			SkillMore = SkillPacket->CorruptionMore;
+		}
+		break;
+	default:
+		return 0.f;
+	}
+
+	float TotalIncreasedPct = SourceAttributes->GetGlobalDamages() + TypeIncreasePct + SkillIncreasedPct;
 	if (CombatManagerComponentPrivate::IsElementalDamageType(DamageType))
 	{
 		TotalIncreasedPct += SourceAttributes->GetElementalDamage();
 	}
 
-	const float DamageAfterIncreased = FMath::Max(0.f, CombatManagerComponentPrivate::ApplyPercentIncrease(BaseDamageWithFlatBonus, TotalIncreasedPct));
-	const float DamageAfterMore = FMath::Max(0.f, DamageAfterIncreased * GetMoreDamageMultiplier(DamageType, SourceAttributes));
+	if (SkillPacket)
+	{
+		if (SkillPacket->bIsMelee)
+		{
+			TotalIncreasedPct += SourceAttributes->GetMeleeDamage();
+		}
+		if (SkillPacket->bIsRanged)
+		{
+			TotalIncreasedPct += SourceAttributes->GetRangedDamage();
+		}
+		if (SkillPacket->bIsSpell)
+		{
+			TotalIncreasedPct += SourceAttributes->GetSpellDamage();
+		}
+		if (SkillPacket->bIsArea)
+		{
+			TotalIncreasedPct += SourceAttributes->GetAreaDamage();
+		}
+		if (SkillPacket->bIsDamageOverTime)
+		{
+			TotalIncreasedPct += SourceAttributes->GetDamageOverTime();
+		}
+		if (SkillPacket->bIsChainHit)
+		{
+			TotalIncreasedPct += SourceAttributes->GetChainDamage();
+		}
+	}
 
-	return DamageAfterMore;
+	const float MaxEffectiveHealth = FMath::Max(SourceAttributes->GetMaxEffectiveHealth(), SourceAttributes->GetMaxHealth());
+	if (MaxEffectiveHealth > 0.f)
+	{
+		const float HealthPercent = SourceAttributes->GetHealth() / MaxEffectiveHealth;
+		if (HealthPercent >= 0.999f)
+		{
+			TotalIncreasedPct += SourceAttributes->GetDamageBonusWhileAtFullHP();
+		}
+		else if (HealthPercent <= 0.35f)
+		{
+			TotalIncreasedPct += SourceAttributes->GetDamageBonusWhileAtLowHP();
+		}
+	}
+
+	const float DamageAfterIncreased = FMath::Max(
+		0.f,
+		CombatManagerComponentPrivate::ApplyPercentIncrease(BaseDamage, TotalIncreasedPct));
+	const float CharMore = GetMoreDamageMultiplier(DamageType, SourceAttributes);
+	const float TotalMore = FMath::Max(0.f, CharMore * SkillMore);
+
+	return FMath::Max(0.f, DamageAfterIncreased * TotalMore);
+}
+
+float UCombatManager::CalculateScaledDamageForHitPacketType(
+	const EHunterDamageType DamageType,
+	const float BaseDamage,
+	const UHunterAttributeSet* SourceAttributes,
+	const FCombatHitPacket& HitPacket) const
+{
+	if (BaseDamage <= 0.f)
+	{
+		return 0.f;
+	}
+
+	float TotalIncreasedPct =
+		HitPacket.Offense.GlobalIncreasedPercent +
+		CombatManagerComponentPrivate::GetValueByType(HitPacket.Offense.TypeIncreasedPercent, DamageType);
+
+	if (CombatManagerComponentPrivate::IsElementalDamageType(DamageType))
+	{
+		TotalIncreasedPct += HitPacket.Offense.ElementalIncreasedPercent;
+	}
+
+	if (HitPacket.Offense.bApplyAttackerAttributeModifiers && SourceAttributes)
+	{
+		TotalIncreasedPct += SourceAttributes->GetGlobalDamages();
+
+		switch (DamageType)
+		{
+		case EHunterDamageType::Physical:
+			TotalIncreasedPct += SourceAttributes->GetPhysicalPercentDamage();
+			break;
+		case EHunterDamageType::Fire:
+			TotalIncreasedPct += SourceAttributes->GetFirePercentDamage();
+			break;
+		case EHunterDamageType::Ice:
+			TotalIncreasedPct += SourceAttributes->GetIcePercentDamage();
+			break;
+		case EHunterDamageType::Lightning:
+			TotalIncreasedPct += SourceAttributes->GetLightningPercentDamage();
+			break;
+		case EHunterDamageType::Light:
+			TotalIncreasedPct += SourceAttributes->GetLightPercentDamage();
+			break;
+		case EHunterDamageType::Corruption:
+			TotalIncreasedPct += SourceAttributes->GetCorruptionPercentDamage();
+			break;
+		default:
+			break;
+		}
+
+		if (CombatManagerComponentPrivate::IsElementalDamageType(DamageType))
+		{
+			TotalIncreasedPct += SourceAttributes->GetElementalDamage();
+		}
+		if (HitPacket.Offense.bIsMelee)
+		{
+			TotalIncreasedPct += SourceAttributes->GetMeleeDamage();
+		}
+		if (HitPacket.Offense.bIsRanged)
+		{
+			TotalIncreasedPct += SourceAttributes->GetRangedDamage();
+		}
+		if (HitPacket.Offense.bIsSpell)
+		{
+			TotalIncreasedPct += SourceAttributes->GetSpellDamage();
+		}
+		if (HitPacket.Offense.bIsArea)
+		{
+			TotalIncreasedPct += SourceAttributes->GetAreaDamage();
+		}
+		if (HitPacket.Offense.bIsDamageOverTime)
+		{
+			TotalIncreasedPct += SourceAttributes->GetDamageOverTime();
+		}
+		if (HitPacket.Offense.bIsChainHit)
+		{
+			TotalIncreasedPct += SourceAttributes->GetChainDamage();
+		}
+
+		const float MaxEffectiveHealth = FMath::Max(SourceAttributes->GetMaxEffectiveHealth(), SourceAttributes->GetMaxHealth());
+		if (MaxEffectiveHealth > 0.f)
+		{
+			const float HealthPercent = SourceAttributes->GetHealth() / MaxEffectiveHealth;
+			if (HealthPercent >= 0.999f)
+			{
+				TotalIncreasedPct += SourceAttributes->GetDamageBonusWhileAtFullHP();
+			}
+			else if (HealthPercent <= 0.35f)
+			{
+				TotalIncreasedPct += SourceAttributes->GetDamageBonusWhileAtLowHP();
+			}
+		}
+	}
+
+	const float DamageAfterIncreased = FMath::Max(
+		0.f,
+		CombatManagerComponentPrivate::ApplyPercentIncrease(BaseDamage, TotalIncreasedPct));
+
+	float TotalMore = CombatManagerComponentPrivate::GetNeutralMultiplier(HitPacket.Offense.GlobalMoreMultiplier);
+	TotalMore *= CombatManagerComponentPrivate::GetNeutralMultiplier(
+		CombatManagerComponentPrivate::GetMultiplierByType(HitPacket.Offense.TypeMoreMultiplier, DamageType));
+	if (CombatManagerComponentPrivate::IsElementalDamageType(DamageType))
+	{
+		TotalMore *= CombatManagerComponentPrivate::GetNeutralMultiplier(HitPacket.Offense.ElementalMoreMultiplier);
+	}
+	if (HitPacket.Offense.bApplyAttackerAttributeModifiers && SourceAttributes)
+	{
+		TotalMore *= GetMoreDamageMultiplier(DamageType, SourceAttributes);
+	}
+
+	return FMath::Max(0.f, DamageAfterIncreased * FMath::Max(0.f, TotalMore));
 }
 
 float UCombatManager::GetResistanceValue(const EHunterDamageType DamageType, const UHunterAttributeSet* TargetAttributes)
@@ -787,7 +1501,6 @@ bool UCombatManager::CanBlockHit(AActor* SourceActor, AActor* TargetActor, const
 	{
 		return true;
 	}
-
 	const FVector DirectionToSource = (SourceActor->GetActorLocation() - TargetActor->GetActorLocation()).GetSafeNormal();
 	if (DirectionToSource.IsNearlyZero())
 	{
@@ -984,10 +1697,18 @@ void UCombatManager::ApplyStaminaBlockCost(const UHunterAttributeSet* TargetAttr
 		InOutResult.bGuardBroken ? TEXT("true") : TEXT("false"));
 }
 
-void UCombatManager::ResolveCriticalStrike(FCombatDamagePacket& Packet, const UHunterAttributeSet* SourceAttributes) const
+void UCombatManager::ResolveCriticalStrike(FCombatDamagePacket& Packet,
+	const UHunterAttributeSet* SourceAttributes, const bool bCanCrit, const FSkillDamagePacket* SkillPacket) const
 {
 	Packet.bCrit = false;
 	Packet.CritMultiplierApplied = 1.f;
+
+	if (!bCanCrit)
+	{
+		UE_LOG(LogCombatManager, Verbose, TEXT("ResolveCriticalStrike: crit disabled by skill packet."));
+		CombatManagerComponentPrivate::UpdatePacketTotal(Packet);
+		return;
+	}
 
 	if (!SourceAttributes)
 	{
@@ -995,7 +1716,12 @@ void UCombatManager::ResolveCriticalStrike(FCombatDamagePacket& Packet, const UH
 		return;
 	}
 
-	const float CritChance = FMath::Clamp(SourceAttributes->GetCritChance(), 0.f, 100.f);
+	float CritChance = SourceAttributes->GetCritChance();
+	if (SkillPacket && SkillPacket->bIsSpell)
+	{
+		CritChance += SourceAttributes->GetSpellsCritChance();
+	}
+	CritChance = FMath::Clamp(CritChance, 0.f, 100.f);
 	if (CritChance <= 0.f)
 	{
 		CombatManagerComponentPrivate::UpdatePacketTotal(Packet);
@@ -1010,9 +1736,14 @@ void UCombatManager::ResolveCriticalStrike(FCombatDamagePacket& Packet, const UH
 		return;
 	}
 
-	const float CritMultiplier = SourceAttributes->GetCritMultiplier() > 0.f
+	float CritMultiplier = SourceAttributes->GetCritMultiplier() > 0.f
 		? SourceAttributes->GetCritMultiplier()
 		: CombatManagerComponentPrivate::DefaultCritMultiplier;
+	if (SkillPacket && SkillPacket->bIsSpell)
+	{
+		const float SpellCritMultiplier = CombatManagerComponentPrivate::GetNeutralMultiplier(SourceAttributes->GetSpellsCritMultiplier());
+		CritMultiplier += FMath::Max(0.f, SpellCritMultiplier - 1.f);
+	}
 
 	Packet.Physical *= CritMultiplier;
 	Packet.Fire *= CritMultiplier;
@@ -1027,6 +1758,237 @@ void UCombatManager::ResolveCriticalStrike(FCombatDamagePacket& Packet, const UH
 	UE_LOG(LogCombatManager, Verbose, TEXT("Critical strike succeeded. Roll=%.2f Chance=%.2f Multiplier=%.2f"), CritRoll, CritChance, CritMultiplier);
 }
 
+void UCombatManager::ResolveHitPacketCriticalStrike(FCombatDamagePacket& Packet,
+	const UHunterAttributeSet* AttackerAttributes,
+	const FCombatHitPacket& HitPacket) const
+{
+	Packet.bCrit = false;
+	Packet.CritMultiplierApplied = 1.f;
+
+	if (!HitPacket.Offense.bCanCrit)
+	{
+		CombatManagerComponentPrivate::UpdatePacketTotal(Packet);
+		return;
+	}
+
+	float CritChance = HitPacket.Offense.CritChanceBonus;
+	if (HitPacket.Offense.bApplyAttackerAttributeModifiers && AttackerAttributes)
+	{
+		CritChance += AttackerAttributes->GetCritChance();
+		if (HitPacket.Offense.bIsSpell)
+		{
+			CritChance += AttackerAttributes->GetSpellsCritChance();
+		}
+	}
+	CritChance = FMath::Clamp(CritChance, 0.f, 100.f);
+
+	if (!HitPacket.Offense.bForceCrit && (CritChance <= 0.f || FMath::FRandRange(0.f, 100.f) >= CritChance))
+	{
+		CombatManagerComponentPrivate::UpdatePacketTotal(Packet);
+		return;
+	}
+
+	float CritMultiplier = HitPacket.Offense.CritMultiplierOverride > 0.f
+		? HitPacket.Offense.CritMultiplierOverride
+		: CombatManagerComponentPrivate::DefaultCritMultiplier;
+	if (HitPacket.Offense.bApplyAttackerAttributeModifiers && AttackerAttributes)
+	{
+		CritMultiplier = HitPacket.Offense.CritMultiplierOverride > 0.f
+			? HitPacket.Offense.CritMultiplierOverride
+			: (AttackerAttributes->GetCritMultiplier() > 0.f
+				? AttackerAttributes->GetCritMultiplier()
+				: CombatManagerComponentPrivate::DefaultCritMultiplier);
+		if (HitPacket.Offense.bIsSpell)
+		{
+			const float SpellCritMultiplier = CombatManagerComponentPrivate::GetNeutralMultiplier(AttackerAttributes->GetSpellsCritMultiplier());
+			CritMultiplier += FMath::Max(0.f, SpellCritMultiplier - 1.f);
+		}
+	}
+	CritMultiplier += FMath::Max(0.f, HitPacket.Offense.CritMultiplierBonus);
+	CritMultiplier = FMath::Max(CritMultiplier, 0.f);
+
+	Packet.Physical *= CritMultiplier;
+	Packet.Fire *= CritMultiplier;
+	Packet.Ice *= CritMultiplier;
+	Packet.Lightning *= CritMultiplier;
+	Packet.Light *= CritMultiplier;
+	Packet.Corruption *= CritMultiplier;
+	Packet.bCrit = true;
+	Packet.CritMultiplierApplied = CritMultiplier;
+
+	CombatManagerComponentPrivate::UpdatePacketTotal(Packet);
+}
+
+void UCombatManager::EvaluateStagger(AActor* TargetActor, const UHunterAttributeSet* TargetAttributes,
+	FCombatResolveResult& InOutResult) const
+{
+	// Stagger fires when a hit drains stamina to zero and the target is NOT mid-skill.
+	// Skills are protected by the State_Self_ExecutingSkill tag — if it's present, no stagger.
+	if (!TargetAttributes || InOutResult.DamageToStamina <= 0.f)
+	{
+		return;
+	}
+
+	const float StaminaAfterHit = FMath::Max(0.f, TargetAttributes->GetStamina() - InOutResult.DamageToStamina);
+	if (StaminaAfterHit > 0.f)
+	{
+		return; // Stamina not depleted — no stagger
+	}
+
+	UAbilitySystemComponent* TargetASC = GetAbilitySystemComponentFromActor(TargetActor);
+	if (!TargetASC)
+	{
+		return;
+	}
+
+	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+	if (TargetASC->HasMatchingGameplayTag(Tags.State_Self_ExecutingSkill))
+	{
+		UE_LOG(LogCombatManager, Verbose,
+			TEXT("EvaluateStagger: stamina depleted but %s is executing a skill — stagger suppressed."),
+			*GetNameSafe(TargetActor));
+		return;
+	}
+
+	InOutResult.bShouldStagger = true;
+	UE_LOG(LogCombatManager, Verbose,
+		TEXT("EvaluateStagger: stagger triggered on %s (stamina %.2f → 0)."),
+		*GetNameSafe(TargetActor), TargetAttributes->GetStamina());
+}
+
+void UCombatManager::ApplyHitResponse(const FCombatHitPacket& HitPacket, FCombatResolveResult& InOutResult) const
+{
+	InOutResult.HitResponse = HitPacket.HitResponse;
+	InOutResult.bShouldApplyAilments = HitPacket.bCanApplyAilments;
+
+	switch (InOutResult.HitResponse)
+	{
+	case EHitResponse::Parry:
+		InOutResult.DamageToHealth      = 0.f;
+		InOutResult.DamageToArcaneShield = 0.f;
+		InOutResult.DamageToStamina     = 0.f;
+		InOutResult.TotalDamageTaken    = 0.f;
+		InOutResult.bShouldApplyAilments = true;
+		InOutResult.bShouldStagger       = false;
+		InOutResult.bKilledTarget        = false;
+		UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHitResponse: Parry zeroed damage and kept flat ailment rolls enabled."));
+		break;
+
+	case EHitResponse::Invincible:
+		InOutResult.DamageToHealth       = 0.f;
+		InOutResult.DamageToArcaneShield  = 0.f;
+		InOutResult.DamageToStamina      = 0.f;
+		InOutResult.TotalDamageTaken     = 0.f;
+		InOutResult.bShouldApplyAilments  = false;
+		InOutResult.bShouldStagger        = false;
+		InOutResult.bKilledTarget         = false;
+		UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHitResponse: Invincible zeroed damage and ailments."));
+		break;
+
+	case EHitResponse::Absorbed:
+		UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHitResponse: Absorbed response left packet damage as authored."));
+		break;
+
+	case EHitResponse::Normal:
+	default:
+		break;
+	}
+
+	return;
+}
+
+void UCombatManager::ApplySkillCostToSource(AActor* SourceActor, const FSkillDamagePacket& SkillPacket) const
+{
+	const UHunterAttributeSet* SourceAttributes = GetHunterAttributeSetFromActor(SourceActor);
+	const float StaminaCost = SourceAttributes
+		? FStatsModifierMath::ApplyPercentChange(SkillPacket.StaminaCost, SourceAttributes->GetStaminaCostChanges())
+		: FMath::Max(SkillPacket.StaminaCost, 0.f);
+	const float ManaCost = SourceAttributes
+		? FStatsModifierMath::ApplyPercentChange(SkillPacket.ManaCost, SourceAttributes->GetManaCostChanges())
+		: FMath::Max(SkillPacket.ManaCost, 0.f);
+	const float HealthCost = SourceAttributes
+		? FStatsModifierMath::ApplyPercentChange(SkillPacket.HealthCost, SourceAttributes->GetHealthCostChanges())
+		: FMath::Max(SkillPacket.HealthCost, 0.f);
+
+	if (StaminaCost <= 0.f && ManaCost <= 0.f && HealthCost <= 0.f)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActor(SourceActor);
+	if (!SourceASC)
+	{
+		return;
+	}
+
+	if (CostApplicationGE)
+	{
+		FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+		Context.AddSourceObject(SourceActor);
+		FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(CostApplicationGE, 1.f, Context);
+		if (Spec.IsValid())
+		{
+			const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+			if (HealthCost > 0.f)
+			{
+				Spec.Data->SetSetByCallerMagnitude(Tags.Data_Cost_Health, -HealthCost);
+			}
+			if (StaminaCost > 0.f)
+			{
+				Spec.Data->SetSetByCallerMagnitude(Tags.Data_Cost_Stamina, -StaminaCost);
+			}
+			if (ManaCost > 0.f)
+			{
+				Spec.Data->SetSetByCallerMagnitude(Tags.Data_Cost_Mana, -ManaCost);
+			}
+
+			SourceASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+
+			UE_LOG(LogCombatManager, Verbose,
+				TEXT("ApplySkillCostToSource: paid costs from %s via CostApplicationGE. Health-=%.2f Mana-=%.2f Stamina-=%.2f"),
+				*GetNameSafe(SourceActor), HealthCost, ManaCost, StaminaCost);
+		}
+		else
+		{
+			UE_LOG(LogCombatManager, Error,
+				TEXT("ApplySkillCostToSource: MakeOutgoingSpec failed for CostApplicationGE on %s."),
+				*GetNameSafe(this));
+		}
+
+		return;
+	}
+
+	if (!SourceAttributes)
+	{
+		return;
+	}
+
+	UE_LOG(LogCombatManager, Warning,
+		TEXT("ApplySkillCostToSource: CostApplicationGE is not set on %s. Falling back to direct cost mutation."),
+		*GetNameSafe(this));
+
+	const float CurrentHealth = FMath::Max(SourceAttributes->GetHealth(), 0.f);
+	const float CurrentMana = FMath::Max(SourceAttributes->GetMana(), 0.f);
+	const float CurrentStamina = FMath::Max(SourceAttributes->GetStamina(), 0.f);
+
+	const float NewHealth = FMath::Max(0.f, CurrentHealth - HealthCost);
+	const float NewMana = FMath::Max(0.f, CurrentMana - ManaCost);
+	const float NewStamina = FMath::Max(0.f, CurrentStamina - StaminaCost);
+
+	if (!FMath::IsNearlyEqual(CurrentHealth, NewHealth))
+	{
+		SourceASC->SetNumericAttributeBase(UHunterAttributeSet::GetHealthAttribute(), NewHealth);
+	}
+	if (!FMath::IsNearlyEqual(CurrentMana, NewMana))
+	{
+		SourceASC->SetNumericAttributeBase(UHunterAttributeSet::GetManaAttribute(), NewMana);
+	}
+	if (!FMath::IsNearlyEqual(CurrentStamina, NewStamina))
+	{
+		SourceASC->SetNumericAttributeBase(UHunterAttributeSet::GetStaminaAttribute(), NewStamina);
+	}
+}
+
 void UCombatManager::ApplyOnHitEffects(
 	AActor* SourceActor,
 	AActor* TargetActor,
@@ -1034,10 +1996,12 @@ void UCombatManager::ApplyOnHitEffects(
 	UAbilitySystemComponent* CachedSourceASC,
 	const UHunterAttributeSet* CachedSourceAttributes) const
 {
-	if (Result.TotalDamageTaken <= 0.f || !IsValid(SourceActor) || !IsValid(TargetActor) || !TargetActor->HasAuthority())
+	if (!IsValid(SourceActor) || !IsValid(TargetActor) || !TargetActor->HasAuthority())
 	{
 		return;
 	}
+
+	const bool bDealtDamage = Result.TotalDamageTaken > 0.f;
 
 	// OPT: Use pre-cached pointers from ResolveHit when available; fall back to lookup
 	// only when called standalone (e.g. from Blueprint).
@@ -1046,7 +2010,7 @@ void UCombatManager::ApplyOnHitEffects(
 	const UHunterAttributeSet* SourceAttributes =
 		CachedSourceAttributes ? CachedSourceAttributes : GetHunterAttributeSetFromActor(SourceActor);
 
-	if (SourceASC && SourceAttributes)
+	if (bDealtDamage && SourceASC && SourceAttributes)
 	{
 		const float LifeOnHit    = FMath::Max(SourceAttributes->GetLifeOnHit(),    0.f);
 		const float ManaOnHit    = FMath::Max(SourceAttributes->GetManaOnHit(),    0.f);
@@ -1112,26 +2076,21 @@ void UCombatManager::ApplyOnHitEffects(
 	}
 
 	ApplyAilments(SourceActor, TargetActor, Result);
-	ApplyReflect(SourceActor, TargetActor, Result);
+	if (bDealtDamage)
+	{
+		ApplyReflect(SourceActor, TargetActor, Result);
+	}
 }
 
 void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result) const
 {
-	// I-03: Structural skeleton for ailment application. Probability calculations are
-	// implemented here so hit-by-hit logic is deterministic. Actual GE application is
-	// deferred until ailment GE assets are created in Blueprint (per user instruction).
-	//
-	// OPT-AILMENT: Early-out until ailment GE assets exist. Remove this guard once
-	// at least one ailment GE is wired up — the per-ailment TODO blocks below will
-	// handle the rest individually.
-	// ────────────────────────────────────────────────────────────────────────
-	// To re-enable: delete (or #if 0) the early-return below and assign
-	// AilmentGE class references on CombatManager defaults in Blueprint.
-	// ────────────────────────────────────────────────────────────────────────
-	UE_LOG(LogCombatManager, VeryVerbose,
-		TEXT("ApplyAilments: Skipped — ailment GE assets not yet created. "
-		     "Remove early-return in CombatManager.cpp once GEs are ready."));
-	return; // OPT-AILMENT: no-op until GE hookup — avoids dead probability math every hit
+	if (!Result.bShouldApplyAilments)
+	{
+		UE_LOG(LogCombatManager, VeryVerbose,
+			TEXT("ApplyAilments: skipped because bShouldApplyAilments is false. Target=%s"),
+			*GetNameSafe(TargetActor));
+		return;
+	}
 
 	if (!IsValid(SourceActor) || !IsValid(TargetActor))
 	{
@@ -1144,69 +2103,113 @@ void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, con
 		return;
 	}
 
-	// ── Bleed (Physical) ──────────────────────────────────────────────────
-	if (Result.PhysicalTaken > 0.f)
+	UDoTManager* SourceDoTManager = SourceActor->FindComponentByClass<UDoTManager>();
+	if (!SourceDoTManager)
+	{
+		UE_LOG(LogCombatManager, Warning,
+			TEXT("ApplyAilments: %s has no DoTManager, so ailments cannot be applied to %s."),
+			*GetNameSafe(SourceActor), *GetNameSafe(TargetActor));
+		return;
+	}
+
+	// bParryPath = true means ailments apply by flat chance only (no buildup contribution).
+	// On the Normal path, ailments can also accumulate buildup toward threshold triggers.
+	// TODO: Implement buildup tracking per ailment type when DoTManager GEs are ready.
+	const bool bParryPath = (Result.HitResponse == EHitResponse::Parry);
+
+	// ── Bleed (Physical) ──────────────────────────────────────────────────────
+	// On parry path: uses same flat chance roll — Elden Ring style, can proc on block.
+	// PreMitigationPacket.Physical is used so the roll is based on raw incoming, not
+	// post-armour damage (matching PoE2 and ER behavior).
+	if (Result.PreMitigationPacket.Physical > 0.f || (bParryPath && Result.PreMitigationPacket.Physical > 0.f))
 	{
 		const float BleedChance = FMath::Clamp(SourceAttributes->GetChanceToBleed(), 0.f, 100.f);
-		if (BleedChance > 0.f && FMath::FRandRange(0.f, 100.f) < BleedChance)
+		if (CombatManagerComponentPrivate::RollPercentChance(BleedChance))
 		{
-			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Bleed triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), BleedChance);
-			// TODO: Apply Bleed GE via TargetASC once GE asset is created in Blueprint.
+			const float DamagePerTick = Result.PreMitigationPacket.Physical * CombatManagerComponentPrivate::BleedDamagePerTickPercent;
+			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetBleedDuration(), CombatManagerComponentPrivate::DefaultBleedDuration);
+			const FDoTApplyResult ApplyResult = SourceDoTManager->ApplyBleed(TargetActor, DamagePerTick, Duration, SourceActor);
+			UE_LOG(LogCombatManager, Verbose,
+				TEXT("ApplyAilments: Bleed %s on %s (chance=%.1f%% damage/tick=%.2f duration=%.2f %s)."),
+				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
+				*GetNameSafe(TargetActor), BleedChance, DamagePerTick, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
 		}
 	}
 
-	// ── Ignite (Fire) ─────────────────────────────────────────────────────
-	if (Result.FireTaken > 0.f)
+	// ── Ignite (Fire) ─────────────────────────────────────────────────────────
+	if (Result.PreMitigationPacket.Fire > 0.f)
 	{
 		const float IgniteChance = FMath::Clamp(SourceAttributes->GetChanceToIgnite(), 0.f, 100.f);
-		if (IgniteChance > 0.f && FMath::FRandRange(0.f, 100.f) < IgniteChance)
+		if (CombatManagerComponentPrivate::RollPercentChance(IgniteChance))
 		{
-			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Ignite triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), IgniteChance);
-			// TODO: Apply Ignite GE via TargetASC once GE asset is created in Blueprint.
+			const float DamagePerTick = Result.PreMitigationPacket.Fire * CombatManagerComponentPrivate::IgniteDamagePerTickPercent;
+			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetBurnDuration(), CombatManagerComponentPrivate::DefaultIgniteDuration);
+			const FDoTApplyResult ApplyResult = SourceDoTManager->ApplyIgnite(TargetActor, DamagePerTick, Duration, SourceActor);
+			UE_LOG(LogCombatManager, Verbose,
+				TEXT("ApplyAilments: Ignite %s on %s (chance=%.1f%% damage/tick=%.2f duration=%.2f %s)."),
+				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
+				*GetNameSafe(TargetActor), IgniteChance, DamagePerTick, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
 		}
 	}
 
-	// ── Freeze (Ice) ──────────────────────────────────────────────────────
-	if (Result.IceTaken > 0.f)
+	// ── Freeze (Ice) ──────────────────────────────────────────────────────────
+	if (Result.PreMitigationPacket.Ice > 0.f)
 	{
 		const float FreezeChance = FMath::Clamp(SourceAttributes->GetChanceToFreeze(), 0.f, 100.f);
-		if (FreezeChance > 0.f && FMath::FRandRange(0.f, 100.f) < FreezeChance)
+		if (CombatManagerComponentPrivate::RollPercentChance(FreezeChance))
 		{
-			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Freeze triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), FreezeChance);
-			// TODO: Apply Freeze GE via TargetASC once GE asset is created in Blueprint.
+			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetFreezeDuration(), CombatManagerComponentPrivate::DefaultFreezeDuration);
+			const FDoTApplyResult ApplyResult = SourceDoTManager->ApplyFreeze(TargetActor, Duration, SourceActor);
+			UE_LOG(LogCombatManager, Verbose,
+				TEXT("ApplyAilments: Freeze %s on %s (chance=%.1f%% duration=%.2f %s)."),
+				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
+				*GetNameSafe(TargetActor), FreezeChance, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
 		}
 	}
 
-	// ── Shock (Lightning) ─────────────────────────────────────────────────
-	if (Result.LightningTaken > 0.f)
+	// ── Shock (Lightning) ─────────────────────────────────────────────────────
+	if (Result.PreMitigationPacket.Lightning > 0.f)
 	{
 		const float ShockChance = FMath::Clamp(SourceAttributes->GetChanceToShock(), 0.f, 100.f);
-		if (ShockChance > 0.f && FMath::FRandRange(0.f, 100.f) < ShockChance)
+		if (CombatManagerComponentPrivate::RollPercentChance(ShockChance))
 		{
-			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Shock triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), ShockChance);
-			// TODO: Apply Shock GE via TargetASC once GE asset is created in Blueprint.
+			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetShockDuration(), CombatManagerComponentPrivate::DefaultShockDuration);
+			const FDoTApplyResult ApplyResult = SourceDoTManager->ApplyShock(TargetActor, CombatManagerComponentPrivate::DefaultShockAmpFraction, Duration, SourceActor);
+			UE_LOG(LogCombatManager, Verbose,
+				TEXT("ApplyAilments: Shock %s on %s (chance=%.1f%% amp=%.2f duration=%.2f %s)."),
+				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
+				*GetNameSafe(TargetActor), ShockChance, CombatManagerComponentPrivate::DefaultShockAmpFraction, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
 		}
 	}
 
-	// ── Petrify (Light) ───────────────────────────────────────────────────
-	if (Result.LightTaken > 0.f)
+	// ── Petrify (Light) ───────────────────────────────────────────────────────
+	if (Result.PreMitigationPacket.Light > 0.f)
 	{
 		const float PetrifyChance = FMath::Clamp(SourceAttributes->GetChanceToPetrify(), 0.f, 100.f);
-		if (PetrifyChance > 0.f && FMath::FRandRange(0.f, 100.f) < PetrifyChance)
+		if (CombatManagerComponentPrivate::RollPercentChance(PetrifyChance))
 		{
-			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Petrify triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), PetrifyChance);
-			// TODO: Apply Petrify GE via TargetASC once GE asset is created in Blueprint.
+			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetPetrifyBuildUpDuration(), CombatManagerComponentPrivate::DefaultPetrifyDuration);
+			const FDoTApplyResult ApplyResult = SourceDoTManager->ApplyPetrify(TargetActor, Duration, SourceActor);
+			UE_LOG(LogCombatManager, Verbose,
+				TEXT("ApplyAilments: Petrify %s on %s (chance=%.1f%% duration=%.2f %s)."),
+				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
+				*GetNameSafe(TargetActor), PetrifyChance, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
 		}
 	}
 
-	// ── Corruption Ailment (Corruption) ───────────────────────────────────
-	if (Result.CorruptionTaken > 0.f)
+	// ── Corruption Ailment ────────────────────────────────────────────────────
+	if (Result.PreMitigationPacket.Corruption > 0.f)
 	{
 		const float CorruptChance = FMath::Clamp(SourceAttributes->GetChanceToCorrupt(), 0.f, 100.f);
-		if (CorruptChance > 0.f && FMath::FRandRange(0.f, 100.f) < CorruptChance)
+		if (CombatManagerComponentPrivate::RollPercentChance(CorruptChance))
 		{
-			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyAilments: Corruption ailment triggered on %s (chance=%.1f%%). GE hookup pending."), *GetNameSafe(TargetActor), CorruptChance);
-			// TODO: Apply Corruption Ailment GE via TargetASC once GE asset is created in Blueprint.
+			const float DamagePerTick = Result.PreMitigationPacket.Corruption * CombatManagerComponentPrivate::CorruptionDamagePerTickPercent;
+			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetCorruptionDuration(), CombatManagerComponentPrivate::DefaultCorruptionDuration);
+			const FDoTApplyResult ApplyResult = SourceDoTManager->ApplyCorruption(TargetActor, DamagePerTick, Duration, SourceActor);
+			UE_LOG(LogCombatManager, Verbose,
+				TEXT("ApplyAilments: Corruption %s on %s (chance=%.1f%% damage/tick=%.2f duration=%.2f %s)."),
+				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
+				*GetNameSafe(TargetActor), CorruptChance, DamagePerTick, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
 		}
 	}
 }
@@ -1256,11 +2259,48 @@ void UCombatManager::ApplyReflect(AActor* SourceActor, AActor* TargetActor, cons
 	}
 
 	UE_LOG(LogCombatManager, Verbose,
-		TEXT("ApplyReflect: Reflecting %.2f damage back to %s from %s. GE hookup pending."),
+		TEXT("ApplyReflect: Reflecting %.2f damage back to %s from %s."),
 		TotalReflect, *GetNameSafe(SourceActor), *GetNameSafe(TargetActor));
 
-	// TODO: Apply TotalReflect to SourceActor via a direct GAS GE (non-recursive path).
-	// Do NOT call ResolveHit(TargetActor, SourceActor, ...) here — that would recurse
-	// infinitely if the source also has reflect. Use a lightweight instant GE that
-	// bypasses ailment and reflect processing.
+	// ── Apply reflect damage via a dedicated non-recursive GE ─────────────────
+	// ReflectApplicationGE is a separate Instant GE that only touches Health.
+	// It MUST NOT go through ResolveHit — doing so would recurse infinitely if the
+	// source also has reflect on their character.
+	if (!ReflectApplicationGE)
+	{
+		UE_LOG(LogCombatManager, Warning,
+			TEXT("ApplyReflect: ReflectApplicationGE is not set on %s. "
+			     "Reflect damage (%.2f) logged but not delivered. "
+			     "Assign ReflectApplicationGE in Blueprint defaults."),
+			*GetNameSafe(this), TotalReflect);
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActor(SourceActor);
+	if (!SourceASC)
+	{
+		return;
+	}
+
+	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+	Context.AddSourceObject(TargetActor); // Reflected from target back to source
+
+	FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(ReflectApplicationGE, 1.f, Context);
+	if (Spec.IsValid())
+	{
+		const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+		// Reflect always hits health directly — it bypasses shields and resistances.
+		Spec.Data->SetSetByCallerMagnitude(Tags.Data_Damage_Health, -TotalReflect);
+		SourceASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+
+		UE_LOG(LogCombatManager, Verbose,
+			TEXT("ApplyReflect: Applied %.2f reflected health damage to %s via ReflectApplicationGE."),
+			TotalReflect, *GetNameSafe(SourceActor));
+	}
+	else
+	{
+		UE_LOG(LogCombatManager, Error,
+			TEXT("ApplyReflect: MakeOutgoingSpec failed for ReflectApplicationGE on %s."),
+			*GetNameSafe(this));
+	}
 }

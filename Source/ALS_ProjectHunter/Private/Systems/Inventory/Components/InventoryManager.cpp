@@ -3,6 +3,8 @@
 #include "Systems/Inventory/Components/InventoryManager.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
+#include "Engine/ActorChannel.h"
+#include "Engine/NetConnection.h"
 #include "Item/ItemInstance.h"
 #include "Net/UnrealNetwork.h"
 #include "Systems/Inventory/InventoryAdder.h"
@@ -34,6 +36,28 @@ void UInventoryManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME_CONDITION(UInventoryManager, Items, COND_OwnerOnly);
 }
 
+bool UInventoryManager::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
+{
+	bool bWroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+	const AActor* OwnerActor = GetOwner();
+	const UNetConnection* OwningConnection = OwnerActor ? OwnerActor->GetNetConnection() : nullptr;
+	if (!Channel || !Channel->Connection || Channel->Connection != OwningConnection)
+	{
+		return bWroteSomething;
+	}
+
+	for (UItemInstance* Item : Items)
+	{
+		if (IsValid(Item))
+		{
+			bWroteSomething |= Channel->ReplicateSubobject(Item, *Bunch, *RepFlags);
+		}
+	}
+
+	return bWroteSomething;
+}
+
 void UInventoryManager::BeginPlay()
 {
 	Super::BeginPlay();
@@ -51,41 +75,81 @@ void UInventoryManager::BeginPlay()
 
 bool UInventoryManager::AddItem(UItemInstance* Item)
 {
+	if (!HasInventoryWriteAuthority(TEXT("AddItem")))
+	{
+		return false;
+	}
+
 	return FInventoryAdder::AddItem(*this, Item);
 }
 
 bool UInventoryManager::AddItemToSlot(UItemInstance* Item, int32 SlotIndex)
 {
+	if (!HasInventoryWriteAuthority(TEXT("AddItemToSlot")))
+	{
+		return false;
+	}
+
 	return FInventoryAdder::AddItemToSlot(*this, Item, SlotIndex);
 }
 
 bool UInventoryManager::RemoveItem(UItemInstance* Item)
 {
+	if (!HasInventoryWriteAuthority(TEXT("RemoveItem")))
+	{
+		return false;
+	}
+
 	return FInventoryRemover::RemoveItem(*this, Item);
 }
 
 UItemInstance* UInventoryManager::RemoveItemAtSlot(int32 SlotIndex)
 {
+	if (!HasInventoryWriteAuthority(TEXT("RemoveItemAtSlot")))
+	{
+		return nullptr;
+	}
+
 	return FInventoryRemover::RemoveItemAtSlot(*this, SlotIndex);
 }
 
 bool UInventoryManager::RemoveQuantity(UItemInstance* Item, int32 Quantity)
 {
+	if (!HasInventoryWriteAuthority(TEXT("RemoveQuantity")))
+	{
+		return false;
+	}
+
 	return FInventoryRemover::RemoveQuantity(*this, Item, Quantity);
 }
 
 bool UInventoryManager::SwapItems(int32 SlotA, int32 SlotB)
 {
+	if (!HasInventoryWriteAuthority(TEXT("SwapItems")))
+	{
+		return false;
+	}
+
 	return FInventorySwapper::SwapItems(*this, SlotA, SlotB);
 }
 
 void UInventoryManager::DropItem(UItemInstance* Item, FVector DropLocation)
 {
+	if (!HasInventoryWriteAuthority(TEXT("DropItem")))
+	{
+		return;
+	}
+
 	FInventoryRemover::DropItem(*this, Item, DropLocation);
 }
 
 void UInventoryManager::DropItemAtSlot(int32 SlotIndex, FVector DropLocation)
 {
+	if (!HasInventoryWriteAuthority(TEXT("DropItemAtSlot")))
+	{
+		return;
+	}
+
 	FInventoryRemover::DropItemAtSlot(*this, SlotIndex, DropLocation);
 }
 
@@ -95,16 +159,31 @@ void UInventoryManager::DropItemAtSlot(int32 SlotIndex, FVector DropLocation)
 
 bool UInventoryManager::TryStackItem(UItemInstance* Item)
 {
+	if (!HasInventoryWriteAuthority(TEXT("TryStackItem")))
+	{
+		return false;
+	}
+
 	return FInventoryStackHandler::TryStackItem(*this, Item);
 }
 
 bool UInventoryManager::StackItems(UItemInstance* SourceItem, UItemInstance* TargetItem)
 {
+	if (!HasInventoryWriteAuthority(TEXT("StackItems")))
+	{
+		return false;
+	}
+
 	return FInventoryStackHandler::StackItems(*this, SourceItem, TargetItem);
 }
 
 UItemInstance* UInventoryManager::SplitStack(UItemInstance* Item, int32 Amount)
 {
+	if (!HasInventoryWriteAuthority(TEXT("SplitStack")))
+	{
+		return nullptr;
+	}
+
 	return FInventoryStackHandler::SplitStack(*this, Item, Amount);
 }
 
@@ -219,6 +298,11 @@ int32 UInventoryManager::GetTotalQuantityOfItem(FName BaseItemID) const
 
 void UInventoryManager::SortInventory(ESortMode SortMode)
 {
+	if (!HasInventoryWriteAuthority(TEXT("SortInventory")))
+	{
+		return;
+	}
+
 	UInventoryFunctionLibrary::SortItems(Items, SortMode, MaxSlots);
 
 	BroadcastInventoryChanged();
@@ -229,6 +313,11 @@ void UInventoryManager::SortInventory(ESortMode SortMode)
 
 void UInventoryManager::CompactInventory()
 {
+	if (!HasInventoryWriteAuthority(TEXT("CompactInventory")))
+	{
+		return;
+	}
+
 	UInventoryFunctionLibrary::CompactItems(Items, MaxSlots);
 
 	BroadcastInventoryChanged();
@@ -239,6 +328,11 @@ void UInventoryManager::CompactInventory()
 
 void UInventoryManager::ClearAll()
 {
+	if (!HasInventoryWriteAuthority(TEXT("ClearAll")))
+	{
+		return;
+	}
+
 	Items.Empty(MaxSlots);
 	
 	BroadcastInventoryChanged();
@@ -253,11 +347,21 @@ void UInventoryManager::ClearAll()
 
 void UInventoryManager::UpdateMaxWeightFromStrength(int32 Strength)
 {
+	if (!HasInventoryWriteAuthority(TEXT("UpdateMaxWeightFromStrength")))
+	{
+		return;
+	}
+
 	FInventoryWeightCalculator::UpdateMaxWeightFromStrength(*this, Strength);
 }
 
 void UInventoryManager::SetMaxWeight(float NewMaxWeight)
 {
+	if (!HasInventoryWriteAuthority(TEXT("SetMaxWeight")))
+	{
+		return;
+	}
+
 	FInventoryWeightCalculator::SetMaxWeight(*this, NewMaxWeight);
 }
 
@@ -294,6 +398,21 @@ void UInventoryManager::CleanupInvalidItems()
 			Items[i] = nullptr;
 		}
 	}
+}
+
+bool UInventoryManager::HasInventoryWriteAuthority(const TCHAR* FunctionName) const
+{
+	const AActor* OwnerActor = GetOwner();
+	if (OwnerActor && OwnerActor->HasAuthority())
+	{
+		return true;
+	}
+
+	UE_LOG(LogInventoryManager, Warning,
+		TEXT("%s rejected: inventory writes must run on the server for Owner=%s."),
+		FunctionName ? FunctionName : TEXT("InventoryWrite"),
+		*GetNameSafe(OwnerActor));
+	return false;
 }
 
 // ═══════════════════════════════════════════════

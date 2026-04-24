@@ -116,6 +116,10 @@ void UCharacterSystemCoordinatorComponent::BindCrossSystemListeners()
 		const bool bApplyVisuals = EquipmentManager->bAutoUpdateWeapons
 			&& EquipmentPresentation;
 
+		const bool bApplyMovesets = MovesetManager
+			&& GetOwner()
+			&& GetOwner()->HasAuthority();
+
 		for (const FEquipmentSlotEntry& Entry : EquipmentManager->EquippedItemsArray)
 		{
 			if (!Entry.Item || Entry.Slot == EEquipmentSlot::ES_None)
@@ -131,6 +135,11 @@ void UCharacterSystemCoordinatorComponent::BindCrossSystemListeners()
 			if (bApplyVisuals)
 			{
 				EquipmentPresentation->HandleEquipmentChanged(Entry.Slot, Entry.Item);
+			}
+
+			if (bApplyMovesets)
+			{
+				MovesetManager->HandleEquipmentChanged(Entry.Slot, Entry.Item, nullptr);
 			}
 		}
 	}
@@ -180,6 +189,12 @@ void UCharacterSystemCoordinatorComponent::HandleEquipmentChanged(
 	if (EquipmentPresentation && EquipmentManager && EquipmentManager->bAutoUpdateWeapons)
 	{
 		EquipmentPresentation->HandleEquipmentChanged(Slot, NewItem);
+	}
+
+	// â”€â”€ 3. Moveset abilities (server-authoritative) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+	if (MovesetManager && GetOwner() && GetOwner()->HasAuthority())
+	{
+		MovesetManager->HandleEquipmentChanged(Slot, NewItem, OldItem);
 	}
 }
 

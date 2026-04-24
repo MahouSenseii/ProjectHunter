@@ -2,12 +2,19 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameplayEffectTypes.h"
 #include "GameplayTagContainer.h"
 #include "Systems/Tags/Debug/TagDebugManager.h"
 #include "TagManager.generated.h"
 
 class UAbilitySystemComponent;
 class UHunterAttributeSet;
+
+struct FTagAttributeDelegateBinding
+{
+	FGameplayAttribute Attribute;
+	FDelegateHandle Handle;
+};
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTagManager, Log, All);
 
@@ -20,6 +27,7 @@ public:
 	UTagManager();
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Tags")
@@ -90,9 +98,12 @@ private:
 	/** Bind GAS attribute-change delegates so resource-based tags update reactively.
 	 *  N-06 FIX: Replaces per-frame attribute polling with event-driven updates. */
 	void BindAttributeChangeDelegates();
+	void UnbindAttributeChangeDelegates();
 
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> ASC;
+
+	TArray<FTagAttributeDelegateBinding> AttributeDelegateBindings;
 
 	TMap<FGameplayTag, bool> PendingTagStates;
 	bool bPendingBaseRefresh = false;

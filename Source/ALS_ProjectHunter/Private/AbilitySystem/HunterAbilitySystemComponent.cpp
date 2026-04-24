@@ -38,6 +38,26 @@ namespace HunterAbilitySystemComponentPrivate
 
 		return nullptr;
 	}
+
+	void ForceStopSprinting(UHunterAbilitySystemComponent* ASC)
+	{
+		if (!ASC)
+		{
+			return;
+		}
+
+		const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+		if (APHBaseCharacter* HunterCharacter = Cast<APHBaseCharacter>(ASC->GetAvatarActor()))
+		{
+			HunterCharacter->SetDesiredGait(EALSGait::Running);
+		}
+
+		if (UTagManager* TagManager = ResolveTagManager(ASC))
+		{
+			TagManager->SetTagState(Tags.Condition_Sprinting, false);
+			TagManager->RefreshBaseConditionTags();
+		}
+	}
 }
 
 // Define log category
@@ -244,6 +264,12 @@ void UHunterAbilitySystemComponent::TickSprintStaminaDegen()
 	{
 		return;
 	}
+	if (CurrentStamina <= KINDA_SMALL_NUMBER)
+	{
+		HunterAbilitySystemComponentPrivate::ForceStopSprinting(this);
+		StopSprintStaminaDegen();
+		return;
+	}
 
 	const float NewStamina = FMath::Max(0.f, CurrentStamina - DrainAmount);
 	if (!FMath::IsNearlyEqual(CurrentStamina, NewStamina))
@@ -272,6 +298,12 @@ void UHunterAbilitySystemComponent::TickSprintStaminaDegen()
 		if (UTagManager* TagManager = HunterAbilitySystemComponentPrivate::ResolveTagManager(this))
 		{
 			TagManager->RefreshBaseConditionTags();
+		}
+
+		if (NewStamina <= KINDA_SMALL_NUMBER)
+		{
+			HunterAbilitySystemComponentPrivate::ForceStopSprinting(this);
+			StopSprintStaminaDegen();
 		}
 	}
 }
