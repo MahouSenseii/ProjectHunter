@@ -10,6 +10,8 @@
 #include "Components/ActorComponent.h"
 #include "ALSDebugComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTraceToggle,bool,bEnabled);
+
 class AALSBaseCharacter;
 class USkeletalMesh;
 
@@ -46,6 +48,9 @@ public:
 	/** Implemented on BP to set dynamic color materials for debugging */
 	UFUNCTION(BlueprintImplementableEvent, Category = "ALS|Debug")
 	void SetDynamicMaterials();
+	
+	UPROPERTY(BlueprintAssignable, Category="Combat|Trace")
+	FOnTraceToggle OnTraceToggle;
 
 	UFUNCTION(BlueprintCallable, Category = "ALS|Debug")
 	void ToggleGlobalTimeDilationLocal(float TimeDilation);
@@ -69,7 +74,7 @@ public:
 	void ToggleDebugMesh();
 
 	UFUNCTION(BlueprintCallable, Category = "ALS|Debug")
-	void ToggleTraces() { bShowTraces = !bShowTraces; }
+	void ToggleTraces() { bShowTraces = !bShowTraces; OnTraceToggle.Broadcast(bShowTraces); }
 
 	UFUNCTION(BlueprintCallable, Category = "ALS|Debug")
 	void ToggleDebugShapes() { bShowDebugShapes = !bShowDebugShapes; }

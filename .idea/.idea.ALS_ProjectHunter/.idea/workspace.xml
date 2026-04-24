@@ -17,49 +17,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Stats/StatsModifierMath.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Stats/StatsEnumLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Stats/StatsModifierMath.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" beforeDir="false" afterPath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Combat/ActionSystem/ActionSystem_Component.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/Combat/ActionSystem/ActionSystem_Component.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAbilitySystemComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAbilitySystemComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/Interaction/InteractionManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/Interaction/InteractionManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/CombatManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/CombatManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemInstance.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemInstance.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Loot/Component/LootComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Loot/Component/LootComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameMode.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameMode.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/AI/Components/MonsterModifierComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/AI/Components/MonsterModifierComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Character/Components/CharacterSystemCoordinatorComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Character/Components/CharacterSystemCoordinatorComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Combat/Components/DoTManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Combat/Components/DoTManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Equipment/Components/EquipmentManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Equipment/Components/EquipmentManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Equipment/EquipmentReplicationHelper.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Equipment/EquipmentReplicationHelper.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Inventory/Components/InventoryManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Inventory/Components/InventoryManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Inventory/InventoryAdder.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Inventory/InventoryAdder.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Inventory/InventoryStackHandler.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Inventory/InventoryStackHandler.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Moveset/Components/MovesetManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Moveset/Components/MovesetManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Progression/Components/CharacterProgressionManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Progression/Components/CharacterProgressionManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Stats/Components/StatsManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Stats/Components/StatsManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Stats/EquipmentStatsApplier.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Stats/EquipmentStatsApplier.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Tags/Components/TagManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Systems/Tags/Components/TagManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/CombatManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/CombatManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatEnumLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemInstance.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemInstance.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Component/LootComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Component/LootComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/PHGameplayTags.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/PHGameplayTags.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/AI/Components/MonsterModifierComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/AI/Components/MonsterModifierComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Combat/Components/DoTManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Combat/Components/DoTManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Combat/Library/CombatStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Combat/Library/CombatStructs.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Equipment/Components/EquipmentManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Equipment/Components/EquipmentManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Inventory/Components/InventoryManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Inventory/Components/InventoryManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Progression/Components/CharacterProgressionManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Progression/Components/CharacterProgressionManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Stats/Components/StatsManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Stats/Components/StatsManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Tags/Components/TagManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Systems/Tags/Components/TagManager.h" afterDir="false" />
-    </list>
+    <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -76,7 +34,6 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="cidr-memory-view://11" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Programs/Shared/EpicGames.Horde/HordeHttpClient.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Concepts/DerivedFrom.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Delegates/DelegateInstancesImpl.h" root0="FORCE_HIGHLIGHTING" />
@@ -90,7 +47,7 @@
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Engine/Classes/Camera/PlayerCameraManager.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Engine/Classes/Components/StaticMeshComponent.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/ALS_ProjectHunter.uproject" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/PHBaseCharacter.gen.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/ALS_ProjectHunter/UHT/PHBaseCharacter.gen.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Plugins/ALS-Community/ALSV4_CPP.uplugin" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Mob/MobPoolSubsystem.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMCResourceShared.h" root0="FORCE_HIGHLIGHTING" />
@@ -1111,6 +1068,7 @@
       <workItem from="1776019922340" duration="2166000" />
       <workItem from="1776470321525" duration="504000" />
       <workItem from="1776541016732" duration="13797000" />
+      <workItem from="1777040515458" duration="5015000" />
     </task>
     <servers />
   </component>
