@@ -8,7 +8,7 @@
 #include "Systems/Equipment/Library/EquipmentFunctionLibrary.h"
 #include "Systems/Inventory/Components/InventoryManager.h"
 #include "Item/ItemInstance.h"
-#include "Item/Runtime/EquippedItemRuntimeActor.h"
+#include "Systems/Equipment/Actors/EquippedItemRuntimeActor.h"
 
 UItemInstance* FEquipmentMutationHelper::EquipItem(UEquipmentManager& Manager, UItemInstance* Item, EEquipmentSlot Slot, bool bSwapToBag)
 {

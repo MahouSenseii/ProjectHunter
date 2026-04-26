@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
-#include "Combat/Library/CombatEnumLibrary.h"
+#include "Systems/Combat/Library/CombatEnumLibrary.h"
 #include "CombatStructs.generated.h"
 
 class AActor;

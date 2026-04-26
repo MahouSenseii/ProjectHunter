@@ -1,6 +1,6 @@
 ﻿// Loot/Generation/LootGenerator.cpp
 
-#include "Loot/Generation/LootGenerator.h"
+#include "Systems/Loot/Generation/LootGenerator.h"
 #include "Item/ItemInstance.h"
 #include "Engine/DataTable.h"
 

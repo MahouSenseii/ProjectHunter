@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Loot/Library/LootEnum.h"
+#include "Systems/Loot/Library/LootEnum.h"
 #include "Engine/DataTable.h"
 #include "Item/ItemInstance.h"
 #include "Item/Library/ItemStructs.h"

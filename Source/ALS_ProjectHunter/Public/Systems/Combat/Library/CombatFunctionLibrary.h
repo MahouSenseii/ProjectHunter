@@ -1,4 +1,4 @@
-// Combat/Library/CombatFunctionLibrary.h
+// Systems/Combat/Library/CombatFunctionLibrary.h
 // Blueprint-callable static helpers for the combat system.
 #pragma once
 

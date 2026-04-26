@@ -1,4 +1,5 @@
 ﻿// Loot/Generation/LootGenerator.h
+// Systems/Loot/Generation/LootGenerator.h
 #pragma once
 
 #include "CoreMinimal.h"

@@ -1,5 +1,5 @@
-// Combat/Library/CombatFunctionLibrary.cpp
-#include "Combat/Library/CombatFunctionLibrary.h"
+// Systems/Combat/Library/CombatFunctionLibrary.cpp
+#include "Systems/Combat/Library/CombatFunctionLibrary.h"
 #include "Character/PHBaseCharacter.h"
 
 bool UCombatFunctionLibrary::AreHostile(const APHBaseCharacter* Source, const APHBaseCharacter* Target)

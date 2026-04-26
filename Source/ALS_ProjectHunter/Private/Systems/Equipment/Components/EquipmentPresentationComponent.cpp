@@ -18,7 +18,7 @@
 #include "GameFramework/Pawn.h"
 #include "Item/ItemInstance.h"
 #include "Item/Library/ItemStructs.h"
-#include "Item/Runtime/EquippedItemRuntimeActor.h"
+#include "Systems/Equipment/Actors/EquippedItemRuntimeActor.h"
 
 DEFINE_LOG_CATEGORY(LogEquipmentPresentation);
 

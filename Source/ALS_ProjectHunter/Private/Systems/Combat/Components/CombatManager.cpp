@@ -1,4 +1,4 @@
-#include "Combat/CombatManager.h"
+#include "Systems/Combat/Components/CombatManager.h"
 
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystemComponent.h"

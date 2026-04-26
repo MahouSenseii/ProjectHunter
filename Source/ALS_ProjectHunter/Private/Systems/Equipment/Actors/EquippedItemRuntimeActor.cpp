@@ -1,7 +1,7 @@
-#include "Item/Runtime/EquippedItemRuntimeActor.h"
+#include "Systems/Equipment/Actors/EquippedItemRuntimeActor.h"
 
 #include "Character/PHBaseCharacter.h"
-#include "Combat/CombatManager.h"
+#include "Systems/Combat/Components/CombatManager.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SplineComponent.h"

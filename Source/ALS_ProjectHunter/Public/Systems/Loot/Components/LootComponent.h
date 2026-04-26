@@ -1,4 +1,5 @@
 ﻿// Loot/Component/LootComponent.h
+// Systems/Loot/Components/LootComponent.h
 #pragma once
 
 #include "CoreMinimal.h"

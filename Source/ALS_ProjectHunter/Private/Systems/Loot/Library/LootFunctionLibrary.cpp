@@ -1,7 +1,7 @@
 ﻿// Loot/Library/LootFunctionLibrary.cpp
 
-#include "Loot/Library/LootFunctionLibrary.h"
-#include "Loot/Generation/LootGenerator.h"
+#include "Systems/Loot/Library/LootFunctionLibrary.h"
+#include "Systems/Loot/Generation/LootGenerator.h"
 #include "Engine/DataTable.h"
 
 // ═══════════════════════════════════════════════════════════════════════

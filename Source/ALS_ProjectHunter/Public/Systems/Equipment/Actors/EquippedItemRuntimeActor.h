@@ -1,3 +1,4 @@
+// Runtime actor used by the ProjectHunter equipment presentation system.
 #pragma once
 
 #include "CoreMinimal.h"

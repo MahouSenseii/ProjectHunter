@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+// Shared combat enums used across ProjectHunter combat systems.
 #include "CoreMinimal.h"
 #include "CombatEnumLibrary.generated.h"
 

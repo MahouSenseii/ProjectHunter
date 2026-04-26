@@ -1,3 +1,4 @@
+// ProjectHunter combat state owner for hit resolution and damage application.
 #pragma once
 
 #include "CoreMinimal.h"

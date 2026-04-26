@@ -1,11 +1,12 @@
 ﻿// Loot/Subsystem/LootSubsystem.h
+// Systems/Loot/Subsystems/LootSubsystem.h
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Engine/StreamableManager.h"
 #include "Systems/Loot/Library/LootStructs.h"
-#include "Loot/Generation/LootGenerator.h"
+#include "Systems/Loot/Generation/LootGenerator.h"
 #include "LootSubsystem.generated.h"
 
 // Forward declarations

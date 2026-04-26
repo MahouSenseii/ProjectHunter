@@ -11,7 +11,7 @@
 #include "Systems/Tags/Components/TagManager.h"
 #include "Systems/Combat/Components/DoTManager.h"
 #include "Systems/Moveset/Components/MovesetManager.h"
-#include "Combat/CombatManager.h"
+#include "Systems/Combat/Components/CombatManager.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "Systems/Equipment/Components/EquipmentManager.h"

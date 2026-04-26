@@ -5,7 +5,7 @@
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
-#include "Item/Runtime/EquippedItemRuntimeActor.h"
+#include "Systems/Equipment/Actors/EquippedItemRuntimeActor.h"
 #include "Item/Library/ItemEnums.h"
 #include "Item/Library/AffixEnums.h"
 #include "Systems/Item/Library/ItemStructsLog.h"

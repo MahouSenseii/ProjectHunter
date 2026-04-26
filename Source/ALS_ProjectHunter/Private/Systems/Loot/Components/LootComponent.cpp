@@ -1,7 +1,7 @@
 ﻿// Loot/Component/LootComponent.cpp
 
-#include "Loot/Component/LootComponent.h"
-#include "Loot/Subsystem/LootSubsystem.h"
+#include "Systems/Loot/Components/LootComponent.h"
+#include "Systems/Loot/Subsystems/LootSubsystem.h"
 #include "Engine/World.h"
 
 DEFINE_LOG_CATEGORY(LogLootComponent);

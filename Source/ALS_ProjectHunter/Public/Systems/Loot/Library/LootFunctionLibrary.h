@@ -1,9 +1,10 @@
 ﻿// Loot/Library/LootFunctionLibrary.h
+// Systems/Loot/Library/LootFunctionLibrary.h
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-#include "Loot/Library/LootEnum.h"
+#include "Systems/Loot/Library/LootEnum.h"
 #include "Systems/Loot/Library/LootStructs.h"
 #include "LootFunctionLibrary.generated.h"
 

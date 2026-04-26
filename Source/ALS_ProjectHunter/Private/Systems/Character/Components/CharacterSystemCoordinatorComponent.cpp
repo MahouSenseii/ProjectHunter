@@ -10,7 +10,7 @@
 #include "Systems/Inventory/Components/InventoryManager.h"
 #include "Systems/Moveset/Components/MovesetManager.h"
 #include "Systems/Stats/Components/StatsManager.h"
-#include "Combat/CombatManager.h"
+#include "Systems/Combat/Components/CombatManager.h"
 #include "Item/ItemInstance.h"
 
 DEFINE_LOG_CATEGORY(LogCharacterSystemCoordinator);
