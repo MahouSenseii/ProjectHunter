@@ -5,6 +5,7 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/Abilities/PHGameplayAbility.h"
 #include "GameplayEffect.h"
 #include "TimerManager.h"
 #include "HunterAbilitySystemComponent.generated.h"
@@ -32,8 +33,37 @@ public:
 	UHunterAbilitySystemComponent();
 	
 	virtual void AbilityActorInfoSet();
+	virtual void InitAbilityActorInfo(AActor* InOwnerActor, AActor* InAvatarActor) override;
+
+	UFUNCTION(BlueprintCallable, Category = "Project Hunter|Abilities")
+	void AbilityInputTagPressed(const FGameplayTag& InputTag);
+
+	UFUNCTION(BlueprintCallable, Category = "Project Hunter|Abilities")
+	void AbilityInputTagReleased(const FGameplayTag& InputTag);
+
+	UFUNCTION(BlueprintCallable, Category = "Project Hunter|Abilities")
+	void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
+
+	UFUNCTION(BlueprintCallable, Category = "Project Hunter|Abilities")
+	void ClearAbilityInput();
+
+	void TryActivateAbilitiesOnSpawn();
+	void CancelInputActivatedAbilities(bool bReplicateCancelAbility);
+
+	typedef TFunctionRef<bool(const UPHGameplayAbility* PHAbility, FGameplayAbilitySpecHandle Handle)> TShouldCancelAbilityFunc;
+	void CancelAbilitiesByFunc(TShouldCancelAbilityFunc ShouldCancelFunc, bool bReplicateCancelAbility);
+
+	bool IsActivationGroupBlocked(EPHAbilityActivationGroup Group) const;
+	void AddAbilityToActivationGroup(EPHAbilityActivationGroup Group, UPHGameplayAbility* PHAbility);
+	void RemoveAbilityFromActivationGroup(EPHAbilityActivationGroup Group, UPHGameplayAbility* PHAbility);
+	void CancelActivationGroupAbilities(EPHAbilityActivationGroup Group, UPHGameplayAbility* IgnorePHAbility, bool bReplicateCancelAbility);
 
 protected:
+	virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
+	virtual void AbilitySpecInputReleased(FGameplayAbilitySpec& Spec) override;
+	virtual void NotifyAbilityActivated(const FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability) override;
+	virtual void NotifyAbilityEnded(FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability, bool bWasCancelled) override;
+
 	void EffectApplied(UAbilitySystemComponent* AbilitySystemComponent,
 		const FGameplayEffectSpec& EffectSpec,
 		FActiveGameplayEffectHandle ActiveEffectHandle);
@@ -104,6 +134,12 @@ private:
 	bool bSprintingTagDelegateBound   = false;
 	bool bSprintDegenEffectTagApplied = false;
 	bool bPassiveRegenStarted         = false;
+
+	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
+	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
+	TArray<FGameplayAbilitySpecHandle> InputHeldSpecHandles;
+
+	int32 ActivationGroupCounts[static_cast<uint8>(EPHAbilityActivationGroup::MAX)];
 
 	// ── Sprint stamina degen ──────────────────────────────────────────────
 	FTimerHandle SprintStaminaDegenTimerHandle;

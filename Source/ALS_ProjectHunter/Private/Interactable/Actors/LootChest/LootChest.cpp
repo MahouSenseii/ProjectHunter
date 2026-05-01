@@ -1,11 +1,11 @@
-﻿// Interactable/Actors/LootChest/LootChest.cpp
+// Interactable/Actors/LootChest/LootChest.cpp
 
 #include "Interactable/Actors/LootChest/LootChest.h"
 #include "Interactable/Component/InteractableManager.h"
 #include "Components/BoxComponent.h"
-#include "Systems/Loot/Components/LootComponent.h"
-#include "Systems/Loot/Subsystems/LootSubsystem.h"
-#include "Systems/Stats/Components/StatsManager.h"
+#include "Loot/Components/LootComponent.h"
+#include "Loot/Subsystems/LootSubsystem.h"
+#include "Stats/Components/StatsManager.h"
 #include "Item/ItemInstance.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"

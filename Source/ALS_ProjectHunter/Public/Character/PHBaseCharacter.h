@@ -7,9 +7,10 @@
 #include "AbilitySystemInterface.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Character/ALSCharacter.h"
-#include "Systems/Character/Library/PHCharacterLog.h"
-#include "Systems/Combat/Library/CombatStructs.h"
+#include "Character/Library/PHCharacterLog.h"
+#include "Combat/Library/CombatStructs.h"
 #include "AbilitySystem/HunterAbilitySystemComponent.h"
+#include "AbilitySystem/PHAbilitySet.h"
 #include "PHBaseCharacter.generated.h"
 
 struct FGameplayAbilitySpecHandle;
@@ -19,13 +20,13 @@ class UHunterAttributeSet;
 class UHunterAbilitySystemComponent;
 class UCharacterProgressionManager;
 class UCombatManager;
+class UCombatSystemManagerComponent;
 class UEquipmentManager;
 class UEquipmentPresentationComponent;
 class UCharacterSystemCoordinatorComponent;
 class UStatsManager;
 class UTagManager;
-class UDoTManager;
-class UMovesetManager;
+class UCombatStatusManager;
 class UBaseStatsData;
 class UGameplayEffect;
 class UGameplayAbility;
@@ -50,6 +51,7 @@ public:
 
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void OnRep_Controller() override;
@@ -100,18 +102,18 @@ public:
 	TObjectPtr<UCombatManager> CombatManager;
 
 	/**
-	 * DoT Manager — apply and track Bleed, Ignite, Poison, Chill, Freeze, Shock.
-	 * Assign GE class references in the Blueprint defaults panel.
+	 * Combat Status Manager - applies and tracks DoTs, statuses, buffs, debuffs,
+	 * cleanses, and GAS-backed status queries.
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UDoTManager> DoTManager;
+	TObjectPtr<UCombatStatusManager> CombatStatusManager;
 
 	/**
-	 * Moveset Manager — socket, corrupt, and level weapon movesets.
-	 * Replicated; authority-only mutation via Server RPCs.
+	 * Combat System Manager - front door for Blueprint and C++ combat calls.
+	 * It routes hit intent to CombatManager and status calls to CombatStatusManager.
 	 */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movesets", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UMovesetManager> MovesetManager;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCombatSystemManagerComponent> CombatSystemManager;
 
 	/**
 	 * Equipment Presentation Component — owns visual weapon actors and mesh
@@ -192,15 +194,21 @@ public:
 	}
 
 	UFUNCTION(BlueprintPure, Category = "Combat")
-	UDoTManager* GetDoTManager() const
+	UCombatSystemManagerComponent* GetCombatSystemManager() const
 	{
-		return DoTManager;
+		return CombatSystemManager;
 	}
 
-	UFUNCTION(BlueprintPure, Category = "Movesets")
-	UMovesetManager* GetMovesetManager() const
+	UFUNCTION(BlueprintPure, Category = "Combat|Status")
+	UCombatStatusManager* GetCombatStatusManager() const
 	{
-		return MovesetManager;
+		return CombatStatusManager;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Status", meta = (DeprecatedFunction, DeprecationMessage = "Use GetCombatStatusManager."))
+	UCombatStatusManager* GetDoTManager() const
+	{
+		return GetCombatStatusManager();
 	}
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
@@ -295,8 +303,12 @@ public:
 	/* ABILITIES */
 	/* ═══════════════════════════════════════════════════════════════════════ */
 
-	/** Abilities granted to this character on spawn */
+	/** Lyra-style ability sets granted to this character on first ASC initialization. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
+	TArray<TObjectPtr<UPHAbilitySet>> DefaultAbilitySets;
+
+	/** Legacy direct ability grants. Prefer DefaultAbilitySets for new abilities. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities|Legacy")
 	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
 
 	/** Startup effects applied on spawn */
@@ -372,4 +384,7 @@ protected:
 
 	UPROPERTY()
 	TArray<FGameplayAbilitySpecHandle> GrantedAbilityHandles;
+
+	UPROPERTY()
+	TArray<FPHAbilitySet_GrantedHandles> GrantedAbilitySetHandles;
 };

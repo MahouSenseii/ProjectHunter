@@ -1,9 +1,9 @@
-﻿// Interactable/Actors/LootChest/LootChest.h
+// Interactable/Actors/LootChest/LootChest.h
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Systems/Loot/Library/LootStructs.h"
+#include "Loot/Library/LootStructs.h"
 #include "LootChest.generated.h"
 
 // Forward declarations

@@ -15,6 +15,7 @@ public class ALS_ProjectHunter : ModuleRules
 			"NavigationSystem",
 			"AIModule",
 			"GameplayAbilities",
+			"GameplayTags",
 			"PhysicsCore",
 			"Niagara",
 			"EnhancedInput",
@@ -26,7 +27,6 @@ public class ALS_ProjectHunter : ModuleRules
 		{
 			"Slate",
 			"SlateCore",
-			"GameplayTags",
 			"GameplayTasks"
 		});
 	}

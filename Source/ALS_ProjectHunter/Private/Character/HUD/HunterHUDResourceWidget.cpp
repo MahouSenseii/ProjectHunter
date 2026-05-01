@@ -7,11 +7,44 @@
 #include "Character/PHBaseCharacter.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Internal helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+void UHunterHUDResourceWidget::ResolveAttributesFromResourceType()
+{
+	// Only fill in attributes that haven't been manually overridden in BP defaults.
+	// An attribute is considered "overridden" if it IsValid() already.
+
+	switch (ResourceType)
+	{
+	case EHunterResourceType::Health:
+		if (!CurrentAttribute.IsValid())  CurrentAttribute  = UHunterAttributeSet::GetHealthAttribute();
+		if (!MaxAttribute.IsValid())      MaxAttribute      = UHunterAttributeSet::GetMaxEffectiveHealthAttribute();
+		if (!ReservedAttribute.IsValid()) ReservedAttribute = UHunterAttributeSet::GetReservedHealthAttribute();
+		break;
+
+	case EHunterResourceType::Stamina:
+		if (!CurrentAttribute.IsValid())  CurrentAttribute  = UHunterAttributeSet::GetStaminaAttribute();
+		if (!MaxAttribute.IsValid())      MaxAttribute      = UHunterAttributeSet::GetMaxEffectiveStaminaAttribute();
+		if (!ReservedAttribute.IsValid()) ReservedAttribute = UHunterAttributeSet::GetReservedStaminaAttribute();
+		break;
+
+	case EHunterResourceType::Mana:
+		if (!CurrentAttribute.IsValid())  CurrentAttribute  = UHunterAttributeSet::GetManaAttribute();
+		if (!MaxAttribute.IsValid())      MaxAttribute      = UHunterAttributeSet::GetMaxEffectiveManaAttribute();
+		if (!ReservedAttribute.IsValid()) ReservedAttribute = UHunterAttributeSet::GetReservedManaAttribute();
+		break;
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // HunterHUDBaseWidget overrides
 // ─────────────────────────────────────────────────────────────────────────────
 
 void UHunterHUDResourceWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
 {
+	ResolveAttributesFromResourceType();
+
 	UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
 	const UHunterAttributeSet* AS  = Character->GetAttributeSet();
 	if (!ASC || !AS)

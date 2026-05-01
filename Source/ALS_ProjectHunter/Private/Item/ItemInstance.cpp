@@ -8,7 +8,7 @@
 #include "Item/ItemUsageHandler.h"
 #include "Item/ItemValueCalculator.h"
 #include "Net/UnrealNetwork.h"
-#include "Systems/Item/Library/ItemLog.h"
+#include "Item/Library/ItemLog.h"
 
 DEFINE_LOG_CATEGORY(LogItemInstance);
 

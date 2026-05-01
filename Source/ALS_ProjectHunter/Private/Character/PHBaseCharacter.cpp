@@ -6,17 +6,17 @@
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystem/Effects/HunterGE_DerivedPrimaryVitals.h"
 #include "AbilitySystemComponent.h"
-#include "Systems/Progression/Components/CharacterProgressionManager.h"
-#include "Systems/Stats/Components/StatsManager.h"
-#include "Systems/Tags/Components/TagManager.h"
-#include "Systems/Combat/Components/DoTManager.h"
-#include "Systems/Moveset/Components/MovesetManager.h"
-#include "Systems/Combat/Components/CombatManager.h"
+#include "Progression/Components/CharacterProgressionManager.h"
+#include "Stats/Components/StatsManager.h"
+#include "Tags/Components/TagManager.h"
+#include "Combat/Components/CombatStatusManager.h"
+#include "Combat/Components/CombatSystemManagerComponent.h"
+#include "Combat/Components/CombatManager.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
-#include "Systems/Equipment/Components/EquipmentManager.h"
-#include "Systems/Equipment/Components/EquipmentPresentationComponent.h"
-#include "Systems/Character/Components/CharacterSystemCoordinatorComponent.h"
+#include "Equipment/Components/EquipmentManager.h"
+#include "Equipment/Components/EquipmentPresentationComponent.h"
+#include "Character/Components/CharacterSystemCoordinatorComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -71,12 +71,11 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 	// and RecoveryApplicationGE in Blueprint defaults.
 	CombatManager = CreateDefaultSubobject<UCombatManager>(TEXT("CombatManager"));
 
-	// Create DoT Manager — assign GE classes in Blueprint defaults
-	DoTManager = CreateDefaultSubobject<UDoTManager>(TEXT("DoTManager"));
+	// Create Combat Status Manager - assign GE classes in Blueprint defaults.
+	CombatStatusManager = CreateDefaultSubobject<UCombatStatusManager>(TEXT("CombatStatusManager"));
 
-	// Create Moveset Manager — weapon skill socket system
-	MovesetManager = CreateDefaultSubobject<UMovesetManager>(TEXT("MovesetManager"));
-	MovesetManager->SetIsReplicated(true);
+	// Combat front door for Blueprint and C++ callers. Heavy math stays in CombatManager.
+	CombatSystemManager = CreateDefaultSubobject<UCombatSystemManagerComponent>(TEXT("CombatSystemManager"));
 
 	// PH-0.4: Equipment Presentation Component — visual weapon actors and mesh attachment.
 	// Does not replicate; each machine rebuilds presentation from replicated slot state.
@@ -137,8 +136,11 @@ void APHBaseCharacter::PostInitializeComponents()
 	PH_RECOVER_COMPONENT(EquipmentManager,       UEquipmentManager)
 	PH_RECOVER_COMPONENT(StatsManager,           UStatsManager)
 	PH_RECOVER_COMPONENT(TagManager,             UTagManager)
-	PH_RECOVER_COMPONENT(DoTManager,             UDoTManager)
-	PH_RECOVER_COMPONENT(MovesetManager,         UMovesetManager)
+	PH_RECOVER_COMPONENT(CombatManager,          UCombatManager)
+	PH_RECOVER_COMPONENT(CombatStatusManager,    UCombatStatusManager)
+	PH_RECOVER_COMPONENT(CombatSystemManager,    UCombatSystemManagerComponent)
+	PH_RECOVER_COMPONENT(EquipmentPresentation,  UEquipmentPresentationComponent)
+	PH_RECOVER_COMPONENT(SystemCoordinator,      UCharacterSystemCoordinatorComponent)
 
 #undef PH_RECOVER_COMPONENT
 
@@ -174,6 +176,25 @@ void APHBaseCharacter::BeginPlay()
 	}
 
 	Super::BeginPlay();
+}
+
+void APHBaseCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(AbilitySystemComponent);
+	if (!HunterASC)
+	{
+		return;
+	}
+
+	const bool bGamePaused = GetWorld() ? GetWorld()->IsPaused() : false;
+	HunterASC->ProcessAbilityInput(DeltaSeconds, bGamePaused);
 }
 
 void APHBaseCharacter::PossessedBy(AController* NewController)
@@ -625,7 +646,29 @@ void APHBaseCharacter::GiveDefaultAbilities()
 		return;
 	}
 
-	// Grant all default abilities
+	if (UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(AbilitySystemComponent))
+	{
+		for (UPHAbilitySet* AbilitySet : DefaultAbilitySets)
+		{
+			if (!AbilitySet)
+			{
+				continue;
+			}
+
+			FPHAbilitySet_GrantedHandles GrantedHandles;
+			AbilitySet->GiveToAbilitySystem(HunterASC, &GrantedHandles, this);
+			if (!GrantedHandles.IsEmpty())
+			{
+				GrantedAbilitySetHandles.Add(GrantedHandles);
+			}
+		}
+	}
+	else if (!DefaultAbilitySets.IsEmpty())
+	{
+		UE_LOG(LogPHBaseCharacter, Error, TEXT("GiveDefaultAbilities: Character=%s has DefaultAbilitySets but ASC=%s is not UHunterAbilitySystemComponent."), *GetName(), *GetNameSafe(AbilitySystemComponent));
+	}
+
+	// Legacy direct grants. New abilities should prefer DefaultAbilitySets.
 	for (TSubclassOf<UGameplayAbility>& AbilityClass : DefaultAbilities)
 	{
 		if (AbilityClass)
@@ -676,7 +719,17 @@ void APHBaseCharacter::RemoveAllAbilities()
 		return;
 	}
 
-	// Remove all granted abilities
+	if (UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(AbilitySystemComponent))
+	{
+		for (FPHAbilitySet_GrantedHandles& GrantedHandles : GrantedAbilitySetHandles)
+		{
+			GrantedHandles.TakeFromAbilitySystem(HunterASC);
+		}
+
+		GrantedAbilitySetHandles.Empty();
+	}
+
+	// Remove legacy direct grants.
 	for (FGameplayAbilitySpecHandle& Handle : GrantedAbilityHandles)
 	{
 		AbilitySystemComponent->ClearAbility(Handle);

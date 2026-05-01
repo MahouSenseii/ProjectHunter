@@ -10,6 +10,20 @@
 #include "HunterHUDResourceWidget.generated.h"
 
 /**
+ * Which resource pool this widget tracks.
+ * Set ResourceType in Blueprint defaults — the widget wires the correct
+ * GAS attributes automatically. You can still override the individual
+ * attribute fields below if you need a non-standard mapping.
+ */
+UENUM(BlueprintType)
+enum class EHunterResourceType : uint8
+{
+	Health   UMETA(DisplayName = "Health"),
+	Stamina  UMETA(DisplayName = "Stamina"),
+	Mana     UMETA(DisplayName = "Mana"),
+};
+
+/**
  * HUD widget that tracks a three-part resource: Current, Max, and Reserved.
  *
  * Visual model:
@@ -22,13 +36,11 @@
  *   FillPercent     = Current  / Max   → drive the filled portion of the bar
  *   ReservedPercent = Reserved / Max   → drive the locked/greyed portion
  *
- * Setup:
- *   Concrete child classes (HealthWidget, StaminaWidget, ManaWidget) set
- *   CurrentAttribute, MaxAttribute, and ReservedAttribute in their constructors.
- *   The attributes must belong to UHunterAttributeSet.
- *
- *   Alternatively you can configure the attributes in Blueprint defaults if you
- *   prefer a fully data-driven setup.
+ * Setup (choose one):
+ *   A) Set ResourceType in Blueprint defaults. The correct attribute triplet
+ *      is resolved automatically in NativeInitializeForCharacter.
+ *   B) Leave ResourceType at its default and set CurrentAttribute, MaxAttribute,
+ *      and ReservedAttribute directly for a fully custom mapping.
  *
  * Blueprint implementation:
  *   Implement OnResourceUpdated to drive your progress bar.
@@ -36,33 +48,44 @@
  *   for fine-grained reactions (e.g. flash on damage, clamp animation on overheal).
  */
 UCLASS(Abstract, BlueprintType, Blueprintable)
-class ALS_PROJECTHUNTER_API 
-UHunterHUDResourceWidget : public UHunterHUDBaseWidget
+class ALS_PROJECTHUNTER_API UHunterHUDResourceWidget : public UHunterHUDBaseWidget
 {
 	GENERATED_BODY()
 
 public:
 	// ─────────────────────────────────────────────────────────────────────────
-	// Attribute configuration — set in subclass constructors or BP defaults
+	// Resource type — set this in BP defaults, everything else is automatic
 	// ─────────────────────────────────────────────────────────────────────────
 
-	/** The live resource pool.  e.g. Health, Stamina, Mana */
+	/**
+	 * Which resource pool to track.
+	 * Automatically wires CurrentAttribute / MaxAttribute / ReservedAttribute
+	 * on initialization. Override the individual attributes below for custom mappings.
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD|Resource")
+	EHunterResourceType ResourceType = EHunterResourceType::Health;
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Attribute overrides — leave invalid to use the ResourceType preset
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/** The live resource pool. Auto-set from ResourceType if left invalid. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD|Resource|Override")
 	FGameplayAttribute CurrentAttribute;
 
 	/**
 	 * The effective maximum — the ceiling of the bar.
-	 * Use MaxEffectiveHealth / MaxEffectiveStamina / MaxEffectiveMana (not MaxHealth)
-	 * so the reserved portion is already factored in.
+	 * Uses MaxEffective* variants so the reserved portion is already factored in.
+	 * Auto-set from ResourceType if left invalid.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD|Resource")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD|Resource|Override")
 	FGameplayAttribute MaxAttribute;
 
 	/**
 	 * The reserved (locked) portion — shown as a greyed segment at the right of the bar.
-	 * e.g. ReservedHealth, ReservedStamina, ReservedMana
+	 * Auto-set from ResourceType if left invalid.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD|Resource")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD|Resource|Override")
 	FGameplayAttribute ReservedAttribute;
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -126,8 +149,11 @@ protected:
 
 private:
 	// ─────────────────────────────────────────────────────────────────────────
-	// GAS delegate callbacks
+	// Internal helpers
 	// ─────────────────────────────────────────────────────────────────────────
+
+	/** Resolves attributes from ResourceType if the individual fields are not set. */
+	void ResolveAttributesFromResourceType();
 
 	void HandleCurrentChanged(const FOnAttributeChangeData& Data);
 	void HandleMaxChanged(const FOnAttributeChangeData& Data);

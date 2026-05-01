@@ -4,7 +4,7 @@
 #include "Item/Generation/AffixGenerator.h"
 #include "Item/ItemInstance.h"
 #include "Item/ItemStackingHandler.h"
-#include "Systems/Item/Library/ItemLog.h"
+#include "Item/Library/ItemLog.h"
 
 bool FItemInitializationHandler::MigrateToCurrentVersion(UItemInstance& Item)
 {

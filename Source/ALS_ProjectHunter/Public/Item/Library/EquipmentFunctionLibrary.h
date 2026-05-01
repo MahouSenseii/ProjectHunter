@@ -1,3 +1,3 @@
 #pragma once
 
-#include "Systems/Equipment/Library/EquipmentFunctionLibrary.h"
+#include "Equipment/Library/EquipmentFunctionLibrary.h"

@@ -1,14 +1,14 @@
-﻿// Item/Library/ItemStructs.h
+// Item/Library/ItemStructs.h
 
 #pragma once
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
-#include "Systems/Equipment/Actors/EquippedItemRuntimeActor.h"
+#include "Equipment/Actors/EquippedItemRuntimeActor.h"
 #include "Item/Library/ItemEnums.h"
 #include "Item/Library/AffixEnums.h"
-#include "Systems/Item/Library/ItemStructsLog.h"
+#include "Item/Library/ItemStructsLog.h"
 #include "AttributeSet.h"
 #include "ItemStructs.generated.h"
 

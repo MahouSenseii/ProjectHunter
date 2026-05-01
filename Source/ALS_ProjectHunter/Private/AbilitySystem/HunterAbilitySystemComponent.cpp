@@ -7,7 +7,7 @@
 #include "AbilitySystem/Effects/HunterGE_ManaRegen.h"
 #include "AbilitySystem/Effects/HunterGE_StaminaRegen.h"
 #include "AbilitySystem/Effects/HunterGE_ArcaneShieldRegen.h"
-#include "Systems/Tags/Components/TagManager.h"
+#include "Tags/Components/TagManager.h"
 #include "Character/PHBaseCharacter.h"
 #include "Engine/Engine.h"
 #include "PHGameplayTags.h"
@@ -92,6 +92,362 @@ UHunterAbilitySystemComponent::UHunterAbilitySystemComponent()
 	ManaRegenGE         = UHunterGE_ManaRegen::StaticClass();
 	StaminaRegenGE      = UHunterGE_StaminaRegen::StaticClass();
 	ArcaneShieldRegenGE = UHunterGE_ArcaneShieldRegen::StaticClass();
+
+	InputPressedSpecHandles.Reset();
+	InputReleasedSpecHandles.Reset();
+	InputHeldSpecHandles.Reset();
+	FMemory::Memzero(ActivationGroupCounts, sizeof(ActivationGroupCounts));
+}
+
+void UHunterAbilitySystemComponent::InitAbilityActorInfo(AActor* InOwnerActor, AActor* InAvatarActor)
+{
+	const AActor* PreviousAvatar = AbilityActorInfo.IsValid() ? AbilityActorInfo->AvatarActor.Get() : nullptr;
+
+	Super::InitAbilityActorInfo(InOwnerActor, InAvatarActor);
+
+	const bool bHasNewAvatar = InAvatarActor && InAvatarActor != PreviousAvatar;
+	if (bHasNewAvatar)
+	{
+		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+		{
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+			ensureMsgf(
+				!AbilitySpec.Ability || AbilitySpec.Ability->GetInstancingPolicy() != EGameplayAbilityInstancingPolicy::NonInstanced,
+				TEXT("InitAbilityActorInfo: PH abilities should be instanced. NonInstanced abilities cannot receive avatar lifecycle events."));
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+			TArray<UGameplayAbility*> Instances = AbilitySpec.GetAbilityInstances();
+			for (UGameplayAbility* AbilityInstance : Instances)
+			{
+				if (UPHGameplayAbility* PHAbilityInstance = Cast<UPHGameplayAbility>(AbilityInstance))
+				{
+					PHAbilityInstance->OnPawnAvatarSet();
+				}
+			}
+		}
+
+		TryActivateAbilitiesOnSpawn();
+	}
+}
+
+void UHunterAbilitySystemComponent::TryActivateAbilitiesOnSpawn()
+{
+	ABILITYLIST_SCOPE_LOCK();
+	for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+	{
+		if (const UPHGameplayAbility* PHAbilityCDO = Cast<UPHGameplayAbility>(AbilitySpec.Ability))
+		{
+			PHAbilityCDO->TryActivateAbilityOnSpawn(AbilityActorInfo.Get(), AbilitySpec);
+		}
+	}
+}
+
+void UHunterAbilitySystemComponent::CancelAbilitiesByFunc(TShouldCancelAbilityFunc ShouldCancelFunc, bool bReplicateCancelAbility)
+{
+	ABILITYLIST_SCOPE_LOCK();
+	for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+	{
+		if (!AbilitySpec.IsActive())
+		{
+			continue;
+		}
+
+		const UPHGameplayAbility* PHAbilityCDO = Cast<UPHGameplayAbility>(AbilitySpec.Ability);
+		if (!PHAbilityCDO)
+		{
+			continue;
+		}
+
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+		ensureMsgf(
+			AbilitySpec.Ability->GetInstancingPolicy() != EGameplayAbilityInstancingPolicy::NonInstanced,
+			TEXT("CancelAbilitiesByFunc: PH abilities should be instanced."));
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+		TArray<UGameplayAbility*> Instances = AbilitySpec.GetAbilityInstances();
+		for (UGameplayAbility* AbilityInstance : Instances)
+		{
+			UPHGameplayAbility* PHAbilityInstance = Cast<UPHGameplayAbility>(AbilityInstance);
+			if (!PHAbilityInstance)
+			{
+				continue;
+			}
+
+			if (ShouldCancelFunc(PHAbilityInstance, AbilitySpec.Handle))
+			{
+				if (PHAbilityInstance->CanBeCanceled())
+				{
+					PHAbilityInstance->CancelAbility(
+						AbilitySpec.Handle,
+						AbilityActorInfo.Get(),
+						PHAbilityInstance->GetCurrentActivationInfo(),
+						bReplicateCancelAbility);
+				}
+				else
+				{
+					UE_LOG(LogHunterGAS, Error, TEXT("CancelAbilitiesByFunc: Cannot cancel ability [%s] because CanBeCanceled is false."), *PHAbilityInstance->GetName());
+				}
+			}
+		}
+	}
+}
+
+void UHunterAbilitySystemComponent::CancelInputActivatedAbilities(bool bReplicateCancelAbility)
+{
+	auto ShouldCancelFunc = [](const UPHGameplayAbility* PHAbility, FGameplayAbilitySpecHandle Handle)
+	{
+		(void)Handle;
+		const EPHAbilityActivationPolicy ActivationPolicy = PHAbility->GetActivationPolicy();
+		return ActivationPolicy == EPHAbilityActivationPolicy::OnInputTriggered ||
+			ActivationPolicy == EPHAbilityActivationPolicy::WhileInputActive;
+	};
+
+	CancelAbilitiesByFunc(ShouldCancelFunc, bReplicateCancelAbility);
+}
+
+void UHunterAbilitySystemComponent::AbilitySpecInputPressed(FGameplayAbilitySpec& Spec)
+{
+	Super::AbilitySpecInputPressed(Spec);
+
+	if (Spec.IsActive())
+	{
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+		const UGameplayAbility* Instance = Spec.GetPrimaryInstance();
+		const FPredictionKey OriginalPredictionKey = Instance
+			? Instance->GetCurrentActivationInfo().GetActivationPredictionKey()
+			: Spec.ActivationInfo.GetActivationPredictionKey();
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+		InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec.Handle, OriginalPredictionKey);
+	}
+}
+
+void UHunterAbilitySystemComponent::AbilitySpecInputReleased(FGameplayAbilitySpec& Spec)
+{
+	Super::AbilitySpecInputReleased(Spec);
+
+	if (Spec.IsActive())
+	{
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+		const UGameplayAbility* Instance = Spec.GetPrimaryInstance();
+		const FPredictionKey OriginalPredictionKey = Instance
+			? Instance->GetCurrentActivationInfo().GetActivationPredictionKey()
+			: Spec.ActivationInfo.GetActivationPredictionKey();
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+		InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, OriginalPredictionKey);
+	}
+}
+
+void UHunterAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
+{
+	if (!InputTag.IsValid())
+	{
+		return;
+	}
+
+	for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+	{
+		if (AbilitySpec.Ability && AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag))
+		{
+			InputPressedSpecHandles.AddUnique(AbilitySpec.Handle);
+			InputHeldSpecHandles.AddUnique(AbilitySpec.Handle);
+		}
+	}
+}
+
+void UHunterAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
+{
+	if (!InputTag.IsValid())
+	{
+		return;
+	}
+
+	for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+	{
+		if (AbilitySpec.Ability && AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag))
+		{
+			InputReleasedSpecHandles.AddUnique(AbilitySpec.Handle);
+			InputHeldSpecHandles.Remove(AbilitySpec.Handle);
+		}
+	}
+}
+
+void UHunterAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGamePaused)
+{
+	(void)DeltaTime;
+	(void)bGamePaused;
+
+	const FGameplayTag InputBlockedTag = FGameplayTag::RequestGameplayTag(TEXT("Gameplay.AbilityInputBlocked"), false);
+	if (InputBlockedTag.IsValid() && HasMatchingGameplayTag(InputBlockedTag))
+	{
+		ClearAbilityInput();
+		return;
+	}
+
+	static TArray<FGameplayAbilitySpecHandle> AbilitiesToActivate;
+	AbilitiesToActivate.Reset();
+
+	for (const FGameplayAbilitySpecHandle& SpecHandle : InputHeldSpecHandles)
+	{
+		if (const FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
+		{
+			if (AbilitySpec->Ability && !AbilitySpec->IsActive())
+			{
+				const UPHGameplayAbility* PHAbilityCDO = Cast<UPHGameplayAbility>(AbilitySpec->Ability);
+				if (PHAbilityCDO && PHAbilityCDO->GetActivationPolicy() == EPHAbilityActivationPolicy::WhileInputActive)
+				{
+					AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+				}
+			}
+		}
+	}
+
+	for (const FGameplayAbilitySpecHandle& SpecHandle : InputPressedSpecHandles)
+	{
+		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
+		{
+			if (AbilitySpec->Ability)
+			{
+				AbilitySpec->InputPressed = true;
+
+				if (AbilitySpec->IsActive())
+				{
+					AbilitySpecInputPressed(*AbilitySpec);
+				}
+				else
+				{
+					const UPHGameplayAbility* PHAbilityCDO = Cast<UPHGameplayAbility>(AbilitySpec->Ability);
+					if (PHAbilityCDO && PHAbilityCDO->GetActivationPolicy() == EPHAbilityActivationPolicy::OnInputTriggered)
+					{
+						AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+					}
+				}
+			}
+		}
+	}
+
+	for (const FGameplayAbilitySpecHandle& AbilitySpecHandle : AbilitiesToActivate)
+	{
+		TryActivateAbility(AbilitySpecHandle);
+	}
+
+	for (const FGameplayAbilitySpecHandle& SpecHandle : InputReleasedSpecHandles)
+	{
+		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
+		{
+			if (AbilitySpec->Ability)
+			{
+				AbilitySpec->InputPressed = false;
+
+				if (AbilitySpec->IsActive())
+				{
+					AbilitySpecInputReleased(*AbilitySpec);
+				}
+			}
+		}
+	}
+
+	InputPressedSpecHandles.Reset();
+	InputReleasedSpecHandles.Reset();
+}
+
+void UHunterAbilitySystemComponent::ClearAbilityInput()
+{
+	InputPressedSpecHandles.Reset();
+	InputReleasedSpecHandles.Reset();
+	InputHeldSpecHandles.Reset();
+}
+
+void UHunterAbilitySystemComponent::NotifyAbilityActivated(const FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability)
+{
+	Super::NotifyAbilityActivated(Handle, Ability);
+
+	if (UPHGameplayAbility* PHAbility = Cast<UPHGameplayAbility>(Ability))
+	{
+		AddAbilityToActivationGroup(PHAbility->GetActivationGroup(), PHAbility);
+	}
+}
+
+void UHunterAbilitySystemComponent::NotifyAbilityEnded(FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability, bool bWasCancelled)
+{
+	Super::NotifyAbilityEnded(Handle, Ability, bWasCancelled);
+
+	if (UPHGameplayAbility* PHAbility = Cast<UPHGameplayAbility>(Ability))
+	{
+		RemoveAbilityFromActivationGroup(PHAbility->GetActivationGroup(), PHAbility);
+	}
+}
+
+bool UHunterAbilitySystemComponent::IsActivationGroupBlocked(EPHAbilityActivationGroup Group) const
+{
+	switch (Group)
+	{
+	case EPHAbilityActivationGroup::Independent:
+		return false;
+
+	case EPHAbilityActivationGroup::Exclusive_Replaceable:
+	case EPHAbilityActivationGroup::Exclusive_Blocking:
+		return ActivationGroupCounts[static_cast<uint8>(EPHAbilityActivationGroup::Exclusive_Blocking)] > 0;
+
+	default:
+		checkf(false, TEXT("IsActivationGroupBlocked: Invalid ActivationGroup [%d]."), static_cast<uint8>(Group));
+		return false;
+	}
+}
+
+void UHunterAbilitySystemComponent::AddAbilityToActivationGroup(EPHAbilityActivationGroup Group, UPHGameplayAbility* PHAbility)
+{
+	check(PHAbility);
+	check(ActivationGroupCounts[static_cast<uint8>(Group)] < INT32_MAX);
+
+	ActivationGroupCounts[static_cast<uint8>(Group)]++;
+
+	const bool bReplicateCancelAbility = false;
+	switch (Group)
+	{
+	case EPHAbilityActivationGroup::Independent:
+		break;
+
+	case EPHAbilityActivationGroup::Exclusive_Replaceable:
+	case EPHAbilityActivationGroup::Exclusive_Blocking:
+		CancelActivationGroupAbilities(EPHAbilityActivationGroup::Exclusive_Replaceable, PHAbility, bReplicateCancelAbility);
+		break;
+
+	default:
+		checkf(false, TEXT("AddAbilityToActivationGroup: Invalid ActivationGroup [%d]."), static_cast<uint8>(Group));
+		break;
+	}
+
+	const int32 ExclusiveCount =
+		ActivationGroupCounts[static_cast<uint8>(EPHAbilityActivationGroup::Exclusive_Replaceable)] +
+		ActivationGroupCounts[static_cast<uint8>(EPHAbilityActivationGroup::Exclusive_Blocking)];
+	if (!ensure(ExclusiveCount <= 1))
+	{
+		UE_LOG(LogHunterGAS, Error, TEXT("AddAbilityToActivationGroup: Multiple exclusive PH abilities are running."));
+	}
+}
+
+void UHunterAbilitySystemComponent::RemoveAbilityFromActivationGroup(EPHAbilityActivationGroup Group, UPHGameplayAbility* PHAbility)
+{
+	check(PHAbility);
+
+	int32& GroupCount = ActivationGroupCounts[static_cast<uint8>(Group)];
+	if (ensure(GroupCount > 0))
+	{
+		GroupCount--;
+	}
+}
+
+void UHunterAbilitySystemComponent::CancelActivationGroupAbilities(EPHAbilityActivationGroup Group, UPHGameplayAbility* IgnorePHAbility, bool bReplicateCancelAbility)
+{
+	auto ShouldCancelFunc = [Group, IgnorePHAbility](const UPHGameplayAbility* PHAbility, FGameplayAbilitySpecHandle Handle)
+	{
+		(void)Handle;
+		return PHAbility && PHAbility->GetActivationGroup() == Group && PHAbility != IgnorePHAbility;
+	};
+
+	CancelAbilitiesByFunc(ShouldCancelFunc, bReplicateCancelAbility);
 }
 
 void UHunterAbilitySystemComponent::AbilityActorInfoSet()

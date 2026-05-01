@@ -3,7 +3,7 @@
 
 #include "Character/HUD/HunterHUD_XPWidget.h"
 #include "Character/PHBaseCharacter.h"
-#include "Systems/Progression/Components/CharacterProgressionManager.h"
+#include "Progression/Components/CharacterProgressionManager.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HunterHUDBaseWidget overrides

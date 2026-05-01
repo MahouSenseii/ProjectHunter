@@ -10,9 +10,7 @@ class UItemTooltipWidget;
 class UItemInstance;
 class APawn;
 
-class UHunterHUD_HealthWidget;
-class UHunterHUD_StaminaWidget;
-class UHunterHUD_ManaWidget;
+class UHunterHUDResourceWidget;
 class UHunterHUD_XPWidget;
 class UStatusEffectHUDWidget;
 class APHBaseCharacter;
@@ -22,15 +20,15 @@ DECLARE_LOG_CATEGORY_EXTERN(LogHunterHUD, Log, All);
 /**
  * AHunterHUD — root HUD actor for the player.
  *
- * Owns the four stat widgets (Health, Stamina, Mana, XP) and keeps them
- * in sync with the locally controlled pawn.  Pawn changes (respawn /
- * repossession) are handled automatically via the APlayerController
- * OnPossessedPawnChanged delegate.
+ * Owns the resource widgets (Health, Stamina, Mana) and the XP widget, and
+ * keeps them in sync with the locally controlled pawn. Pawn changes are
+ * handled automatically via APlayerController::OnPossessedPawnChanged.
  *
- * Setup in editor (Blueprint subclass):
- *   1. Set HealthWidgetClass, StaminaWidgetClass, ManaWidgetClass, XPWidgetClass
- *      to your Blueprint widget children.
- *   2. Assign the HUD class to the GameMode or PlayerController.
+ * Setup in Blueprint defaults:
+ *   1. Set HealthWidgetClass, StaminaWidgetClass, ManaWidgetClass to BP children
+ *      of UHunterHUDResourceWidget — each with ResourceType set to the matching pool.
+ *   2. Set XPWidgetClass and StatusEffectWidgetClass.
+ *   3. Assign this HUD class to the GameMode or PlayerController.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API AHunterHUD : public AHUD
@@ -39,7 +37,7 @@ class ALS_PROJECTHUNTER_API AHunterHUD : public AHUD
 
 public:
 	// ─────────────────────────────────────────────────────────────────────────
-	// Tooltip management (existing)
+	// Tooltip management
 	// ─────────────────────────────────────────────────────────────────────────
 
 	UFUNCTION(BlueprintCallable)
@@ -52,17 +50,17 @@ public:
 	void HideMashProgressWidget();
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// Stat widget accessors — useful for Blueprint-side layout code
+	// Widget accessors
 	// ─────────────────────────────────────────────────────────────────────────
 
 	UFUNCTION(BlueprintPure, Category = "HUD|Widgets")
-	UHunterHUD_HealthWidget*  GetHealthWidget()  const { return HealthWidget;  }
+	UHunterHUDResourceWidget* GetHealthWidget()  const { return HealthWidget;  }
 
 	UFUNCTION(BlueprintPure, Category = "HUD|Widgets")
-	UHunterHUD_StaminaWidget* GetStaminaWidget() const { return StaminaWidget; }
+	UHunterHUDResourceWidget* GetStaminaWidget() const { return StaminaWidget; }
 
 	UFUNCTION(BlueprintPure, Category = "HUD|Widgets")
-	UHunterHUD_ManaWidget*    GetManaWidget()    const { return ManaWidget;    }
+	UHunterHUDResourceWidget* GetManaWidget()    const { return ManaWidget;    }
 
 	UFUNCTION(BlueprintPure, Category = "HUD|Widgets")
 	UHunterHUD_XPWidget*      GetXPWidget()      const { return XPWidget;      }
@@ -77,28 +75,26 @@ protected:
 	// Widget class references — set in Blueprint defaults
 	// ─────────────────────────────────────────────────────────────────────────
 
+	/** BP child of UHunterHUDResourceWidget with ResourceType = Health */
 	UPROPERTY(EditDefaultsOnly, Category = "HUD|Widget Classes")
-	TSubclassOf<UHunterHUD_HealthWidget> HealthWidgetClass;
+	TSubclassOf<UHunterHUDResourceWidget> HealthWidgetClass;
 
+	/** BP child of UHunterHUDResourceWidget with ResourceType = Stamina */
 	UPROPERTY(EditDefaultsOnly, Category = "HUD|Widget Classes")
-	TSubclassOf<UHunterHUD_StaminaWidget> StaminaWidgetClass;
+	TSubclassOf<UHunterHUDResourceWidget> StaminaWidgetClass;
 
+	/** BP child of UHunterHUDResourceWidget with ResourceType = Mana */
 	UPROPERTY(EditDefaultsOnly, Category = "HUD|Widget Classes")
-	TSubclassOf<UHunterHUD_ManaWidget> ManaWidgetClass;
+	TSubclassOf<UHunterHUDResourceWidget> ManaWidgetClass;
 
 	UPROPERTY(EditDefaultsOnly, Category = "HUD|Widget Classes")
 	TSubclassOf<UHunterHUD_XPWidget> XPWidgetClass;
 
-	/**
-	 * Widget class for the status effect icon strip.
-	 * Must be a Blueprint child of UStatusEffectHUDWidget.
-	 * Assign in the HUD Blueprint defaults.
-	 */
 	UPROPERTY(EditDefaultsOnly, Category = "HUD|Widget Classes")
 	TSubclassOf<UStatusEffectHUDWidget> StatusEffectWidgetClass;
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// Tooltip (existing)
+	// Tooltip
 	// ─────────────────────────────────────────────────────────────────────────
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
@@ -112,35 +108,28 @@ private:
 	// Live widget instances
 	// ─────────────────────────────────────────────────────────────────────────
 
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TObjectPtr<UHunterHUD_HealthWidget>  HealthWidget;
+	UPROPERTY()
+	TObjectPtr<UHunterHUDResourceWidget> HealthWidget;
 
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TObjectPtr<UHunterHUD_StaminaWidget> StaminaWidget;
+	UPROPERTY()
+	TObjectPtr<UHunterHUDResourceWidget> StaminaWidget;
 
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TObjectPtr<UHunterHUD_ManaWidget>    ManaWidget;
+	UPROPERTY()
+	TObjectPtr<UHunterHUDResourceWidget> ManaWidget;
 
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TObjectPtr<UHunterHUD_XPWidget>      XPWidget;
+	UPROPERTY()
+	TObjectPtr<UHunterHUD_XPWidget> XPWidget;
 
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TObjectPtr<UStatusEffectHUDWidget>   StatusEffectWidget;
+	UPROPERTY()
+	TObjectPtr<UStatusEffectHUDWidget> StatusEffectWidget;
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// Pawn-change wiring
+	// Helpers
 	// ─────────────────────────────────────────────────────────────────────────
 
-	/** Create all stat widgets and add them to the viewport. */
 	void CreateStatWidgets();
-
-	/**
-	 * Bind or rebind all stat widgets to the given character.
-	 * Safely releases previous bindings before rebinding.
-	 */
 	void BindWidgetsToCharacter(APHBaseCharacter* Character);
 
-	/** Callback for APlayerController::OnPossessedPawnChanged — handles respawn. */
 	UFUNCTION()
 	void HandlePawnChanged(APawn* OldPawn, APawn* NewPawn);
 };

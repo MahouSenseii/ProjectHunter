@@ -1,10 +1,10 @@
-﻿// Character/Component/GroundItemPickupManager.cpp
+// Character/Component/GroundItemPickupManager.cpp
 
 #include "Character/Component/Interaction/GroundItemPickupManager.h"
-#include "Systems/Inventory/Components/InventoryManager.h"
-#include "Systems/Inventory/InventoryGroundDropResolver.h"
-#include "Systems/Equipment/Components/EquipmentManager.h"
-#include "Systems/Equipment/Library/EquipmentFunctionLibrary.h"
+#include "Inventory/Components/InventoryManager.h"
+#include "Inventory/InventoryGroundDropResolver.h"
+#include "Equipment/Components/EquipmentManager.h"
+#include "Equipment/Library/EquipmentFunctionLibrary.h"
 #include "Tower/Subsystem/GroundItemSubsystem.h"
 #include "Item/ItemInstance.h"
 #include "Engine/World.h"

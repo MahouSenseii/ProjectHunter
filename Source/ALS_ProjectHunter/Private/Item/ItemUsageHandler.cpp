@@ -5,7 +5,7 @@
 #include "GameplayEffect.h"
 #include "Item/ItemInstance.h"
 #include "Item/ItemStackingHandler.h"
-#include "Systems/Item/Library/ItemLog.h"
+#include "Item/Library/ItemLog.h"
 
 void FItemUsageHandler::ApplyAffixesToCharacter(UItemInstance& Item, UAbilitySystemComponent* ASC)
 {

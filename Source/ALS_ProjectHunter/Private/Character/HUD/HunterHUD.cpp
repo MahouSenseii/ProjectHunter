@@ -4,9 +4,7 @@
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Interactable/Widget/ItemTooltipWidget.h"
-#include "Character/HUD/HunterHUD_HealthWidget.h"
-#include "Character/HUD/HunterHUD_StaminaWidget.h"
-#include "Character/HUD/HunterHUD_ManaWidget.h"
+#include "Character/HUD/HunterHUDResourceWidget.h"
 #include "Character/HUD/HunterHUD_XPWidget.h"
 #include "Character/HUD/StatusEffect/StatusEffectHUDWidget.h"
 #include "Character/PHBaseCharacter.h"
@@ -92,30 +90,26 @@ void AHunterHUD::CreateStatWidgets()
 		return;
 	}
 
-	// UI-1 FIX: Warn if any essential widget class is unset in Blueprint defaults.
 	if (!HealthWidgetClass)  { PH_LOG_WARNING(LogHunterHUD, "CreateStatWidgets: HealthWidgetClass was not set in Blueprint defaults."); }
 	if (!StaminaWidgetClass) { PH_LOG_WARNING(LogHunterHUD, "CreateStatWidgets: StaminaWidgetClass was not set in Blueprint defaults."); }
 	if (!ManaWidgetClass)    { PH_LOG_WARNING(LogHunterHUD, "CreateStatWidgets: ManaWidgetClass was not set in Blueprint defaults."); }
 	if (!XPWidgetClass)      { PH_LOG_WARNING(LogHunterHUD, "CreateStatWidgets: XPWidgetClass was not set in Blueprint defaults."); }
 
-	// Create each widget (if the class was assigned in Blueprint defaults) and
-	// add it to the viewport at Z-order 10 — above the world, below the tooltip.
-
 	if (HealthWidgetClass)
 	{
-		HealthWidget = CreateWidget<UHunterHUD_HealthWidget>(PC, HealthWidgetClass);
+		HealthWidget = CreateWidget<UHunterHUDResourceWidget>(PC, HealthWidgetClass);
 		if (HealthWidget) { HealthWidget->AddToViewport(10); }
 	}
 
 	if (StaminaWidgetClass)
 	{
-		StaminaWidget = CreateWidget<UHunterHUD_StaminaWidget>(PC, StaminaWidgetClass);
+		StaminaWidget = CreateWidget<UHunterHUDResourceWidget>(PC, StaminaWidgetClass);
 		if (StaminaWidget) { StaminaWidget->AddToViewport(10); }
 	}
 
 	if (ManaWidgetClass)
 	{
-		ManaWidget = CreateWidget<UHunterHUD_ManaWidget>(PC, ManaWidgetClass);
+		ManaWidget = CreateWidget<UHunterHUDResourceWidget>(PC, ManaWidgetClass);
 		if (ManaWidget) { ManaWidget->AddToViewport(10); }
 	}
 
@@ -145,18 +139,15 @@ void AHunterHUD::BindWidgetsToCharacter(APHBaseCharacter* Character)
 		return;
 	}
 
-	// InitializeForCharacter safely releases any previous binding before rebinding,
-	// so it is safe to call unconditionally on respawn.
-	if (HealthWidget)        { HealthWidget->InitializeForCharacter(Character);        }
-	if (StaminaWidget)       { StaminaWidget->InitializeForCharacter(Character);       }
-	if (ManaWidget)          { ManaWidget->InitializeForCharacter(Character);          }
-	if (XPWidget)            { XPWidget->InitializeForCharacter(Character);            }
-	if (StatusEffectWidget)  { StatusEffectWidget->InitializeForCharacter(Character);  }
+	if (HealthWidget)       { HealthWidget->InitializeForCharacter(Character);       }
+	if (StaminaWidget)      { StaminaWidget->InitializeForCharacter(Character);      }
+	if (ManaWidget)         { ManaWidget->InitializeForCharacter(Character);         }
+	if (XPWidget)           { XPWidget->InitializeForCharacter(Character);           }
+	if (StatusEffectWidget) { StatusEffectWidget->InitializeForCharacter(Character); }
 }
 
 void AHunterHUD::HandlePawnChanged(APawn* OldPawn, APawn* NewPawn)
 {
-	// NewPawn is null when the player is unpossessed (death, going to menu, etc.).
 	APHBaseCharacter* NewCharacter = Cast<APHBaseCharacter>(NewPawn);
 	BindWidgetsToCharacter(NewCharacter);
 }
