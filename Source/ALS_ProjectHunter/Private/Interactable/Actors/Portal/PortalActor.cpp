@@ -35,6 +35,23 @@ void APortalActor::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// ── Auto-link: resolve LinkedPortal → DestinationPortalID ───────────────
+	// If a direct actor reference is set, derive the destination ID from it.
+	// This means you only need to drag the other portal into the Details slot —
+	// no manual name matching required.
+	if (LinkedPortal)
+	{
+		DestinationPortalID = LinkedPortal->PortalID;
+
+		// Optionally wire the return link automatically if the other portal
+		// hasn't been linked yet — so connecting A→B also connects B→A.
+		if (LinkedPortal->LinkedPortal == nullptr && LinkedPortal->DestinationPortalID == NAME_None)
+		{
+			LinkedPortal->LinkedPortal        = this;
+			LinkedPortal->DestinationPortalID = PortalID;
+		}
+	}
+
 	// Register with subsystem (authority + clients both register so the subsystem
 	// can answer "where do I arrive?" queries on the client for map-pins etc.)
 	if (UWorld* World = GetWorld())

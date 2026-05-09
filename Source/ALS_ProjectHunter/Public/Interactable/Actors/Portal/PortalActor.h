@@ -94,10 +94,20 @@ public:
 	// ── Destination (same-map travel) ─────────────────────────────────────────
 
 	/**
-	 * PortalID of the destination portal on the SAME map.
-	 * Leave empty if this portal triggers cross-map travel (see DestinationLevel).
+	 * Direct reference to the destination portal on the SAME map.
+	 * Drag the other APortalActor from the Outliner into this slot —
+	 * no need to type matching IDs manually.
+	 * At BeginPlay this is resolved and DestinationPortalID is set automatically.
+	 * Leave null for cross-map travel (set DestinationLevelName instead).
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Destination")
+	TObjectPtr<APortalActor> LinkedPortal = nullptr;
+
+	/**
+	 * Resolved at BeginPlay from LinkedPortal (same-map) or set manually
+	 * when LinkedPortal is null (cross-map, or legacy hand-typed IDs).
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal|Destination")
 	FName DestinationPortalID = NAME_None;
 
 	/**

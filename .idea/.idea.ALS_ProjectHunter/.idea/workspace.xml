@@ -18,19 +18,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/World/Portal/NS_Portal_Main.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/World/Tower_Theme.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Library/RunFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Subsystem/RunSubsystem.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/RunEnumLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/RunFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/RunStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystem/RunSubsystem.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ALS_ProjectHunter.uproject" beforeDir="false" afterPath="$PROJECT_DIR$/ALS_ProjectHunter.uproject" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/CharacterSystemCoordinatorComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/CharacterSystemCoordinatorComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Components/CombatStatusManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Components/CombatStatusManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystem/StashSubsystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystem/StashSubsystem.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/Interaction/InteractionManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Component/Interaction/InteractionManager.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -1086,6 +1074,7 @@
       <workItem from="1777590578264" duration="5152000" />
       <workItem from="1777656519113" duration="4908000" />
       <workItem from="1778273053162" duration="8733000" />
+      <workItem from="1778327985278" duration="1630000" />
     </task>
     <servers />
   </component>
