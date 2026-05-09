@@ -7,21 +7,10 @@
 #include "Character/HUD/HunterHUDBaseWidget.h"
 #include "GameplayEffectTypes.h"
 #include "AttributeSet.h"
+#include "AbilitySystem/Library/MMCEnumLibrary.h"
 #include "HunterHUDResourceWidget.generated.h"
 
-/**
- * Which resource pool this widget tracks.
- * Set ResourceType in Blueprint defaults — the widget wires the correct
- * GAS attributes automatically. You can still override the individual
- * attribute fields below if you need a non-standard mapping.
- */
-UENUM(BlueprintType)
-enum class EHunterResourceType : uint8
-{
-	Health   UMETA(DisplayName = "Health"),
-	Stamina  UMETA(DisplayName = "Stamina"),
-	Mana     UMETA(DisplayName = "Mana"),
-};
+// EHunterResourceType is defined in AbilitySystem/Library/MMCEnumLibrary.h
 
 /**
  * HUD widget that tracks a three-part resource: Current, Max, and Reserved.

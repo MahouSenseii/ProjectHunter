@@ -29,19 +29,19 @@ float UHunterMMC_EffectiveResource::CalculateBaseMagnitude_Implementation(const 
 
 	switch (GetResourceType())
 	{
-	case EHunterEffectiveResourceType::Health:
+	case EHunterResourceType::Health:
 		MaxValue     = GetCapturedValue(Spec, Cap.MaxHealthDef, 0.0f);
 		PercentValue = GetCapturedValue(Spec, Cap.PercentageReservedHealthDef, 0.0f);
 		FlatValue    = GetCapturedValue(Spec, Cap.FlatReservedHealthDef, 0.0f);
 		break;
 
-	case EHunterEffectiveResourceType::Mana:
+	case EHunterResourceType::Mana:
 		MaxValue     = GetCapturedValue(Spec, Cap.MaxManaDef, 0.0f);
 		PercentValue = GetCapturedValue(Spec, Cap.PercentageReservedManaDef, 0.0f);
 		FlatValue    = GetCapturedValue(Spec, Cap.FlatReservedManaDef, 0.0f);
 		break;
 
-	case EHunterEffectiveResourceType::Stamina:
+	case EHunterResourceType::Stamina:
 		MaxValue     = GetCapturedValue(Spec, Cap.MaxStaminaDef, 0.0f);
 		PercentValue = GetCapturedValue(Spec, Cap.PercentageReservedStaminaDef, 0.0f);
 		FlatValue    = GetCapturedValue(Spec, Cap.FlatReservedStaminaDef, 0.0f);

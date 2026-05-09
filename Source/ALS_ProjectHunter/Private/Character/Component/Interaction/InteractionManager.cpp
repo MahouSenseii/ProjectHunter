@@ -602,7 +602,7 @@ bool UInteractionManager::InteractWithActor(AActor* TargetActor)
 
 	if (UInteractableManager* InteractableComp = TargetActor->FindComponentByClass<UInteractableManager>())
 	{
-		IInteractable::Execute_OnInteract(InteractableComp, Owner);
+e		IInteractable::Execute_OnInteract(InteractableComp, Owner);
 
 		if (bDebugEnabled)
 		{

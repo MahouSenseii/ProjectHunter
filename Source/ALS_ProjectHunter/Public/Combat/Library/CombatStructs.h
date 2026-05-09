@@ -1,6 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Combat/Library/CombatEnumLibrary.h"
+#include "ActiveGameplayEffectHandle.h"
 #include "CombatStructs.generated.h"
 
 class AActor;
@@ -538,4 +539,21 @@ struct ALS_PROJECTHUNTER_API FSkillDamagePacket
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Skill|Flags")
 	bool bCanApplyAilments = true;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FCombatStatusApplyResult — result of a UCombatStatusManager Apply* call
+// ─────────────────────────────────────────────────────────────────────────────
+USTRUCT(BlueprintType)
+struct ALS_PROJECTHUNTER_API FCombatStatusApplyResult
+{
+	GENERATED_BODY()
+
+	/** True if the effect was successfully applied to the target. */
+	UPROPERTY(BlueprintReadOnly, Category = "Combat Status")
+	bool bApplied = false;
+
+	/** Handle of the active GE instance (invalid if bApplied == false). */
+	UPROPERTY(BlueprintReadOnly, Category = "Combat Status")
+	FActiveGameplayEffectHandle EffectHandle;
 };

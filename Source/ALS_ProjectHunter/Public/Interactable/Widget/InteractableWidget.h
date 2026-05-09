@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "InputAction.h"
+#include "Interactable/Library/InteractionEnumLibrary.h"
 #include "InteractableWidget.generated.h"
 
 class UImage;
@@ -15,18 +16,7 @@ class UEnhancedInputLocalPlayerSubsystem;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInteractableWidget, Log, All);
 
-/**
- * EInteractionWidgetState - Widget display states
- */
-UENUM(BlueprintType)
-enum class EInteractionWidgetState : uint8
-{
-	IWS_Idle        UMETA(DisplayName = "Idle"),           // Tap interaction - animated border
-	IWS_Holding     UMETA(DisplayName = "Holding"),        // Hold interaction - progress fills
-	IWS_Mashing     UMETA(DisplayName = "Mashing"),        // Mash interaction - progress fills
-	IWS_Completed   UMETA(DisplayName = "Completed"),      // Action completed - flash effect
-	IWS_Cancelled   UMETA(DisplayName = "Cancelled")       // Action cancelled - deplete effect
-};
+// EInteractionWidgetState is defined in Interactable/Library/InteractionEnumLibrary.h
 
 /**
  * UInteractableWidget - Universal interaction prompt widget

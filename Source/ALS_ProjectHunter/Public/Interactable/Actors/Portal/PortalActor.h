@@ -204,6 +204,16 @@ public:
 	virtual FVector GetWidgetOffset_Implementation() const override;
 
 protected:
+	// ── InteractableManager bridge ────────────────────────────────────────────
+
+	/**
+	 * Bound to InteractableManager->OnTapInteracted in BeginPlay.
+	 * The player's InteractionManager routes interaction to the UInteractableManager
+	 * component first (not the actor), so we bridge the tap event back here.
+	 */
+	UFUNCTION()
+	void OnInteractableManagerTap(AActor* Interactor);
+
 	// ── Server logic ──────────────────────────────────────────────────────────
 
 	UFUNCTION(Server, Reliable)

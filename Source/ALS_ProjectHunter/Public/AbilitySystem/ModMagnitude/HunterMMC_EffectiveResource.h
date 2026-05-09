@@ -2,15 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "GameplayModMagnitudeCalculation.h"
+#include "AbilitySystem/Library/MMCEnumLibrary.h"
 #include "HunterMMC_EffectiveResource.generated.h"
-
-UENUM()
-enum class EHunterEffectiveResourceType : uint8
-{
-	Health,
-	Mana,
-	Stamina
-};
 
 /**
  * Effective = MaxValue - ReservedAmount, clamped to >= 0.
@@ -26,7 +19,7 @@ public:
 	virtual float CalculateBaseMagnitude_Implementation(const FGameplayEffectSpec& Spec) const override;
 
 protected:
-	virtual EHunterEffectiveResourceType GetResourceType() const PURE_VIRTUAL(UHunterMMC_EffectiveResource::GetResourceType, return EHunterEffectiveResourceType::Health;);
+	virtual EHunterResourceType GetResourceType() const PURE_VIRTUAL(UHunterMMC_EffectiveResource::GetResourceType, return EHunterResourceType::Health;);
 
 	float GetCapturedValue(
 		const FGameplayEffectSpec& Spec,
@@ -42,9 +35,9 @@ class ALS_PROJECTHUNTER_API UHunterMMC_EffectiveHealth : public UHunterMMC_Effec
 	GENERATED_BODY()
 
 protected:
-	virtual EHunterEffectiveResourceType GetResourceType() const override
+	virtual EHunterResourceType GetResourceType() const override
 	{
-		return EHunterEffectiveResourceType::Health;
+		return EHunterResourceType::Health;
 	}
 };
 
@@ -54,9 +47,9 @@ class ALS_PROJECTHUNTER_API UHunterMMC_EffectiveMana : public UHunterMMC_Effecti
 	GENERATED_BODY()
 
 protected:
-	virtual EHunterEffectiveResourceType GetResourceType() const override
+	virtual EHunterResourceType GetResourceType() const override
 	{
-		return EHunterEffectiveResourceType::Mana;
+		return EHunterResourceType::Mana;
 	}
 };
 
@@ -66,8 +59,8 @@ class ALS_PROJECTHUNTER_API UHunterMMC_EffectiveStamina : public UHunterMMC_Effe
 	GENERATED_BODY()
 
 protected:
-	virtual EHunterEffectiveResourceType GetResourceType() const override
+	virtual EHunterResourceType GetResourceType() const override
 	{
-		return EHunterEffectiveResourceType::Stamina;
+		return EHunterResourceType::Stamina;
 	}
 };

@@ -16,22 +16,10 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "AI/Library/MobStructs.h"
 #include "PlayerLocationCacheSubsystem.generated.h"
 
-class APlayerController;
-
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayerLocationCache, Log, All);
-
-USTRUCT(BlueprintType)
-struct FPlayerLocationSnapshot
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadOnly) TWeakObjectPtr<APlayerController> Controller;
-	UPROPERTY(BlueprintReadOnly) FVector Location = FVector::ZeroVector;
-	UPROPERTY(BlueprintReadOnly) FVector Velocity = FVector::ZeroVector;
-	UPROPERTY(BlueprintReadOnly) double TimestampSeconds = 0.0;
-};
 
 /**
  * UPlayerLocationCacheSubsystem

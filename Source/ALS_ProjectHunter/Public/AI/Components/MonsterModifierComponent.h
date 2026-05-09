@@ -6,6 +6,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "AI/Library/MobEnumLibrary.h"
+#include "AI/Library/MobStructs.h"
 #include "Data/MonsterModifierData.h"
 #include "GameplayAbilitySpec.h"
 #include "GameplayEffectTypes.h"
@@ -17,39 +19,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogMonsterModifier, Log, All);
 class UAbilitySystemComponent;
 class UMonsterSpawnConfig;
 class UDataTable;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FMonsterStatVariation — per-instance random multipliers rolled once at spawn.
-//
-// This is what makes two Normal Goblins mechanically different. Every mob —
-// regardless of tier — rolls one of these so nothing is ever perfectly identical.
-// Tier-based mods are still applied on top for Magic / Rare / Unique.
-// ─────────────────────────────────────────────────────────────────────────────
-USTRUCT(BlueprintType)
-struct FMonsterStatVariation
-{
-	GENERATED_BODY()
-
-	/** 1.0 = no change. Rolled in [1 - HPVariancePct, 1 + HPVariancePct]. */
-	UPROPERTY(BlueprintReadOnly, Category = "Variation")
-	float HPMultiplier = 1.0f;
-
-	/** 1.0 = no change. Rolled in [1 - DamageVariancePct, 1 + DamageVariancePct]. */
-	UPROPERTY(BlueprintReadOnly, Category = "Variation")
-	float DamageMultiplier = 1.0f;
-
-	/** 1.0 = no change. Applied directly to MaxWalkSpeed. */
-	UPROPERTY(BlueprintReadOnly, Category = "Variation")
-	float MoveSpeedMultiplier = 1.0f;
-
-	/** Additive bonus to all resistances in percent. E.g. +3.0 = +3% to all resists. */
-	UPROPERTY(BlueprintReadOnly, Category = "Variation")
-	float ResistBonusPct = 0.0f;
-
-	/** True if this struct has been rolled (so we don't double-roll on reroll). */
-	UPROPERTY(BlueprintReadOnly, Category = "Variation")
-	bool bRolled = false;
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Delegate — broadcast after all mods are applied so UI can refresh the name

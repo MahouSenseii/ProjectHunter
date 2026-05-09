@@ -8,23 +8,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameState.h"
+#include "GameModes/Library/GameModeEnumLibrary.h"
 #include "PHGameState.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPHGameState, Log, All);
-
-/** High-level match phases */
-UENUM(BlueprintType)
-enum class EPHMatchPhase : uint8
-{
-	/** Lobby / character select */
-	WaitingToStart    UMETA(DisplayName = "Waiting To Start"),
-	/** Active gameplay */
-	InProgress        UMETA(DisplayName = "In Progress"),
-	/** Boss killed / objective complete */
-	Completed         UMETA(DisplayName = "Completed"),
-	/** All players dead / failed */
-	Failed            UMETA(DisplayName = "Failed"),
-};
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchPhaseChanged, EPHMatchPhase, NewPhase);
 

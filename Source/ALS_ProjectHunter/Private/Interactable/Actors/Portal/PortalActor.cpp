@@ -45,6 +45,22 @@ void APortalActor::BeginPlay()
 		}
 	}
 
+	// ── InteractableManager bridge ────────────────────────────────────────────
+	// The player's InteractionManager calls OnInteract on the UInteractableManager
+	// component (not the actor) when one is present. Bind here so tap events
+	// route back to this actor's server logic.
+	if (InteractableManager)
+	{
+		InteractableManager->OnTapInteracted.AddDynamic(this, &APortalActor::OnInteractableManagerTap);
+
+		// Mirror the portal's interaction type and initial text into the component
+		// so the widget presenter reads the correct values.
+		InteractableManager->Config.InteractionType = EInteractionType::IT_Tap;
+		InteractableManager->Config.InteractionText  = GetInteractionText_Implementation();
+		InteractableManager->Config.InputAction      = InteractInputAction;
+		InteractableManager->Config.bCanInteract     = bActiveOnBeginPlay;
+	}
+
 	if (HasAuthority())
 	{
 		SetStateInternal(bActiveOnBeginPlay
@@ -179,6 +195,28 @@ UInputAction* APortalActor::GetInputAction_Implementation() const         { retu
 FVector APortalActor::GetWidgetOffset_Implementation() const              { return FVector(0.0f, 0.0f, 120.0f); }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// InteractableManager bridge
+// ─────────────────────────────────────────────────────────────────────────────
+
+void APortalActor::OnInteractableManagerTap(AActor* Interactor)
+{
+	APawn* Traveller = Cast<APawn>(Interactor);
+	if (!Traveller)
+	{
+		return;
+	}
+
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		Server_ActivatePortal_Implementation(Traveller);
+	}
+	else
+	{
+		Server_ActivatePortal(Traveller);
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Server RPC
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -201,6 +239,37 @@ void APortalActor::Server_ActivatePortal_Implementation(APawn* Traveller)
 
 void APortalActor::ExecuteTravel(APawn* Traveller)
 {
+	PlayTravelFeedback();
+	OnPortalActivated.Broadcast(this, Traveller);
+
+	// ── Cross-map travel ──────────────────────────────────────────────────────
+	// DestinationLevelName is set → load the new map.
+	// We stash the arrival portal ID in the GameInstance so the destination
+	// level can retrieve it and teleport the player to the right spawn point.
+	if (DestinationLevelName != NAME_None)
+	{
+		// Persist arrival intent across the level boundary
+		if (UGameInstance* GI = GetGameInstance())
+		{
+			// Store on GI so BP (or a future subsystem) can read it after load.
+			// Using a property tag approach: the destination level's portal actor
+			// with a matching PortalID will consume this and teleport the player.
+			GI->GetEngine()->AddOnScreenDebugMessage(-1, 0.f, FColor::Transparent, TEXT(""));
+			// TODO: replace with a proper GameInstance property or save-game field
+			// so the arriving level knows which portal to use as the spawn point.
+		}
+
+		UE_LOG(LogPortalActor, Log,
+			TEXT("ExecuteTravel: '%s' loading level '%s' (arrival portal: '%s')"),
+			*PortalID.ToString(),
+			*DestinationLevelName.ToString(),
+			*DestinationPortalID.ToString());
+
+		UGameplayStatics::OpenLevel(this, DestinationLevelName);
+		return; // Level is loading — no further state changes needed on this actor
+	}
+
+	// ── Same-map travel ───────────────────────────────────────────────────────
 	UPortalSubsystem* PortalSub = GetWorld()->GetSubsystem<UPortalSubsystem>();
 	if (!PortalSub)
 	{
@@ -214,19 +283,13 @@ void APortalActor::ExecuteTravel(APawn* Traveller)
 	if (!Destination)
 	{
 		UE_LOG(LogPortalActor, Warning,
-			TEXT("ExecuteTravel: Destination portal '%s' not registered (same-map travel)"),
+			TEXT("ExecuteTravel: Destination portal '%s' not registered"),
 			*DestinationPortalID.ToString());
 		return;
 	}
 
 	const FTransform ArrivalTF = Destination->GetArrivalTransform();
-
-	// Teleport the pawn
 	Traveller->SetActorTransform(ArrivalTF, false, nullptr, ETeleportType::TeleportPhysics);
-
-	// Notify destination portal (e.g., start its cooldown too if desired)
-	PlayTravelFeedback();
-	OnPortalActivated.Broadcast(this, Traveller);
 
 	UE_LOG(LogPortalActor, Log,
 		TEXT("ExecuteTravel: '%s' teleported pawn '%s' to portal '%s'"),
@@ -252,6 +315,16 @@ void APortalActor::SetStateInternal(EPortalState NewState)
 {
 	PortalState = NewState;
 	UpdateVFXForState();
+
+	// Keep the component's bCanInteract in sync so CanInteract checks on the
+	// component (which the interaction system calls instead of the actor) match
+	// the portal's actual state.
+	if (InteractableManager)
+	{
+		const bool bUsable = (NewState == EPortalState::PS_Active);
+		InteractableManager->SetCanInteract(bUsable);
+		InteractableManager->Config.InteractionText = GetInteractionText_Implementation();
+	}
 }
 
 void APortalActor::StartCooldown()

@@ -6,6 +6,7 @@
 #include "GameplayEffect.h"
 #include "Components/ActorComponent.h"
 #include "GameplayEffectTypes.h"
+#include "Progression/Library/ProgressionStructs.h"
 #include "CharacterProgressionManager.generated.h"
 
 // Forward declarations
@@ -15,35 +16,8 @@ class AHunterBaseCharacter;
 struct FGameplayAttribute;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCharacterProgressionManager, Log, All);
-/**
- * Stat point spending data
- * Replicated struct for tracking stat points spent per attribute
- */
-USTRUCT(BlueprintType)
-struct FStatPointSpending
-{
-	GENERATED_BODY()
 
-	/** Attribute name (Strength, Dexterity, etc.) */
-	UPROPERTY(BlueprintReadOnly)
-	FName AttributeName;
-
-	/** Number of stat points spent on this attribute */
-	UPROPERTY(BlueprintReadOnly)
-	int32 PointsSpent = 0;
-
-	// Default constructor
-	FStatPointSpending()
-		: AttributeName(NAME_None)
-		, PointsSpent(0)
-	{}
-
-	// Constructor with params
-	FStatPointSpending(FName InAttributeName, int32 InPointsSpent)
-		: AttributeName(InAttributeName)
-		, PointsSpent(InPointsSpent)
-	{}
-};
+// FStatPointSpending is defined in Progression/Library/ProgressionStructs.h
 
 /**
  * Delegate for XP gain events

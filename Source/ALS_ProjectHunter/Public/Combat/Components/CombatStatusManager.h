@@ -1,16 +1,6 @@
 // Character/Component/CombatStatusManager.h
 // Convenience layer over GAS for applying Damage-over-Time effects.
 //
-// DESIGN:
-//   DoT effects in Project Hunter are implemented as UGameplayEffect assets
-//   with EGameplayEffectDurationType::HasDuration and a periodic tick.
-//   The damage per tick is driven by SetByCaller so the magnitude can be
-//   passed at runtime without creating one GE per damage value.
-//
-//   This component does NOT tick — all timing is handled by GAS.
-//   It exists to provide a clean Blueprint & C++ API so callers don't have
-//   to build FGameplayEffectSpecHandle manually every time.
-//
 // SETUP — Required GE assets (create in Content/GAS/Effects/DoT/):
 //   GE_DoT_Bleed   — HasDuration, Periodic tick, SetByCaller tag "DoT.Bleed.DamagePerTick"
 //   GE_DoT_Ignite  — HasDuration, Periodic tick, SetByCaller tag "DoT.Ignite.DamagePerTick"
@@ -39,6 +29,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameplayEffectTypes.h"
+#include "Combat/Library/CombatStructs.h"
 #include "CombatStatusManager.generated.h"
 
 class UAbilitySystemComponent;
@@ -51,30 +42,15 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCombatStatusManager, Log, All);
 // ─────────────────────────────────────────────────────────────────────────────
 namespace CombatStatusSetByCallerTags
 {
-	const FName Bleed_DamagePerTick  = TEXT("DoT.Bleed.DamagePerTick");
-	const FName Ignite_DamagePerTick = TEXT("DoT.Ignite.DamagePerTick");
-	const FName Poison_DamagePerTick = TEXT("DoT.Poison.DamagePerTick");
+	const FName Bleed_DamagePerTick      = TEXT("DoT.Bleed.DamagePerTick");
+	const FName Ignite_DamagePerTick     = TEXT("DoT.Ignite.DamagePerTick");
+	const FName Poison_DamagePerTick     = TEXT("DoT.Poison.DamagePerTick");
 	const FName Corruption_DamagePerTick = TEXT("DoT.Corruption.DamagePerTick");
-	const FName Chill_SlowFraction   = TEXT("DoT.Chill.Magnitude");
-	const FName Shock_AmpFraction    = TEXT("DoT.Shock.Magnitude");
+	const FName Chill_SlowFraction       = TEXT("DoT.Chill.Magnitude");
+	const FName Shock_AmpFraction        = TEXT("DoT.Shock.Magnitude");
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Result struct returned by each Apply* function
-// ─────────────────────────────────────────────────────────────────────────────
-USTRUCT(BlueprintType)
-struct ALS_PROJECTHUNTER_API FCombatStatusApplyResult
-{
-	GENERATED_BODY()
-
-	/** True if the effect was successfully applied to the target. */
-	UPROPERTY(BlueprintReadOnly, Category = "Combat Status")
-	bool bApplied = false;
-
-	/** Handle of the active GE instance (invalid if bApplied == false). */
-	UPROPERTY(BlueprintReadOnly, Category = "Combat Status")
-	FActiveGameplayEffectHandle EffectHandle;
-};
+// FCombatStatusApplyResult is defined in Combat/Library/CombatStructs.h
 
 // ─────────────────────────────────────────────────────────────────────────────
 UCLASS(ClassGroup=(ProjectHunter), meta=(BlueprintSpawnableComponent))

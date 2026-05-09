@@ -10,121 +10,21 @@
 // times.  Full FStashTabData (the actual item arrays) is loaded from the save
 // slot on demand the FIRST TIME a player opens that tab, then cached in memory
 // for the session.  Tabs that have not been touched stay as handles only.
-//
-// Typical flow:
-//   1. PlayerController::BeginPlay → StashSubsystem::LoadStashHandles()
-//      — loads only the tab headers (names, types, item counts).  Fast.
-//   2. Player opens Tab 3 → StashSubsystem::RequestTabData(2)
-//      — loads only Tab 3's item array from disk.  Other tabs untouched.
-//   3. Player moves item → StashSubsystem::MarkTabDirty(2)
-//   4. Zone transition / logout → StashSubsystem::FlushDirtyTabs()
-//      — only saves tabs flagged dirty.
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Tower/Library/StashEnumLibrary.h"
+#include "Tower/Library/StashStructs.h"
 #include "StashSubsystem.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogStashSubsystem, Log, All);
 
 class UItemInstance;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab type — controls display and sorting behaviour in the UI
-// ─────────────────────────────────────────────────────────────────────────────
-UENUM(BlueprintType)
-enum class EStashTabType : uint8
-{
-	STT_Normal      UMETA(DisplayName = "Normal (Grid)"),
-	STT_Quad        UMETA(DisplayName = "Quad (Large Grid)"),
-	STT_Currency    UMETA(DisplayName = "Currency (Auto-Sort)"),
-	STT_Premium     UMETA(DisplayName = "Premium (Colour/Named)"),
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// One item stored in the stash — position within the tab's grid
-// ─────────────────────────────────────────────────────────────────────────────
-USTRUCT(BlueprintType)
-struct ALS_PROJECTHUNTER_API FStashItemEntry
-{
-	GENERATED_BODY()
-
-	/** The item itself */
-	UPROPERTY(BlueprintReadWrite, Category = "Stash")
-	TObjectPtr<UItemInstance> Item;
-
-	/** Top-left grid cell (col, row) in the tab */
-	UPROPERTY(BlueprintReadWrite, Category = "Stash")
-	FIntPoint GridPosition = FIntPoint::ZeroValue;
-
-	FStashItemEntry() = default;
-	FStashItemEntry(UItemInstance* InItem, FIntPoint InPos)
-		: Item(InItem), GridPosition(InPos)
-	{}
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Full tab payload — only resident in memory while the tab is open/dirty
-// ─────────────────────────────────────────────────────────────────────────────
-USTRUCT(BlueprintType)
-struct ALS_PROJECTHUNTER_API FStashTabData
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadOnly, Category = "Stash")
-	FName TabID;
-
-	UPROPERTY(BlueprintReadWrite, Category = "Stash")
-	TArray<FStashItemEntry> Items;
-
-	/** Grid dimensions (cols x rows) */
-	UPROPERTY(BlueprintReadOnly, Category = "Stash")
-	FIntPoint GridSize = FIntPoint(12, 12);
-
-	FStashTabData() = default;
-	explicit FStashTabData(FName InID) : TabID(InID) {}
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Lightweight header — always resident in memory for every tab
-// ─────────────────────────────────────────────────────────────────────────────
-USTRUCT(BlueprintType)
-struct ALS_PROJECTHUNTER_API FStashTabHandle
-{
-	GENERATED_BODY()
-
-	/** Stable identifier used as the sub-slot name when saving */
-	UPROPERTY(BlueprintReadOnly, Category = "Stash")
-	FName TabID;
-
-	/** Display name shown in the tab bar */
-	UPROPERTY(BlueprintReadWrite, Category = "Stash")
-	FText TabName;
-
-	UPROPERTY(BlueprintReadWrite, Category = "Stash")
-	EStashTabType TabType = EStashTabType::STT_Normal;
-
-	/** Cached item count for the tab badge — updated on add/remove without loading data */
-	UPROPERTY(BlueprintReadOnly, Category = "Stash")
-	int32 CachedItemCount = 0;
-
-	/** Optional accent colour for premium tabs */
-	UPROPERTY(BlueprintReadWrite, Category = "Stash")
-	FLinearColor AccentColor = FLinearColor::White;
-
-	/** True when full data has been loaded into StashSubsystem::LoadedTabs */
-	UPROPERTY(Transient)
-	bool bIsLoaded = false;
-
-	/** True when loaded data has been modified and needs saving */
-	UPROPERTY(Transient)
-	bool bIsDirty = false;
-
-	FStashTabHandle() = default;
-	FStashTabHandle(FName InID, FText InName, EStashTabType InType = EStashTabType::STT_Normal)
-		: TabID(InID), TabName(InName), TabType(InType)
-	{}
-};
+// EStashTabType, FStashItemEntry, FStashTabData, FStashTabHandle
+// are defined in Tower/Library/StashEnumLibrary.h and Tower/Library/StashStructs.h
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Delegates

@@ -194,6 +194,22 @@ enum class EManagedInteractionMode : uint8
 	ActorContinuous
 };
 
+/**
+ * EInteractionWidgetState — display states for the interaction prompt widget.
+ * Moved here from InteractableWidget.h so any system that needs the state type
+ * (e.g. InteractionWidgetPresenter) can include this light header without
+ * pulling in the full widget class.
+ */
+UENUM(BlueprintType)
+enum class EInteractionWidgetState : uint8
+{
+	IWS_Idle        UMETA(DisplayName = "Idle"),       // Waiting for input — animated border
+	IWS_Holding     UMETA(DisplayName = "Holding"),    // Hold in progress — fill advances
+	IWS_Mashing     UMETA(DisplayName = "Mashing"),    // Mash in progress — fill advances
+	IWS_Completed   UMETA(DisplayName = "Completed"),  // Action complete — flash effect
+	IWS_Cancelled   UMETA(DisplayName = "Cancelled")   // Action cancelled — deplete effect
+};
+
 // ═══════════════════════════════════════════════════════════════════════
 // STRUCTS
 // ═══════════════════════════════════════════════════════════════════════

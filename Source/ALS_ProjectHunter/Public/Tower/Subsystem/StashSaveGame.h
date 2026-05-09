@@ -8,7 +8,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
-#include "Tower/Subsystem/StashSubsystem.h"
+#include "Tower/Library/StashEnumLibrary.h"
 #include "StashSaveGame.generated.h"
 
 // ─────────────────────────────────────────────────────────────────────────────

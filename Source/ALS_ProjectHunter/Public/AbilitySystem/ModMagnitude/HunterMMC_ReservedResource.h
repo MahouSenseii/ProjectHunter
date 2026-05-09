@@ -2,15 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "GameplayModMagnitudeCalculation.h"
+#include "AbilitySystem/Library/MMCEnumLibrary.h"
 #include "HunterMMC_ReservedResource.generated.h"
-
-UENUM()
-enum class EHunterReservedResourceType : uint8
-{
-	Health,
-	Mana,
-	Stamina
-};
 
 /**
  * Reserved = RoundHalfToEven((MaxValue * (Percent / 100)) + FlatValue)
@@ -26,7 +19,7 @@ public:
 	virtual float CalculateBaseMagnitude_Implementation(const FGameplayEffectSpec& Spec) const override;
 
 protected:
-	virtual EHunterReservedResourceType GetResourceType() const PURE_VIRTUAL(UHunterMMC_ReservedResource::GetResourceType, return EHunterReservedResourceType::Health;);
+	virtual EHunterResourceType GetResourceType() const PURE_VIRTUAL(UHunterMMC_ReservedResource::GetResourceType, return EHunterResourceType::Health;);
 
 	float GetCapturedValue(
 		const FGameplayEffectSpec& Spec,
@@ -42,9 +35,9 @@ class ALS_PROJECTHUNTER_API UHunterMMC_ReservedHealth : public UHunterMMC_Reserv
 	GENERATED_BODY()
 
 protected:
-	virtual EHunterReservedResourceType GetResourceType() const override
+	virtual EHunterResourceType GetResourceType() const override
 	{
-		return EHunterReservedResourceType::Health;
+		return EHunterResourceType::Health;
 	}
 };
 
@@ -54,9 +47,9 @@ class ALS_PROJECTHUNTER_API UHunterMMC_ReservedMana : public UHunterMMC_Reserved
 	GENERATED_BODY()
 
 protected:
-	virtual EHunterReservedResourceType GetResourceType() const override
+	virtual EHunterResourceType GetResourceType() const override
 	{
-		return EHunterReservedResourceType::Mana;
+		return EHunterResourceType::Mana;
 	}
 };
 
@@ -66,8 +59,8 @@ class ALS_PROJECTHUNTER_API UHunterMMC_ReservedStamina : public UHunterMMC_Reser
 	GENERATED_BODY()
 
 protected:
-	virtual EHunterReservedResourceType GetResourceType() const override
+	virtual EHunterResourceType GetResourceType() const override
 	{
-		return EHunterReservedResourceType::Stamina;
+		return EHunterResourceType::Stamina;
 	}
 };

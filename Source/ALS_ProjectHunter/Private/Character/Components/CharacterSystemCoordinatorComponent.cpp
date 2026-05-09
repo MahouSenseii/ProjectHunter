@@ -68,6 +68,7 @@ void UCharacterSystemCoordinatorComponent::CacheManagerReferences()
 	// After PH-0.4 lands, grep Source/ for FindComponentByClass<UStatsManager> etc.
 	// in domain hot paths and route them through this coordinator instead.
 	AActor* Owner = GetOwner();
+	
 	if (!Owner)
 	{
 		PH_LOG_ERROR(LogCharacterSystemCoordinator,

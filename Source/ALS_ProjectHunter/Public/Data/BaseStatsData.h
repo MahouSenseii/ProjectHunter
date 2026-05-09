@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
+#include "Data/Library/BaseStatsEnumLibrary.h"
+#include "Data/Library/StatsStructs.h"
 #include "BaseStatsData.generated.h"
 
 class UGameplayEffect;
@@ -10,154 +12,8 @@ class UAttributeSet;
 struct FGameplayAttribute;
 struct FPropertyChangedEvent;
 
-UENUM(BlueprintType)
-enum class EHunterStatType : uint8
-{
-	Neutral		UMETA(DisplayName = "Neutral"),
-	Primary		UMETA(DisplayName = "Primary"),
-	Vital		UMETA(DisplayName = "Vital"),
-	Offense		UMETA(DisplayName = "Offense"),
-	Defense		UMETA(DisplayName = "Defense"),
-	Resource	UMETA(DisplayName = "Resource"),
-	Utility		UMETA(DisplayName = "Utility"),
-	Special		UMETA(DisplayName = "Special")
-};
-
-/**
- * Canonical parsed category path used everywhere the stat system needs to group or display categories.
- *
- * RawCategory keeps the trimmed source string from metadata or authored data.
- * NormalizedCategory is the stable "Parent|Child" form used for storage and comparisons.
- * MainCategory/SubCategory expose the logical split for grouping in runtime debug and editor UI.
- */
-USTRUCT(BlueprintType)
-struct ALS_PROJECTHUNTER_API FParsedStatCategory
-{
-	GENERATED_BODY()
-
-	FParsedStatCategory()
-		: RawCategory(TEXT(""))
-		, NormalizedCategory(TEXT("Uncategorized"))
-		, MainCategory(TEXT("Uncategorized"))
-		, SubCategory(NAME_None)
-	{
-	}
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FString RawCategory;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FName NormalizedCategory;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FName MainCategory;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FName SubCategory;
-
-	FORCEINLINE bool HasSubCategory() const
-	{
-		return SubCategory != NAME_None;
-	}
-};
-
-/**
- * One reflected stat entry sourced from the configured AttributeSet class.
- *
- * Identity and presentation fields are rebuilt from reflection:
- * - StatName
- * - DisplayName
- * - Category
- * - SortOrder
- * - Tooltip
- * - IconName
- * - StatType
- *
- * Authored runtime values remain editable per asset:
- * - bOverrideValue
- * - BaseValue
- */
-USTRUCT(BlueprintType)
-struct ALS_PROJECTHUNTER_API FStatInitializationEntry
-{
-	GENERATED_BODY()
-
-	FStatInitializationEntry()
-		: StatName(NAME_None)
-		, DisplayName(FText::GetEmpty())
-		, RawCategory(TEXT(""))
-		, Category(NAME_None)
-		, MainCategory(NAME_None)
-		, SubCategory(NAME_None)
-		, SortOrder(0)
-		, Tooltip(FText::GetEmpty())
-		, IconName(NAME_None)
-		, StatType(EHunterStatType::Neutral)
-		, bOverrideValue(false)
-		, BaseValue(0.0f)
-	{
-	}
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FName StatName;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FText DisplayName;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FString RawCategory;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FName Category;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FName MainCategory;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FName SubCategory;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	int32 SortOrder;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FText Tooltip;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	FName IconName;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	EHunterStatType StatType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
-	bool bOverrideValue;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats", meta = (EditCondition = "bOverrideValue", EditConditionHides))
-	float BaseValue;
-
-	FORCEINLINE bool HasRuntimeValue() const
-	{
-		return bOverrideValue;
-	}
-
-	FORCEINLINE bool IsValid() const
-	{
-		return StatName != NAME_None;
-	}
-
-	FORCEINLINE FString BuildSearchString() const
-	{
-		return FString::Printf(
-			TEXT("%s %s %s %s %s %s %s %s"),
-			*StatName.ToString(),
-			*DisplayName.ToString(),
-			*RawCategory,
-			*Category.ToString(),
-			*MainCategory.ToString(),
-			*SubCategory.ToString(),
-			*Tooltip.ToString(),
-			*StaticEnum<EHunterStatType>()->GetNameStringByValue(static_cast<int64>(StatType)));
-	}
-};
+// FParsedStatCategory and FStatInitializationEntry have been moved to
+// Data/Library/StatsStructs.h — included above.
 
 UCLASS(BlueprintType)
 class ALS_PROJECTHUNTER_API UBaseStatsData : public UPrimaryDataAsset

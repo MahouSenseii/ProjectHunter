@@ -2,28 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
+#include "AbilitySystem/Library/PHAbilityEnumLibrary.h"
 #include "PHGameplayAbility.generated.h"
 
 class APHBaseCharacter;
 class UHunterAbilitySystemComponent;
-
-UENUM(BlueprintType)
-enum class EPHAbilityActivationPolicy : uint8
-{
-	OnInputTriggered,
-	WhileInputActive,
-	OnSpawn
-};
-
-UENUM(BlueprintType)
-enum class EPHAbilityActivationGroup : uint8
-{
-	Independent,
-	Exclusive_Replaceable,
-	Exclusive_Blocking,
-
-	MAX UMETA(Hidden)
-};
 
 /**
  * Project Hunter gameplay ability base.
