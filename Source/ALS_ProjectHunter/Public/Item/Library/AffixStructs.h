@@ -192,7 +192,7 @@ struct FAffixData : public FTableRowBase
 
 	/** Icon for this affix (optional) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
-	UTexture2D* AffixIcon;
+	UTexture2D* AffixIcon = nullptr;
 
 	// ═══════════════════════════════════════════════
 	// DAMAGE CONVERSION (For "Convert X% to Y" affixes)

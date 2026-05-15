@@ -7,6 +7,7 @@
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "PHGameplayTags.h"
+#include "Character/PHBaseCharacter.h"
 #include "Combat/Components/CombatStatusManager.h"
 #include "Stats/StatsModifierMath.h"
 
@@ -29,6 +30,13 @@ namespace CombatManagerComponentPrivate
 	constexpr float IgniteDamagePerTickPercent = 0.25f;
 	constexpr float CorruptionDamagePerTickPercent = 0.2f;
 	constexpr float DefaultShockAmpFraction = 0.2f;
+	// Chill: no ChanceToChill attribute exists yet — cold damage always chills (PoE2 style).
+	// To make Chill chance-configurable, add a ChanceToChill attribute to HunterAttributeSet
+	// and replace the 100% apply below with SourceAttributes->GetChanceToChill().
+	constexpr float DefaultChillSlowFraction = 0.3f;  // 30 % movement slow
+	constexpr float DefaultChillDuration     = 2.f;   // seconds
+	// Poison: no ChanceToPoison attribute exists yet — add one to HunterAttributeSet and
+	// wire ApplyPoison in ApplyAilments (analogous to the Corruption section below).
 
 	float GetDamageByType(const FCombatDamagePacket& Packet, const EHunterDamageType DamageType)
 	{
@@ -307,6 +315,53 @@ namespace CombatManagerComponentPrivate
 	{
 		return ChancePercent > 0.f && FMath::FRandRange(0.f, 100.f) < ChancePercent;
 	}
+
+	/**
+	 * Compute the effective ailment proc chance for a single damage type.
+	 *
+	 * Normal path — scale BaseChance by the fraction of damage that penetrated all
+	 * defenses (armour + resistance + block):
+	 *
+	 *   MitigationRatio = PostMitigationDamage / PreMitigationDamage   (clamped 0–1)
+	 *   EffectiveChance = BaseChance × MitigationRatio
+	 *
+	 * A target that mitigated 90 % of a hit also reduces the ailment proc chance by 90 %.
+	 * PostMitigationDamage already encapsulates every defense layer, so no extra work here.
+	 *
+	 * Parry path — return BaseChance unmodified (mitigation ratio is skipped).
+	 * The defender cancelled the damage but physical/elemental contact was still made,
+	 * so the attacker's full ailment chance applies as a counterplay mechanic.
+	 *
+	 * Invincible path — gated upstream by bShouldApplyAilments = false;
+	 * ApplyAilments never calls this function on that path.
+	 *
+	 * @param BaseChance           Attacker's configured ailment chance (0–100).
+	 * @param PreMitigationDamage  Raw damage of this type before any defenses.
+	 * @param PostMitigationDamage Damage of this type after armour + resistance + block.
+	 * @param bParryPath           True when HitResponse == EHitResponse::Parry.
+	 * @return Effective chance in [0, 100].
+	 */
+	float CalculateEffectiveAilmentChance(
+		const float BaseChance,
+		const float PreMitigationDamage,
+		const float PostMitigationDamage,
+		const bool  bParryPath)
+	{
+		if (BaseChance <= 0.f || PreMitigationDamage <= 0.f)
+		{
+			return 0.f;
+		}
+
+		// Parry: damage was deflected but contact was real — full base chance, no scaling.
+		if (bParryPath)
+		{
+			return FMath::Clamp(BaseChance, 0.f, 100.f);
+		}
+
+		// Normal: scale by the fraction of damage that punched through all defenses.
+		const float MitigationRatio = FMath::Clamp(PostMitigationDamage / PreMitigationDamage, 0.f, 1.f);
+		return FMath::Clamp(BaseChance * MitigationRatio, 0.f, 100.f);
+	}
 }
 
 UCombatManager::UCombatManager()
@@ -580,6 +635,16 @@ const UHunterAttributeSet* UCombatManager::GetHunterAttributeSetFromActor(const 
 	const UHunterAttributeSet* AttributeSet = ASC->GetSet<UHunterAttributeSet>();
 	if (!AttributeSet)
 	{
+		/*if (const APHBaseCharacter* Character = Cast<APHBaseCharacter>(Actor))
+		{
+			AttributeSet = Character->GetAttributeSet();
+			if (AttributeSet)
+			{
+				UE_LOG(LogCombatManager, Warning, TEXT("Actor %s has an ASC but no registered UHunterAttributeSet; using PHBaseCharacter AttributeSet fallback. The ASC registration path should still be fixed."), *GetNameSafe(Actor));
+				return AttributeSet;
+			}
+		}*/
+
 		UE_LOG(LogCombatManager, Warning, TEXT("Actor %s has an ASC but no registered UHunterAttributeSet."), *GetNameSafe(Actor));
 	}
 
@@ -1031,10 +1096,12 @@ FCombatResolveResult UCombatManager::MitigateDamagePacketAgainstAttributes(
 		Result.CorruptionTaken;
 
 	const float CurrentArcaneShield = FMath::Max(TargetAttributes->GetArcaneShield(), 0.f);
-	const float CurrentHealth = FMath::Max(TargetAttributes->GetHealth(), 0.f);
 	Result.DamageToArcaneShield = FMath::Min(CurrentArcaneShield, Result.TotalDamageTaken);
 	Result.DamageToHealth = FMath::Max(0.f, Result.TotalDamageTaken - Result.DamageToArcaneShield);
-	Result.bKilledTarget = (CurrentHealth - Result.DamageToHealth) <= 0.f;
+	// NOTE: bKilledTarget is intentionally NOT set here.
+	// This function produces a mitigation preview; the GE that actually subtracts health has
+	// not fired yet. bKilledTarget is authoritative only after ApplyResolvedDamage returns —
+	// ApplyHit reads the live attribute value and sets it there.
 
 	return Result;
 }
@@ -1635,6 +1702,24 @@ void UCombatManager::ApplyBlockingToMitigatedResult(AActor* SourceActor, AActor*
 
 	InOutResult.bWasBlocked = true;
 
+	// ── Step 1: tally the total incoming (post-resistance) damage so we can
+	// distribute the flat block budget proportionally across damage types.
+	// Without this, FlatBlockAmount would be subtracted from EACH type independently,
+	// multiplying its effect by however many damage types are present.
+	float TotalIncomingForBlock = 0.f;
+	for (const EHunterDamageType DamageType : {
+		EHunterDamageType::Physical,
+		EHunterDamageType::Fire,
+		EHunterDamageType::Ice,
+		EHunterDamageType::Lightning,
+		EHunterDamageType::Light,
+		EHunterDamageType::Corruption })
+	{
+		TotalIncomingForBlock += FMath::Max(0.f,
+			CombatManagerComponentPrivate::GetResultTakenByType(InOutResult, DamageType)
+			* GetBlockTypeMultiplier(DamageType, TargetAttributes));
+	}
+
 	float TotalAfterBlock = 0.f;
 	float TotalBlockedAmount = 0.f;
 
@@ -1648,8 +1733,15 @@ void UCombatManager::ApplyBlockingToMitigatedResult(AActor* SourceActor, AActor*
 	{
 		const float DamageBeforeBlock = FMath::Max(0.f, CombatManagerComponentPrivate::GetResultTakenByType(InOutResult, DamageType));
 		const float BlockedInput = DamageBeforeBlock * GetBlockTypeMultiplier(DamageType, TargetAttributes);
+
+		// Distribute flat block budget proportionally by this type's share of total incoming.
+		// e.g. 60 % of incoming is Fire → Fire absorbs 60 % of FlatBlockAmount.
+		const float TypeFlatShare = (TotalIncomingForBlock > 0.f)
+			? FlatBlockAmount * (BlockedInput / TotalIncomingForBlock)
+			: 0.f;
+
 		const float PercentBlocked = BlockedInput * BlockStrengthPct;
-		const float BlockedTotal = PercentBlocked + FlatBlockAmount;
+		const float BlockedTotal = PercentBlocked + TypeFlatShare;
 		const float DamageAfterBlock = FMath::Max(0.f, BlockedInput - BlockedTotal);
 		const float ChipFloor = BlockedInput * ChipDamagePct;
 		const float FinalBlockedTypeDamage = FMath::Max(DamageAfterBlock, ChipFloor);
@@ -1864,29 +1956,61 @@ void UCombatManager::ApplyHitResponse(const FCombatHitPacket& HitPacket, FCombat
 	switch (InOutResult.HitResponse)
 	{
 	case EHitResponse::Parry:
-		InOutResult.DamageToHealth      = 0.f;
+		// Damage is negated — the defender deflected the force of the hit.
+		// Ailments are NOT blocked — physical contact was still made, so the
+		// attacker's status effects can still proc. This is the attacker's
+		// counterplay: a venomous blade, igniting staff, etc. still tags the
+		// parrier. Ailments roll at full base chance (no mitigation ratio) since
+		// the parry only cancelled the damage, not the elemental contact.
+		InOutResult.DamageToHealth       = 0.f;
 		InOutResult.DamageToArcaneShield = 0.f;
-		InOutResult.DamageToStamina     = 0.f;
-		InOutResult.TotalDamageTaken    = 0.f;
+		InOutResult.DamageToStamina      = 0.f;
+		InOutResult.TotalDamageTaken     = 0.f;
 		InOutResult.bShouldApplyAilments = true;
 		InOutResult.bShouldStagger       = false;
 		InOutResult.bKilledTarget        = false;
-		UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHitResponse: Parry zeroed damage and kept flat ailment rolls enabled."));
+		UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHitResponse: Parry zeroed damage — ailments still roll at full base chance."));
 		break;
 
 	case EHitResponse::Invincible:
-		InOutResult.DamageToHealth       = 0.f;
-		InOutResult.DamageToArcaneShield  = 0.f;
+		// Zero every damage-related field so the result struct is a clean "nothing happened"
+		// from the caller's perspective — per-type taken, block amounts, and application
+		// totals are all cleared. Blueprints can safely read any field without filtering.
+		InOutResult.PhysicalTaken        = 0.f;
+		InOutResult.FireTaken            = 0.f;
+		InOutResult.IceTaken             = 0.f;
+		InOutResult.LightningTaken       = 0.f;
+		InOutResult.LightTaken           = 0.f;
+		InOutResult.CorruptionTaken      = 0.f;
+		InOutResult.PhysicalBlocked      = 0.f;
+		InOutResult.FireBlocked          = 0.f;
+		InOutResult.IceBlocked           = 0.f;
+		InOutResult.LightningBlocked     = 0.f;
+		InOutResult.LightBlocked         = 0.f;
+		InOutResult.CorruptionBlocked    = 0.f;
+		InOutResult.TotalDamageBeforeBlock = 0.f;
+		InOutResult.TotalDamageAfterBlock  = 0.f;
+		InOutResult.TotalBlockedAmount   = 0.f;
 		InOutResult.DamageToStamina      = 0.f;
+		InOutResult.DamageToArcaneShield = 0.f;
+		InOutResult.DamageToHealth       = 0.f;
 		InOutResult.TotalDamageTaken     = 0.f;
-		InOutResult.bShouldApplyAilments  = false;
-		InOutResult.bShouldStagger        = false;
-		InOutResult.bKilledTarget         = false;
-		UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHitResponse: Invincible zeroed damage and ailments."));
+		InOutResult.bShouldApplyAilments = false;
+		InOutResult.bShouldStagger       = false;
+		InOutResult.bWasBlocked          = false;
+		InOutResult.bGuardBroken         = false;
+		InOutResult.bWasCrit             = false;
+		InOutResult.bKilledTarget        = false;
+		UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHitResponse: Invincible — all damage and ailment fields zeroed."));
 		break;
 
-	case EHitResponse::Absorbed:
-		UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHitResponse: Absorbed response left packet damage as authored."));
+	case EHitResponse::Blocked:
+		// Damage is absorbed by a resource (ArcaneShield, blood magic, etc.).
+		// Ailments ARE allowed — the hit made contact even though the damage was absorbed.
+		// Matches PoE2 energy shield behaviour: your shield eats the fire hit but
+		// you can still be ignited.
+		InOutResult.bShouldApplyAilments = true;
+		UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHitResponse: Blocked — damage absorbed by resource, ailments still roll."));
 		break;
 
 	case EHitResponse::Normal:
@@ -2112,104 +2236,172 @@ void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, con
 		return;
 	}
 
-	// bParryPath = true means ailments apply by flat chance only (no buildup contribution).
-	// On the Normal path, ailments can also accumulate buildup toward threshold triggers.
-	// TODO: Implement buildup tracking per ailment type when CombatStatusManager GEs are ready.
+	// On the Parry path damage is zeroed but ailments roll at full base chance —
+	// the defender deflected the force but elemental/status contact was still made.
 	const bool bParryPath = (Result.HitResponse == EHitResponse::Parry);
 
 	// ── Bleed (Physical) ──────────────────────────────────────────────────────
-	// On parry path: uses same flat chance roll — Elden Ring style, can proc on block.
-	// PreMitigationPacket.Physical is used so the roll is based on raw incoming, not
-	// post-armour damage (matching PoE2 and ER behavior).
-	if (Result.PreMitigationPacket.Physical > 0.f || (bParryPath && Result.PreMitigationPacket.Physical > 0.f))
+	// Normal: EffectiveChance = BaseChance × (PhysicalTaken / PreMitigationPhysical).
+	// Parry:  EffectiveChance = BaseChance (full — mitigation ratio skipped).
+	if (Result.PreMitigationPacket.Physical > 0.f)
 	{
-		const float BleedChance = FMath::Clamp(SourceAttributes->GetChanceToBleed(), 0.f, 100.f);
-		if (CombatManagerComponentPrivate::RollPercentChance(BleedChance))
+		const float EffectiveBleedChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
+			SourceAttributes->GetChanceToBleed(),
+			Result.PreMitigationPacket.Physical,
+			Result.PhysicalTaken,
+			bParryPath);
+		if (CombatManagerComponentPrivate::RollPercentChance(EffectiveBleedChance))
 		{
 			const float DamagePerTick = Result.PreMitigationPacket.Physical * CombatManagerComponentPrivate::BleedDamagePerTickPercent;
 			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetBleedDuration(), CombatManagerComponentPrivate::DefaultBleedDuration);
 			const FCombatStatusApplyResult ApplyResult = SourceCombatStatusManager->ApplyBleed(TargetActor, DamagePerTick, Duration, SourceActor);
 			UE_LOG(LogCombatManager, Verbose,
-				TEXT("ApplyAilments: Bleed %s on %s (chance=%.1f%% damage/tick=%.2f duration=%.2f %s)."),
+				TEXT("ApplyAilments: Bleed %s on %s (base=%.1f%% effective=%.1f%% dmg/tick=%.2f dur=%.2f%s)."),
 				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
-				*GetNameSafe(TargetActor), BleedChance, DamagePerTick, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
+				*GetNameSafe(TargetActor),
+				SourceAttributes->GetChanceToBleed(), EffectiveBleedChance,
+				DamagePerTick, Duration, bParryPath ? TEXT(" [parry]") : TEXT(""));
 		}
 	}
 
 	// ── Ignite (Fire) ─────────────────────────────────────────────────────────
 	if (Result.PreMitigationPacket.Fire > 0.f)
 	{
-		const float IgniteChance = FMath::Clamp(SourceAttributes->GetChanceToIgnite(), 0.f, 100.f);
-		if (CombatManagerComponentPrivate::RollPercentChance(IgniteChance))
+		const float EffectiveIgniteChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
+			SourceAttributes->GetChanceToIgnite(),
+			Result.PreMitigationPacket.Fire,
+			Result.FireTaken,
+			bParryPath);
+		if (CombatManagerComponentPrivate::RollPercentChance(EffectiveIgniteChance))
 		{
 			const float DamagePerTick = Result.PreMitigationPacket.Fire * CombatManagerComponentPrivate::IgniteDamagePerTickPercent;
 			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetBurnDuration(), CombatManagerComponentPrivate::DefaultIgniteDuration);
 			const FCombatStatusApplyResult ApplyResult = SourceCombatStatusManager->ApplyIgnite(TargetActor, DamagePerTick, Duration, SourceActor);
 			UE_LOG(LogCombatManager, Verbose,
-				TEXT("ApplyAilments: Ignite %s on %s (chance=%.1f%% damage/tick=%.2f duration=%.2f %s)."),
+				TEXT("ApplyAilments: Ignite %s on %s (base=%.1f%% effective=%.1f%% dmg/tick=%.2f dur=%.2f%s)."),
 				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
-				*GetNameSafe(TargetActor), IgniteChance, DamagePerTick, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
+				*GetNameSafe(TargetActor),
+				SourceAttributes->GetChanceToIgnite(), EffectiveIgniteChance,
+				DamagePerTick, Duration, bParryPath ? TEXT(" [parry]") : TEXT(""));
 		}
 	}
 
-	// ── Freeze (Ice) ──────────────────────────────────────────────────────────
+	// ── Chill + Freeze (Ice) ─────────────────────────────────────────────────
+	// Chill uses a 100 % base chance so it always applies on an undefended hit,
+	// scaled down by ice resistance on the normal path.
+	// TODO: expose a ChanceToChill attribute on HunterAttributeSet if you want
+	//       designers to tune the base below 100 % for specific enemies or builds.
+	// Freeze rolls independently on top of Chill.
 	if (Result.PreMitigationPacket.Ice > 0.f)
 	{
-		const float FreezeChance = FMath::Clamp(SourceAttributes->GetChanceToFreeze(), 0.f, 100.f);
-		if (CombatManagerComponentPrivate::RollPercentChance(FreezeChance))
+		// Chill
 		{
-			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetFreezeDuration(), CombatManagerComponentPrivate::DefaultFreezeDuration);
-			const FCombatStatusApplyResult ApplyResult = SourceCombatStatusManager->ApplyFreeze(TargetActor, Duration, SourceActor);
-			UE_LOG(LogCombatManager, Verbose,
-				TEXT("ApplyAilments: Freeze %s on %s (chance=%.1f%% duration=%.2f %s)."),
-				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
-				*GetNameSafe(TargetActor), FreezeChance, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
+			const float EffectiveChillChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
+				100.f,
+				Result.PreMitigationPacket.Ice,
+				Result.IceTaken,
+				bParryPath);
+			if (CombatManagerComponentPrivate::RollPercentChance(EffectiveChillChance))
+			{
+				const FCombatStatusApplyResult ChillResult = SourceCombatStatusManager->ApplyChill(
+					TargetActor,
+					CombatManagerComponentPrivate::DefaultChillSlowFraction,
+					CombatManagerComponentPrivate::DefaultChillDuration,
+					SourceActor);
+				UE_LOG(LogCombatManager, Verbose,
+					TEXT("ApplyAilments: Chill %s on %s (effective=%.1f%% slow=%.0f%% dur=%.2f%s)."),
+					ChillResult.bApplied ? TEXT("applied") : TEXT("failed"),
+					*GetNameSafe(TargetActor),
+					EffectiveChillChance,
+					CombatManagerComponentPrivate::DefaultChillSlowFraction * 100.f,
+					CombatManagerComponentPrivate::DefaultChillDuration,
+					bParryPath ? TEXT(" [parry]") : TEXT(""));
+			}
+		}
+
+		// Freeze
+		{
+			const float EffectiveFreezeChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
+				SourceAttributes->GetChanceToFreeze(),
+				Result.PreMitigationPacket.Ice,
+				Result.IceTaken,
+				bParryPath);
+			if (CombatManagerComponentPrivate::RollPercentChance(EffectiveFreezeChance))
+			{
+				const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetFreezeDuration(), CombatManagerComponentPrivate::DefaultFreezeDuration);
+				const FCombatStatusApplyResult ApplyResult = SourceCombatStatusManager->ApplyFreeze(TargetActor, Duration, SourceActor);
+				UE_LOG(LogCombatManager, Verbose,
+					TEXT("ApplyAilments: Freeze %s on %s (base=%.1f%% effective=%.1f%% dur=%.2f%s)."),
+					ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
+					*GetNameSafe(TargetActor),
+					SourceAttributes->GetChanceToFreeze(), EffectiveFreezeChance,
+					Duration, bParryPath ? TEXT(" [parry]") : TEXT(""));
+			}
 		}
 	}
 
 	// ── Shock (Lightning) ─────────────────────────────────────────────────────
 	if (Result.PreMitigationPacket.Lightning > 0.f)
 	{
-		const float ShockChance = FMath::Clamp(SourceAttributes->GetChanceToShock(), 0.f, 100.f);
-		if (CombatManagerComponentPrivate::RollPercentChance(ShockChance))
+		const float EffectiveShockChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
+			SourceAttributes->GetChanceToShock(),
+			Result.PreMitigationPacket.Lightning,
+			Result.LightningTaken,
+			bParryPath);
+		if (CombatManagerComponentPrivate::RollPercentChance(EffectiveShockChance))
 		{
 			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetShockDuration(), CombatManagerComponentPrivate::DefaultShockDuration);
 			const FCombatStatusApplyResult ApplyResult = SourceCombatStatusManager->ApplyShock(TargetActor, CombatManagerComponentPrivate::DefaultShockAmpFraction, Duration, SourceActor);
 			UE_LOG(LogCombatManager, Verbose,
-				TEXT("ApplyAilments: Shock %s on %s (chance=%.1f%% amp=%.2f duration=%.2f %s)."),
+				TEXT("ApplyAilments: Shock %s on %s (base=%.1f%% effective=%.1f%% amp=%.2f dur=%.2f%s)."),
 				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
-				*GetNameSafe(TargetActor), ShockChance, CombatManagerComponentPrivate::DefaultShockAmpFraction, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
+				*GetNameSafe(TargetActor),
+				SourceAttributes->GetChanceToShock(), EffectiveShockChance,
+				CombatManagerComponentPrivate::DefaultShockAmpFraction, Duration,
+				bParryPath ? TEXT(" [parry]") : TEXT(""));
 		}
 	}
 
 	// ── Petrify (Light) ───────────────────────────────────────────────────────
 	if (Result.PreMitigationPacket.Light > 0.f)
 	{
-		const float PetrifyChance = FMath::Clamp(SourceAttributes->GetChanceToPetrify(), 0.f, 100.f);
-		if (CombatManagerComponentPrivate::RollPercentChance(PetrifyChance))
+		const float EffectivePetrifyChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
+			SourceAttributes->GetChanceToPetrify(),
+			Result.PreMitigationPacket.Light,
+			Result.LightTaken,
+			bParryPath);
+		if (CombatManagerComponentPrivate::RollPercentChance(EffectivePetrifyChance))
 		{
 			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetPetrifyBuildUpDuration(), CombatManagerComponentPrivate::DefaultPetrifyDuration);
 			const FCombatStatusApplyResult ApplyResult = SourceCombatStatusManager->ApplyPetrify(TargetActor, Duration, SourceActor);
 			UE_LOG(LogCombatManager, Verbose,
-				TEXT("ApplyAilments: Petrify %s on %s (chance=%.1f%% duration=%.2f %s)."),
+				TEXT("ApplyAilments: Petrify %s on %s (base=%.1f%% effective=%.1f%% dur=%.2f%s)."),
 				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
-				*GetNameSafe(TargetActor), PetrifyChance, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
+				*GetNameSafe(TargetActor),
+				SourceAttributes->GetChanceToPetrify(), EffectivePetrifyChance,
+				Duration, bParryPath ? TEXT(" [parry]") : TEXT(""));
 		}
 	}
 
-	// ── Corruption Ailment ────────────────────────────────────────────────────
+	// ── Corruption ────────────────────────────────────────────────────────────
 	if (Result.PreMitigationPacket.Corruption > 0.f)
 	{
-		const float CorruptChance = FMath::Clamp(SourceAttributes->GetChanceToCorrupt(), 0.f, 100.f);
-		if (CombatManagerComponentPrivate::RollPercentChance(CorruptChance))
+		const float EffectiveCorruptChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
+			SourceAttributes->GetChanceToCorrupt(),
+			Result.PreMitigationPacket.Corruption,
+			Result.CorruptionTaken,
+			bParryPath);
+		if (CombatManagerComponentPrivate::RollPercentChance(EffectiveCorruptChance))
 		{
 			const float DamagePerTick = Result.PreMitigationPacket.Corruption * CombatManagerComponentPrivate::CorruptionDamagePerTickPercent;
 			const float Duration = CombatManagerComponentPrivate::GetDurationOrDefault(SourceAttributes->GetCorruptionDuration(), CombatManagerComponentPrivate::DefaultCorruptionDuration);
 			const FCombatStatusApplyResult ApplyResult = SourceCombatStatusManager->ApplyCorruption(TargetActor, DamagePerTick, Duration, SourceActor);
 			UE_LOG(LogCombatManager, Verbose,
-				TEXT("ApplyAilments: Corruption %s on %s (chance=%.1f%% damage/tick=%.2f duration=%.2f %s)."),
+				TEXT("ApplyAilments: Corruption %s on %s (base=%.1f%% effective=%.1f%% dmg/tick=%.2f dur=%.2f%s)."),
 				ApplyResult.bApplied ? TEXT("applied") : TEXT("failed"),
-				*GetNameSafe(TargetActor), CorruptChance, DamagePerTick, Duration, bParryPath ? TEXT("parry-flat") : TEXT("normal"));
+				*GetNameSafe(TargetActor),
+				SourceAttributes->GetChanceToCorrupt(), EffectiveCorruptChance,
+				DamagePerTick, Duration, bParryPath ? TEXT(" [parry]") : TEXT(""));
 		}
 	}
 }

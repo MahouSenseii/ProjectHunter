@@ -155,7 +155,29 @@ void APHBaseCharacter::PostInitializeComponents()
 		}
 		else
 		{
-			PH_LOG_ERROR(LogPHBaseCharacter, "PostInitializeComponents failed: Character=%s had a null AttributeSet and recovery via FindObject also failed.", *GetName());
+			AttributeSet = NewObject<UHunterAttributeSet>(this, UHunterAttributeSet::StaticClass(), TEXT("AttributeSet"));
+			if (AttributeSet)
+			{
+				PH_LOG_WARNING(LogPHBaseCharacter, "PostInitializeComponents created a runtime AttributeSet for Character=%s because Blueprint recovery via FindObject failed. Compile and save this Blueprint.", *GetName());
+			}
+			else
+			{
+				PH_LOG_ERROR(LogPHBaseCharacter, "PostInitializeComponents failed: Character=%s had a null AttributeSet and recovery via FindObject/NewObject also failed.", *GetName());
+			}
+		}
+	}
+
+	if (AbilitySystemComponent && AttributeSet && !AbilitySystemComponent->GetSet<UHunterAttributeSet>())
+	{
+		AbilitySystemComponent->AddAttributeSetSubobject(AttributeSet.Get());
+
+		if (AbilitySystemComponent->GetSet<UHunterAttributeSet>() == AttributeSet.Get())
+		{
+			PH_LOG_WARNING(LogPHBaseCharacter, "PostInitializeComponents registered AttributeSet=%s with ASC=%s for Character=%s after Blueprint recovery. Compile and save this Blueprint.", *GetNameSafe(AttributeSet), *GetNameSafe(AbilitySystemComponent), *GetName());
+		}
+		else
+		{
+			PH_LOG_ERROR(LogPHBaseCharacter, "PostInitializeComponents failed to register AttributeSet=%s with ASC=%s for Character=%s after Blueprint recovery.", *GetNameSafe(AttributeSet), *GetNameSafe(AbilitySystemComponent), *GetName());
 		}
 	}
 }

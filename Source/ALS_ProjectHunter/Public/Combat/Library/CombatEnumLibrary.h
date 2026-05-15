@@ -76,12 +76,16 @@ enum class ECombatStatus : uint8
 /**
  * How an incoming hit was resolved by the target.
  *
- * Normal     — full damage + ailments + buildup (standard hit)
- * Parry      — damage zeroed; ailments still apply by flat chance roll (no buildup).
- *              Elden Ring style: attacker can still proc bleed/poison on a parried hit.
- *              Packet result is marked Parry so Blueprint can react from ApplyHit output.
- * Invincible — damage AND ailments fully negated (i-frames, divine blessings, etc.)
- * Absorbed   — damage converts to a resource (blood magic absorb, arcane shields, future)
+ * Normal     — full damage + ailments (standard hit).
+ * Parry      — damage zeroed; ailments roll at full base chance (mitigation ratio skipped).
+ *              The defender cancelled the force of the hit but elemental/status contact
+ *              was still made — attacker's venomous blade, igniting staff, etc. can still
+ *              tag the parrier. This is the attacker's counterplay vs. a skilled blocker.
+ *              Blueprint can read HitResponse == Parry to trigger counter-animations, VFX.
+ * Invincible — all damage AND ailments fully negated, every result field zeroed.
+ *              (i-frames, divine blessings, etc.) Blueprint reads a clean "nothing happened".
+ * Blocked    — damage absorbed by a resource (ArcaneShield, blood magic, etc.). Ailments
+ *              still roll — the hit made contact even though damage was absorbed.
  */
 UENUM(BlueprintType)
 enum class EHitResponse : uint8
@@ -89,5 +93,5 @@ enum class EHitResponse : uint8
 	Normal      UMETA(DisplayName = "Normal"),
 	Parry       UMETA(DisplayName = "Parry"),
 	Invincible  UMETA(DisplayName = "Invincible"),
-	Absorbed    UMETA(DisplayName = "Absorbed")
+	Blocked     UMETA(DisplayName = "Blocked")
 };
