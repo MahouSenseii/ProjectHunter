@@ -1,15 +1,5 @@
 // Tower/Subsystem/StashSubsystem.h
 // Lazy-loading stash system.
-//
-// ARCHITECTURE — Why lazy loading?
-// In Diablo-style games, loading all stash data on login caused hitches and
-// memory spikes because every item, including ones in tabs the player never
-// opened, was fully deserialised upfront.
-//
-// This system keeps only lightweight FStashTabHandle metadata in memory at all
-// times.  Full FStashTabData (the actual item arrays) is loaded from the save
-// slot on demand the FIRST TIME a player opens that tab, then cached in memory
-// for the session.  Tabs that have not been touched stay as handles only.
 
 #pragma once
 
