@@ -213,8 +213,7 @@ void UMobPoolSubsystem::ResetMobState(APHBaseCharacter* Mob) const
 {
 	if (!Mob) { return; }
 
-	// ── 1. Reset death state ─────────────────────────────────────────────
-	Mob->bIsDead = false;
+
 
 	// ── 2. Clear GAS state (effects, tags, abilities) ────────────────────
 	if (UAbilitySystemComponent* ASC = Mob->GetAbilitySystemComponent())
@@ -267,8 +266,6 @@ void UMobPoolSubsystem::ResetMobState(APHBaseCharacter* Mob) const
 		// The bModsApplied flag is protected — RerollMods resets it internally
 	}
 
-	// ── 5. Clear the OnDeathEvent delegate (MobManager will rebind) ──────
-	Mob->OnDeathEvent.Clear();
 }
 
 void UMobPoolSubsystem::DeactivateMob(APHBaseCharacter* Mob) const

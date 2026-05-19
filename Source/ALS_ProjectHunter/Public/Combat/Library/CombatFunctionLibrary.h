@@ -19,14 +19,7 @@ class ALS_PROJECTHUNTER_API UCombatFunctionLibrary : public UBlueprintFunctionLi
 	GENERATED_BODY()
 
 public:
-	/** Returns true if Source and Target are on different teams (hostile). */
-	UFUNCTION(BlueprintPure, Category = "Combat|Utility",
-		meta = (WorldContext = "WorldContextObject"))
-	static bool AreHostile(const APHBaseCharacter* Source, const APHBaseCharacter* Target);
 
-	/** Returns true if the character is alive (not dead). */
-	UFUNCTION(BlueprintPure, Category = "Combat|Utility")
-	static bool IsAlive(const APHBaseCharacter* Character);
 
 	/**
 	 * Get the health percentage of a character (0.0–1.0).

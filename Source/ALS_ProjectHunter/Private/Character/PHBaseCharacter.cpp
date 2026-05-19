@@ -89,14 +89,6 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(APHBaseCharacter, CharacterName);
-	DOREPLIFETIME(APHBaseCharacter, bIsDead);
-	DOREPLIFETIME(APHBaseCharacter, TeamID);
-	DOREPLIFETIME(APHBaseCharacter, CombatAffiliation);
-	// I-05: LastKillerActor was declared UPROPERTY(Replicated) but missing here.
-	// Added so late-joining clients can retrieve the killer after a Multicast fires.
-	DOREPLIFETIME(APHBaseCharacter, LastKillerActor);
 }
 
 
@@ -184,14 +176,7 @@ void APHBaseCharacter::PostInitializeComponents()
 
 void APHBaseCharacter::BeginPlay()
 {
-	// TAGFIX: InitializeAbilitySystem MUST run BEFORE Super::BeginPlay().
-	// Super::BeginPlay() propagates to every component's BeginPlay(), including
-	// TagManager::BeginPlay(). TagManager::BeginPlay tries to self-initialize via
-	// IAbilitySystemInterface — but if the ASC member was null (Blueprint CDO issue,
-	// now fixed in PostInitializeComponents) or actor-info not yet set, it gets null
-	// and movement tags are never applied.
-	// Running InitializeAbilitySystem first ensures TagManager::Initialize(ASC) is
-	// called with a valid ASC before any component's BeginPlay executes.
+
 	if (AbilitySystemComponent)
 	{
 		InitializeAbilitySystem();
@@ -227,11 +212,7 @@ void APHBaseCharacter::PossessedBy(AController* NewController)
 	{
 		InitializeAbilitySystem();
 
-		// Safety net: if TagManager still has no ASC after InitializeAbilitySystem
-		// (e.g., EnsureAttributeSetRegisteredWithAbilitySystem returned false on a
-		// prior BeginPlay attempt, or the character's BeginPlay fired before
-		// possession so InitAbilityActorInfo wasn't ready), wire it up now.
-		// This is the reliable late-init point for player-controlled characters.
+
 		if (TagManager && !TagManager->IsInitialized())
 		{
 			TagManager->Initialize(AbilitySystemComponent);
@@ -466,32 +447,7 @@ void APHBaseCharacter::OnAbilitySystemInitialized()
 	// Override in subclasses for custom initialization
 }
 
-void APHBaseCharacter::OnRep_CombatAffiliation(FCombatAffiliation OldAffiliation)
-{
-	if (OldAffiliation != CombatAffiliation)
-	{
-		OnCombatAffiliationChanged.Broadcast(CombatAffiliation);
-	}
-}
 
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* PROGRESSION */
-/* ═══════════════════════════════════════════════════════════════════════ */
-
-void APHBaseCharacter::SetCombatAffiliation(const FCombatAffiliation& NewAffiliation)
-{
-	if (!HasAuthority())
-	{
-		return;
-	}
-
-	if (CombatAffiliation == NewAffiliation)
-	{
-		return;
-	}
-	CombatAffiliation = NewAffiliation;
-	OnCombatAffiliationChanged.Broadcast(CombatAffiliation);
-}
 
 int32 APHBaseCharacter::GetCharacterLevel() const
 {
@@ -524,31 +480,6 @@ void APHBaseCharacter::AwardExperienceFromKill(APHBaseCharacter* KilledCharacter
 /* COMBAT & HEALTH */
 /* ═══════════════════════════════════════════════════════════════════════ */
 
-void APHBaseCharacter::OnRep_IsDead()
-{
-	// I-05 FIX: Multicast_NotifyDeath now delivers bIsDead + LastKillerActor atomically
-	// to all connected clients, eliminating the previous race where LastKillerActor
-	// could arrive after bIsDead triggered this callback with a stale null killer.
-	//
-	// OnRep_IsDead is kept only as a safety net for clients that connect AFTER the
-	// character has already died (late joiners receive replicated state but miss the
-	// multicast). In that case we fire the visual death state without the event so the
-	// corpse appears correctly. The OnDeathEvent broadcast is intentionally skipped
-	// here because gameplay logic should not re-fire on late join.
-	if (!bIsDead || HasAuthority())
-	{
-		return;
-	}
-
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-	if (GetCharacterMovement())
-	{
-		GetCharacterMovement()->DisableMovement();
-	}
-
-	PlayDeathAnimation();
-}
 
 float APHBaseCharacter::GetHealth() const
 {
@@ -580,57 +511,6 @@ float APHBaseCharacter::GetHealthPercent() const
 
 
 
-void APHBaseCharacter::OnDeath_Implementation(AController* Killer, AActor* DamageCauser)
-{
-	if (bIsDead)
-	{
-		return;
-	}
-
-	// I-05 FIX: Set server-side state for late-join replication, then deliver
-	// the authoritative death notification via a reliable multicast RPC so that
-	// ALL clients receive bIsDead and LastKillerActor in a single packet — no race.
-	bIsDead = true;
-	LastKillerActor = DamageCauser;
-
-	UE_LOG(LogPHBaseCharacter, Log, TEXT("%s died"), *GetName());
-
-	// Apply physics/movement changes immediately on the server
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GetCharacterMovement()->DisableMovement();
-	PlayDeathAnimation();
-
-	// Reliable multicast delivers atomic death state + event to all clients
-	Multicast_NotifyDeath(DamageCauser);
-}
-
-void APHBaseCharacter::Multicast_NotifyDeath_Implementation(AActor* KillerActor)
-{
-	// Skip on the server — OnDeath_Implementation already handled the local state.
-	if (HasAuthority())
-	{
-		// Server-side: broadcast event now that both properties are set
-		OnDeathEvent.Broadcast(this, KillerActor);
-		return;
-	}
-
-	// Client-side: apply death visuals/physics and broadcast the event.
-	// LastKillerActor is supplied directly as a parameter, so it is always valid
-	// here regardless of when the Replicated property arrives.
-	bIsDead = true;
-	LastKillerActor = KillerActor;
-
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-	if (GetCharacterMovement())
-	{
-		GetCharacterMovement()->DisableMovement();
-	}
-
-	PlayDeathAnimation();
-	OnDeathEvent.Broadcast(this, KillerActor);
-}
-
 void APHBaseCharacter::HandleHealthChanged(const FOnAttributeChangeData& Data)
 {
 	(void)Data;
@@ -641,21 +521,6 @@ void APHBaseCharacter::HandleHealthChanged(const FOnAttributeChangeData& Data)
 	}
 }
 
-void APHBaseCharacter::PlayDeathAnimation()
-{
-	if (DeathMontage)
-	{
-		PlayAnimMontage(DeathMontage);
-	}
-}
-
-void APHBaseCharacter::PlayHitReactAnimation()
-{
-	if (HitReactMontage)
-	{
-		PlayAnimMontage(HitReactMontage);
-	}
-}
 
 /* ═══════════════════════════════════════════════════════════════════════ */
 /* ABILITIES */
@@ -760,36 +625,4 @@ void APHBaseCharacter::RemoveAllAbilities()
 	GrantedAbilityHandles.Empty();
 }
 
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* TEAM & TARGETING */
-/* ═══════════════════════════════════════════════════════════════════════ */
-
-bool APHBaseCharacter::IsSameTeam(const APHBaseCharacter* OtherCharacter) const
-{
-	if (!OtherCharacter)
-	{
-		return false;
-	}
-
-	return TeamID == OtherCharacter->TeamID;
-}
-
-bool APHBaseCharacter::IsHostile(const APHBaseCharacter* OtherCharacter) const
-{
-	if (!OtherCharacter || OtherCharacter == this)
-	{
-		return false;
-	}
-
-	// Example override
-	if (CombatAffiliation.Faction == EFaction::PlayerKillers ||
-		OtherCharacter->GetCombatAffiliation().Faction == EFaction::PlayerKillers)
-	{
-		return true;
-	}
-
-	// TODO: temporary hostility / guard aggro checks here
-
-	return TeamID != OtherCharacter->TeamID;
-}
 

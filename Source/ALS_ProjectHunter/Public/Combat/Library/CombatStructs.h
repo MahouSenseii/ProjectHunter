@@ -385,6 +385,9 @@ struct ALS_PROJECTHUNTER_API FCombatResolveResult
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	float TotalDamageTaken = 0.f;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
+	float HealthAfterHit = 0.f;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	bool bKilledTarget = false;

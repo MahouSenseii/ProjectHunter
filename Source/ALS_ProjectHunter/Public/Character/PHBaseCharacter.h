@@ -53,17 +53,11 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void SprintAction_Implementation(bool bValue) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void OnRep_Controller() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	virtual void SprintAction_Implementation(bool bValue) override;
-	UPROPERTY(BlueprintAssignable, Category="Combat")
-	FOnCombatAffiliationChanged OnCombatAffiliationChanged;
-
-	UPROPERTY(BlueprintAssignable, Category="Combat")
-	FOnDeath OnDeathEvent;
-
+	
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* CORE COMPONENTS (Shared by Players and NPCs) */
 	/* ═══════════════════════════════════════════════════════════════════════ */
@@ -215,10 +209,6 @@ public:
 	/* CHARACTER INFO */
 	/* ═══════════════════════════════════════════════════════════════════════ */
 
-	/** Character display name */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Character")
-	FText CharacterName;
-
 	/** Character level (cached from ProgressionManager for convenience) */
 	UPROPERTY(BlueprintReadOnly, Category = "Character")
 	int32 CachedLevel = 1;
@@ -231,11 +221,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Character")
 	virtual bool IsNPC() const { return false; }
 	
-	UFUNCTION(BlueprintPure, Category = "Character")
-	FCombatAffiliation GetCombatAffiliation() const { return CombatAffiliation; }
-
-	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Character")
-	void SetCombatAffiliation(const FCombatAffiliation& NewAffiliation);
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* PROGRESSION (Shared System) */
@@ -257,16 +242,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Progression", BlueprintAuthorityOnly)
 	void AwardExperienceFromKill(APHBaseCharacter* KilledCharacter);
 
-	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* COMBAT & HEALTH */
-	/* ═══════════════════════════════════════════════════════════════════════ */
-
-	UPROPERTY(ReplicatedUsing=OnRep_IsDead, BlueprintReadOnly, Category="Combat")
-	bool bIsDead = false;
-
-	UFUNCTION()
-	void OnRep_IsDead();
-
 	/** Get current health (delegates to StatsManager) */
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	float GetHealth() const;
@@ -278,21 +253,7 @@ public:
 	/** Get health percent (delegates to StatsManager) */
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	float GetHealthPercent() const;
-
-	/** Called when this character dies. Server-authoritative — clients receive
-	 *  death state via Multicast_NotifyDeath. */
-	UFUNCTION(BlueprintNativeEvent, BlueprintAuthorityOnly, Category = "Combat")
-	void OnDeath(AController* Killer, AActor* DamageCauser);
-	virtual void OnDeath_Implementation(AController* Killer, AActor* DamageCauser);
-
-	/**
-	 * Reliable multicast RPC to deliver death state atomically to all clients.
-	 * Called server-side from OnDeath_Implementation — guarantees bIsDead and
-	 * LastKillerActor arrive in the same RPC payload, eliminating the replication
-	 * race between those two properties (I-05).
-	 */
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_NotifyDeath(AActor* KillerActor);
+	
 
 	/** 
 	 * Called when health changes
@@ -323,39 +284,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 	void RemoveAllAbilities();
-
-	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* TEAM & TARGETING */
-	/* ═══════════════════════════════════════════════════════════════════════ */
-
-	/** Team ID (for friendly fire, targeting, etc.) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Team")
-	uint8 TeamID = 0;
-
-	UFUNCTION(BlueprintPure, Category = "Team")
-	uint8 GetTeamID() const { return TeamID; }
-
-	UFUNCTION(BlueprintPure, Category = "Team")
-	bool IsSameTeam(const APHBaseCharacter* OtherCharacter) const;
-
-	UFUNCTION(BlueprintPure, Category = "Team")
-	bool IsHostile(const APHBaseCharacter* OtherCharacter) const;
-
-	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* VISUAL & ANIMATION */
-	/* ═══════════════════════════════════════════════════════════════════════ */
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
-	TObjectPtr<UAnimMontage> DeathMontage;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
-	TObjectPtr<UAnimMontage> HitReactMontage;
-
-	UFUNCTION(BlueprintCallable, Category = "Animation")
-	void PlayDeathAnimation();
-
-	UFUNCTION(BlueprintCallable, Category = "Animation")
-	void PlayHitReactAnimation();
+	
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* INITIALIZATION (public so MobPoolSubsystem can reinitialize recycled actors) */
@@ -369,19 +298,10 @@ protected:
 	virtual void BindAttributeDelegates();
 	virtual void OnAbilitySystemInitialized();
 	bool EnsureAttributeSetRegisteredWithAbilitySystem();
-	
-	UPROPERTY(Replicated)
-	TObjectPtr<AActor> LastKillerActor = nullptr;
 
 	UPROPERTY()
 	bool bAbilitySystemInitialized = false;
 	
-	UPROPERTY(ReplicatedUsing=OnRep_CombatAffiliation)
-	FCombatAffiliation CombatAffiliation;
-	
-	UFUNCTION()
-	void OnRep_CombatAffiliation(FCombatAffiliation OldAffiliation);
-
 	UPROPERTY()
 	TArray<FGameplayAbilitySpecHandle> GrantedAbilityHandles;
 

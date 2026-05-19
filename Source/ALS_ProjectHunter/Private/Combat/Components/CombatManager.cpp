@@ -420,7 +420,7 @@ bool UCombatManager::ApplyHit(AActor* AttackerActor, AActor* DefenderActor,
 		EditContext->HitPacket = EffectiveHitPacket;
 
 		OnEditIncomingHitPacket.Broadcast(EditContext);
-
+		
 		if (!EditContext->bApplyHit)
 		{
 			UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHit rejected by incoming packet edit. Attacker=%s Defender=%s"),
@@ -485,6 +485,8 @@ bool UCombatManager::ApplyHit(AActor* AttackerActor, AActor* DefenderActor,
 	OutResult.bKilledTarget = DefenderAttributes->GetHealth() <= 0.f;
 	ApplyOnHitEffects(AttackerActor, DefenderActor, OutResult, AttackerASC, AttackerAttributes);
 
+	OutResult.HealthAfterHit = DefenderAttributes->GetHealth();
+	
 	UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHit completed. Attacker=%s Defender=%s %s"),
 		*GetNameSafe(AttackerActor),
 		*GetNameSafe(DefenderActor),
@@ -635,15 +637,6 @@ const UHunterAttributeSet* UCombatManager::GetHunterAttributeSetFromActor(const 
 	const UHunterAttributeSet* AttributeSet = ASC->GetSet<UHunterAttributeSet>();
 	if (!AttributeSet)
 	{
-		/*if (const APHBaseCharacter* Character = Cast<APHBaseCharacter>(Actor))
-		{
-			AttributeSet = Character->GetAttributeSet();
-			if (AttributeSet)
-			{
-				UE_LOG(LogCombatManager, Warning, TEXT("Actor %s has an ASC but no registered UHunterAttributeSet; using PHBaseCharacter AttributeSet fallback. The ASC registration path should still be fixed."), *GetNameSafe(Actor));
-				return AttributeSet;
-			}
-		}*/
 
 		UE_LOG(LogCombatManager, Warning, TEXT("Actor %s has an ASC but no registered UHunterAttributeSet."), *GetNameSafe(Actor));
 	}

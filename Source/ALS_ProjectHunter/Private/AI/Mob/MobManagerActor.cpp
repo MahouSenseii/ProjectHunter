@@ -19,6 +19,7 @@
 #include "Components/CapsuleComponent.h"
 #include "BrainComponent.h"
 #include "AIController.h"
+#include "Character/PHBaseCharacter.h"
 #include "GameFramework/PlayerController.h"
 
 DEFINE_LOG_CATEGORY(LogMobManager);
@@ -261,11 +262,8 @@ int32 AMobManagerActor::GetActiveCount() const
 	int32 Count = 0;
 	for (const TWeakObjectPtr<APHBaseCharacter>& Weak : ActiveMobs)
 	{
-		// Check both pointer validity AND alive state.
-		// A mob that died (bIsDead=true) but hasn't been GC'd yet still has
-		// a valid weak pointer — without the bIsDead check, the counter
-		// stays inflated until CleanActiveMobs happens to run.
-		if (Weak.IsValid() && !Weak->bIsDead) { ++Count; }
+
+		if (Weak.IsValid()) { ++Count; }
 	}
 	return Count;
 }
@@ -276,7 +274,7 @@ TArray<APHBaseCharacter*> AMobManagerActor::GetActiveMobsArray() const
 	Result.Reserve(ActiveMobs.Num());
 	for (const TWeakObjectPtr<APHBaseCharacter>& Weak : ActiveMobs)
 	{
-		if (Weak.IsValid() && !Weak->bIsDead)
+		if (Weak.IsValid())
 		{
 			Result.Add(Weak.Get());
 		}
@@ -293,7 +291,7 @@ void AMobManagerActor::CleanActiveMobs()
 	// slower over time.
 	ActiveMobs.RemoveAll([](const TWeakObjectPtr<APHBaseCharacter>& Weak)
 	{
-		return !Weak.IsValid() || Weak->bIsDead;
+		return !Weak.IsValid();
 	});
 
 	// Also compact stale recycle timer handles (already-fired timers
@@ -1181,9 +1179,6 @@ void AMobManagerActor::FinalizeSpawn(APHBaseCharacter* Mob, const FVector& Spawn
 	// ── 1. Track first — so OnMobDeathEvent can find and remove it ────────
 	ActiveMobs.Add(TWeakObjectPtr<APHBaseCharacter>(Mob));
 
-	// ── 2. Bind death delegate — so we hear about it immediately ──────────
-	Mob->OnDeathEvent.AddDynamic(this, &AMobManagerActor::OnMobDeathEvent);
-
 	// ── 3. Configure data while the mob is still inert ────────────────────
 	if (Mob->Implements<UMobWanderable>())
 	{
@@ -1565,7 +1560,7 @@ void AMobManagerActor::DrawDebugVisuals() const
 		// GetActiveCount() and GetActiveMobsArray().  The old code only
 		// checked IsValid(), so dead mobs showed debug spheres as if alive,
 		// creating a mismatch between the visual count and the HUD counter.
-		if (!Weak.IsValid() || Weak->bIsDead) { continue; }
+		if (!Weak.IsValid() ) { continue; }
 
 		const FVector MobLoc = Weak->GetActorLocation();
 		DrawDebugSphere(GetWorld(), MobLoc, 30.0f, 6,
