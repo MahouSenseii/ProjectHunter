@@ -1,5 +1,4 @@
 // Character/Component/CharacterSystemCoordinatorComponent.cpp
-// PH-0.3 / PH-0.4 — Character System Coordinator (complete)
 
 #include "Character/Components/CharacterSystemCoordinatorComponent.h"
 
@@ -34,7 +33,6 @@ void UCharacterSystemCoordinatorComponent::BeginPlay()
 
 	if (bWired)
 	{
-		// PH-0.5: Idempotent — never wire twice.
 		// Handles late join, possession churn, and component re-registration.
 		return;
 	}
@@ -59,7 +57,7 @@ void UCharacterSystemCoordinatorComponent::EndPlay(const EEndPlayReason::Type En
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// PH-0.2: SINGLE MANAGER DISCOVERY PASS
+//  SINGLE MANAGER DISCOVERY PASS
 // ═══════════════════════════════════════════════════════════════════════
 
 void UCharacterSystemCoordinatorComponent::CacheManagerReferences()
@@ -87,7 +85,7 @@ void UCharacterSystemCoordinatorComponent::CacheManagerReferences()
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// PH-0.3: CROSS-SYSTEM LISTENER WIRING
+//  CROSS-SYSTEM LISTENER WIRING
 // ═══════════════════════════════════════════════════════════════════════
 
 void UCharacterSystemCoordinatorComponent::BindCrossSystemListeners()
@@ -163,7 +161,6 @@ void UCharacterSystemCoordinatorComponent::HandleEquipmentChanged(
 	EEquipmentSlot Slot, UItemInstance* NewItem, UItemInstance* OldItem)
 {
 	// ── 1. Stats (server-authoritative) ────────────────────────────────────
-	// PH-1.5: Equipment no longer calls StatsManager directly.
 	// The coordinator is the single place stats are applied/removed on equip events.
 	if (StatsManager && EquipmentManager && EquipmentManager->bApplyStatsOnEquip
 		&& GetOwner() && GetOwner()->HasAuthority())
@@ -179,7 +176,6 @@ void UCharacterSystemCoordinatorComponent::HandleEquipmentChanged(
 	}
 
 	// ── 2. Visual / Presentation (cosmetic — runs on all machines) ─────────
-	// PH-1.4: Equipment no longer calls UpdateEquippedWeapon directly.
 	// The presentation component owns all mesh / runtime-actor lifecycle.
 	if (EquipmentPresentation && EquipmentManager && EquipmentManager->bAutoUpdateWeapons)
 	{
