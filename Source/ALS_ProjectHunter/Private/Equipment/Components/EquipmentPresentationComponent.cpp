@@ -1,14 +1,3 @@
-// Character/Component/EquipmentPresentationComponent.cpp
-// PH-1.4 — Equipment Presentation Component (complete)
-//
-// Migrated from UEquipmentManager:
-//   UpdateEquippedWeapon  → HandleEquipmentChanged + AttachItemVisual/DetachItemVisual
-//   SpawnWeaponActor      → SpawnWeaponActor
-//   SpawnWeaponMesh       → SpawnWeaponMesh
-//   CleanupWeapon         → DetachItemVisual
-//   GetSocketContextForSlot → GetSocketContextForSlot (static)
-//   ConvertAttachmentRules  → ConvertAttachmentRules (static)
-
 #include "Equipment/Components/EquipmentPresentationComponent.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
@@ -22,14 +11,9 @@
 
 DEFINE_LOG_CATEGORY(LogEquipmentPresentation);
 
-// ═══════════════════════════════════════════════════════════════════════
-// LIFECYCLE
-// ═══════════════════════════════════════════════════════════════════════
-
 UEquipmentPresentationComponent::UEquipmentPresentationComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	// Presentation is purely cosmetic; no replication needed.
 	SetIsReplicatedByDefault(false);
 }
 
@@ -37,7 +21,6 @@ void UEquipmentPresentationComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Cache the character mesh once. AttachItemVisual re-resolves if null.
 	if (const ACharacter* Character = Cast<ACharacter>(GetOwner()))
 	{
 		CharacterMesh = Character->GetMesh();
@@ -46,7 +29,6 @@ void UEquipmentPresentationComponent::BeginPlay()
 
 void UEquipmentPresentationComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// Destroy all spawned actors.
 	for (auto& Pair : SpawnedActors)
 	{
 		if (AEquippedItemRuntimeActor* Actor = Pair.Value)
@@ -56,7 +38,6 @@ void UEquipmentPresentationComponent::EndPlay(const EEndPlayReason::Type EndPlay
 	}
 	SpawnedActors.Reset();
 
-	// Destroy all spawned mesh components.
 	for (auto& Pair : SpawnedMeshComponents)
 	{
 		if (USceneComponent* Component = Pair.Value)
@@ -69,10 +50,6 @@ void UEquipmentPresentationComponent::EndPlay(const EEndPlayReason::Type EndPlay
 	Super::EndPlay(EndPlayReason);
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// LISTENER ENTRYPOINT
-// ═══════════════════════════════════════════════════════════════════════
-
 void UEquipmentPresentationComponent::HandleEquipmentChanged(EEquipmentSlot Slot, UItemInstance* NewItem)
 {
 	if (Slot == EEquipmentSlot::ES_None)
@@ -80,7 +57,6 @@ void UEquipmentPresentationComponent::HandleEquipmentChanged(EEquipmentSlot Slot
 		return;
 	}
 
-	// Always tear down the previous visual first.
 	DetachItemVisual(Slot);
 
 	if (NewItem != nullptr)
@@ -88,13 +64,8 @@ void UEquipmentPresentationComponent::HandleEquipmentChanged(EEquipmentSlot Slot
 		AttachItemVisual(Slot, NewItem);
 	}
 
-	// Notify downstream visual systems (FX, anim, moveset cosmetics).
 	OnWeaponUpdated.Broadcast(Slot, NewItem);
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// ACCESSOR
-// ═══════════════════════════════════════════════════════════════════════
 
 AEquippedItemRuntimeActor* UEquipmentPresentationComponent::GetActiveRuntimeItemActor(EEquipmentSlot Slot) const
 {
@@ -105,10 +76,6 @@ AEquippedItemRuntimeActor* UEquipmentPresentationComponent::GetActiveRuntimeItem
 	return nullptr;
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// VISUAL LIFECYCLE
-// ═══════════════════════════════════════════════════════════════════════
-
 void UEquipmentPresentationComponent::AttachItemVisual(EEquipmentSlot Slot, UItemInstance* Item)
 {
 	if (!Item)
@@ -116,7 +83,6 @@ void UEquipmentPresentationComponent::AttachItemVisual(EEquipmentSlot Slot, UIte
 		return;
 	}
 
-	// Lazily resolve mesh if BeginPlay ran before possession was complete.
 	if (!CharacterMesh)
 	{
 		if (const ACharacter* Character = Cast<ACharacter>(GetOwner()))
@@ -166,7 +132,6 @@ void UEquipmentPresentationComponent::AttachItemVisual(EEquipmentSlot Slot, UIte
 
 void UEquipmentPresentationComponent::DetachItemVisual(EEquipmentSlot Slot)
 {
-	// Destroy a runtime actor if present.
 	if (TObjectPtr<AEquippedItemRuntimeActor>* FoundActor = SpawnedActors.Find(Slot))
 	{
 		if (AEquippedItemRuntimeActor* Actor = FoundActor->Get())
@@ -179,7 +144,6 @@ void UEquipmentPresentationComponent::DetachItemVisual(EEquipmentSlot Slot)
 		SpawnedActors.Remove(Slot);
 	}
 
-	// Destroy mesh component if present.
 	if (TObjectPtr<USceneComponent>* FoundMesh = SpawnedMeshComponents.Find(Slot))
 	{
 		if (USceneComponent* Mesh = FoundMesh->Get())
@@ -192,10 +156,6 @@ void UEquipmentPresentationComponent::DetachItemVisual(EEquipmentSlot Slot)
 		SpawnedMeshComponents.Remove(Slot);
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// SPAWN HELPERS
-// ═══════════════════════════════════════════════════════════════════════
 
 void UEquipmentPresentationComponent::SpawnWeaponActor(EEquipmentSlot Slot, UItemInstance* Item,
                                                        const FItemBase* BaseData, FName SocketName)
@@ -233,16 +193,10 @@ void UEquipmentPresentationComponent::SpawnWeaponActor(EEquipmentSlot Slot, UIte
 		return;
 	}
 
-	// Attach to the character mesh socket.
 	const FAttachmentTransformRules AttachRules = ConvertAttachmentRules(BaseData->AttachmentRules);
 	WeaponActor->AttachToComponent(CharacterMesh, AttachRules, SocketName);
-
-	// Initialize the runtime actor with item data.
 	WeaponActor->InitializeFromItem(Item, OwnerPawn, Slot);
-
-	// Store for later retrieval and cleanup.
 	SpawnedActors.Add(Slot, WeaponActor);
-
 	UE_LOG(LogEquipmentPresentation, Log,
 		TEXT("UEquipmentPresentationComponent: Spawned runtime actor '%s' on socket '%s'."),
 		*GetNameSafe(WeaponActor), *SocketName.ToString());
@@ -304,10 +258,6 @@ void UEquipmentPresentationComponent::SpawnWeaponMesh(EEquipmentSlot Slot, UItem
 	}
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// PURE HELPERS
-// ═══════════════════════════════════════════════════════════════════════
-
 FName UEquipmentPresentationComponent::GetSocketContextForSlot(EEquipmentSlot Slot)
 {
 	switch (Slot)
@@ -337,7 +287,6 @@ FName UEquipmentPresentationComponent::ResolveSocketForSlot(EEquipmentSlot Slot,
 		}
 	}
 
-	// Fall back to the item's default attachment socket.
 	return BaseData->AttachmentSocket;
 }
 

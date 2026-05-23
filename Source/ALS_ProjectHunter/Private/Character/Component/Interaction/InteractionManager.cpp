@@ -1,5 +1,3 @@
-// Character/Component/Interaction/InteractionManager.cpp
-
 #include "Character/Component/Interaction/InteractionManager.h"
 
 #include "EngineUtils.h"
@@ -70,18 +68,13 @@ namespace InteractionManagerPrivate
 	}
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// LIFECYCLE
-// ═══════════════════════════════════════════════════════════════════════
-
 UInteractionManager::UInteractionManager()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	SetIsReplicatedByDefault(true);  // Required for Server RPCs on this component
+	SetIsReplicatedByDefault(true);
 
 	CurrentGroundItemID = INDEX_NONE;
 	bSystemInitialized  = false;
-	// ActiveInteraction is zero-initialised by its own default constructor.
 }
 
 void UInteractionManager::BeginPlay()
@@ -146,12 +139,10 @@ void UInteractionManager::TickComponent(
 		UpdateActiveInteraction(DeltaTime);
 	}
 
-	// Keep the world-space widget anchored above the focused ground item every frame
 	if (CurrentGroundItemID != INDEX_NONE)
 	{
 		WidgetPresenter.TickGroundItemWorldWidget(CurrentGroundItemID);
 
-		// Also keep the screen-space HUD widget projected to the correct screen position
 		if (WidgetPresenter.IsHUDWidgetShown())
 		{
 			WidgetPresenter.PositionWidgetAtGroundItem(CurrentGroundItemID);
@@ -164,13 +155,11 @@ void UInteractionManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	ResetActiveInteractionState(true);
 	bInteractInputHeld = false;
 
-	// Clear all timers
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(InteractionCheckTimer);
 	}
 
-	// End focus on current interactable
 	if (UObject* CurrentInteractableTarget = GetCurrentInteractableObject())
 	{
 		IInteractable::Execute_OnEndFocus(CurrentInteractableTarget, GetOwner());
@@ -180,15 +169,10 @@ void UInteractionManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	CurrentInteractableObject.Reset();
 	CurrentGroundItemID = INDEX_NONE;
 
-	// Destroy widget instances owned by the presenter
 	WidgetPresenter.Shutdown();
 
 	Super::EndPlay(EndPlayReason);
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// PRIMARY INTERFACE
-// ═══════════════════════════════════════════════════════════════════════
 
 void UInteractionManager::OnInteractPressed()
 {
@@ -199,7 +183,6 @@ void UInteractionManager::OnInteractPressed()
 
 	bInteractInputHeld = true;
 
-	// Resolve focus right before deciding which interaction path to enter.
 	const UWorld* World = GetWorld();
 	const float CurrentTimeSeconds = World ? World->GetTimeSeconds() : 0.0f;
 	const bool bHasRecentTrace = LastInteractionCheckTimeSeconds >= 0.0f
@@ -229,8 +212,6 @@ void UInteractionManager::OnInteractPressed()
 				return;
 
 			case EInteractionType::IT_Hold:
-				// IT_Hold calls StartHoldPhaseIfNeeded() immediately because TapThresholdSeconds
-				// is 0 for pure holds — hold phase fires synchronously on press, before first tick.
 				BeginActorHoldInteraction(FocusedInteractable, false);
 				StartHoldPhaseIfNeeded();
 				return;
@@ -271,7 +252,6 @@ void UInteractionManager::OnInteractReleased()
 	switch (ActiveInteraction.Mode)
 	{
 		case EManagedInteractionMode::ActorMash:
-			// Mash progress is press-based — releasing does not end the sequence.
 			return;
 
 		case EManagedInteractionMode::ActorContinuous:
@@ -348,7 +328,6 @@ void UInteractionManager::CheckForInteractables()
 		LastInteractionCheckTimeSeconds = World->GetTimeSeconds();
 	}
 
-	// Camera location for debug visualization
 	FVector CameraLocation;
 	FRotator CameraRotation;
 	TraceManager.GetCameraViewPoint(CameraLocation, CameraRotation);
@@ -358,10 +337,8 @@ void UInteractionManager::CheckForInteractables()
 		DebugManager.DrawInteractionRange(CameraLocation, TraceManager.InteractionDistance);
 	}
 
-	// PRIORITY 1: actor-based interactables
 	TScriptInterface<IInteractable> NewInteractable = TraceManager.TraceForActorInteractable();
 
-	// PRIORITY 2: ground items (preferred: direct ISM trace; fallback: proximity)
 	int32 NewGroundItemID = INDEX_NONE;
 	if (!NewInteractable.GetInterface())
 	{
@@ -373,25 +350,21 @@ void UInteractionManager::CheckForInteractables()
 		}
 	}
 
-	// Update actor interactable focus
 	if (GetCurrentInteractableObject() != NewInteractable.GetObject())
 	{
 		UpdateFocusState(NewInteractable);
 	}
 
-	// Update ground item focus
 	if (NewGroundItemID != CurrentGroundItemID)
 	{
 		UpdateGroundItemFocus(NewGroundItemID);
 	}
 
-	// Refresh prompt widget when not in an active interaction
 	if (ShouldUpdatePromptWidgetFromFocus())
 	{
 		RefreshFocusedWidget();
 	}
 
-	// Debug visualization
 	if (bDebugEnabled)
 	{
 		UInteractableManager* InteractableComp = GetCurrentInteractable();
@@ -419,10 +392,6 @@ void UInteractionManager::CheckForInteractables()
 	}
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// GETTERS
-// ═══════════════════════════════════════════════════════════════════════
-
 UInteractableManager* UInteractionManager::GetCurrentInteractable() const
 {
 	if (UObject* CurrentInteractableTarget = GetCurrentInteractableObject())
@@ -444,10 +413,6 @@ bool UInteractionManager::IsHoldingInteraction() const
 		|| ActiveInteraction.Mode == EManagedInteractionMode::ActorTapOrHold
 		|| ActiveInteraction.Mode == EManagedInteractionMode::ActorContinuous;
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// INITIALIZATION
-// ═══════════════════════════════════════════════════════════════════════
 
 void UInteractionManager::InitializeInteractionSystem()
 {
@@ -508,7 +473,6 @@ void UInteractionManager::InitializeSubManagers()
 
 void UInteractionManager::InitializeWidget()
 {
-	// Delegate entirely to WidgetPresenter (PH-4.3)
 	WidgetPresenter.Initialize(this, GetWorld());
 }
 
@@ -518,10 +482,6 @@ void UInteractionManager::ApplyQuickSettings()
 		? EInteractionDebugMode::Full
 		: EInteractionDebugMode::None;
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// FOCUS MANAGEMENT
-// ═══════════════════════════════════════════════════════════════════════
 
 void UInteractionManager::UpdateFocusState(TScriptInterface<IInteractable> NewInteractable)
 {
@@ -567,10 +527,6 @@ void UInteractionManager::UpdateGroundItemFocus(int32 NewGroundItemID)
 		OnGroundItemFocusChanged.Broadcast(NewGroundItemID);
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// INTERACTION ROUTING
-// ═══════════════════════════════════════════════════════════════════════
 
 bool UInteractionManager::InteractWithActor(AActor* TargetActor)
 {
@@ -631,12 +587,11 @@ bool UInteractionManager::PickupGroundItemToInventory(int32 ItemID)
 	if (const AActor* Owner = GetOwner(); Owner && !Owner->HasAuthority())
 	{
 		Server_PickupToInventory(ItemID, Owner->GetActorLocation());
-		// Optimistically clear focus so the UI feels responsive
 		if (CurrentGroundItemID == ItemID)
 		{
 			UpdateGroundItemFocus(INDEX_NONE);
 		}
-		return true; // Assume success — server validates
+		return true;
 	}
 
 	const bool bSuccess = PickupManager.PickupToInventory(ItemID);
@@ -661,7 +616,6 @@ bool UInteractionManager::PickupGroundItemAndEquip(int32 ItemID)
 		return false;
 	}
 
-	// OPT-RPC: Route through Server RPC when not on authority
 	AActor* Owner = GetOwner();
 	if (Owner && !Owner->HasAuthority())
 	{
@@ -687,10 +641,6 @@ bool UInteractionManager::PickupGroundItemAndEquip(int32 ItemID)
 
 	return bSuccess;
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// ACTIVE INTERACTION STATE MACHINE
-// ═══════════════════════════════════════════════════════════════════════
 
 void UInteractionManager::BeginGroundTapOrHoldInteraction(int32 GroundItemID)
 {
@@ -1117,8 +1067,6 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 
 void UInteractionManager::RefreshFocusedWidget()
 {
-	// Always reset the ground item world widget first — it will be re-shown by
-	// UpdateForGroundItem if a ground item is still focused.
 	WidgetPresenter.HideGroundItemWorldWidget();
 
 	if (HasValidCurrentInteractable())
@@ -1134,10 +1082,6 @@ void UInteractionManager::RefreshFocusedWidget()
 		WidgetPresenter.HideAll();
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// STATE MACHINE HELPERS
-// ═══════════════════════════════════════════════════════════════════════
 
 AActor* UInteractionManager::ResolveInteractionActor(const TScriptInterface<IInteractable>& Interactable) const
 {
@@ -1220,10 +1164,6 @@ bool UInteractionManager::ShouldUpdatePromptWidgetFromFocus() const
 	return !HasActiveInteraction();
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// SERVER RPCs
-// ═══════════════════════════════════════════════════════════════════════
-
 void UInteractionManager::Server_PickupToInventory_Implementation(
 	int32 ItemID, FVector ClientLocation)
 {
@@ -1233,8 +1173,7 @@ void UInteractionManager::Server_PickupToInventory_Implementation(
 		return;
 	}
 
-	// Basic proximity validation — prevents clients picking up items across the map.
-	constexpr float MaxPickupDistSq = 800.f * 800.f; // ~8 m tolerance
+	constexpr float MaxPickupDistSq = 800.f * 800.f;
 	if (AActor* Owner = GetOwner())
 	{
 		const float DistSq = FVector::DistSquared(Owner->GetActorLocation(), ClientLocation);

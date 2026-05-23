@@ -1,4 +1,3 @@
-// PHGameState.cpp
 #include "GameModes/PHGameState.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
@@ -19,10 +18,6 @@ void APHGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(APHGameState, WorldTier);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Match phase
-// ─────────────────────────────────────────────────────────────────────────────
-
 void APHGameState::SetMatchPhase(EPHMatchPhase NewPhase)
 {
 	if (MatchPhase == NewPhase)
@@ -33,7 +28,6 @@ void APHGameState::SetMatchPhase(EPHMatchPhase NewPhase)
 	const EPHMatchPhase OldPhase = MatchPhase;
 	MatchPhase = NewPhase;
 
-	// Record start time when transitioning to InProgress
 	if (NewPhase == EPHMatchPhase::InProgress)
 	{
 		if (UWorld* World = GetWorld())
@@ -54,10 +48,6 @@ void APHGameState::OnRep_MatchPhase()
 	OnMatchPhaseChanged.Broadcast(MatchPhase);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Timing
-// ─────────────────────────────────────────────────────────────────────────────
-
 float APHGameState::GetMatchElapsedTime() const
 {
 	if (MatchPhase == EPHMatchPhase::WaitingToStart || MatchStartServerTime <= 0.f)
@@ -71,10 +61,6 @@ float APHGameState::GetMatchElapsedTime() const
 	}
 	return 0.f;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Stats
-// ─────────────────────────────────────────────────────────────────────────────
 
 void APHGameState::IncrementMobKills(int32 Count)
 {

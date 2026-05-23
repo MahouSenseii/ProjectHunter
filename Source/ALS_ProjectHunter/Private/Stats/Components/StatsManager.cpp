@@ -1,5 +1,3 @@
-// Character/Component/StatsManager.cpp
-
 #include "Stats/Components/StatsManager.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "AbilitySystem/HunterAttributeSet.h"
@@ -21,8 +19,7 @@ UStatsManager::UStatsManager()
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 #endif
-	// Stats are mutated server-side only; attribute replication is handled by the
-	// AttributeSet/ASC, not by this manager component itself.
+	// Attribute replication is handled by the AttributeSet/ASC, not this component.
 	SetIsReplicatedByDefault(false);
 }
 
@@ -60,9 +57,8 @@ void UStatsManager::NotifyAbilitySystemReady()
 
 void UStatsManager::ResetStatsInitialization()
 {
-	// Clear the one-time guard so the next NotifyAbilitySystemReady() call
-	// fully re-runs InitializeFromDataAsset.  Required for pool-recycled mobs
-	// whose first life already set bHasInitializedConfiguredStats = true.
+	// Required for pool-recycled mobs whose first life already set this flag,
+	// which would otherwise short-circuit the next NotifyAbilitySystemReady() call.
 	bHasInitializedConfiguredStats = false;
 }
 
@@ -128,10 +124,6 @@ bool UStatsManager::TryInitializeConfiguredStats(const TCHAR* Context)
 {
 	return FStatsInitializer::TryInitializeConfiguredStats(*this, Context);
 }
-
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* EQUIPMENT INTEGRATION                                                   */
-/* ═══════════════════════════════════════════════════════════════════════ */
 
 void UStatsManager::ApplyEquipmentStats(UItemInstance* Item)
 {
@@ -274,10 +266,6 @@ bool UStatsManager::ApplyStatModifier(UGameplayEffect* Effect, const FPHAttribut
 	return FEquipmentStatsApplier::ApplyStatModifier(Effect, Stat, Attribute);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* INTERNAL HELPERS                                                        */
-/* ═══════════════════════════════════════════════════════════════════════ */
-
 UHunterAttributeSet* UStatsManager::GetAttributeSet() const
 {
 	return FStatsAttributeResolver::GetAttributeSet(*this);
@@ -287,10 +275,6 @@ UAbilitySystemComponent* UStatsManager::GetAbilitySystemComponent() const
 {
 	return FStatsAttributeResolver::GetAbilitySystemComponent(*this);
 }
-
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* PRIMARY ATTRIBUTES (7)                                                  */
-/* ═══════════════════════════════════════════════════════════════════════ */
 
 bool UStatsManager::SetNumericAttributeByName(FName AttributeName, float Value, bool bAutoInitializeCurrentFromMax) const
 {
@@ -364,10 +348,6 @@ float UStatsManager::GetCovenant() const
 	return AttrSet ? AttrSet->GetCovenant() : 0.0f;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* SECONDARY/DERIVED ATTRIBUTES                                            */
-/* ═══════════════════════════════════════════════════════════════════════ */
-
 float UStatsManager::GetMagicFind() const
 {
 	UHunterAttributeSet* AttrSet = GetAttributeSet();
@@ -376,13 +356,6 @@ float UStatsManager::GetMagicFind() const
 		return 0.0f;
 	}
 
-	// FIX: Added GetMagicFind() for loot system integration
-	// If MagicFind attribute exists in your AttributeSet, use it directly:
-	// return AttrSet->GetMagicFind();
-	
-	// Otherwise, derive from Luck (common ARPG formula)
-	// MagicFind = Luck * 0.5 (each point of luck gives 0.5% magic find)
-	// You may want to add a dedicated MagicFind attribute to HunterAttributeSet
 	return GetLuck() * 0.5f;
 }
 
@@ -394,7 +367,6 @@ float UStatsManager::GetItemFind() const
 		return 0.0f;
 	}
 
-	// Similar to MagicFind - derive from Luck or use dedicated attribute
 	return GetLuck() * 0.25f;
 }
 
@@ -406,7 +378,6 @@ float UStatsManager::GetGoldFind() const
 		return 0.0f;
 	}
 
-	// Derive from Luck
 	return GetLuck() * 0.75f;
 }
 
@@ -423,10 +394,6 @@ float UStatsManager::GetExperienceBonus() const
 	const float PenaltyMultiplier = FMath::Max(AttrSet->GetXPPenalty(), 0.0f);
 	return (IncreasedMultiplier * MoreMultiplier * PenaltyMultiplier - 1.0f) * 100.0f;
 }
-
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* C ATTRIBUTES                                                        */
-/* ═══════════════════════════════════════════════════════════════════════ */
 
 float UStatsManager::GetHealth() const
 {
@@ -486,10 +453,6 @@ float UStatsManager::GetStaminaPercent() const
 }
 
 
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* GENERIC ATTRIBUTE ACCESS                                                */
-/* ═══════════════════════════════════════════════════════════════════════ */
-
 float UStatsManager::GetAttributeByName(FName AttributeName) const
 {
 	FGameplayAttribute Attribute;
@@ -503,8 +466,6 @@ float UStatsManager::GetAttributeByName(FName AttributeName) const
 
 float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 {
-	// Direct accessor path — no string lookup, no FGameplayAttribute resolution.
-	// Calls the typed getter on UHunterAttributeSet directly for maximum speed.
 	const UHunterAttributeSet* Attrs = GetAttributeSet();
 	if (!Attrs)
 	{
@@ -516,7 +477,6 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 
 	switch (AttributeType)
 	{
-	// ── Primary ───────────────────────────────────────────────────────────────
 	case EHunterAttribute::Strength:             return Attrs->GetStrength();
 	case EHunterAttribute::Intelligence:         return Attrs->GetIntelligence();
 	case EHunterAttribute::Dexterity:            return Attrs->GetDexterity();
@@ -524,17 +484,11 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::Affliction:           return Attrs->GetAffliction();
 	case EHunterAttribute::Luck:                 return Attrs->GetLuck();
 	case EHunterAttribute::Covenant:             return Attrs->GetCovenant();
-
-	// ── Progression ───────────────────────────────────────────────────────────
 	case EHunterAttribute::PlayerLevel:          return Attrs->GetPlayerLevel();
-
-	// ── Experience ────────────────────────────────────────────────────────────
 	case EHunterAttribute::GlobalXPGain:         return Attrs->GetGlobalXPGain();
 	case EHunterAttribute::LocalXPGain:          return Attrs->GetLocalXPGain();
 	case EHunterAttribute::XPGainMultiplier:     return Attrs->GetXPGainMultiplier();
 	case EHunterAttribute::XPPenalty:            return Attrs->GetXPPenalty();
-
-	// ── Health ────────────────────────────────────────────────────────────────
 	case EHunterAttribute::Health:                      return Attrs->GetHealth();
 	case EHunterAttribute::MaxHealth:                   return Attrs->GetMaxHealth();
 	case EHunterAttribute::MaxEffectiveHealth:          return Attrs->GetMaxEffectiveHealth();
@@ -546,8 +500,6 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::MaxReservedHealth:           return Attrs->GetMaxReservedHealth();
 	case EHunterAttribute::FlatReservedHealth:          return Attrs->GetFlatReservedHealth();
 	case EHunterAttribute::PercentageReservedHealth:    return Attrs->GetPercentageReservedHealth();
-
-	// ── Stamina ───────────────────────────────────────────────────────────────
 	case EHunterAttribute::Stamina:                     return Attrs->GetStamina();
 	case EHunterAttribute::MaxStamina:                  return Attrs->GetMaxStamina();
 	case EHunterAttribute::MaxEffectiveStamina:         return Attrs->GetMaxEffectiveStamina();
@@ -561,8 +513,6 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::MaxReservedStamina:          return Attrs->GetMaxReservedStamina();
 	case EHunterAttribute::FlatReservedStamina:         return Attrs->GetFlatReservedStamina();
 	case EHunterAttribute::PercentageReservedStamina:   return Attrs->GetPercentageReservedStamina();
-
-	// ── Mana ──────────────────────────────────────────────────────────────────
 	case EHunterAttribute::Mana:                        return Attrs->GetMana();
 	case EHunterAttribute::MaxMana:                     return Attrs->GetMaxMana();
 	case EHunterAttribute::MaxEffectiveMana:            return Attrs->GetMaxEffectiveMana();
@@ -574,8 +524,6 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::MaxReservedMana:             return Attrs->GetMaxReservedMana();
 	case EHunterAttribute::FlatReservedMana:            return Attrs->GetFlatReservedMana();
 	case EHunterAttribute::PercentageReservedMana:      return Attrs->GetPercentageReservedMana();
-
-	// ── Arcane Shield ─────────────────────────────────────────────────────────
 	case EHunterAttribute::ArcaneShield:                    return Attrs->GetArcaneShield();
 	case EHunterAttribute::MaxArcaneShield:                 return Attrs->GetMaxArcaneShield();
 	case EHunterAttribute::MaxEffectiveArcaneShield:        return Attrs->GetMaxEffectiveArcaneShield();
@@ -587,60 +535,42 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::MaxReservedArcaneShield:         return Attrs->GetMaxReservedArcaneShield();
 	case EHunterAttribute::FlatReservedArcaneShield:        return Attrs->GetFlatReservedArcaneShield();
 	case EHunterAttribute::PercentageReservedArcaneShield:  return Attrs->GetPercentageReservedArcaneShield();
-
-	// ── Damage — Global ───────────────────────────────────────────────────────
 	case EHunterAttribute::GlobalDamages:           return Attrs->GetGlobalDamages();
 	case EHunterAttribute::GlobalMoreDamage:        return Attrs->GetGlobalMoreDamage();
 	case EHunterAttribute::DamageBonusWhileAtFullHP: return Attrs->GetDamageBonusWhileAtFullHP();
 	case EHunterAttribute::DamageBonusWhileAtLowHP:  return Attrs->GetDamageBonusWhileAtLowHP();
-
-	// ── Damage — Physical ─────────────────────────────────────────────────────
 	case EHunterAttribute::MinPhysicalDamage:       return Attrs->GetMinPhysicalDamage();
 	case EHunterAttribute::MaxPhysicalDamage:       return Attrs->GetMaxPhysicalDamage();
 	case EHunterAttribute::PhysicalFlatDamage:      return Attrs->GetPhysicalFlatDamage();
 	case EHunterAttribute::PhysicalPercentDamage:   return Attrs->GetPhysicalPercentDamage();
 	case EHunterAttribute::PhysicalMoreDamage:      return Attrs->GetPhysicalMoreDamage();
-
-	// ── Damage — Fire ─────────────────────────────────────────────────────────
 	case EHunterAttribute::MinFireDamage:           return Attrs->GetMinFireDamage();
 	case EHunterAttribute::MaxFireDamage:           return Attrs->GetMaxFireDamage();
 	case EHunterAttribute::FireFlatDamage:          return Attrs->GetFireFlatDamage();
 	case EHunterAttribute::FirePercentDamage:       return Attrs->GetFirePercentDamage();
 	case EHunterAttribute::FireMoreDamage:          return Attrs->GetFireMoreDamage();
-
-	// ── Damage — Ice ──────────────────────────────────────────────────────────
 	case EHunterAttribute::MinIceDamage:            return Attrs->GetMinIceDamage();
 	case EHunterAttribute::MaxIceDamage:            return Attrs->GetMaxIceDamage();
 	case EHunterAttribute::IceFlatDamage:           return Attrs->GetIceFlatDamage();
 	case EHunterAttribute::IcePercentDamage:        return Attrs->GetIcePercentDamage();
 	case EHunterAttribute::IceMoreDamage:           return Attrs->GetIceMoreDamage();
-
-	// ── Damage — Lightning ────────────────────────────────────────────────────
 	case EHunterAttribute::MinLightningDamage:      return Attrs->GetMinLightningDamage();
 	case EHunterAttribute::MaxLightningDamage:      return Attrs->GetMaxLightningDamage();
 	case EHunterAttribute::LightningFlatDamage:     return Attrs->GetLightningFlatDamage();
 	case EHunterAttribute::LightningPercentDamage:  return Attrs->GetLightningPercentDamage();
 	case EHunterAttribute::LightningMoreDamage:     return Attrs->GetLightningMoreDamage();
-
-	// ── Damage — Light ────────────────────────────────────────────────────────
 	case EHunterAttribute::MinLightDamage:          return Attrs->GetMinLightDamage();
 	case EHunterAttribute::MaxLightDamage:          return Attrs->GetMaxLightDamage();
 	case EHunterAttribute::LightFlatDamage:         return Attrs->GetLightFlatDamage();
 	case EHunterAttribute::LightPercentDamage:      return Attrs->GetLightPercentDamage();
 	case EHunterAttribute::LightMoreDamage:         return Attrs->GetLightMoreDamage();
-
-	// ── Damage — Corruption ───────────────────────────────────────────────────
 	case EHunterAttribute::MinCorruptionDamage:     return Attrs->GetMinCorruptionDamage();
 	case EHunterAttribute::MaxCorruptionDamage:     return Attrs->GetMaxCorruptionDamage();
 	case EHunterAttribute::CorruptionFlatDamage:    return Attrs->GetCorruptionFlatDamage();
 	case EHunterAttribute::CorruptionPercentDamage: return Attrs->GetCorruptionPercentDamage();
 	case EHunterAttribute::CorruptionMoreDamage:    return Attrs->GetCorruptionMoreDamage();
-
-	// ── Damage — Elemental ────────────────────────────────────────────────────
 	case EHunterAttribute::ElementalMoreDamage:     return Attrs->GetElementalMoreDamage();
 	case EHunterAttribute::ElementalDamage:         return Attrs->GetElementalDamage();
-
-	// ── Offensive Stats ───────────────────────────────────────────────────────
 	case EHunterAttribute::AreaDamage:              return Attrs->GetAreaDamage();
 	case EHunterAttribute::AreaOfEffect:            return Attrs->GetAreaOfEffect();
 	case EHunterAttribute::AttackRange:             return Attrs->GetAttackRange();
@@ -659,8 +589,6 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::ChainCount:              return Attrs->GetChainCount();
 	case EHunterAttribute::ForkCount:               return Attrs->GetForkCount();
 	case EHunterAttribute::ChainDamage:             return Attrs->GetChainDamage();
-
-	// ── Damage Conversion ─────────────────────────────────────────────────────
 	case EHunterAttribute::PhysicalToFire:          return Attrs->GetPhysicalToFire();
 	case EHunterAttribute::PhysicalToIce:           return Attrs->GetPhysicalToIce();
 	case EHunterAttribute::PhysicalToLightning:     return Attrs->GetPhysicalToLightning();
@@ -691,8 +619,6 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::CorruptionToIce:         return Attrs->GetCorruptionToIce();
 	case EHunterAttribute::CorruptionToLightning:   return Attrs->GetCorruptionToLightning();
 	case EHunterAttribute::CorruptionToLight:       return Attrs->GetCorruptionToLight();
-
-	// ── Ailment Chances ───────────────────────────────────────────────────────
 	case EHunterAttribute::ChanceToBleed:           return Attrs->GetChanceToBleed();
 	case EHunterAttribute::ChanceToCorrupt:         return Attrs->GetChanceToCorrupt();
 	case EHunterAttribute::ChanceToFreeze:          return Attrs->GetChanceToFreeze();
@@ -702,8 +628,6 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::ChanceToPetrify:         return Attrs->GetChanceToPetrify();
 	case EHunterAttribute::ChanceToShock:           return Attrs->GetChanceToShock();
 	case EHunterAttribute::ChanceToStun:            return Attrs->GetChanceToStun();
-
-	// ── DoT Durations ─────────────────────────────────────────────────────────
 	case EHunterAttribute::BurnDuration:            return Attrs->GetBurnDuration();
 	case EHunterAttribute::BleedDuration:           return Attrs->GetBleedDuration();
 	case EHunterAttribute::FreezeDuration:          return Attrs->GetFreezeDuration();
@@ -711,8 +635,6 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::ShockDuration:           return Attrs->GetShockDuration();
 	case EHunterAttribute::PetrifyBuildUpDuration:  return Attrs->GetPetrifyBuildUpDuration();
 	case EHunterAttribute::PurifyDuration:          return Attrs->GetPurifyDuration();
-
-	// ── Defense ───────────────────────────────────────────────────────────────
 	case EHunterAttribute::GlobalDefenses:              return Attrs->GetGlobalDefenses();
 	case EHunterAttribute::Armour:                      return Attrs->GetArmour();
 	case EHunterAttribute::ArmourFlatBonus:             return Attrs->GetArmourFlatBonus();
@@ -726,8 +648,6 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::BlockPhysicalMultiplier:     return Attrs->GetBlockPhysicalMultiplier();
 	case EHunterAttribute::BlockElementalMultiplier:    return Attrs->GetBlockElementalMultiplier();
 	case EHunterAttribute::BlockCorruptionMultiplier:   return Attrs->GetBlockCorruptionMultiplier();
-
-	// ── Resistances ───────────────────────────────────────────────────────────
 	case EHunterAttribute::FireResistanceFlatBonus:         return Attrs->GetFireResistanceFlatBonus();
 	case EHunterAttribute::FireResistancePercentBonus:      return Attrs->GetFireResistancePercentBonus();
 	case EHunterAttribute::MaxFireResistance:               return Attrs->GetMaxFireResistance();
@@ -743,8 +663,6 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::CorruptionResistanceFlatBonus:   return Attrs->GetCorruptionResistanceFlatBonus();
 	case EHunterAttribute::CorruptionResistancePercentBonus: return Attrs->GetCorruptionResistancePercentBonus();
 	case EHunterAttribute::MaxCorruptionResistance:         return Attrs->GetMaxCorruptionResistance();
-
-	// ── Damage Taken Multipliers ──────────────────────────────────────────────
 	case EHunterAttribute::GlobalDamageTakenMultiplier:     return Attrs->GetGlobalDamageTakenMultiplier();
 	case EHunterAttribute::PhysicalDamageTakenMultiplier:   return Attrs->GetPhysicalDamageTakenMultiplier();
 	case EHunterAttribute::ElementalDamageTakenMultiplier:  return Attrs->GetElementalDamageTakenMultiplier();
@@ -753,22 +671,16 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::LightningDamageTakenMultiplier:  return Attrs->GetLightningDamageTakenMultiplier();
 	case EHunterAttribute::LightDamageTakenMultiplier:      return Attrs->GetLightDamageTakenMultiplier();
 	case EHunterAttribute::CorruptionDamageTakenMultiplier: return Attrs->GetCorruptionDamageTakenMultiplier();
-
-	// ── Reflect ───────────────────────────────────────────────────────────────
 	case EHunterAttribute::ReflectPhysical:         return Attrs->GetReflectPhysical();
 	case EHunterAttribute::ReflectElemental:        return Attrs->GetReflectElemental();
 	case EHunterAttribute::ReflectChancePhysical:   return Attrs->GetReflectChancePhysical();
 	case EHunterAttribute::ReflectChanceElemental:  return Attrs->GetReflectChanceElemental();
-
-	// ── Piercing ──────────────────────────────────────────────────────────────
 	case EHunterAttribute::ArmourPiercing:          return Attrs->GetArmourPiercing();
 	case EHunterAttribute::FirePiercing:            return Attrs->GetFirePiercing();
 	case EHunterAttribute::IcePiercing:             return Attrs->GetIcePiercing();
 	case EHunterAttribute::LightningPiercing:       return Attrs->GetLightningPiercing();
 	case EHunterAttribute::LightPiercing:           return Attrs->GetLightPiercing();
 	case EHunterAttribute::CorruptionPiercing:      return Attrs->GetCorruptionPiercing();
-
-	// ── Resource & Utility ────────────────────────────────────────────────────
 	case EHunterAttribute::ComboCounter:            return Attrs->GetComboCounter();
 	case EHunterAttribute::Cooldown:                return Attrs->GetCooldown();
 	case EHunterAttribute::Gems:                    return Attrs->GetGems();
@@ -822,14 +734,9 @@ bool UStatsManager::HasLiveAttribute(const FGameplayAttribute& Attribute) const
 	return FStatsAttributeResolver::HasLiveAttribute(*this, Attribute);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* POWER CALCULATIONS                                                      */
-/* ═══════════════════════════════════════════════════════════════════════ */
-
 float UStatsManager::GetPowerLevel() const
 {
-	// Simple power calculation based on primary stats
-	float TotalPrimary = GetStrength() + GetIntelligence() + GetDexterity() + 
+	float TotalPrimary = GetStrength() + GetIntelligence() + GetDexterity() +
 	                     GetEndurance() + GetAffliction() + GetLuck() + GetCovenant();
 	
 	float VitalBonus = GetMaxHealth() * 0.01f + GetMaxMana() * 0.01f;
@@ -860,10 +767,6 @@ float UStatsManager::GetPowerRatioAgainst(AActor* OtherActor) const
 
 	return MyPower / TheirPower;
 }
-
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* STAT INITIALIZATION                                                     */
-/* ═══════════════════════════════════════════════════════════════════════ */
 
 void UStatsManager::InitializeFromDataAsset(UBaseStatsData* InStatsData)
 {

@@ -1,6 +1,5 @@
-// N-18 FIX: Removed duplicated FCaptureDefinitions, GetCapturedValue, and
-// CalculateReservedAmount.  All three are now shared via HunterMMCResourceShared.h
-// which is also included by HunterMMC_ReservedResource.cpp.
+// Shared capture definitions, GetCapturedValue, and CalculateReservedAmount live in
+// HunterMMCResourceShared.h to avoid duplication with HunterMMC_ReservedResource.cpp.
 #include "AbilitySystem/ModMagnitude/HunterMMC_EffectiveResource.h"
 #include "HunterMMCResourceShared.h"
 

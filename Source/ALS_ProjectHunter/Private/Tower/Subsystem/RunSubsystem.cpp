@@ -1,15 +1,9 @@
-// Tower/Subsystem/RunSubsystem.cpp
-
 #include "Tower/Subsystem/RunSubsystem.h"
 #include "Tower/Library/RunStructs.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 
 DEFINE_LOG_CATEGORY(LogRunSubsystem);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LIFECYCLE
-// ─────────────────────────────────────────────────────────────────────────────
 
 void URunSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -21,10 +15,6 @@ void URunSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RUN LIFECYCLE
-// ─────────────────────────────────────────────────────────────────────────────
 
 void URunSubsystem::StartRun()
 {
@@ -80,7 +70,6 @@ void URunSubsystem::EndRun()
 
 	OnRunEnded.Broadcast(SessionData);
 
-	// Reset floor counter so a fresh StartRun begins cleanly.
 	CurrentFloor = 0;
 }
 
@@ -94,15 +83,10 @@ void URunSubsystem::RegisterKill()
 	++SessionData.TotalKills;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GETTERS
-// ─────────────────────────────────────────────────────────────────────────────
-
 float URunSubsystem::GetElapsedTime() const
 {
 	if (!bRunActive)
 	{
-		// Run has ended — return the frozen value written in EndRun.
 		return SessionData.TimeElapsed;
 	}
 
@@ -114,10 +98,6 @@ float URunSubsystem::GetElapsedTime() const
 
 	return World->GetTimeSeconds() - RunStartTimeSeconds;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// INTERNAL
-// ─────────────────────────────────────────────────────────────────────────────
 
 void URunSubsystem::ResetState()
 {

@@ -1,6 +1,4 @@
-﻿// Character/Component/InteractionDebugManager.cpp
-
-#include "Character/Component/Interaction/InteractionDebugManager.h"
+﻿#include "Character/Component/Interaction/InteractionDebugManager.h"
 #include "Interactable/Component/InteractableManager.h"
 #include "Components/ALSDebugComponent.h"
 #include "DrawDebugHelpers.h"
@@ -44,7 +42,6 @@ void FInteractionDebugManager::Initialize(AActor* Owner, UWorld* World)
 		return;
 	}
 
-	// Cache ALS Debug Component (optional)
 	CachedALSDebugComponent = OwnerActor->FindComponentByClass<UALSDebugComponent>();
 	if (CachedALSDebugComponent)
 	{
@@ -57,10 +54,6 @@ void FInteractionDebugManager::Initialize(AActor* Owner, UWorld* World)
 	
 	UE_LOG(LogInteractionDebugManager, Log, TEXT("InteractionDebugManager: Initialized for %s"), *OwnerActor->GetName());
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// DEBUG DRAWING
-// ═══════════════════════════════════════════════════════════════════════
 
 void FInteractionDebugManager::DrawTraceLine(FVector Start, FVector End, bool bHit)
 {
@@ -90,7 +83,6 @@ void FInteractionDebugManager::DrawHitPoint(FVector HitLocation, FVector HitNorm
 		return;
 	}
 
-	// Draw sphere at hit point
 	DrawDebugSphere(
 		WorldContext,
 		HitLocation,
@@ -103,7 +95,6 @@ void FInteractionDebugManager::DrawHitPoint(FVector HitLocation, FVector HitNorm
 		DrawThickness
 	);
 
-	// Draw normal vector
 	if (DebugMode == EInteractionDebugMode::Detailed || DebugMode == EInteractionDebugMode::Full)
 	{
 		DrawDebugDirectionalArrow(
@@ -147,7 +138,6 @@ void FInteractionDebugManager::DrawGroundItem(FVector ItemLocation, int32 ItemID
 		return;
 	}
 
-	// Draw cylinder at ground item location
 	DrawDebugCylinder(
 		WorldContext,
 		ItemLocation,
@@ -161,7 +151,6 @@ void FInteractionDebugManager::DrawGroundItem(FVector ItemLocation, int32 ItemID
 		DrawThickness
 	);
 
-	// Draw item ID text
 	if (DebugMode == EInteractionDebugMode::Detailed || DebugMode == EInteractionDebugMode::Full)
 	{
 		DrawDebugString(
@@ -190,7 +179,6 @@ void FInteractionDebugManager::DrawInteractableInfo(UInteractableManager* Intera
 
 	FVector ActorLocation = TargetActor->GetActorLocation();
 
-	// Draw debug sphere around interactable
 	DrawDebugSphere(
 		WorldContext,
 		ActorLocation,
@@ -203,7 +191,6 @@ void FInteractionDebugManager::DrawInteractableInfo(UInteractableManager* Intera
 		DrawThickness
 	);
 
-	// Draw detailed info
 	if (DebugMode == EInteractionDebugMode::Detailed || DebugMode == EInteractionDebugMode::Full)
 	{
 		FString DebugInfo = FString::Printf(
@@ -216,8 +203,8 @@ void FInteractionDebugManager::DrawInteractableInfo(UInteractableManager* Intera
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(
-				-1,          // key (-1 = new message every time)
-				2.0f,        // time on screen
+				-1,
+				2.0f,
 				FColor::Green,
 				DebugInfo
 			);
@@ -233,10 +220,6 @@ void FInteractionDebugManager::DrawInteractableInfo(UInteractableManager* Intera
 		);
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// DEBUG TEXT
-// ═══════════════════════════════════════════════════════════════════════
 
 void FInteractionDebugManager::DisplayInteractionState(UInteractableManager* Interactable, float Distance, int32 GroundItemID)
 {
@@ -275,7 +258,6 @@ void FInteractionDebugManager::DisplayInteractionState(UInteractableManager* Int
 		DebugText = TEXT("INTERACTION DEBUG\nNo Target");
 	}
 
-	// Display on screen
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(
@@ -294,7 +276,6 @@ void FInteractionDebugManager::DisplayPerformanceMetrics(float TraceTime, float 
 		return;
 	}
 
-	// Update running averages
 	AverageTraceTime = (AverageTraceTime * 0.9f) + (TraceTime * 0.1f);
 	AverageValidationTime = (AverageValidationTime * 0.9f) + (ValidationTime * 0.1f);
 
@@ -318,10 +299,6 @@ void FInteractionDebugManager::DisplayPerformanceMetrics(float TraceTime, float 
 		);
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// LOGGING
-// ═══════════════════════════════════════════════════════════════════════
 
 void FInteractionDebugManager::LogInteraction(UInteractableManager* Interactable, bool bSuccess, const FString& Reason)
 {
@@ -383,20 +360,14 @@ void FInteractionDebugManager::PrintDebugStats()
 	UE_LOG(LogInteractionDebugManager, Display, TEXT("═══════════════════════════════════════════"));
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// ALS DEBUG INTEGRATION
-// ═══════════════════════════════════════════════════════════════════════
-
 bool FInteractionDebugManager::ShouldShowDebugTraces() const
 {
 #if !UE_BUILD_SHIPPING
-	// Use ALS debug component if available
 	if (CachedALSDebugComponent)
 	{
 		return CachedALSDebugComponent->GetShowTraces();
 	}
 
-	// Fallback: Use DebugMode setting
 	return DebugMode != EInteractionDebugMode::None;
 #else
 	return false;

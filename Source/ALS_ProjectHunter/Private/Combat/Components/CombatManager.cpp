@@ -30,13 +30,8 @@ namespace CombatManagerComponentPrivate
 	constexpr float IgniteDamagePerTickPercent = 0.25f;
 	constexpr float CorruptionDamagePerTickPercent = 0.2f;
 	constexpr float DefaultShockAmpFraction = 0.2f;
-	// Chill: no ChanceToChill attribute exists yet — cold damage always chills (PoE2 style).
-	// To make Chill chance-configurable, add a ChanceToChill attribute to HunterAttributeSet
-	// and replace the 100% apply below with SourceAttributes->GetChanceToChill().
-	constexpr float DefaultChillSlowFraction = 0.3f;  // 30 % movement slow
-	constexpr float DefaultChillDuration     = 2.f;   // seconds
-	// Poison: no ChanceToPoison attribute exists yet — add one to HunterAttributeSet and
-	// wire ApplyPoison in ApplyAilments (analogous to the Corruption section below).
+	constexpr float DefaultChillSlowFraction = 0.3f;
+	constexpr float DefaultChillDuration     = 2.f;
 
 	float GetDamageByType(const FCombatDamagePacket& Packet, const EHunterDamageType DamageType)
 	{
@@ -316,31 +311,6 @@ namespace CombatManagerComponentPrivate
 		return ChancePercent > 0.f && FMath::FRandRange(0.f, 100.f) < ChancePercent;
 	}
 
-	/**
-	 * Compute the effective ailment proc chance for a single damage type.
-	 *
-	 * Normal path — scale BaseChance by the fraction of damage that penetrated all
-	 * defenses (armour + resistance + block):
-	 *
-	 *   MitigationRatio = PostMitigationDamage / PreMitigationDamage   (clamped 0–1)
-	 *   EffectiveChance = BaseChance × MitigationRatio
-	 *
-	 * A target that mitigated 90 % of a hit also reduces the ailment proc chance by 90 %.
-	 * PostMitigationDamage already encapsulates every defense layer, so no extra work here.
-	 *
-	 * Parry path — return BaseChance unmodified (mitigation ratio is skipped).
-	 * The defender cancelled the damage but physical/elemental contact was still made,
-	 * so the attacker's full ailment chance applies as a counterplay mechanic.
-	 *
-	 * Invincible path — gated upstream by bShouldApplyAilments = false;
-	 * ApplyAilments never calls this function on that path.
-	 *
-	 * @param BaseChance           Attacker's configured ailment chance (0–100).
-	 * @param PreMitigationDamage  Raw damage of this type before any defenses.
-	 * @param PostMitigationDamage Damage of this type after armour + resistance + block.
-	 * @param bParryPath           True when HitResponse == EHitResponse::Parry.
-	 * @return Effective chance in [0, 100].
-	 */
 	float CalculateEffectiveAilmentChance(
 		const float BaseChance,
 		const float PreMitigationDamage,
@@ -352,13 +322,11 @@ namespace CombatManagerComponentPrivate
 			return 0.f;
 		}
 
-		// Parry: damage was deflected but contact was real — full base chance, no scaling.
 		if (bParryPath)
 		{
 			return FMath::Clamp(BaseChance, 0.f, 100.f);
 		}
 
-		// Normal: scale by the fraction of damage that punched through all defenses.
 		const float MitigationRatio = FMath::Clamp(PostMitigationDamage / PreMitigationDamage, 0.f, 1.f);
 		return FMath::Clamp(BaseChance * MitigationRatio, 0.f, 100.f);
 	}
@@ -523,9 +491,6 @@ void UCombatManager::ApplyResolvedDamage(AActor* SourceActor, AActor* TargetActo
 		return;
 	}
 
-	// B-1 FIX: Route damage through GAS (PreAttributeChange/PostAttributeChange) so the
-	// AttributeSet's clamping logic fires. If DamageApplicationGE is configured use the
-	// proper GE path; otherwise fall back to direct mutation with a loud warning.
 	if (DamageApplicationGE)
 	{
 		FGameplayEffectContextHandle Context = TargetASC->MakeEffectContext();
@@ -536,7 +501,6 @@ void UCombatManager::ApplyResolvedDamage(AActor* SourceActor, AActor* TargetActo
 		{
 			const FPHGameplayTags& Tags = FPHGameplayTags::Get();
 
-			// Negate: the GE modifier is Additive, so a negative magnitude subtracts.
 			if (Result.DamageToHealth > 0.f)
 			{
 				Spec.Data->SetSetByCallerMagnitude(Tags.Data_Damage_Health, -Result.DamageToHealth);
@@ -566,8 +530,6 @@ void UCombatManager::ApplyResolvedDamage(AActor* SourceActor, AActor* TargetActo
 	}
 	else
 	{
-		// B-1 FALLBACK (configure DamageApplicationGE to fix this):
-		// SetNumericAttributeBase bypasses PreAttributeChange clamping in the AttributeSet.
 		UE_LOG(LogCombatManager, Warning,
 			TEXT("ApplyResolvedDamage: DamageApplicationGE is not set on %s. Falling back to "
 				 "SetNumericAttributeBase which bypasses GAS clamping. "
@@ -700,7 +662,6 @@ FCombatDamagePacket UCombatManager::BuildOutgoingDamagePacketFromAttributes(
 		SkillPacket);
 	CombatManagerComponentPrivate::UpdatePacketTotal(Packet);
 
-	// Respect the skill's crit flag. If no skill packet, crit is always eligible.
 	const bool bCanCrit = (SkillPacket == nullptr) || SkillPacket->bCanCrit;
 	ResolveCriticalStrike(Packet, SourceAttributes, bCanCrit, SkillPacket);
 
@@ -1091,10 +1052,6 @@ FCombatResolveResult UCombatManager::MitigateDamagePacketAgainstAttributes(
 	const float CurrentArcaneShield = FMath::Max(TargetAttributes->GetArcaneShield(), 0.f);
 	Result.DamageToArcaneShield = FMath::Min(CurrentArcaneShield, Result.TotalDamageTaken);
 	Result.DamageToHealth = FMath::Max(0.f, Result.TotalDamageTaken - Result.DamageToArcaneShield);
-	// NOTE: bKilledTarget is intentionally NOT set here.
-	// This function produces a mitigation preview; the GE that actually subtracts health has
-	// not fired yet. bKilledTarget is authoritative only after ApplyResolvedDamage returns —
-	// ApplyHit reads the live attribute value and sets it there.
 
 	return Result;
 }
@@ -1121,7 +1078,6 @@ float UCombatManager::CalculateBaseDamageForType(
 		return 0.f;
 	}
 
-	// ── Character attribute weapon ranges ─────────────────────────────────────
 	float WeaponMin = 0.f;
 	float WeaponMax = 0.f;
 	float FlatDamage = 0.f;
@@ -1162,23 +1118,14 @@ float UCombatManager::CalculateBaseDamageForType(
 		return 0.f;
 	}
 
-	// ── Base damage roll ──────────────────────────────────────────────────────
-	// PoE2 model:
-	//   WeaponRoll  = attribute weapon range × WeaponDamageEffectiveness
-	//   SkillRoll   = skill's own min/max range (always 0 if no SkillPacket)
-	//   FlatBonus   = character flat damage modifiers (always applied)
-	//   Base        = WeaponRoll + SkillRoll + FlatBonus
-
 	float SkillMin = 0.f;
 	float SkillMax = 0.f;
 	float WeaponEffectiveness = 1.f;
 
 	if (SkillPacket)
 	{
-		// bLayerCharacterStats = false → pure skill damage, ignore weapon stats entirely.
 		WeaponEffectiveness = SkillPacket->bLayerCharacterStats ? SkillPacket->WeaponDamageEffectiveness : 0.f;
 
-		// Per-type skill base ranges and PoE2 multiplier fields
 		switch (DamageType)
 		{
 		case EHunterDamageType::Physical:
@@ -1695,10 +1642,6 @@ void UCombatManager::ApplyBlockingToMitigatedResult(AActor* SourceActor, AActor*
 
 	InOutResult.bWasBlocked = true;
 
-	// ── Step 1: tally the total incoming (post-resistance) damage so we can
-	// distribute the flat block budget proportionally across damage types.
-	// Without this, FlatBlockAmount would be subtracted from EACH type independently,
-	// multiplying its effect by however many damage types are present.
 	float TotalIncomingForBlock = 0.f;
 	for (const EHunterDamageType DamageType : {
 		EHunterDamageType::Physical,
@@ -1727,8 +1670,6 @@ void UCombatManager::ApplyBlockingToMitigatedResult(AActor* SourceActor, AActor*
 		const float DamageBeforeBlock = FMath::Max(0.f, CombatManagerComponentPrivate::GetResultTakenByType(InOutResult, DamageType));
 		const float BlockedInput = DamageBeforeBlock * GetBlockTypeMultiplier(DamageType, TargetAttributes);
 
-		// Distribute flat block budget proportionally by this type's share of total incoming.
-		// e.g. 60 % of incoming is Fire → Fire absorbs 60 % of FlatBlockAmount.
 		const float TypeFlatShare = (TotalIncomingForBlock > 0.f)
 			? FlatBlockAmount * (BlockedInput / TotalIncomingForBlock)
 			: 0.f;
@@ -1907,8 +1848,6 @@ void UCombatManager::ResolveHitPacketCriticalStrike(FCombatDamagePacket& Packet,
 void UCombatManager::EvaluateStagger(AActor* TargetActor, const UHunterAttributeSet* TargetAttributes,
 	FCombatResolveResult& InOutResult) const
 {
-	// Stagger fires when a hit drains stamina to zero and the target is NOT mid-skill.
-	// Skills are protected by the State_Self_ExecutingSkill tag — if it's present, no stagger.
 	if (!TargetAttributes || InOutResult.DamageToStamina <= 0.f)
 	{
 		return;
@@ -1917,7 +1856,7 @@ void UCombatManager::EvaluateStagger(AActor* TargetActor, const UHunterAttribute
 	const float StaminaAfterHit = FMath::Max(0.f, TargetAttributes->GetStamina() - InOutResult.DamageToStamina);
 	if (StaminaAfterHit > 0.f)
 	{
-		return; // Stamina not depleted — no stagger
+		return;
 	}
 
 	UAbilitySystemComponent* TargetASC = GetAbilitySystemComponentFromActor(TargetActor);
@@ -1949,12 +1888,6 @@ void UCombatManager::ApplyHitResponse(const FCombatHitPacket& HitPacket, FCombat
 	switch (InOutResult.HitResponse)
 	{
 	case EHitResponse::Parry:
-		// Damage is negated — the defender deflected the force of the hit.
-		// Ailments are NOT blocked — physical contact was still made, so the
-		// attacker's status effects can still proc. This is the attacker's
-		// counterplay: a venomous blade, igniting staff, etc. still tags the
-		// parrier. Ailments roll at full base chance (no mitigation ratio) since
-		// the parry only cancelled the damage, not the elemental contact.
 		InOutResult.DamageToHealth       = 0.f;
 		InOutResult.DamageToArcaneShield = 0.f;
 		InOutResult.DamageToStamina      = 0.f;
@@ -1966,9 +1899,6 @@ void UCombatManager::ApplyHitResponse(const FCombatHitPacket& HitPacket, FCombat
 		break;
 
 	case EHitResponse::Invincible:
-		// Zero every damage-related field so the result struct is a clean "nothing happened"
-		// from the caller's perspective — per-type taken, block amounts, and application
-		// totals are all cleared. Blueprints can safely read any field without filtering.
 		InOutResult.PhysicalTaken        = 0.f;
 		InOutResult.FireTaken            = 0.f;
 		InOutResult.IceTaken             = 0.f;
@@ -1998,10 +1928,6 @@ void UCombatManager::ApplyHitResponse(const FCombatHitPacket& HitPacket, FCombat
 		break;
 
 	case EHitResponse::Blocked:
-		// Damage is absorbed by a resource (ArcaneShield, blood magic, etc.).
-		// Ailments ARE allowed — the hit made contact even though the damage was absorbed.
-		// Matches PoE2 energy shield behaviour: your shield eats the fire hit but
-		// you can still be ignited.
 		InOutResult.bShouldApplyAilments = true;
 		UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHitResponse: Blocked — damage absorbed by resource, ailments still roll."));
 		break;
@@ -2120,8 +2046,6 @@ void UCombatManager::ApplyOnHitEffects(
 
 	const bool bDealtDamage = Result.TotalDamageTaken > 0.f;
 
-	// OPT: Use pre-cached pointers from ResolveHit when available; fall back to lookup
-	// only when called standalone (e.g. from Blueprint).
 	UAbilitySystemComponent* SourceASC =
 		CachedSourceASC ? CachedSourceASC : GetAbilitySystemComponentFromActor(SourceActor);
 	const UHunterAttributeSet* SourceAttributes =
@@ -2137,18 +2061,12 @@ void UCombatManager::ApplyOnHitEffects(
 		{
 			if (RecoveryApplicationGE)
 			{
-				// I-01 FIX: Route on-hit recovery through the GAS GE pipeline so
-				// PreAttributeChange clamping fires correctly. Previously called
-				// SetNumericAttributeBase directly, bypassing all GAS attribute hooks.
 				FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
 				Context.AddSourceObject(SourceActor);
 
 				FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(RecoveryApplicationGE, 1.f, Context);
 				if (Spec.IsValid())
 				{
-					// Tags must match the SetByCaller tags configured on RecoveryApplicationGE.
-					// Use RequestGameplayTag to keep the code decoupled from FPHGameplayTags
-					// so designers can choose tag names freely in the GE asset.
 					static const FGameplayTag RecoveryHealthTag   = FGameplayTag::RequestGameplayTag(FName("Data.Recovery.Health"));
 					static const FGameplayTag RecoveryManaTag     = FGameplayTag::RequestGameplayTag(FName("Data.Recovery.Mana"));
 					static const FGameplayTag RecoveryStaminaTag  = FGameplayTag::RequestGameplayTag(FName("Data.Recovery.Stamina"));
@@ -2181,8 +2099,6 @@ void UCombatManager::ApplyOnHitEffects(
 			}
 			else
 			{
-				// I-01 FALLBACK: Direct attribute mutation bypasses GAS clamping hooks.
-				// Assign RecoveryApplicationGE in Blueprint defaults to fix this.
 				UE_LOG(LogCombatManager, Warning,
 					TEXT("ApplyOnHitEffects: RecoveryApplicationGE is not set on %s. "
 					     "On-hit recovery (Life+%.2f Mana+%.2f Stamina+%.2f) skipped. "
@@ -2229,13 +2145,8 @@ void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, con
 		return;
 	}
 
-	// On the Parry path damage is zeroed but ailments roll at full base chance —
-	// the defender deflected the force but elemental/status contact was still made.
 	const bool bParryPath = (Result.HitResponse == EHitResponse::Parry);
 
-	// ── Bleed (Physical) ──────────────────────────────────────────────────────
-	// Normal: EffectiveChance = BaseChance × (PhysicalTaken / PreMitigationPhysical).
-	// Parry:  EffectiveChance = BaseChance (full — mitigation ratio skipped).
 	if (Result.PreMitigationPacket.Physical > 0.f)
 	{
 		const float EffectiveBleedChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
@@ -2257,7 +2168,6 @@ void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, con
 		}
 	}
 
-	// ── Ignite (Fire) ─────────────────────────────────────────────────────────
 	if (Result.PreMitigationPacket.Fire > 0.f)
 	{
 		const float EffectiveIgniteChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
@@ -2279,15 +2189,8 @@ void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, con
 		}
 	}
 
-	// ── Chill + Freeze (Ice) ─────────────────────────────────────────────────
-	// Chill uses a 100 % base chance so it always applies on an undefended hit,
-	// scaled down by ice resistance on the normal path.
-	// TODO: expose a ChanceToChill attribute on HunterAttributeSet if you want
-	//       designers to tune the base below 100 % for specific enemies or builds.
-	// Freeze rolls independently on top of Chill.
 	if (Result.PreMitigationPacket.Ice > 0.f)
 	{
-		// Chill
 		{
 			const float EffectiveChillChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
 				100.f,
@@ -2312,7 +2215,6 @@ void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, con
 			}
 		}
 
-		// Freeze
 		{
 			const float EffectiveFreezeChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
 				SourceAttributes->GetChanceToFreeze(),
@@ -2333,7 +2235,6 @@ void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, con
 		}
 	}
 
-	// ── Shock (Lightning) ─────────────────────────────────────────────────────
 	if (Result.PreMitigationPacket.Lightning > 0.f)
 	{
 		const float EffectiveShockChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
@@ -2355,7 +2256,6 @@ void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, con
 		}
 	}
 
-	// ── Petrify (Light) ───────────────────────────────────────────────────────
 	if (Result.PreMitigationPacket.Light > 0.f)
 	{
 		const float EffectivePetrifyChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
@@ -2376,7 +2276,6 @@ void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, con
 		}
 	}
 
-	// ── Corruption ────────────────────────────────────────────────────────────
 	if (Result.PreMitigationPacket.Corruption > 0.f)
 	{
 		const float EffectiveCorruptChance = CombatManagerComponentPrivate::CalculateEffectiveAilmentChance(
@@ -2401,10 +2300,6 @@ void UCombatManager::ApplyAilments(AActor* SourceActor, AActor* TargetActor, con
 
 void UCombatManager::ApplyReflect(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result) const
 {
-	// I-03: Structural skeleton for damage reflection. Probability and amount calculations
-	// are implemented here. Actual damage delivery uses a dedicated non-recursive path
-	// (direct attribute mutation rather than ResolveHit) to prevent infinite loops.
-
 	if (!IsValid(SourceActor) || !IsValid(TargetActor))
 	{
 		return;
@@ -2416,15 +2311,12 @@ void UCombatManager::ApplyReflect(AActor* SourceActor, AActor* TargetActor, cons
 		return;
 	}
 
-	// ── Physical Reflect ──────────────────────────────────────────────────
-	// ReflectChancePhysical gates whether reflect fires; ReflectPhysical is the % amount.
 	const float PhysReflectChance = FMath::Clamp(TargetAttributes->GetReflectChancePhysical(), 0.f, 100.f);
 	const float PhysicalReflectPct = (PhysReflectChance > 0.f && FMath::FRandRange(0.f, 100.f) < PhysReflectChance)
 		? FMath::Clamp(TargetAttributes->GetReflectPhysical(), 0.f, 100.f)
 		: 0.f;
 	const float PhysicalReflectAmount = Result.PhysicalTaken * (PhysicalReflectPct / 100.f);
 
-	// ── Elemental Reflect ─────────────────────────────────────────────────
 	const float ElemReflectChance = FMath::Clamp(TargetAttributes->GetReflectChanceElemental(), 0.f, 100.f);
 	const float ElementalReflectPct = (ElemReflectChance > 0.f && FMath::FRandRange(0.f, 100.f) < ElemReflectChance)
 		? FMath::Clamp(TargetAttributes->GetReflectElemental(), 0.f, 100.f)
@@ -2447,10 +2339,6 @@ void UCombatManager::ApplyReflect(AActor* SourceActor, AActor* TargetActor, cons
 		TEXT("ApplyReflect: Reflecting %.2f damage back to %s from %s."),
 		TotalReflect, *GetNameSafe(SourceActor), *GetNameSafe(TargetActor));
 
-	// ── Apply reflect damage via a dedicated non-recursive GE ─────────────────
-	// ReflectApplicationGE is a separate Instant GE that only touches Health.
-	// It MUST NOT go through ResolveHit — doing so would recurse infinitely if the
-	// source also has reflect on their character.
 	if (!ReflectApplicationGE)
 	{
 		UE_LOG(LogCombatManager, Warning,
@@ -2468,13 +2356,12 @@ void UCombatManager::ApplyReflect(AActor* SourceActor, AActor* TargetActor, cons
 	}
 
 	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
-	Context.AddSourceObject(TargetActor); // Reflected from target back to source
+	Context.AddSourceObject(TargetActor);
 
 	FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(ReflectApplicationGE, 1.f, Context);
 	if (Spec.IsValid())
 	{
 		const FPHGameplayTags& Tags = FPHGameplayTags::Get();
-		// Reflect always hits health directly — it bypasses shields and resistances.
 		Spec.Data->SetSetByCallerMagnitude(Tags.Data_Damage_Health, -TotalReflect);
 		SourceASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 

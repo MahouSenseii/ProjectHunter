@@ -1,6 +1,4 @@
-﻿// Character/Component/InteractionTraceManager.cpp
-
-#include "Character/Component/Interaction/InteractionTraceManager.h"
+﻿#include "Character/Component/Interaction/InteractionTraceManager.h"
 #include "Interactable/Interface/Interactable.h"
 #include "Interactable/Component/InteractableManager.h"
 #include "Tower/Subsystem/GroundItemSubsystem.h"
@@ -51,17 +49,10 @@ void FInteractionTraceManager::SetDebugManager(FInteractionDebugManager* InDebug
 	DebugManager = InDebugManager;
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// PRIMARY FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════
-
-// Character/Component/InteractionTraceManager.cpp
-
 TScriptInterface<IInteractable> FInteractionTraceManager::TraceForActorInteractable()
 {
 	TScriptInterface<IInteractable> Result;
 
-	// Get camera view
 	FVector CameraLocation;
 	FRotator CameraRotation;
 	if (!GetCameraViewPoint(CameraLocation, CameraRotation))
@@ -69,17 +60,12 @@ TScriptInterface<IInteractable> FInteractionTraceManager::TraceForActorInteracta
 		return Result;
 	}
 
-	// Calculate trace points
 	FVector TraceStart = GetTraceStartLocation(CameraLocation, CameraRotation);
 	FVector TraceEnd = GetTraceEndLocation(CameraLocation, CameraRotation);
 
-	// Perform line trace
 	FHitResult HitResult;
 	bool bHit = PerformLineTrace(TraceStart, TraceEnd, HitResult);
-    
-	// ═══════════════════════════════════════════════════════════════
-	// DEBUG VISUALIZATION - Draw immediately after trace
-	// ═══════════════════════════════════════════════════════════════
+
 	if (DebugManager)
 	{
 		DebugManager->DrawTraceLine(TraceStart, TraceEnd, bHit);
@@ -90,33 +76,28 @@ TScriptInterface<IInteractable> FInteractionTraceManager::TraceForActorInteracta
 		}
 	}
 
-	// Early exit if no hit
 	if (!bHit)
 	{
 		return Result;
 	}
 
-	// Check if a hit actor is interactable
 	AActor* HitActor = HitResult.GetActor();
 	if (!IsActorInteractable(HitActor))
 	{
 		return Result;
 	}
 
-	// Try component first
 	if (UInteractableManager* InteractableComp = HitActor->FindComponentByClass<UInteractableManager>())
 	{
 		Result.SetObject(InteractableComp);
 		Result.SetInterface(Cast<IInteractable>(InteractableComp));
 	}
-	// Try actor interface
 	else if (HitActor->GetClass()->ImplementsInterface(UInteractable::StaticClass()))
 	{
 		Result.SetObject(HitActor);
 		Result.SetInterface(Cast<IInteractable>(HitActor));
 	}
 
-	// Store last trace result
 	LastTraceResult = HitResult;
 
 	return Result;
@@ -129,7 +110,6 @@ int32 FInteractionTraceManager::FindGroundItemByTrace()
 		return INDEX_NONE;
 	}
 
-	// Get camera view
 	FVector CameraLocation;
 	FRotator CameraRotation;
 	if (!GetCameraViewPoint(CameraLocation, CameraRotation))
@@ -137,8 +117,6 @@ int32 FInteractionTraceManager::FindGroundItemByTrace()
 		return INDEX_NONE;
 	}
 
-	// Reuse the same trace geometry as TraceForActorInteractable so the
-	// interaction feel is identical to looking at a loot chest.
 	const FVector TraceStart = GetTraceStartLocation(CameraLocation, CameraRotation);
 	const FVector TraceEnd   = GetTraceEndLocation(CameraLocation, CameraRotation);
 
@@ -148,8 +126,6 @@ int32 FInteractionTraceManager::FindGroundItemByTrace()
 		return INDEX_NONE;
 	}
 
-	// Ground items are rendered via UInstancedStaticMeshComponent.
-	// FHitResult::Item is the ISM instance index when an ISMC is hit.
 	UInstancedStaticMeshComponent* HitISM = Cast<UInstancedStaticMeshComponent>(HitResult.Component.Get());
 	if (!HitISM)
 	{
@@ -174,7 +150,6 @@ UItemInstance* FInteractionTraceManager::FindNearestGroundItem(int32& OutItemID)
 		return nullptr;
 	}
 
-	// Get camera location for distance check
 	FVector CameraLocation;
 	FRotator CameraRotation;
 	if (!GetCameraViewPoint(CameraLocation, CameraRotation))
@@ -182,7 +157,6 @@ UItemInstance* FInteractionTraceManager::FindNearestGroundItem(int32& OutItemID)
 		return nullptr;
 	}
 
-	// Query subsystem for nearest item
 	return CachedGroundItemSubsystem->GetNearestItem(
 		CameraLocation,
 		InteractionDistance,
@@ -197,7 +171,6 @@ bool FInteractionTraceManager::GetCameraViewPoint(FVector& OutLocation, FRotator
 	{
 		CachedPlayerController = Cast<APlayerController>(OwnerPawn->GetController());
 
-		// Refresh ALS camera manager alongside the controller.
 		if (CachedPlayerController && CachedPlayerController->PlayerCameraManager)
 		{
 			CachedALSCameraManager = Cast<AALSPlayerCameraManager>(
@@ -211,7 +184,6 @@ bool FInteractionTraceManager::GetCameraViewPoint(FVector& OutLocation, FRotator
 
 	if (!CachedPlayerController)
 	{
-		// Fallback to owner location/rotation
 		if (OwnerActor)
 		{
 			OutLocation = OwnerActor->GetActorLocation();
@@ -221,11 +193,9 @@ bool FInteractionTraceManager::GetCameraViewPoint(FVector& OutLocation, FRotator
 		return false;
 	}
 
-	// Get camera rotation
 	FVector RawCameraLoc;
 	CachedPlayerController->GetPlayerViewPoint(RawCameraLoc, OutRotation);
 
-	// Calculate location with ALS-style offsets
 	if (OwnerActor)
 	{
 		FVector PivotLocation = OwnerActor->GetActorLocation();
@@ -260,7 +230,6 @@ FVector FInteractionTraceManager::GetTraceStartLocation(const FVector& CameraLoc
 		return CachedALSCameraManager->GetCameraLocation();
 	}
 
-	// Standard path: pawn-pivot + directional offsets (computed in GetCameraViewPoint).
 	return CameraLocation;
 }
 
@@ -284,10 +253,6 @@ bool FInteractionTraceManager::IsLocallyControlled() const
 	return false;
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// INTERNAL HELPERS
-// ═══════════════════════════════════════════════════════════════════════
-
 void FInteractionTraceManager::CacheComponents()
 {
 	if (!OwnerActor)
@@ -295,12 +260,10 @@ void FInteractionTraceManager::CacheComponents()
 		return;
 	}
 
-	// Cache player controller
 	if (APawn* OwnerPawn = Cast<APawn>(OwnerActor))
 	{
 		CachedPlayerController = Cast<APlayerController>(OwnerPawn->GetController());
 
-		// Cache ALS camera manager if available
 		if (CachedPlayerController && CachedPlayerController->PlayerCameraManager)
 		{
 			CachedALSCameraManager = Cast<AALSPlayerCameraManager>(CachedPlayerController->PlayerCameraManager);
@@ -311,7 +274,6 @@ void FInteractionTraceManager::CacheComponents()
 		}
 	}
 
-	// Cache ground item subsystem
 	if (WorldContext)
 	{
 		CachedGroundItemSubsystem = WorldContext->GetSubsystem<UGroundItemSubsystem>();
@@ -329,12 +291,10 @@ bool FInteractionTraceManager::PerformLineTrace(const FVector& Start, const FVec
 		return false;
 	}
 
-	// Setup trace params
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(OwnerActor);
 	QueryParams.bTraceComplex = false;
 
-	// Perform line trace
 	return WorldContext->LineTraceSingleByChannel(
 		OutHit,
 		Start,
@@ -351,12 +311,10 @@ bool FInteractionTraceManager::IsActorInteractable(AActor* Actor) const
 		return false;
 	}
 
-	// Check for InteractableManager component
 	if (Actor->FindComponentByClass<UInteractableManager>())
 	{
 		return true;
 	}
 
-	// Check if actor implements interface
 	return Actor->GetClass()->ImplementsInterface(UInteractable::StaticClass());
 }

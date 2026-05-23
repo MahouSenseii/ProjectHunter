@@ -1,4 +1,3 @@
-// Combat/Library/CombatFunctionLibrary.cpp
 #include "Combat/Library/CombatFunctionLibrary.h"
 #include "Character/PHBaseCharacter.h"
 

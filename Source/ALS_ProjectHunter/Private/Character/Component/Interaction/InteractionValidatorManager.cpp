@@ -1,6 +1,4 @@
-﻿// Character/Component/InteractionValidatorManager.cpp
-
-#include "Character/Component/Interaction/InteractionValidatorManager.h"
+﻿#include "Character/Component/Interaction/InteractionValidatorManager.h"
 #include "Interactable/Interface/Interactable.h"
 #include "Interactable/Component/InteractableManager.h"
 #include "Tower/Subsystem/GroundItemSubsystem.h"
@@ -42,10 +40,6 @@ void FInteractionValidatorManager::Initialize(AActor* Owner, UWorld* World)
 	UE_LOG(LogInteractionValidatorManager, Log, TEXT("InteractionValidatorManager: Initialized for %s"), *OwnerActor->GetName());
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// VALIDATION FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════
-
 bool FInteractionValidatorManager::ValidateActorInteraction(AActor* TargetActor, FVector ClientLocation, float MaxDistance)
 {
 	if (!TargetActor)
@@ -57,7 +51,6 @@ bool FInteractionValidatorManager::ValidateActorInteraction(AActor* TargetActor,
 		return false;
 	}
 
-	// Validate distance
 	FVector TargetLocation = TargetActor->GetActorLocation();
 	if (!ValidateDistance(ClientLocation, TargetLocation, MaxDistance, true))
 	{
@@ -65,10 +58,8 @@ bool FInteractionValidatorManager::ValidateActorInteraction(AActor* TargetActor,
 		return false;
 	}
 
-	// Validate line of sight (optional)
 	if (bRequireLineOfSight)
 	{
-		// Pass both source and target actors for proper line of sight validation
 		if (!HasLineOfSight(ClientLocation, TargetLocation, OwnerActor, TargetActor))
 		{
 			LogValidationFailure("Line of sight check failed", ClientLocation, TargetLocation);
@@ -76,7 +67,6 @@ bool FInteractionValidatorManager::ValidateActorInteraction(AActor* TargetActor,
 		}
 	}
 
-	// Validate interactable state
 	if (!IsValidInteractable(TargetActor, OwnerActor))
 	{
 		if (bLogValidationFailures)
@@ -96,7 +86,6 @@ bool FInteractionValidatorManager::ValidateGroundItemPickup(int32 ItemID, FVecto
 		return false;
 	}
 
-	// Get item location from subsystem
 	const FVector* ItemLocation = CachedGroundItemSubsystem->GetInstanceLocations().Find(ItemID);
 	if (!ItemLocation)
 	{
@@ -107,7 +96,6 @@ bool FInteractionValidatorManager::ValidateGroundItemPickup(int32 ItemID, FVecto
 		return false;
 	}
 
-	// Validate distance
 	if (!ValidateDistance(ClientLocation, *ItemLocation, MaxDistance, true))
 	{
 		LogValidationFailure("Ground item distance check failed", ClientLocation, *ItemLocation);
@@ -124,14 +112,12 @@ bool FInteractionValidatorManager::IsValidInteractable(AActor* Actor, AActor* In
 		return false;
 	}
 
-	// Check component
 	UInteractableManager* InteractableComp = Actor->FindComponentByClass<UInteractableManager>();
 	if (InteractableComp)
 	{
 		return IInteractable::Execute_CanInteract(InteractableComp, Interactor);
 	}
 
-	// Check actor interface
 	if (Actor->GetClass()->ImplementsInterface(UInteractable::StaticClass()))
 	{
 		return IInteractable::Execute_CanInteract(Actor, Interactor);
@@ -145,7 +131,6 @@ bool FInteractionValidatorManager::ValidateDistance(FVector LocationA, FVector L
 	float ActualDistance = FVector::Distance(LocationA, LocationB);
 	float AllowedDistance = MaxDistance;
 
-	// Apply latency buffer
 	if (bUseLatencyBuffer)
 	{
 		if (bUseDynamicLatencyBuffer)
@@ -168,10 +153,8 @@ bool FInteractionValidatorManager::HasLineOfSight(FVector Start, FVector End, AA
 		return false;
 	}
 
-	// Setup trace params
 	FCollisionQueryParams QueryParams;
-	
-	// Ignore source actor (typically the player)
+
 	if (SourceActor)
 	{
 		QueryParams.AddIgnoredActor(SourceActor);
@@ -179,7 +162,6 @@ bool FInteractionValidatorManager::HasLineOfSight(FVector Start, FVector End, AA
 	
 	QueryParams.bTraceComplex = false;
 
-	// Perform line trace
 	FHitResult HitResult;
 	bool bHit = WorldContext->LineTraceSingleByChannel(
 		HitResult,
@@ -189,36 +171,27 @@ bool FInteractionValidatorManager::HasLineOfSight(FVector Start, FVector End, AA
 		QueryParams
 	);
 
-	// No hit means clear line of sight
 	if (!bHit)
 	{
 		return true;
 	}
 
-	// If we hit something, check if it's the target actor we're trying to interact with
-	// Hitting the target actor itself (or its components) counts as valid line of sight
 	if (TargetActor && HitResult.GetActor() == TargetActor)
 	{
 		return true;
 	}
 
-	// Hit something else that's blocking line of sight
 	return false;
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// HELPER FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════
 
 float FInteractionValidatorManager::GetDynamicLatencyBuffer() const
 {
 	float Ping = GetPlayerPing();
 	if (Ping <= 0.0f)
 	{
-		return LatencyBuffer; // Fallback to static buffer
+		return LatencyBuffer;
 	}
 
-	// Convert ping (ms) to buffer distance
 	float DynamicBuffer = Ping * 0.1f;
 	return FMath::Clamp(DynamicBuffer, MinLatencyBuffer, MaxLatencyBuffer);
 }
@@ -230,7 +203,6 @@ float FInteractionValidatorManager::GetPlayerPing() const
 		return 0.0f;
 	}
 
-	// Get player state
 	APawn* OwnerPawn = Cast<APawn>(OwnerActor);
 	if (!OwnerPawn)
 	{
@@ -243,7 +215,6 @@ float FInteractionValidatorManager::GetPlayerPing() const
 		return 0.0f;
 	}
 
-	// Get ping in milliseconds
 	return PC->PlayerState->GetPingInMilliseconds();
 }
 
@@ -275,13 +246,8 @@ void FInteractionValidatorManager::LogValidationFailure(const FString& Reason, F
 	);
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// INTERNAL HELPERS
-// ═══════════════════════════════════════════════════════════════════════
-
 void FInteractionValidatorManager::CacheComponents()
 {
-	// Cache ground item subsystem
 	if (WorldContext)
 	{
 		CachedGroundItemSubsystem = WorldContext->GetSubsystem<UGroundItemSubsystem>();

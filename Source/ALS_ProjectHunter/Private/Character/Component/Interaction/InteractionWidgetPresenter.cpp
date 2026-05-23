@@ -1,6 +1,3 @@
-// Character/Component/Interaction/InteractionWidgetPresenter.cpp
-// PH-4.3 — Widget + outline presentation extracted from UInteractionManager.
-
 #include "Character/Component/Interaction/InteractionWidgetPresenter.h"
 
 #include "Blueprint/UserWidget.h"
@@ -20,18 +17,9 @@
 
 DEFINE_LOG_CATEGORY(LogInteractionWidgetPresenter);
 
-// ═══════════════════════════════════════════════════════════════════════
-// CONSTRUCTOR
-// ═══════════════════════════════════════════════════════════════════════
-
 FInteractionWidgetPresenter::FInteractionWidgetPresenter()
 {
-	// All members default-constructed; Initialize() must be called before use.
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// INITIALIZATION
-// ═══════════════════════════════════════════════════════════════════════
 
 void FInteractionWidgetPresenter::Initialize(UActorComponent* InOwnerComponent, UWorld* InWorld)
 {
@@ -59,16 +47,11 @@ void FInteractionWidgetPresenter::Initialize(UActorComponent* InOwnerComponent, 
 		return;
 	}
 
-	// ── SCREEN-SPACE HUD WIDGET ──────────────────────────────────────────────
-	// Overlay for hold-progress bars, cancellation feedback, and key prompts.
-	// Shown for both actor interactables and ground items.
 	if (InteractionWidgetClass)
 	{
 		InteractionWidget = CreateWidget<UInteractableWidget>(PC, InteractionWidgetClass);
 		if (InteractionWidget)
 		{
-			// Alignment (0.5, 0.5) → SetPositionInViewport places the widget's
-			// center at the given screen point (used by PositionWidgetAtGroundItem).
 			InteractionWidget->AddToViewport(WidgetZOrder);
 			InteractionWidget->SetAlignmentInViewport(FVector2D(0.5f, 0.5f));
 			InteractionWidget->Hide();
@@ -86,9 +69,6 @@ void FInteractionWidgetPresenter::Initialize(UActorComponent* InOwnerComponent, 
 			TEXT("FInteractionWidgetPresenter::Initialize — InteractionWidgetClass not set; screen HUD widget disabled."));
 	}
 
-	// ── WORLD-SPACE FLOATING WIDGET FOR GROUND ITEMS ─────────────────────────
-	// Mirrors the UWidgetComponent on actor interactables (loot chests, portals).
-	// Uses GroundItemWorldWidgetClass if assigned; falls back to InteractionWidgetClass.
 	const TSubclassOf<UUserWidget> GroundWidgetClass =
 		GroundItemWorldWidgetClass
 			? TSubclassOf<UUserWidget>(GroundItemWorldWidgetClass)
@@ -111,13 +91,11 @@ void FInteractionWidgetPresenter::Initialize(UActorComponent* InOwnerComponent, 
 			GroundItemWorldWidget->SetTwoSided(false);
 			GroundItemWorldWidget->SetWindowFocusable(false);
 
-			// Pivot at center so the widget is centered on its world position
 			GroundItemWorldWidget->SetPivot(FVector2D(0.5f, 0.5f));
 			GroundItemWorldWidget->SetDrawSize(GroundItemWidgetDrawSize);
 			GroundItemWorldWidget->SetDrawAtDesiredSize(true);
 			GroundItemWorldWidget->SetWidgetClass(GroundWidgetClass);
 
-			// Attach to owner root; world location is overridden each tick
 			GroundItemWorldWidget->AttachToComponent(
 				Owner->GetRootComponent(),
 				FAttachmentTransformRules::KeepRelativeTransform);
@@ -136,10 +114,6 @@ void FInteractionWidgetPresenter::Initialize(UActorComponent* InOwnerComponent, 
 		InteractionWidgetClass     ? *InteractionWidgetClass->GetName()     : TEXT("none"),
 		GroundItemWorldWidgetClass ? *GroundItemWorldWidgetClass->GetName() : TEXT("fallback"));
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// WIDGET UPDATE
-// ═══════════════════════════════════════════════════════════════════════
 
 void FInteractionWidgetPresenter::UpdateForActorInteractable(const TScriptInterface<IInteractable>& Interactable)
 {
@@ -162,7 +136,6 @@ void FInteractionWidgetPresenter::UpdateForGroundItem(int32 GroundItemID)
 		return;
 	}
 
-	// Build display text (shared by both widget types).
 	FText Description = GroundItemDefaultText;
 	if (UItemInstance* Item = GetGroundItemInstance(GroundItemID))
 	{
@@ -173,10 +146,8 @@ void FInteractionWidgetPresenter::UpdateForGroundItem(int32 GroundItemID)
 		}
 	}
 
-	// ── PRIMARY: world-space floating widget above the item ──────────────────
 	ShowGroundItemWorldWidget(GroundItemID);
 
-	// ── SECONDARY: screen-space HUD widget ───────────────────────────────────
 	if (!InteractionWidget)
 	{
 		return;
@@ -208,7 +179,6 @@ void FInteractionWidgetPresenter::PositionWidgetAtGroundItem(int32 GroundItemID)
 		return;
 	}
 
-	// Lift the projection point above the item so the widget floats above it
 	FVector WorldPos = *WorldLocPtr;
 	WorldPos.Z += GroundItemWidgetHeightOffset;
 
@@ -221,11 +191,9 @@ void FInteractionWidgetPresenter::PositionWidgetAtGroundItem(int32 GroundItemID)
 	FVector2D ScreenPos;
 	if (!PC->ProjectWorldLocationToScreen(WorldPos, ScreenPos, /*bPlayerViewportRelative=*/false))
 	{
-		// Item is behind the camera — keep widget hidden at its current position
 		return;
 	}
 
-	// Account for DPI scaling so the widget lands at the correct physical pixel
 	const float DPIScale = UWidgetLayoutLibrary::GetViewportScale(OwnerComponent);
 	if (DPIScale > KINDA_SMALL_NUMBER)
 	{
@@ -255,11 +223,9 @@ void FInteractionWidgetPresenter::ShowGroundItemWorldWidget(int32 GroundItemID)
 		return;
 	}
 
-	// Position the widget component above the item in world space
 	const FVector WidgetWorldPos = *WorldLocPtr + FVector(0.f, 0.f, GroundItemWidgetHeightOffset);
 	GroundItemWorldWidget->SetWorldLocation(WidgetWorldPos);
 
-	// Update the widget content
 	if (UInteractableWidget* W = Cast<UInteractableWidget>(GroundItemWorldWidget->GetWidget()))
 	{
 		FText Description = GroundItemDefaultText;
@@ -308,11 +274,9 @@ void FInteractionWidgetPresenter::TickGroundItemWorldWidget(int32 GroundItemID)
 		return;
 	}
 
-	// Keep the widget anchored above the item as the player moves
 	const FVector WidgetWorldPos = *LocPtr + FVector(0.f, 0.f, GroundItemWidgetHeightOffset);
 	GroundItemWorldWidget->SetWorldLocation(WidgetWorldPos);
 
-	// Face the widget toward the local player camera
 	if (APlayerController* PC = GetOwnerPlayerController())
 	{
 		FVector CamLoc;
@@ -361,7 +325,6 @@ void FInteractionWidgetPresenter::SetHoldingState(float Progress, EManagedIntera
 			? EInteractionWidgetState::IWS_Mashing
 			: EInteractionWidgetState::IWS_Holding;
 
-	// Screen HUD widget
 	if (InteractionWidget)
 	{
 		if (!InteractionWidget->IsShown())
@@ -372,7 +335,6 @@ void FInteractionWidgetPresenter::SetHoldingState(float Progress, EManagedIntera
 		InteractionWidget->SetProgress(FMath::Clamp(Progress, 0.0f, 1.0f));
 	}
 
-	// World-space widget above the ground item
 	if (Mode == EManagedInteractionMode::GroundTapOrHold && GroundItemWorldWidget)
 	{
 		if (UInteractableWidget* W = Cast<UInteractableWidget>(GroundItemWorldWidget->GetWidget()))
@@ -428,10 +390,6 @@ bool FInteractionWidgetPresenter::IsHUDWidgetShown() const
 	return InteractionWidget && InteractionWidget->IsShown();
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// OUTLINE / HIGHLIGHT
-// ═══════════════════════════════════════════════════════════════════════
-
 bool FInteractionWidgetPresenter::InitializeOutlineMID()
 {
 	if (OutlineMID)
@@ -439,8 +397,6 @@ bool FInteractionWidgetPresenter::InitializeOutlineMID()
 		return true;
 	}
 
-	// Cache scan failure to avoid a repeated TActorIterator walk.
-	// If the level has no PostProcessVolume, iterating every call is wasteful.
 	if (!TargetPostProcessVolume && !bPostProcessSearchFailed)
 	{
 		if (!WorldContext)
@@ -514,10 +470,6 @@ void FInteractionWidgetPresenter::ResetHighlightStyle()
 	OutlineMID->SetScalarParameterValue(TEXT("Threshold"), PlayerHighlightThreshold);
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// CLEANUP
-// ═══════════════════════════════════════════════════════════════════════
-
 void FInteractionWidgetPresenter::Shutdown()
 {
 	if (InteractionWidget)
@@ -532,10 +484,6 @@ void FInteractionWidgetPresenter::Shutdown()
 		GroundItemWorldWidget = nullptr;
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// INTERNAL HELPERS
-// ═══════════════════════════════════════════════════════════════════════
 
 APlayerController* FInteractionWidgetPresenter::GetOwnerPlayerController() const
 {

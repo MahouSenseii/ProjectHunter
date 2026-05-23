@@ -1,5 +1,3 @@
-// Copyright@2024 Quentin Davis
-
 #include "PHGameplayTags.h"
 #include "GameplayTagsManager.h"
 #include "AbilitySystem/HunterAttributeSet.h"
@@ -8,9 +6,6 @@ DEFINE_LOG_CATEGORY_STATIC(LogPHGameplayTags, Log, All);
 
 
 
-// ==============================
-// Static maps / singleton
-// ==============================
 TMap<FGameplayTag, FGameplayAttribute> FPHGameplayTags::StatusEffectTagToAttributeMap;
 TMap<FGameplayTag, FGameplayTag>        FPHGameplayTags::TagsMinMax;
 TMap<FString, FGameplayAttribute>       FPHGameplayTags::FlatDamageToAttributesMap;
@@ -24,11 +19,6 @@ FPHGameplayTags FPHGameplayTags::GameplayTags;
 
 #define DEFINE_GAMEPLAY_TAG(TAG) FGameplayTag FPHGameplayTags::TAG;
 
-// ==============================
-// Tag declarations (mirror .h)
-// ==============================
-
-// Primary
 DEFINE_GAMEPLAY_TAG(Attributes_Primary_Strength)
 DEFINE_GAMEPLAY_TAG(Attributes_Primary_Intelligence)
 DEFINE_GAMEPLAY_TAG(Attributes_Primary_Dexterity)
@@ -37,10 +27,8 @@ DEFINE_GAMEPLAY_TAG(Attributes_Primary_Affliction)
 DEFINE_GAMEPLAY_TAG(Attributes_Primary_Luck)
 DEFINE_GAMEPLAY_TAG(Attributes_Primary_Covenant)
 
-// Secondary: Defenses
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Defenses_Armor)
 
-// Secondary: Vitals - Health
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxHealth)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxEffectiveHealth)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_HealthRegenRate)
@@ -52,7 +40,6 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxHealthReservedAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_HealthFlatReservedAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_HealthPercentageReserved)
 
-// Secondary: Vitals - Mana
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxMana)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxEffectiveMana)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ManaRegenRate)
@@ -64,7 +51,6 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxManaReservedAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ManaFlatReservedAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ManaPercentageReserved)
 
-// Secondary: Vitals - Stamina
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxStamina)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxEffectiveStamina)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaRegenRate)
@@ -78,7 +64,6 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaPercentageReserved)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaDegenRate)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_StaminaDegenAmount)
 
-// Secondary: Vitals - Arcane Shield
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ArcaneShield)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxArcaneShield)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxEffectiveArcaneShield)
@@ -91,7 +76,6 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_MaxArcaneShieldReservedAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ArcaneShieldFlatReservedAmount)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Vital_ArcaneShieldPercentageReserved)
 
-// Damage: Base (Min/Max)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MinPhysicalDamage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MinFireDamage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MinIceDamage)
@@ -105,7 +89,6 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MaxLightDamage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MaxLightningDamage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Damages_MaxCorruptionDamage)
 
-// Damage: Flat/Percent bonuses
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_BonusDamage_GlobalDamages)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_BonusDamage_PhysicalPercentBonus)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_BonusDamage_PhysicalFlatBonus)
@@ -120,7 +103,6 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_BonusDamage_LightningFlatBonus)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_BonusDamage_CorruptionPercentBonus)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_BonusDamage_CorruptionFlatBonus)
 
-// Resistances
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Resistances_GlobalDefenses)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Resistances_BlockStrength)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Resistances_Armour)
@@ -142,7 +124,6 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Resistances_CorruptionResistanceFlat)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Resistances_CorruptionResistancePercentage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Resistances_MaxCorruptionResistance)
 
-// Secondary: Offensive
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Offensive_AreaDamage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Offensive_AreaOfEffect)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Offensive_AttackRange)
@@ -165,7 +146,6 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Offensive_ChainDamage)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Offensive_DamageBonusWhileAtFullHP)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Offensive_DamageBonusWhileAtLowHP)
 
-// Secondary: Piercing
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Piercing_Armour)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Piercing_Fire)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Piercing_Ice)
@@ -173,13 +153,11 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Piercing_Light)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Piercing_Lightning)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Piercing_Corruption)
 
-// Secondary: Reflection
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Reflection_Physical)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Reflection_Elemental)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Reflection_ChancePhysical)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Reflection_ChanceElemental)
 
-// Secondary: Conversions
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Conversion_PhysicalToFire)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Conversion_PhysicalToIce)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Conversion_PhysicalToLightning)
@@ -211,7 +189,6 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Conversion_CorruptionToIce)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Conversion_CorruptionToLightning)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Conversion_CorruptionToLight)
 
-// Misc
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Money_Gems)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_Poise)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_ComboCounter)
@@ -233,12 +210,10 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_CritMultiplier)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Misc_CombatAlignment)
 DEFINE_GAMEPLAY_TAG(Relation_HostileToSource)
 
-// Vitals (current values)
 DEFINE_GAMEPLAY_TAG(Attributes_Vital_Health)
 DEFINE_GAMEPLAY_TAG(Attributes_Vital_Stamina)
 DEFINE_GAMEPLAY_TAG(Attributes_Vital_Mana)
 
-// Status chances (aliases under Attributes.Secondary.*)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Ailments_ChanceToBleed)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Ailments_ChanceToIgnite)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Ailments_ChanceToFreeze)
@@ -249,7 +224,6 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Ailments_ChanceToPetrify)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Ailments_ChanceToPurify)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Ailments_ChanceToCorrupt)
 
-// Durations (aliases under Attributes.Secondary.*)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Duration_Bleed)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Duration_Burn)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Duration_Freeze)
@@ -258,7 +232,6 @@ DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Duration_Corruption)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Duration_PetrifyBuildUp)
 DEFINE_GAMEPLAY_TAG(Attributes_Secondary_Duration_Purify)
 
-// Conditions / Triggers / Effects
 DEFINE_GAMEPLAY_TAG(Condition_Alive)
 DEFINE_GAMEPLAY_TAG(Condition_Dead)
 DEFINE_GAMEPLAY_TAG(Condition_NearDeathExperience)
@@ -359,18 +332,15 @@ DEFINE_GAMEPLAY_TAG(Effect_Mana_RegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Health_DegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Mana_DegenActive)
 
-// SetByCaller data tags — used by DamageApplicationGE
 DEFINE_GAMEPLAY_TAG(Data_Damage_Health)
 DEFINE_GAMEPLAY_TAG(Data_Damage_ArcaneShield)
 DEFINE_GAMEPLAY_TAG(Data_Damage_Stamina)
 
-// N-20 FIX: Recovery SetByCaller tags (mirrors damage tags for healing GEs)
 DEFINE_GAMEPLAY_TAG(Data_Recovery_Health)
 DEFINE_GAMEPLAY_TAG(Data_Recovery_Mana)
 DEFINE_GAMEPLAY_TAG(Data_Recovery_Stamina)
 DEFINE_GAMEPLAY_TAG(Data_Recovery_ArcaneShield)
 
-// Parry / Stagger / Invincible state tags
 DEFINE_GAMEPLAY_TAG(Condition_Self_IsParrying)
 DEFINE_GAMEPLAY_TAG(Condition_Self_RecentlyParried)
 DEFINE_GAMEPLAY_TAG(Condition_Self_IsStaggered)
@@ -378,7 +348,6 @@ DEFINE_GAMEPLAY_TAG(Condition_Self_StaminaDepleted)
 DEFINE_GAMEPLAY_TAG(Condition_Self_IsInvincible)
 DEFINE_GAMEPLAY_TAG(State_Self_ExecutingSkill)
 
-// More damage modifier SetByCaller tags (multiplicative per source)
 DEFINE_GAMEPLAY_TAG(Data_More_Physical)
 DEFINE_GAMEPLAY_TAG(Data_More_Fire)
 DEFINE_GAMEPLAY_TAG(Data_More_Ice)
@@ -388,7 +357,6 @@ DEFINE_GAMEPLAY_TAG(Data_More_Corruption)
 DEFINE_GAMEPLAY_TAG(Data_More_Elemental)
 DEFINE_GAMEPLAY_TAG(Data_More_Global)
 
-// Increased damage modifier SetByCaller tags (additive pool)
 DEFINE_GAMEPLAY_TAG(Data_Increased_Physical)
 DEFINE_GAMEPLAY_TAG(Data_Increased_Fire)
 DEFINE_GAMEPLAY_TAG(Data_Increased_Ice)
@@ -398,16 +366,12 @@ DEFINE_GAMEPLAY_TAG(Data_Increased_Corruption)
 DEFINE_GAMEPLAY_TAG(Data_Increased_Elemental)
 DEFINE_GAMEPLAY_TAG(Data_Increased_Global)
 
-// Skill resource cost SetByCaller tags
 DEFINE_GAMEPLAY_TAG(Data_Cost_Stamina)
 DEFINE_GAMEPLAY_TAG(Data_Cost_Mana)
 DEFINE_GAMEPLAY_TAG(Data_Cost_Health)
 
 #undef DEFINE_GAMEPLAY_TAG
 
-// ==============================
-// Initialization entry points
-// ==============================
 void FPHGameplayTags::InitializeNativeGameplayTags()
 {
 	InitRegister();
@@ -432,14 +396,10 @@ void FPHGameplayTags::InitRegister()
 	RegisterStatusEffectAliases();
 	RegisterSetByCallerDamageTags();
 	RegisterAttributeToTagMappings();
-	// Keep the lookup-map rebuild steps last: they clear and repopulate shared maps.
 	RegisterAllAttribute();
 	RegisterTagToAttributeMappings();
 }
 
-// ==============================
-// Registrars (grouped, tidy)
-// ==============================
 void FPHGameplayTags::RegisterPrimaryAttributes()
 {
 	UGameplayTagsManager& T = UGameplayTagsManager::Get();
@@ -456,7 +416,6 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 {
 	UGameplayTagsManager& T = UGameplayTagsManager::Get();
 
-	// Health
 	Attributes_Secondary_Vital_MaxHealth              = T.AddNativeGameplayTag("Attributes.Secondary.Vital.MaxHealth",              TEXT("Maximum health."));
 	Attributes_Secondary_Vital_MaxEffectiveHealth     = T.AddNativeGameplayTag("Attributes.Secondary.Vital.MaxEffectiveHealth",     TEXT("Effective max health after reservations."));
 	Attributes_Secondary_Vital_HealthRegenRate        = T.AddNativeGameplayTag("Attributes.Secondary.Vital.HealthRegenRate",        TEXT("Health regen rate."));
@@ -468,7 +427,6 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 	Attributes_Secondary_Vital_HealthFlatReservedAmount= T.AddNativeGameplayTag("Attributes.Secondary.Vital.HealthFlatReservedAmount",TEXT("Flat reserved health."));
 	Attributes_Secondary_Vital_HealthPercentageReserved= T.AddNativeGameplayTag("Attributes.Secondary.Vital.HealthPercentageReserved",TEXT("% reserved health."));
 
-	// Mana
 	Attributes_Secondary_Vital_MaxMana                = T.AddNativeGameplayTag("Attributes.Secondary.Vital.MaxMana",                TEXT("Maximum mana."));
 	Attributes_Secondary_Vital_MaxEffectiveMana       = T.AddNativeGameplayTag("Attributes.Secondary.Vital.MaxEffectiveMana",       TEXT("Effective max mana after reservations."));
 	Attributes_Secondary_Vital_ManaRegenRate          = T.AddNativeGameplayTag("Attributes.Secondary.Vital.ManaRegenRate",          TEXT("Mana regen rate."));
@@ -480,7 +438,6 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 	Attributes_Secondary_Vital_ManaFlatReservedAmount = T.AddNativeGameplayTag("Attributes.Secondary.Vital.ManaFlatReservedAmount", TEXT("Flat reserved mana."));
 	Attributes_Secondary_Vital_ManaPercentageReserved = T.AddNativeGameplayTag("Attributes.Secondary.Vital.ManaPercentageReserved", TEXT("% reserved mana."));
 
-	// Stamina
 	Attributes_Secondary_Vital_MaxStamina             = T.AddNativeGameplayTag("Attributes.Secondary.Vital.MaxStamina",             TEXT("Max stamina."));
 	Attributes_Secondary_Vital_MaxEffectiveStamina    = T.AddNativeGameplayTag("Attributes.Secondary.Vital.MaxEffectiveStamina",    TEXT("Effective max stamina."));
 	Attributes_Secondary_Vital_StaminaRegenRate       = T.AddNativeGameplayTag("Attributes.Secondary.Vital.StaminaRegenRate",       TEXT("Stamina regen rate."));
@@ -494,7 +451,6 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 	Attributes_Secondary_Vital_StaminaDegenRate       = T.AddNativeGameplayTag("Attributes.Secondary.Vital.StaminaDegenRate",       TEXT("Stamina degeneration rate."));
 	Attributes_Secondary_Vital_StaminaDegenAmount     = T.AddNativeGameplayTag("Attributes.Secondary.Vital.StaminaDegenAmount",     TEXT("Stamina degeneration amount."));
 
-	// Arcane Shield
 	Attributes_Secondary_Vital_ArcaneShield                 = T.AddNativeGameplayTag("Attributes.Secondary.Vital.ArcaneShield",                 TEXT("Current arcane shield."));
 	Attributes_Secondary_Vital_MaxArcaneShield              = T.AddNativeGameplayTag("Attributes.Secondary.Vital.MaxArcaneShield",              TEXT("Max arcane shield."));
 	Attributes_Secondary_Vital_MaxEffectiveArcaneShield     = T.AddNativeGameplayTag("Attributes.Secondary.Vital.MaxEffectiveArcaneShield",     TEXT("Effective max arcane shield."));
@@ -507,7 +463,6 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 	Attributes_Secondary_Vital_ArcaneShieldFlatReservedAmount= T.AddNativeGameplayTag("Attributes.Secondary.Vital.ArcaneShieldFlatReservedAmount",TEXT("Flat reserved arcane shield."));
 	Attributes_Secondary_Vital_ArcaneShieldPercentageReserved= T.AddNativeGameplayTag("Attributes.Secondary.Vital.ArcaneShieldPercentageReserved",TEXT("% reserved arcane shield."));
 
-	// Also register your regen/degeneration “effect” tags here (unchanged)
 	Effect_Stamina_RegenActive = T.AddNativeGameplayTag("Effect.Stamina.RegenActive", TEXT("Stamina is regenerating."));
 	Effect_Stamina_DegenActive = T.AddNativeGameplayTag("Effect.Stamina.DegenActive", TEXT("Stamina is degenerating."));
 	Effect_Health_RegenActive  = T.AddNativeGameplayTag("Effect.Health.RegenActive",  TEXT("Health is regenerating."));
@@ -521,7 +476,6 @@ void FPHGameplayTags::RegisterDamageTags()
 {
 	UGameplayTagsManager& T = UGameplayTagsManager::Get();
 
-	// Min
 	Attributes_Secondary_Damages_MinPhysicalDamage   = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Min.Physical",   TEXT("Min physical damage."));
 	Attributes_Secondary_Damages_MinFireDamage       = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Min.Fire",       TEXT("Min fire damage."));
 	Attributes_Secondary_Damages_MinIceDamage        = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Min.Ice",        TEXT("Min ice damage."));
@@ -529,7 +483,6 @@ void FPHGameplayTags::RegisterDamageTags()
 	Attributes_Secondary_Damages_MinLightningDamage  = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Min.Lightning",  TEXT("Min lightning damage."));
 	Attributes_Secondary_Damages_MinCorruptionDamage = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Min.Corruption", TEXT("Min corruption damage."));
 
-	// Max
 	Attributes_Secondary_Damages_MaxPhysicalDamage   = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Max.Physical",   TEXT("Max physical damage."));
 	Attributes_Secondary_Damages_MaxFireDamage       = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Max.Fire",       TEXT("Max fire damage."));
 	Attributes_Secondary_Damages_MaxIceDamage        = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Max.Ice",        TEXT("Max ice damage."));
@@ -537,7 +490,6 @@ void FPHGameplayTags::RegisterDamageTags()
 	Attributes_Secondary_Damages_MaxLightningDamage  = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Max.Lightning",  TEXT("Max lightning damage."));
 	Attributes_Secondary_Damages_MaxCorruptionDamage = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Max.Corruption", TEXT("Max corruption damage."));
 
-	// Flat
 	Attributes_Secondary_BonusDamage_PhysicalFlatBonus   = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Flat.Physical",   TEXT("Flat physical bonus."));
 	Attributes_Secondary_BonusDamage_FireFlatBonus       = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Flat.Fire",       TEXT("Flat fire bonus."));
 	Attributes_Secondary_BonusDamage_IceFlatBonus        = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Flat.Ice",        TEXT("Flat ice bonus."));
@@ -545,7 +497,6 @@ void FPHGameplayTags::RegisterDamageTags()
 	Attributes_Secondary_BonusDamage_LightningFlatBonus  = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Flat.Lightning",  TEXT("Flat lightning bonus."));
 	Attributes_Secondary_BonusDamage_CorruptionFlatBonus = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Flat.Corruption", TEXT("Flat corruption bonus."));
 
-	// Percent
 	Attributes_Secondary_BonusDamage_PhysicalPercentBonus   = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Percent.Physical",   TEXT("Percent physical bonus."));
 	Attributes_Secondary_BonusDamage_FirePercentBonus       = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Percent.Fire",       TEXT("Percent fire bonus."));
 	Attributes_Secondary_BonusDamage_IcePercentBonus        = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Percent.Ice",        TEXT("Percent ice bonus."));
@@ -553,7 +504,6 @@ void FPHGameplayTags::RegisterDamageTags()
 	Attributes_Secondary_BonusDamage_LightningPercentBonus  = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Percent.Lightning",  TEXT("Percent lightning bonus."));
 	Attributes_Secondary_BonusDamage_CorruptionPercentBonus = T.AddNativeGameplayTag("Attributes.Secondary.Damage.Percent.Corruption", TEXT("Percent corruption bonus."));
 
-	// Global
 	Attributes_Secondary_BonusDamage_GlobalDamages = T.AddNativeGameplayTag("Attributes.Secondary.Damage.GlobalBonus", TEXT("Global damage bonus."));
 }
 
@@ -561,7 +511,6 @@ void FPHGameplayTags::RegisterResistanceTags()
 {
 	UGameplayTagsManager& T = UGameplayTagsManager::Get();
 
-	// Global & Armour
 	Attributes_Secondary_Defenses_Armor             = T.AddNativeGameplayTag("Attributes.Secondary.Defenses.Armor",           TEXT("Armor. Legacy alias for Armour."));
 	Attributes_Secondary_Resistances_GlobalDefenses       = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.GlobalDefenses", TEXT("Global defenses."));
 	Attributes_Secondary_Resistances_Armour               = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Armour",         TEXT("Armour."));
@@ -572,27 +521,22 @@ void FPHGameplayTags::RegisterResistanceTags()
 	T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Armor.Flat",    TEXT("Flat armor. US spelling alias for Armour."));
 	T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Armor.Percent", TEXT("Percent armor. US spelling alias for Armour."));
 
-	// Fire
 	Attributes_Secondary_Resistances_FireResistanceFlat        = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Fire.Flat",     TEXT("Flat fire res."));
 	Attributes_Secondary_Resistances_FireResistancePercentage  = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Fire.Percent",  TEXT("Percent fire res."));
 	Attributes_Secondary_Resistances_MaxFireResistance         = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Fire.Max",      TEXT("Max fire res."));
 
-	// Ice
 	Attributes_Secondary_Resistances_IceResistanceFlat         = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Ice.Flat",      TEXT("Flat ice res."));
 	Attributes_Secondary_Resistances_IceResistancePercentage   = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Ice.Percent",   TEXT("Percent ice res."));
 	Attributes_Secondary_Resistances_MaxIceResistance          = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Ice.Max",       TEXT("Max ice res."));
 
-	// Light
 	Attributes_Secondary_Resistances_LightResistanceFlat       = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Light.Flat",    TEXT("Flat light res."));
 	Attributes_Secondary_Resistances_LightResistancePercentage = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Light.Percent", TEXT("Percent light res."));
 	Attributes_Secondary_Resistances_MaxLightResistance        = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Light.Max",     TEXT("Max light res."));
 
-	// Lightning
 	Attributes_Secondary_Resistances_LightningResistanceFlat       = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Lightning.Flat",    TEXT("Flat lightning res."));
 	Attributes_Secondary_Resistances_LightningResistancePercentage = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Lightning.Percent", TEXT("Percent lightning res."));
 	Attributes_Secondary_Resistances_MaxLightningResistance        = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Lightning.Max",     TEXT("Max lightning res."));
 
-	// Corruption
 	Attributes_Secondary_Resistances_CorruptionResistanceFlat       = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Corruption.Flat",    TEXT("Flat corruption res."));
 	Attributes_Secondary_Resistances_CorruptionResistancePercentage = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Corruption.Percent", TEXT("Percent corruption res."));
 	Attributes_Secondary_Resistances_MaxCorruptionResistance        = T.AddNativeGameplayTag("Attributes.Secondary.Resistance.Corruption.Max",     TEXT("Max corruption res."));
@@ -619,7 +563,6 @@ void FPHGameplayTags::RegisterMiscAttributes()
 	Attributes_Secondary_Misc_CritChance       = T.AddNativeGameplayTag("Attributes.Secondary.Misc.CritChance",       TEXT("Crit chance (legacy alias of Offensive.CritChance)."));
 	Attributes_Secondary_Misc_CritMultiplier   = T.AddNativeGameplayTag("Attributes.Secondary.Misc.CritMultiplier",   TEXT("Crit multiplier (legacy alias of Offensive.CritMultiplier)."));
 
-	// Ensure this is registered once (remove any duplicate you might have had)
 	Attributes_Secondary_Misc_CombatAlignment  = T.AddNativeGameplayTag("Attributes.Secondary.Misc.CombatAlignment",  TEXT("Combat alignment."));
 	Relation_HostileToSource                   = T.AddNativeGameplayTag("Relation.HostileToSource",                   TEXT("Hostile relation to source."));
 }
@@ -635,8 +578,6 @@ void FPHGameplayTags::RegisterVitals()
 void FPHGameplayTags::RegisterStatusEffectChances()
 {
 	UGameplayTagsManager& T = UGameplayTagsManager::Get();
-	// Canonical StatusEffect.* tags are kept for content-facing usage.
-	// C++ lookups use the Attributes.Secondary.* aliases registered below.
 	T.AddNativeGameplayTag("StatusEffect.ChanceToApply.Bleed",     TEXT("Chance to Bleed."));
 	T.AddNativeGameplayTag("StatusEffect.ChanceToApply.Ignite",    TEXT("Chance to Ignite."));
 	T.AddNativeGameplayTag("StatusEffect.ChanceToApply.Freeze",    TEXT("Chance to Freeze."));
@@ -651,7 +592,6 @@ void FPHGameplayTags::RegisterStatusEffectChances()
 void FPHGameplayTags::RegisterStatusEffectDurations()
 {
 	UGameplayTagsManager& T = UGameplayTagsManager::Get();
-	// Canonical StatusEffect.* tags (kept for UI/content)
 	T.AddNativeGameplayTag("StatusEffect.Duration.Bleed",          TEXT("Bleed duration."));
 	T.AddNativeGameplayTag("StatusEffect.Duration.Burn",           TEXT("Burn duration."));
 	T.AddNativeGameplayTag("StatusEffect.Duration.Freeze",         TEXT("Freeze duration."));
@@ -665,13 +605,11 @@ void FPHGameplayTags::RegisterConditions()
 {
 	UGameplayTagsManager& T = UGameplayTagsManager::Get();
 
-	// Life/Death
 	Condition_Alive               = T.AddNativeGameplayTag("Condition.State.Alive",               TEXT("Alive."));
 	Condition_Dead                = T.AddNativeGameplayTag("Condition.State.Dead",                TEXT("Dead."));
 	Condition_NearDeathExperience = T.AddNativeGameplayTag("Condition.State.NearDeathExperience", TEXT("Near death."));
 	Condition_DeathPrevented      = T.AddNativeGameplayTag("Condition.State.DeathPrevented",      TEXT("Death prevented."));
 
-	// Thresholds
 	Condition_OnFullHealth        = T.AddNativeGameplayTag("Condition.Threshold.OnFullHealth",     TEXT("Full health."));
 	Condition_OnLowHealth         = T.AddNativeGameplayTag("Condition.Threshold.OnLowHealth",      TEXT("Low health."));
 	Condition_OnFullMana          = T.AddNativeGameplayTag("Condition.Threshold.OnFullMana",       TEXT("Full mana."));
@@ -681,7 +619,6 @@ void FPHGameplayTags::RegisterConditions()
 	Condition_OnFullArcaneShield  = T.AddNativeGameplayTag("Condition.Threshold.OnFullArcaneShield", TEXT("Full arcane shield."));
 	Condition_OnLowArcaneShield   = T.AddNativeGameplayTag("Condition.Threshold.OnLowArcaneShield",  TEXT("Low arcane shield."));
 
-	// Combat interaction states
 	Condition_OnKill              = T.AddNativeGameplayTag("Condition.Trigger.OnKill",            TEXT("On kill."));
 	Condition_OnCrit              = T.AddNativeGameplayTag("Condition.Trigger.OnCrit",            TEXT("On crit."));
 	Condition_RecentlyHit         = T.AddNativeGameplayTag("Condition.Recently.ReceivedHit",      TEXT("Recently hit."));
@@ -696,7 +633,6 @@ void FPHGameplayTags::RegisterConditions()
 	Condition_InCombat            = T.AddNativeGameplayTag("Condition.State.InCombat",            TEXT("In combat."));
 	Condition_OutOfCombat         = T.AddNativeGameplayTag("Condition.State.OutOfCombat",         TEXT("Out of combat."));
 
-	// Action states
 	Condition_UsingSkill          = T.AddNativeGameplayTag("Condition.State.UsingSkill",          TEXT("Using skill."));
 	Condition_UsingMelee          = T.AddNativeGameplayTag("Condition.State.UsingMelee",          TEXT("Using melee."));
 	Condition_UsingRanged         = T.AddNativeGameplayTag("Condition.State.UsingRanged",         TEXT("Using ranged."));
@@ -708,20 +644,17 @@ void FPHGameplayTags::RegisterConditions()
 	Condition_WhileStationary     = T.AddNativeGameplayTag("Condition.State.WhileStationary",     TEXT("While stationary."));
 	Condition_Sprinting           = T.AddNativeGameplayTag("Condition.State.Sprinting",           TEXT("Sprinting."));
 
-	// Buff/Debuff & effect states
 	Condition_BuffDurationBelow50 = T.AddNativeGameplayTag("Condition.Buff.DurationBelow50",      TEXT("Buff < 50% duration."));
 	Condition_EffectDurationExpired= T.AddNativeGameplayTag("Condition.Effect.Expired",           TEXT("Effect expired."));
 	Condition_HasBuff             = T.AddNativeGameplayTag("Condition.Has.Buff",                  TEXT("Has buff."));
 	Condition_HasDebuff           = T.AddNativeGameplayTag("Condition.Has.Debuff",                TEXT("Has debuff."));
 
-	// Enemy target states
 	Condition_TargetIsBoss        = T.AddNativeGameplayTag("Condition.Target.IsBoss",             TEXT("Target is boss."));
 	Condition_TargetIsMinion      = T.AddNativeGameplayTag("Condition.Target.IsMinion",           TEXT("Target is minion."));
 	Condition_TargetHasShield     = T.AddNativeGameplayTag("Condition.Target.HasShield",          TEXT("Target has shield."));
 	Condition_TargetIsCasting     = T.AddNativeGameplayTag("Condition.Target.IsCasting",          TEXT("Target casting."));
 	Condition_Target_IsBlocking   = T.AddNativeGameplayTag("Condition.Target.IsBlocking",         TEXT("Target blocking."));
 
-	// Positional / environmental
 	Condition_NearAllies          = T.AddNativeGameplayTag("Condition.Proximity.NearAllies",      TEXT("Near allies."));
 	Condition_NearEnemies         = T.AddNativeGameplayTag("Condition.Proximity.NearEnemies",     TEXT("Near enemies."));
 	Condition_Alone               = T.AddNativeGameplayTag("Condition.Proximity.Alone",           TEXT("Alone."));
@@ -729,7 +662,6 @@ void FPHGameplayTags::RegisterConditions()
 	Condition_InDark              = T.AddNativeGameplayTag("Condition.Environment.InDark",        TEXT("In dark."));
 	Condition_InDangerZone        = T.AddNativeGameplayTag("Condition.Environment.InDangerZone",  TEXT("In danger zone."));
 
-	// Ailment & status (self)
 	Condition_Self_Bleeding                   = T.AddNativeGameplayTag("Condition.Self.Bleeding",                   TEXT("Self bleeding."));
 	Condition_Self_Stunned                    = T.AddNativeGameplayTag("Condition.Self.Stunned",                    TEXT("Self stunned."));
 	Condition_Self_Frozen                     = T.AddNativeGameplayTag("Condition.Self.Frozen",                     TEXT("Self frozen."));
@@ -748,7 +680,6 @@ void FPHGameplayTags::RegisterConditions()
 	Condition_Self_ZeroArcaneShield           = T.AddNativeGameplayTag("Condition.Self.ZeroArcaneShield",           TEXT("Zero arcane shield."));
 	Condition_Self_IsBlocking                 = T.AddNativeGameplayTag("Condition.Self.IsBlocking",                 TEXT("Self is blocking."));
 
-	// Ailment & status (target)
 	Condition_Target_Bleeding  = T.AddNativeGameplayTag("Condition.Target.Bleeding",  TEXT("Target bleeding."));
 	Condition_Target_Stunned   = T.AddNativeGameplayTag("Condition.Target.Stunned",   TEXT("Target stunned."));
 	Condition_Target_Frozen    = T.AddNativeGameplayTag("Condition.Target.Frozen",    TEXT("Target frozen."));
@@ -825,42 +756,36 @@ void FPHGameplayTags::RegisterDamageConversionTags()
 {
 	UGameplayTagsManager& T = UGameplayTagsManager::Get();
 
-	// Physical ->
 	Attributes_Secondary_Conversion_PhysicalToFire       = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.PhysicalToFire",       TEXT(""));
 	Attributes_Secondary_Conversion_PhysicalToIce        = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.PhysicalToIce",        TEXT(""));
 	Attributes_Secondary_Conversion_PhysicalToLightning  = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.PhysicalToLightning",  TEXT(""));
 	Attributes_Secondary_Conversion_PhysicalToLight      = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.PhysicalToLight",      TEXT(""));
 	Attributes_Secondary_Conversion_PhysicalToCorruption = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.PhysicalToCorruption", TEXT(""));
 
-	// Fire ->
 	Attributes_Secondary_Conversion_FireToPhysical       = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.FireToPhysical",       TEXT(""));
 	Attributes_Secondary_Conversion_FireToIce            = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.FireToIce",            TEXT(""));
 	Attributes_Secondary_Conversion_FireToLightning      = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.FireToLightning",      TEXT(""));
 	Attributes_Secondary_Conversion_FireToLight          = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.FireToLight",          TEXT(""));
 	Attributes_Secondary_Conversion_FireToCorruption     = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.FireToCorruption",     TEXT(""));
 
-	// Ice ->
 	Attributes_Secondary_Conversion_IceToPhysical        = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.IceToPhysical",        TEXT(""));
 	Attributes_Secondary_Conversion_IceToFire            = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.IceToFire",            TEXT(""));
 	Attributes_Secondary_Conversion_IceToLightning       = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.IceToLightning",       TEXT(""));
 	Attributes_Secondary_Conversion_IceToLight           = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.IceToLight",           TEXT(""));
 	Attributes_Secondary_Conversion_IceToCorruption      = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.IceToCorruption",      TEXT(""));
 
-	// Lightning ->
 	Attributes_Secondary_Conversion_LightningToPhysical  = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.LightningToPhysical",  TEXT(""));
 	Attributes_Secondary_Conversion_LightningToFire      = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.LightningToFire",      TEXT(""));
 	Attributes_Secondary_Conversion_LightningToIce       = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.LightningToIce",       TEXT(""));
 	Attributes_Secondary_Conversion_LightningToLight     = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.LightningToLight",     TEXT(""));
 	Attributes_Secondary_Conversion_LightningToCorruption= T.AddNativeGameplayTag("Attributes.Secondary.Conversion.LightningToCorruption",TEXT(""));
 
-	// Light ->
 	Attributes_Secondary_Conversion_LightToPhysical      = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.LightToPhysical",      TEXT(""));
 	Attributes_Secondary_Conversion_LightToFire          = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.LightToFire",          TEXT(""));
 	Attributes_Secondary_Conversion_LightToIce           = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.LightToIce",           TEXT(""));
 	Attributes_Secondary_Conversion_LightToLightning     = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.LightToLightning",     TEXT(""));
 	Attributes_Secondary_Conversion_LightToCorruption    = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.LightToCorruption",    TEXT(""));
 
-	// Corruption ->
 	Attributes_Secondary_Conversion_CorruptionToPhysical = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.CorruptionToPhysical", TEXT(""));
 	Attributes_Secondary_Conversion_CorruptionToFire     = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.CorruptionToFire",     TEXT(""));
 	Attributes_Secondary_Conversion_CorruptionToIce      = T.AddNativeGameplayTag("Attributes.Secondary.Conversion.CorruptionToIce",      TEXT(""));
@@ -870,10 +795,8 @@ void FPHGameplayTags::RegisterDamageConversionTags()
 
 void FPHGameplayTags::RegisterStatusEffectAliases()
 {
-	// Bridge: expose aliases under Attributes.Secondary.* to match FindAttributeByTag()
 	UGameplayTagsManager& T = UGameplayTagsManager::Get();
 
-	// Chances
 	Attributes_Secondary_Ailments_ChanceToBleed     = T.AddNativeGameplayTag("Attributes.Secondary.Ailments.ChanceToBleed",     TEXT(""));
 	Attributes_Secondary_Ailments_ChanceToIgnite    = T.AddNativeGameplayTag("Attributes.Secondary.Ailments.ChanceToIgnite",    TEXT(""));
 	Attributes_Secondary_Ailments_ChanceToFreeze    = T.AddNativeGameplayTag("Attributes.Secondary.Ailments.ChanceToFreeze",    TEXT(""));
@@ -884,7 +807,6 @@ void FPHGameplayTags::RegisterStatusEffectAliases()
 	Attributes_Secondary_Ailments_ChanceToPurify    = T.AddNativeGameplayTag("Attributes.Secondary.Ailments.ChanceToPurify",    TEXT(""));
 	Attributes_Secondary_Ailments_ChanceToCorrupt   = T.AddNativeGameplayTag("Attributes.Secondary.Ailments.ChanceToCorrupt",   TEXT(""));
 
-	// Durations
 	Attributes_Secondary_Duration_Bleed           = T.AddNativeGameplayTag("Attributes.Secondary.Duration.Bleed",           TEXT(""));
 	Attributes_Secondary_Duration_Burn            = T.AddNativeGameplayTag("Attributes.Secondary.Duration.Burn",            TEXT(""));
 	Attributes_Secondary_Duration_Freeze          = T.AddNativeGameplayTag("Attributes.Secondary.Duration.Freeze",          TEXT(""));
@@ -896,24 +818,16 @@ void FPHGameplayTags::RegisterStatusEffectAliases()
 
 void FPHGameplayTags::RegisterSetByCallerDamageTags()
 {
-	// B-1 FIX: These tags are used as SetByCaller keys on DamageApplicationGE.
-	// The GE must have an Instant duration with three Additive modifiers, each
-	// using a SetByCaller magnitude with the corresponding tag below.
-	// CombatManager::ApplyResolvedDamage passes negative magnitudes (damage = subtraction).
 	UGameplayTagsManager& T = UGameplayTagsManager::Get();
 	Data_Damage_Health       = T.AddNativeGameplayTag("Data.Damage.Health",       TEXT("SetByCaller key for health damage in DamageApplicationGE."));
 	Data_Damage_ArcaneShield = T.AddNativeGameplayTag("Data.Damage.ArcaneShield", TEXT("SetByCaller key for arcane shield damage in DamageApplicationGE."));
 	Data_Damage_Stamina      = T.AddNativeGameplayTag("Data.Damage.Stamina",      TEXT("SetByCaller key for stamina damage in DamageApplicationGE."));
 
-	// N-20 FIX: Register recovery (healing) SetByCaller tags.
-	// HealingApplicationGE uses these as SetByCaller keys — pass positive magnitudes.
 	Data_Recovery_Health        = T.AddNativeGameplayTag("Data.Recovery.Health",        TEXT("SetByCaller key for health recovery in HealingApplicationGE."));
 	Data_Recovery_Mana          = T.AddNativeGameplayTag("Data.Recovery.Mana",          TEXT("SetByCaller key for mana recovery in HealingApplicationGE."));
 	Data_Recovery_Stamina       = T.AddNativeGameplayTag("Data.Recovery.Stamina",       TEXT("SetByCaller key for stamina recovery in HealingApplicationGE."));
 	Data_Recovery_ArcaneShield  = T.AddNativeGameplayTag("Data.Recovery.ArcaneShield",  TEXT("SetByCaller key for arcane shield recovery in HealingApplicationGE."));
 
-	// ── Parry / Stagger / Invincibility state tags ─────────────────────────
-	// Set as active GE tags — not SetByCaller. Registered here for consistency.
 	Condition_Self_IsParrying      = T.AddNativeGameplayTag("Condition.Self.IsParrying",      TEXT("Character is in the active parry window. CombatManager routes EHitResponse::Parry when this is present."));
 	Condition_Self_RecentlyParried = T.AddNativeGameplayTag("Condition.Self.RecentlyParried", TEXT("Character successfully parried within the last few seconds. Enables 'after parrying' conditional modifiers."));
 	Condition_Self_IsStaggered     = T.AddNativeGameplayTag("Condition.Self.IsStaggered",     TEXT("Character is in a stagger state. Set when bShouldStagger fires; cleared on stagger recovery."));
@@ -921,8 +835,6 @@ void FPHGameplayTags::RegisterSetByCallerDamageTags()
 	Condition_Self_IsInvincible    = T.AddNativeGameplayTag("Condition.Self.IsInvincible",    TEXT("Character has invincibility frames active. Routes EHitResponse::Invincible — negates damage and ailments."));
 	State_Self_ExecutingSkill      = T.AddNativeGameplayTag("State.Self.ExecutingSkill",      TEXT("Character is mid-execution of an active skill. Suppresses stagger trigger even at zero stamina."));
 
-	// ── More damage SetByCaller tags (multiplicative per source) ──────────
-	// Apply via temporary instant GE on the source. Each GE is its own More multiplier.
 	Data_More_Physical   = T.AddNativeGameplayTag("Data.More.Physical",   TEXT("SetByCaller: X% more physical damage. Stacks multiplicatively."));
 	Data_More_Fire       = T.AddNativeGameplayTag("Data.More.Fire",       TEXT("SetByCaller: X% more fire damage. Stacks multiplicatively."));
 	Data_More_Ice        = T.AddNativeGameplayTag("Data.More.Ice",        TEXT("SetByCaller: X% more ice damage. Stacks multiplicatively."));
@@ -932,8 +844,6 @@ void FPHGameplayTags::RegisterSetByCallerDamageTags()
 	Data_More_Elemental  = T.AddNativeGameplayTag("Data.More.Elemental",  TEXT("SetByCaller: X% more elemental damage (fire/ice/lightning/light). Stacks multiplicatively."));
 	Data_More_Global     = T.AddNativeGameplayTag("Data.More.Global",     TEXT("SetByCaller: X% more damage of all types. Stacks multiplicatively."));
 
-	// ── Increased damage SetByCaller tags (additive pool) ─────────────────
-	// All Increased sources sum together before applying as one multiplier.
 	Data_Increased_Physical   = T.AddNativeGameplayTag("Data.Increased.Physical",   TEXT("SetByCaller: X% increased physical damage. Pools additively with other Increased sources."));
 	Data_Increased_Fire       = T.AddNativeGameplayTag("Data.Increased.Fire",       TEXT("SetByCaller: X% increased fire damage. Pools additively."));
 	Data_Increased_Ice        = T.AddNativeGameplayTag("Data.Increased.Ice",        TEXT("SetByCaller: X% increased ice damage. Pools additively."));
@@ -943,7 +853,6 @@ void FPHGameplayTags::RegisterSetByCallerDamageTags()
 	Data_Increased_Elemental  = T.AddNativeGameplayTag("Data.Increased.Elemental",  TEXT("SetByCaller: X% increased elemental damage. Pools additively."));
 	Data_Increased_Global     = T.AddNativeGameplayTag("Data.Increased.Global",     TEXT("SetByCaller: X% increased damage of all types. Pools additively."));
 
-	// ── Skill resource cost SetByCaller tags ──────────────────────────────
 	Data_Cost_Stamina = T.AddNativeGameplayTag("Data.Cost.Stamina", TEXT("SetByCaller: skill stamina cost. Deducted from source on activation."));
 	Data_Cost_Mana    = T.AddNativeGameplayTag("Data.Cost.Mana",    TEXT("SetByCaller: skill mana cost. Deducted from source on activation."));
 	Data_Cost_Health  = T.AddNativeGameplayTag("Data.Cost.Health",  TEXT("SetByCaller: skill health cost (blood magic). Deducted from source on activation."));
@@ -953,9 +862,6 @@ void FPHGameplayTags::RegisterAttributeToTagMappings()
 {
     AttributeToTagMap.Empty();
 
-    // ===========================
-    // Base Damage Attributes
-    // ===========================
     AttributeToTagMap.Add(UHunterAttributeSet::GetMinPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MinPhysicalDamage);
     AttributeToTagMap.Add(UHunterAttributeSet::GetMaxPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MaxPhysicalDamage);
     AttributeToTagMap.Add(UHunterAttributeSet::GetMinFireDamageAttribute(),       Attributes_Secondary_Damages_MinFireDamage);
@@ -969,9 +875,6 @@ void FPHGameplayTags::RegisterAttributeToTagMappings()
     AttributeToTagMap.Add(UHunterAttributeSet::GetMinCorruptionDamageAttribute(), Attributes_Secondary_Damages_MinCorruptionDamage);
     AttributeToTagMap.Add(UHunterAttributeSet::GetMaxCorruptionDamageAttribute(), Attributes_Secondary_Damages_MaxCorruptionDamage);
     
-    // ===========================
-    // Primary Attributes
-    // ===========================
     AttributeToTagMap.Add(UHunterAttributeSet::GetStrengthAttribute(),     Attributes_Primary_Strength);
     AttributeToTagMap.Add(UHunterAttributeSet::GetIntelligenceAttribute(), Attributes_Primary_Intelligence);
     AttributeToTagMap.Add(UHunterAttributeSet::GetDexterityAttribute(),    Attributes_Primary_Dexterity);
@@ -980,40 +883,25 @@ void FPHGameplayTags::RegisterAttributeToTagMappings()
     AttributeToTagMap.Add(UHunterAttributeSet::GetLuckAttribute(),         Attributes_Primary_Luck);
     AttributeToTagMap.Add(UHunterAttributeSet::GetCovenantAttribute(),     Attributes_Primary_Covenant);
     
-    // ===========================
-    // Defense Attributes
-    // ===========================
     AttributeToTagMap.Add(UHunterAttributeSet::GetArmourAttribute(),    Attributes_Secondary_Resistances_Armour);
     AttributeToTagMap.Add(UHunterAttributeSet::GetPoiseAttribute(),     Attributes_Secondary_Misc_Poise);
     
-    // ===========================
-    // Resistance Attributes (Flat Bonus)
-    // ===========================
     AttributeToTagMap.Add(UHunterAttributeSet::GetFireResistanceFlatBonusAttribute(),       Attributes_Secondary_Resistances_FireResistanceFlat);
     AttributeToTagMap.Add(UHunterAttributeSet::GetIceResistanceFlatBonusAttribute(),        Attributes_Secondary_Resistances_IceResistanceFlat);
     AttributeToTagMap.Add(UHunterAttributeSet::GetLightningResistanceFlatBonusAttribute(),  Attributes_Secondary_Resistances_LightningResistanceFlat);
     AttributeToTagMap.Add(UHunterAttributeSet::GetLightResistanceFlatBonusAttribute(),      Attributes_Secondary_Resistances_LightResistanceFlat);
     AttributeToTagMap.Add(UHunterAttributeSet::GetCorruptionResistanceFlatBonusAttribute(), Attributes_Secondary_Resistances_CorruptionResistanceFlat);
     
-    // ===========================
-    // Combat Attributes
-    // ===========================
     AttributeToTagMap.Add(UHunterAttributeSet::GetCritChanceAttribute(),    Attributes_Secondary_Offensive_CritChance);
     AttributeToTagMap.Add(UHunterAttributeSet::GetCritMultiplierAttribute(), Attributes_Secondary_Offensive_CritMultiplier);
     AttributeToTagMap.Add(UHunterAttributeSet::GetAttackSpeedAttribute(),   Attributes_Secondary_Offensive_AttackSpeed);
     AttributeToTagMap.Add(UHunterAttributeSet::GetCastSpeedAttribute(),     Attributes_Secondary_Offensive_CastSpeed);
     AttributeToTagMap.Add(UHunterAttributeSet::GetAttackRangeAttribute(),   Attributes_Secondary_Offensive_AttackRange);
     
-    // ===========================
-    // Resource Cost Attributes
-    // ===========================
     AttributeToTagMap.Add(UHunterAttributeSet::GetManaCostChangesAttribute(),    Attributes_Secondary_Misc_ManaCostChanges);
     AttributeToTagMap.Add(UHunterAttributeSet::GetHealthCostChangesAttribute(),  Attributes_Secondary_Misc_HealthCostChanges);
     AttributeToTagMap.Add(UHunterAttributeSet::GetStaminaCostChangesAttribute(), Attributes_Secondary_Misc_StaminaCostChanges);
     
-    // ===========================
-    // Flat Damage Bonus Attributes
-    // ===========================
     AttributeToTagMap.Add(UHunterAttributeSet::GetPhysicalFlatDamageAttribute(),   Attributes_Secondary_BonusDamage_PhysicalFlatBonus);
     AttributeToTagMap.Add(UHunterAttributeSet::GetFireFlatDamageAttribute(),       Attributes_Secondary_BonusDamage_FireFlatBonus);
     AttributeToTagMap.Add(UHunterAttributeSet::GetIceFlatDamageAttribute(),        Attributes_Secondary_BonusDamage_IceFlatBonus);
@@ -1021,9 +909,6 @@ void FPHGameplayTags::RegisterAttributeToTagMappings()
     AttributeToTagMap.Add(UHunterAttributeSet::GetLightFlatDamageAttribute(),      Attributes_Secondary_BonusDamage_LightFlatBonus);
     AttributeToTagMap.Add(UHunterAttributeSet::GetCorruptionFlatDamageAttribute(), Attributes_Secondary_BonusDamage_CorruptionFlatBonus);
     
-    // ===========================
-    // Percent Damage Bonus Attributes
-    // ===========================
     AttributeToTagMap.Add(UHunterAttributeSet::GetPhysicalPercentDamageAttribute(),   Attributes_Secondary_BonusDamage_PhysicalPercentBonus);
     AttributeToTagMap.Add(UHunterAttributeSet::GetFirePercentDamageAttribute(),       Attributes_Secondary_BonusDamage_FirePercentBonus);
     AttributeToTagMap.Add(UHunterAttributeSet::GetIcePercentDamageAttribute(),        Attributes_Secondary_BonusDamage_IcePercentBonus);
@@ -1037,7 +922,6 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
 {
     TagToAttributeMap.Empty();
 
-    // Safety check - ensure AttributeSet is ready
     if (!UHunterAttributeSet::GetHealthAttribute().IsValid())
     {
         UE_LOG(LogPHGameplayTags, Error, TEXT("❌ AttributeSet not ready - skipping tag mappings"));
@@ -1046,28 +930,18 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
 
     UE_LOG(LogPHGameplayTags, Warning, TEXT("=== Registering Tag-to-Attribute Mappings ==="));
 
-    // ===========================
-    // Vitals - Current Values 
-    // ===========================
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Health")), UHunterAttributeSet::GetHealthAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Mana")), UHunterAttributeSet::GetManaAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Stamina")), UHunterAttributeSet::GetStaminaAttribute());
 
-    // ===========================
-    // Vitals - Max Values 
-    // ===========================
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxHealth")), UHunterAttributeSet::GetMaxHealthAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxMana")), UHunterAttributeSet::GetMaxManaAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxStamina")), UHunterAttributeSet::GetMaxStaminaAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ArcaneShield")), UHunterAttributeSet::GetArcaneShieldAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxArcaneShield")), UHunterAttributeSet::GetMaxArcaneShieldAttribute());
 
-    // ===========================
-    // Damage Types
-    // ===========================
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.GlobalBonus")), UHunterAttributeSet::GetGlobalDamagesAttribute());
     
-    // Max Damage
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Physical")), UHunterAttributeSet::GetMaxPhysicalDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Fire")), UHunterAttributeSet::GetMaxFireDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Ice")), UHunterAttributeSet::GetMaxIceDamageAttribute());
@@ -1075,7 +949,6 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Light")), UHunterAttributeSet::GetMaxLightDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Corruption")), UHunterAttributeSet::GetMaxCorruptionDamageAttribute());
 
-    // Min Damage
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Physical")), UHunterAttributeSet::GetMinPhysicalDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Fire")), UHunterAttributeSet::GetMinFireDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Ice")), UHunterAttributeSet::GetMinIceDamageAttribute());
@@ -1083,11 +956,6 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Light")), UHunterAttributeSet::GetMinLightDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Corruption")), UHunterAttributeSet::GetMinCorruptionDamageAttribute());
 
-    // ===========================
-    // Damage Bonuses
-    // ===========================
-    
-    // Flat Damage Bonuses
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Physical")), UHunterAttributeSet::GetPhysicalFlatDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Fire")), UHunterAttributeSet::GetFireFlatDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Ice")), UHunterAttributeSet::GetIceFlatDamageAttribute());
@@ -1095,7 +963,6 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Light")), UHunterAttributeSet::GetLightFlatDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Corruption")), UHunterAttributeSet::GetCorruptionFlatDamageAttribute());
 
-    // Percent Damage Bonuses
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Physical")), UHunterAttributeSet::GetPhysicalPercentDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Fire")), UHunterAttributeSet::GetFirePercentDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Ice")), UHunterAttributeSet::GetIcePercentDamageAttribute());
@@ -1103,15 +970,11 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Light")), UHunterAttributeSet::GetLightPercentDamageAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Corruption")), UHunterAttributeSet::GetCorruptionPercentDamageAttribute());
 
-    // ===========================
-    // Resistances
-    // ===========================
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.GlobalDefenses")), UHunterAttributeSet::GetGlobalDefensesAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Defenses.Armor")), UHunterAttributeSet::GetArmourAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour")), UHunterAttributeSet::GetArmourAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armor")), UHunterAttributeSet::GetArmourAttribute());
     
-    // Flat Resistances
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour.Flat")), UHunterAttributeSet::GetArmourFlatBonusAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armor.Flat")), UHunterAttributeSet::GetArmourFlatBonusAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Fire.Flat")), UHunterAttributeSet::GetFireResistanceFlatBonusAttribute());
@@ -1120,7 +983,6 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Light.Flat")), UHunterAttributeSet::GetLightResistanceFlatBonusAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Corruption.Flat")), UHunterAttributeSet::GetCorruptionResistanceFlatBonusAttribute());
 
-    // Percent Resistances
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour.Percent")), UHunterAttributeSet::GetArmourPercentBonusAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armor.Percent")), UHunterAttributeSet::GetArmourPercentBonusAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Fire.Percent")), UHunterAttributeSet::GetFireResistancePercentBonusAttribute());
@@ -1129,9 +991,6 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Light.Percent")), UHunterAttributeSet::GetLightResistancePercentBonusAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Corruption.Percent")), UHunterAttributeSet::GetCorruptionResistancePercentBonusAttribute());
 
-    // ===========================
-    // Primary Stats
-    // ===========================
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Strength")), UHunterAttributeSet::GetStrengthAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Intelligence")), UHunterAttributeSet::GetIntelligenceAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Dexterity")), UHunterAttributeSet::GetDexterityAttribute());
@@ -1140,9 +999,6 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Luck")), UHunterAttributeSet::GetLuckAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Covenant")), UHunterAttributeSet::GetCovenantAttribute());
 
-    // ===========================
-    // Regeneration
-    // ===========================
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.HealthRegenAmount")), UHunterAttributeSet::GetHealthRegenAmountAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.HealthRegenRate")), UHunterAttributeSet::GetHealthRegenRateAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ManaRegenAmount")), UHunterAttributeSet::GetManaRegenAmountAttribute());
@@ -1150,9 +1006,6 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaRegenAmount")), UHunterAttributeSet::GetStaminaRegenAmountAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaRegenRate")), UHunterAttributeSet::GetStaminaRegenRateAttribute());
 
-    // ===========================
-    // Degeneration
-    // ===========================
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaDegenAmount")), UHunterAttributeSet::GetStaminaDegenAmountAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaDegenRate")), UHunterAttributeSet::GetStaminaDegenRateAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Offensive.CritChance")), UHunterAttributeSet::GetCritChanceAttribute());
@@ -1179,12 +1032,8 @@ FGameplayAttribute FPHGameplayTags::GetAttributeFromTag(const FGameplayTag& Tag)
 	return FGameplayAttribute();
 }
 
-// ==============================
-// Helper maps
-// ==============================
 void FPHGameplayTags::RegisterStatusEffectAttributes()
 {
-	// Chances → FGameplayAttribute
 	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToBleed,     UHunterAttributeSet::GetChanceToBleedAttribute());
 	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToIgnite,    UHunterAttributeSet::GetChanceToIgniteAttribute());
 	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToFreeze,    UHunterAttributeSet::GetChanceToFreezeAttribute());
@@ -1195,7 +1044,6 @@ void FPHGameplayTags::RegisterStatusEffectAttributes()
 	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToPurify,    UHunterAttributeSet::GetChanceToPurifyAttribute());
 	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Ailments_ChanceToCorrupt,   UHunterAttributeSet::GetChanceToCorruptAttribute());
 
-	// Durations → FGameplayAttribute
 	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Bleed,          UHunterAttributeSet::GetBleedDurationAttribute());
 	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Burn,           UHunterAttributeSet::GetBurnDurationAttribute());
 	StatusEffectTagToAttributeMap.Add(Attributes_Secondary_Duration_Freeze,         UHunterAttributeSet::GetFreezeDurationAttribute());
@@ -1207,7 +1055,6 @@ void FPHGameplayTags::RegisterStatusEffectAttributes()
 
 void FPHGameplayTags::RegisterMinMaxTagMap()
 {
-	// Primary map to itself (no min/max pair)
 	TagsMinMax.Add(Attributes_Primary_Strength,     Attributes_Primary_Strength);
 	TagsMinMax.Add(Attributes_Primary_Intelligence, Attributes_Primary_Intelligence);
 	TagsMinMax.Add(Attributes_Primary_Endurance,    Attributes_Primary_Endurance);
@@ -1216,7 +1063,6 @@ void FPHGameplayTags::RegisterMinMaxTagMap()
 	TagsMinMax.Add(Attributes_Primary_Luck,         Attributes_Primary_Luck);
 	TagsMinMax.Add(Attributes_Primary_Covenant,     Attributes_Primary_Covenant);
 
-	// Vitals pairs
 	TagsMinMax.Add(Attributes_Secondary_Vital_HealthRegenRate,       Attributes_Secondary_Vital_MaxHealthRegenRate);
 	TagsMinMax.Add(Attributes_Secondary_Vital_HealthRegenAmount,     Attributes_Secondary_Vital_MaxHealthRegenAmount);
 	TagsMinMax.Add(Attributes_Secondary_Vital_HealthReservedAmount,  Attributes_Secondary_Vital_MaxHealthReservedAmount);
@@ -1273,7 +1119,6 @@ void FPHGameplayTags::RegisterBaseDamageAttributes()
 
 void FPHGameplayTags::RegisterAllAttribute()
 {
-	// 1) Reset all helper maps so hot-reload or multiple calls are safe.
 	StatusEffectTagToAttributeMap.Empty();
 	TagsMinMax.Empty();
 	BaseDamageToAttributesMap.Empty();
@@ -1281,15 +1126,12 @@ void FPHGameplayTags::RegisterAllAttribute()
 	PercentDamageToAttributesMap.Empty();
 	AllAttributesMap.Empty();
 
-	// 2) Rebuild the small, focused maps.
 	RegisterStatusEffectAttributes();
 	RegisterMinMaxTagMap();
 	RegisterBaseDamageAttributes();
 	RegisterFlatDamageAttributes();
 	RegisterPercentDamageAttributes();
 
-	// 3) Build a single, comprehensive TagString -> FGameplayAttribute map.
-	//    NOTE: use canonical tag paths (exactly what FindAttributeByTag uses).
 	auto Add = [&](const TCHAR* Tag, const FGameplayAttribute& Attr)
 	{
 		if (Attr.IsValid())
@@ -1298,9 +1140,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 		}
 	};
 
-	// ===========================
-	// Primary
-	// ===========================
 	Add(TEXT("Attributes.Primary.Strength"),      UHunterAttributeSet::GetStrengthAttribute());
 	Add(TEXT("Attributes.Primary.Intelligence"),  UHunterAttributeSet::GetIntelligenceAttribute());
 	Add(TEXT("Attributes.Primary.Dexterity"),     UHunterAttributeSet::GetDexterityAttribute());
@@ -1309,16 +1148,10 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Primary.Luck"),          UHunterAttributeSet::GetLuckAttribute());
 	Add(TEXT("Attributes.Primary.Covenant"),      UHunterAttributeSet::GetCovenantAttribute());
 
-	// ===========================
-	// Vitals (current values)
-	// ===========================
 	Add(TEXT("Attributes.Vital.Health"),   UHunterAttributeSet::GetHealthAttribute());
 	Add(TEXT("Attributes.Vital.Mana"),     UHunterAttributeSet::GetManaAttribute());
 	Add(TEXT("Attributes.Vital.Stamina"),  UHunterAttributeSet::GetStaminaAttribute());
 
-	// ===========================
-	// Secondary → Vitals: Health
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Vital.MaxHealth"),               UHunterAttributeSet::GetMaxHealthAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveHealth"),      UHunterAttributeSet::GetMaxEffectiveHealthAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.HealthRegenRate"),         UHunterAttributeSet::GetHealthRegenRateAttribute());
@@ -1330,9 +1163,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Vital.HealthFlatReservedAmount"),UHunterAttributeSet::GetFlatReservedHealthAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.HealthPercentageReserved"),UHunterAttributeSet::GetPercentageReservedHealthAttribute());
 
-	// ===========================
-	// Secondary → Vitals: Mana
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Vital.MaxMana"),               UHunterAttributeSet::GetMaxManaAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveMana"),      UHunterAttributeSet::GetMaxEffectiveManaAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.ManaRegenRate"),         UHunterAttributeSet::GetManaRegenRateAttribute());
@@ -1344,9 +1174,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Vital.ManaFlatReservedAmount"),UHunterAttributeSet::GetFlatReservedManaAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.ManaPercentageReserved"),UHunterAttributeSet::GetPercentageReservedManaAttribute());
 
-	// ===========================
-	// Secondary → Vitals: Stamina
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Vital.MaxStamina"),               UHunterAttributeSet::GetMaxStaminaAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveStamina"),      UHunterAttributeSet::GetMaxEffectiveStaminaAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.StaminaRegenRate"),         UHunterAttributeSet::GetStaminaRegenRateAttribute());
@@ -1360,9 +1187,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Vital.StaminaDegenRate"),         UHunterAttributeSet::GetStaminaDegenRateAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.StaminaDegenAmount"),       UHunterAttributeSet::GetStaminaDegenAmountAttribute());
 
-	// ===========================
-	// Secondary → Vitals: Arcane Shield
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Vital.ArcaneShield"),                 UHunterAttributeSet::GetArcaneShieldAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.MaxArcaneShield"),              UHunterAttributeSet::GetMaxArcaneShieldAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.MaxEffectiveArcaneShield"),     UHunterAttributeSet::GetMaxEffectiveArcaneShieldAttribute());
@@ -1375,9 +1199,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldFlatReservedAmount"),UHunterAttributeSet::GetFlatReservedArcaneShieldAttribute());
 	Add(TEXT("Attributes.Secondary.Vital.ArcaneShieldPercentageReserved"),UHunterAttributeSet::GetPercentageReservedArcaneShieldAttribute());
 
-	// ===========================
-	// Damage (min/max)
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Damage.Min.Physical"),   UHunterAttributeSet::GetMinPhysicalDamageAttribute());
 	Add(TEXT("Attributes.Secondary.Damage.Max.Physical"),   UHunterAttributeSet::GetMaxPhysicalDamageAttribute());
 	Add(TEXT("Attributes.Secondary.Damage.Min.Fire"),       UHunterAttributeSet::GetMinFireDamageAttribute());
@@ -1391,7 +1212,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Damage.Min.Corruption"), UHunterAttributeSet::GetMinCorruptionDamageAttribute());
 	Add(TEXT("Attributes.Secondary.Damage.Max.Corruption"), UHunterAttributeSet::GetMaxCorruptionDamageAttribute());
 
-	// Damage (flat/percent + global)
 	Add(TEXT("Attributes.Secondary.Damage.GlobalBonus"),       UHunterAttributeSet::GetGlobalDamagesAttribute());
 	Add(TEXT("Attributes.Secondary.Damage.Flat.Physical"),     UHunterAttributeSet::GetPhysicalFlatDamageAttribute());
 	Add(TEXT("Attributes.Secondary.Damage.Percent.Physical"),  UHunterAttributeSet::GetPhysicalPercentDamageAttribute());
@@ -1406,9 +1226,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Damage.Flat.Corruption"),   UHunterAttributeSet::GetCorruptionFlatDamageAttribute());
 	Add(TEXT("Attributes.Secondary.Damage.Percent.Corruption"),UHunterAttributeSet::GetCorruptionPercentDamageAttribute());
 
-	// ===========================
-	// Resistances
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Resistance.GlobalDefenses"),   UHunterAttributeSet::GetGlobalDefensesAttribute());
 	Add(TEXT("Attributes.Secondary.Resistance.BlockStrength"),    UHunterAttributeSet::GetBlockStrengthAttribute());
 	Add(TEXT("Attributes.Secondary.Defenses.Armor"),             UHunterAttributeSet::GetArmourAttribute());
@@ -1439,9 +1256,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Resistance.Corruption.Percent"),UHunterAttributeSet::GetCorruptionResistancePercentBonusAttribute());
 	Add(TEXT("Attributes.Secondary.Resistance.Corruption.Max"),   UHunterAttributeSet::GetMaxCorruptionResistanceAttribute());
 
-	// ===========================
-	// Offensive
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Offensive.AreaDamage"),                 UHunterAttributeSet::GetAreaDamageAttribute());
 	Add(TEXT("Attributes.Secondary.Offensive.AreaOfEffect"),               UHunterAttributeSet::GetAreaOfEffectAttribute());
 	Add(TEXT("Attributes.Secondary.Offensive.AttackRange"),                UHunterAttributeSet::GetAttackRangeAttribute());
@@ -1464,9 +1278,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Offensive.DamageBonusWhileAtFullHP"),   UHunterAttributeSet::GetDamageBonusWhileAtFullHPAttribute());
 	Add(TEXT("Attributes.Secondary.Offensive.DamageBonusWhileAtLowHP"),    UHunterAttributeSet::GetDamageBonusWhileAtLowHPAttribute());
 
-	// ===========================
-	// Piercing
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Piercing.Armour"),     UHunterAttributeSet::GetArmourPiercingAttribute());
 	Add(TEXT("Attributes.Secondary.Piercing.Armor"),      UHunterAttributeSet::GetArmourPiercingAttribute());
 	Add(TEXT("Attributes.Secondary.Piercing.Fire"),       UHunterAttributeSet::GetFirePiercingAttribute());
@@ -1475,17 +1286,11 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Piercing.Lightning"),  UHunterAttributeSet::GetLightningPiercingAttribute());
 	Add(TEXT("Attributes.Secondary.Piercing.Corruption"), UHunterAttributeSet::GetCorruptionPiercingAttribute());
 
-	// ===========================
-	// Reflection
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Reflection.Physical"),       UHunterAttributeSet::GetReflectPhysicalAttribute());
 	Add(TEXT("Attributes.Secondary.Reflection.Elemental"),      UHunterAttributeSet::GetReflectElementalAttribute());
 	Add(TEXT("Attributes.Secondary.Reflection.ChancePhysical"), UHunterAttributeSet::GetReflectChancePhysicalAttribute());
 	Add(TEXT("Attributes.Secondary.Reflection.ChanceElemental"),UHunterAttributeSet::GetReflectChanceElementalAttribute());
 
-	// ===========================
-	// Damage Conversions
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToFire"),        UHunterAttributeSet::GetPhysicalToFireAttribute());
 	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToIce"),         UHunterAttributeSet::GetPhysicalToIceAttribute());
 	Add(TEXT("Attributes.Secondary.Conversion.PhysicalToLightning"),   UHunterAttributeSet::GetPhysicalToLightningAttribute());
@@ -1522,9 +1327,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToLightning"), UHunterAttributeSet::GetCorruptionToLightningAttribute());
 	Add(TEXT("Attributes.Secondary.Conversion.CorruptionToLight"),     UHunterAttributeSet::GetCorruptionToLightAttribute());
 
-	// ===========================
-	// Misc
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Money.Gems"),           UHunterAttributeSet::GetGemsAttribute());
 	Add(TEXT("Attributes.Secondary.Misc.Poise"),           UHunterAttributeSet::GetPoiseAttribute());
 	Add(TEXT("Attributes.Secondary.Misc.Weight"),          UHunterAttributeSet::GetWeightAttribute());
@@ -1539,12 +1341,9 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Misc.ManaOnHit"),       UHunterAttributeSet::GetManaOnHitAttribute());
 	Add(TEXT("Attributes.Secondary.Misc.StaminaOnHit"),    UHunterAttributeSet::GetStaminaOnHitAttribute());
 	Add(TEXT("Attributes.Secondary.Misc.StaminaCostChanges"),UHunterAttributeSet::GetStaminaCostChangesAttribute());
-	Add(TEXT("Attributes.Secondary.Misc.CritChance"),      UHunterAttributeSet::GetCritChanceAttribute());     // mirrors Misc tag
-	Add(TEXT("Attributes.Secondary.Misc.CritMultiplier"),  UHunterAttributeSet::GetCritMultiplierAttribute()); // mirrors Misc tag
+	Add(TEXT("Attributes.Secondary.Misc.CritChance"),      UHunterAttributeSet::GetCritChanceAttribute());
+	Add(TEXT("Attributes.Secondary.Misc.CritMultiplier"),  UHunterAttributeSet::GetCritMultiplierAttribute());
 
-	// ===========================
-	// Status Effects (aliases)
-	// ===========================
 	Add(TEXT("Attributes.Secondary.Ailments.ChanceToBleed"),     UHunterAttributeSet::GetChanceToBleedAttribute());
 	Add(TEXT("Attributes.Secondary.Ailments.ChanceToIgnite"),    UHunterAttributeSet::GetChanceToIgniteAttribute());
 	Add(TEXT("Attributes.Secondary.Ailments.ChanceToFreeze"),    UHunterAttributeSet::GetChanceToFreezeAttribute());
@@ -1563,7 +1362,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 	Add(TEXT("Attributes.Secondary.Duration.PetrifyBuildUp"), UHunterAttributeSet::GetPetrifyBuildUpDurationAttribute());
 	Add(TEXT("Attributes.Secondary.Duration.Purify"),         UHunterAttributeSet::GetPurifyDurationAttribute());
 
-	// (Optional) Log summary for sanity
 	UE_LOG(LogPHGameplayTags, Log, TEXT("[PHGameplayTags] RegisterAllAttribute(): %d attributes in AllAttributesMap, %d status tags, %d min/max pairs."),
 		AllAttributesMap.Num(),
 		StatusEffectTagToAttributeMap.Num(),

@@ -1,14 +1,8 @@
-// Loot/Generation/LootGenerator.cpp
-
 #include "Loot/Generation/LootGenerator.h"
 #include "Item/ItemInstance.h"
 #include "Engine/DataTable.h"
 
 DEFINE_LOG_CATEGORY(LogLootGenerator);
-
-// ═══════════════════════════════════════════════════════════════════════
-// MAIN GENERATION FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════
 
 FLootResultBatch FLootGenerator::GenerateLoot(
 	const FLootTable& LootTable,
@@ -17,51 +11,51 @@ FLootResultBatch FLootGenerator::GenerateLoot(
 	UObject* Outer) const
 {
 	FLootResultBatch Batch;
-	
+
 	if (LootTable.Entries.Num() == 0)
 	{
 		UE_LOG(LogLootGenerator, Warning, TEXT("GenerateLoot: Empty loot table"));
 		return Batch;
 	}
-	
+
 	FRandomStream RandStream(Seed != 0 ? Seed : FMath::Rand());
 	Batch.Seed = RandStream.GetCurrentSeed();
-	
+
 	TArray<FLootEntry> FilteredEntries = FilterEntries(LootTable.Entries, Settings);
-	
+
 	if (FilteredEntries.Num() == 0)
 	{
 		UE_LOG(LogLootGenerator, Warning, TEXT("GenerateLoot: No valid entries after filtering"));
 		return Batch;
 	}
-	
+
 	int32 DropCount = CalculateDropCount(LootTable, Settings, RandStream);
-	
+
 	TArray<int32> SelectedIndices;
-	
+
 	switch (LootTable.SelectionMethod)
 	{
 		case ELootSelectionMethod::LSM_Weighted:
 			SelectedIndices = SelectWeighted(FilteredEntries, DropCount, LootTable.bAllowDuplicates, RandStream);
 			break;
-			
+
 		case ELootSelectionMethod::LSM_Sequential:
 			SelectedIndices = SelectSequential(FilteredEntries, Settings, RandStream);
 			break;
-			
+
 		case ELootSelectionMethod::LSM_GuaranteedOne:
 			SelectedIndices = SelectGuaranteedOne(FilteredEntries, RandStream);
 			break;
-			
+
 		case ELootSelectionMethod::LSM_All:
 			SelectedIndices = SelectAll(FilteredEntries, Settings, RandStream);
 			break;
-			
+
 		default:
 			SelectedIndices = SelectWeighted(FilteredEntries, DropCount, LootTable.bAllowDuplicates, RandStream);
 			break;
 	}
-	
+
 	for (int32 Index : SelectedIndices)
 	{
 		if (FilteredEntries.IsValidIndex(Index))
@@ -73,10 +67,10 @@ FLootResultBatch FLootGenerator::GenerateLoot(
 			}
 		}
 	}
-	
+
 	UE_LOG(LogLootGenerator, Verbose, TEXT("GenerateLoot: Generated %d items from %d entries (seed: %d)"),
 		Batch.Results.Num(), FilteredEntries.Num(), Batch.Seed);
-	
+
 	return Batch;
 }
 
@@ -87,13 +81,13 @@ FLootResultBatch FLootGenerator::GenerateLootFromHandle(
 	UObject* Outer) const
 {
 	const FLootTable* LootTable = GetLootTableFromHandle(TableHandle);
-	
+
 	if (!LootTable)
 	{
 		UE_LOG(LogLootGenerator, Warning, TEXT("GenerateLootFromHandle: Invalid table handle"));
 		return FLootResultBatch();
 	}
-	
+
 	return GenerateLoot(*LootTable, Settings, Seed, Outer);
 }
 
@@ -109,27 +103,18 @@ FLootResultBatch FLootGenerator::GenerateLootWithSource(
 	return Batch;
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// CORRUPTED LOOT GENERATION
-// ═══════════════════════════════════════════════════════════════════════
-
 FLootResultBatch FLootGenerator::GenerateCorruptedLoot(
 	const FLootTable& LootTable,
 	const FLootDropSettings& Settings,
 	int32 Seed,
 	UObject* Outer) const
 {
-	// Force all items to have at least one corrupted (negative) affix
 	FLootDropSettings CorruptedSettings = Settings;
 	CorruptedSettings.bForceCorruptedDrops = true;
 	CorruptedSettings.CorruptionChanceMultiplier = 1.0f;
-	
+
 	return GenerateLoot(LootTable, CorruptedSettings, Seed, Outer);
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// SINGLE ITEM GENERATION
-// ═══════════════════════════════════════════════════════════════════════
 
 FLootResult FLootGenerator::CreateItemFromEntry(
 	const FLootEntry& Entry,
@@ -138,38 +123,27 @@ FLootResult FLootGenerator::CreateItemFromEntry(
 	UObject* Outer) const
 {
 	FLootResult Result;
-	
+
 	if (!Entry.IsValid())
 	{
 		return Result;
 	}
-	
+
 	int32 Quantity = RollQuantity(Entry, Settings, RandStream);
 	int32 ItemLevel = RollItemLevel(Entry, Settings, RandStream);
 	EItemRarity Rarity = DetermineRarity(Entry, Settings, RandStream);
 	int32 ItemSeed = RandStream.RandHelper(INT32_MAX);
-	
-	// ═══════════════════════════════════════════════
-	// CALCULATE CORRUPTION PARAMETERS
-	// Corruption = negative affixes via ERankPoints
-	// ═══════════════════════════════════════════════
-	
+
 	float FinalCorruptionChance = 0.0f;
 	bool bForceCorrupted = false;
-	
+
 	if (Entry.bCanBeCorrupted)
 	{
-		// Base corruption chance from entry
 		FinalCorruptionChance = Entry.CorruptionChancePerAffix;
-		
-		// Apply global multiplier
 		FinalCorruptionChance *= Settings.CorruptionChanceMultiplier;
-		
-		// Check for forced corruption
 		bForceCorrupted = Entry.bForceOneCorruptedAffix || Settings.bForceCorruptedDrops;
 	}
-	
-	// Create item instance
+
 	UItemInstance* Item = CreateItemInstance(
 		Entry,
 		ItemLevel,
@@ -179,25 +153,21 @@ FLootResult FLootGenerator::CreateItemFromEntry(
 		ItemSeed,
 		Outer
 	);
-	
+
 	if (Item)
 	{
 		Result.Item = Item;
 		Result.Quantity = Quantity;
 		Result.bWasCorrupted = Item->IsCorrupted();
-		
+
 		if (Quantity > 1 && Item->IsStackable())
 		{
 			Item->SetQuantity(Quantity);
 		}
 	}
-	
+
 	return Result;
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// UTILITY FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════
 
 int32 FLootGenerator::RollQuantity(
 	const FLootEntry& Entry,
@@ -205,12 +175,12 @@ int32 FLootGenerator::RollQuantity(
 	FRandomStream& RandStream) const
 {
 	int32 BaseQuantity = RandStream.RandRange(Entry.MinQuantity, Entry.MaxQuantity);
-	
+
 	float Multiplier = Settings.QuantityMultiplier;
 	Multiplier += Settings.PlayerMagicFindBonus * 0.01f;
-	
+
 	int32 FinalQuantity = FMath::RoundToInt(BaseQuantity * Multiplier);
-	
+
 	return FMath::Max(1, FinalQuantity);
 }
 
@@ -220,9 +190,7 @@ int32 FLootGenerator::RollItemLevel(
 	FRandomStream& RandStream) const
 {
 	int32 BaseLevel;
-	
-	// bUseItemLevel = use source's level with variance
-	// !bUseItemLevel = use entry-specific range
+
 	if (Entry.bUseItemLevel)
 	{
 		const int32 MinLevel = FMath::Max(1, Settings.SourceLevel - Settings.LevelVariance);
@@ -233,7 +201,7 @@ int32 FLootGenerator::RollItemLevel(
 	{
 		BaseLevel = RandStream.RandRange(Entry.MinItemLevel, Entry.MaxItemLevel);
 	}
-	
+
 	return FMath::Clamp(BaseLevel, 1, 100);
 }
 
@@ -246,17 +214,17 @@ EItemRarity FLootGenerator::DetermineRarity(
 	{
 		return Entry.OverrideRarity;
 	}
-	
+
 	if (Settings.MinimumItemRarity != EItemRarity::IR_None)
 	{
 		return Settings.MinimumItemRarity;
 	}
-	
+
 	float UpgradeChance = Settings.RarityBonusChance;
 	UpgradeChance += Settings.PlayerLuckBonus * 0.005f;
-	
+
 	EItemRarity BaseRarity = EItemRarity::IR_GradeF;
-	
+
 	switch (Settings.SourceRarity)
 	{
 		case EDropRarity::DR_Common:
@@ -278,12 +246,10 @@ EItemRarity FLootGenerator::DetermineRarity(
 			BaseRarity = EItemRarity::IR_GradeA;
 			break;
 	}
-	
-	// I-07 FIX: Replace single roll (max +1 tier) with a decaying loop so that high
-	// magic-find values can push items multiple rarity tiers upward. Each iteration
-	// the chance is multiplied by a decay factor (0.35) to make each successive
-	// upgrade exponentially less likely — matching the intended PoE-style
-	// "diminishing returns" feel for magic find investment.
+
+	// High magic-find values can push items multiple rarity tiers upward. Each iteration
+	// the chance is multiplied by a decay factor (0.35) to make each successive upgrade
+	// exponentially less likely — diminishing returns for magic find investment.
 	if (UpgradeChance > 0.0f)
 	{
 		constexpr float DecayFactor = 0.35f;
@@ -305,10 +271,6 @@ EItemRarity FLootGenerator::DetermineRarity(
 	return BaseRarity;
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// INTERNAL HELPERS
-// ═══════════════════════════════════════════════════════════════════════
-
 int32 FLootGenerator::CalculateDropCount(
 	const FLootTable& Table,
 	const FLootDropSettings& Settings,
@@ -316,10 +278,10 @@ int32 FLootGenerator::CalculateDropCount(
 {
 	int32 Min = Table.MinSelections > 0 ? Table.MinSelections : Settings.MinDrops;
 	int32 Max = Table.MaxSelections > 0 ? Table.MaxSelections : Settings.MaxDrops;
-	
+
 	Max = FMath::RoundToInt(Max * (1.0f + Settings.PlayerMagicFindBonus * 0.01f));
 	Max = FMath::Max(Min, Max);
-	
+
 	return RandStream.RandRange(Min, Max);
 }
 
@@ -333,41 +295,33 @@ UItemInstance* FLootGenerator::CreateItemInstance(
 	UObject* Outer) const
 {
 	UItemInstance* Item = NewObject<UItemInstance>(Outer);
-	
+
 	if (!Item)
 	{
 		UE_LOG(LogLootGenerator, Error, TEXT("Failed to create ItemInstance"));
 		return nullptr;
 	}
-	
+
 	Item->SetSeed(Seed);
-	
+
 	if (Entry.ItemRowHandle.DataTable)
 	{
-		// ═══════════════════════════════════════════════
-		// CORRUPTION: Use InitializeWithCorruption for corruption params
-		// Corruption = negative affixes (ERankPoints < 0)
-		// ═══════════════════════════════════════════════
 		Item->InitializeWithCorruption(
 			Entry.ItemRowHandle,
 			ItemLevel,
 			Rarity,
 			Entry.bGenerateAffixes,
-			CorruptionChance,     
-			bForceCorrupted        // Force at least one corrupted
+			CorruptionChance,
+			bForceCorrupted
 		);
 	}
 	else if (Entry.ItemClass)
 	{
 		UE_LOG(LogLootGenerator, Warning, TEXT("Class-based item creation not yet implemented"));
 	}
-	
+
 	return Item;
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// SELECTION METHODS
-// ═══════════════════════════════════════════════════════════════════════
 
 TArray<int32> FLootGenerator::SelectWeighted(
 	const TArray<FLootEntry>& Entries,
@@ -376,29 +330,28 @@ TArray<int32> FLootGenerator::SelectWeighted(
 	FRandomStream& RandStream) const
 {
 	TArray<int32> Selected;
-	
+
 	if (Entries.Num() == 0 || NumToSelect <= 0)
 	{
 		return Selected;
 	}
-	
+
 	float TotalWeight = 0.0f;
 	for (const FLootEntry& Entry : Entries)
 	{
 		TotalWeight += Entry.GetEffectiveWeight();
 	}
-	
+
 	if (TotalWeight <= 0.0f)
 	{
 		return Selected;
 	}
-	
+
 	TArray<int32> AvailableIndices;
 	TArray<float> AvailableWeights;
 
-	// P-2 FIX: Track remaining weight as a running sum rather than re-summing
-	// the entire AvailableWeights array on every iteration (was O(n) per pick → O(n²) total).
-	// We initialise RemainingWeight once and subtract each removed entry's weight.
+	// Track remaining weight as a running sum rather than re-summing the entire
+	// AvailableWeights array on every iteration (was O(n) per pick → O(n²) total).
 	float RemainingWeight = TotalWeight;
 
 	if (!bAllowDuplicates)
@@ -421,10 +374,10 @@ TArray<int32> FLootGenerator::SelectWeighted(
 		}
 
 		float CurrentTotalWeight = bAllowDuplicates ? TotalWeight : RemainingWeight;
-		
+
 		float RandomValue = RandStream.FRandRange(0.0f, CurrentTotalWeight);
 		float CurrentWeight = 0.0f;
-		
+
 		if (bAllowDuplicates)
 		{
 			for (int32 j = 0; j < Entries.Num(); ++j)
@@ -445,8 +398,6 @@ TArray<int32> FLootGenerator::SelectWeighted(
 				if (RandomValue < CurrentWeight)
 				{
 					Selected.Add(AvailableIndices[j]);
-					// P-2 FIX: subtract this entry's weight from the running total
-					// so the next iteration's CurrentTotalWeight is correct in O(1).
 					RemainingWeight -= AvailableWeights[j];
 					AvailableIndices.RemoveAtSwap(j);
 					AvailableWeights.RemoveAtSwap(j);
@@ -455,7 +406,7 @@ TArray<int32> FLootGenerator::SelectWeighted(
 			}
 		}
 	}
-	
+
 	return Selected;
 }
 
@@ -465,18 +416,18 @@ TArray<int32> FLootGenerator::SelectSequential(
 	FRandomStream& RandStream) const
 {
 	TArray<int32> Selected;
-	
+
 	for (int32 i = 0; i < Entries.Num(); ++i)
 	{
 		const FLootEntry& Entry = Entries[i];
 		float EffectiveChance = Entry.DropChance * Settings.DropChanceMultiplier;
-		
+
 		if (RandStream.FRand() < EffectiveChance)
 		{
 			Selected.Add(i);
 		}
 	}
-	
+
 	return Selected;
 }
 
@@ -485,27 +436,27 @@ TArray<int32> FLootGenerator::SelectGuaranteedOne(
 	FRandomStream& RandStream) const
 {
 	TArray<int32> Selected;
-	
+
 	if (Entries.Num() == 0)
 	{
 		return Selected;
 	}
-	
+
 	float TotalWeight = 0.0f;
 	for (const FLootEntry& Entry : Entries)
 	{
 		TotalWeight += Entry.GetEffectiveWeight();
 	}
-	
+
 	if (TotalWeight <= 0.0f)
 	{
 		Selected.Add(RandStream.RandRange(0, Entries.Num() - 1));
 		return Selected;
 	}
-	
+
 	float RandomValue = RandStream.FRandRange(0.0f, TotalWeight);
 	float CurrentWeight = 0.0f;
-	
+
 	for (int32 i = 0; i < Entries.Num(); ++i)
 	{
 		CurrentWeight += Entries[i].GetEffectiveWeight();
@@ -515,7 +466,7 @@ TArray<int32> FLootGenerator::SelectGuaranteedOne(
 			break;
 		}
 	}
-	
+
 	return Selected;
 }
 
@@ -524,15 +475,10 @@ TArray<int32> FLootGenerator::SelectAll(
 	const FLootDropSettings& Settings,
 	FRandomStream& RandStream) const
 {
-	// C-4 FIX: LSM_All must return EVERY valid entry unconditionally.
-	// Previously this was identical to SelectSequential (copy-paste bug) —
-	// it incorrectly rolled a per-entry random chance and skipped some entries.
-	// Entries have already been validated by FilterEntries, so we just add all indices.
-
-	// FIX: Settings and RandStream are not used by LSM_All (by design — all entries
-	// are selected unconditionally). Suppress unused-parameter warnings explicitly
-	// rather than removing the parameters, which would break the calling convention
-	// shared with the other Select* methods.
+	// LSM_All must return every valid entry unconditionally. Entries have already
+	// been validated by FilterEntries. Settings and RandStream are unused by design —
+	// suppress warnings without removing the parameters, which would break the shared
+	// calling convention with the other Select* methods.
 	(void)Settings;
 	(void)RandStream;
 
@@ -553,16 +499,16 @@ TArray<FLootEntry> FLootGenerator::FilterEntries(
 {
 	TArray<FLootEntry> Filtered;
 	Filtered.Reserve(Entries.Num());
-	
+
 	for (const FLootEntry& Entry : Entries)
 	{
 		if (!Entry.IsValid())
 		{
 			continue;
 		}
-		
+
 		Filtered.Add(Entry);
 	}
-	
+
 	return Filtered;
 }

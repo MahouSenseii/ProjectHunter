@@ -1,5 +1,3 @@
-// Interactable/Component/InteractableManager.cpp
-
 #include "Interactable/Component/InteractableManager.h"
 
 #include "EngineUtils.h"
@@ -25,13 +23,11 @@ void UInteractableManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Auto-find meshes if none specified
 	if (MeshesToHighlight.Num() == 0)
 	{
 		AutoFindMeshes();
 	}
 
-	// Create widget component
 	if (bShowWidget && InteractionWidgetClass)
 	{
 		CreateWidgetComponent();
@@ -42,7 +38,6 @@ void UInteractableManager::BeginPlay()
 
 void UInteractableManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// Clean up timer
 	StopCameraFacingUpdates();
 	
 	Super::EndPlay(EndPlayReason);
@@ -57,7 +52,6 @@ void UInteractableManager::CreateWidgetComponent()
 		return;
 	}
 
-	// Create widget component
 	WidgetComponent = NewObject<UWidgetComponent>(Owner, UWidgetComponent::StaticClass(), TEXT("InteractionWidget"));
 	if (!WidgetComponent)
 	{
@@ -65,76 +59,38 @@ void UInteractableManager::CreateWidgetComponent()
 		return;
 	}
 
-	// Register component FIRST
 	WidgetComponent->RegisterComponent();
 	
-	// ═══════════════════════════════════════════════════════════
-	// CRITICAL QUALITY SETTINGS (Set BEFORE widget class!)
-	// ═══════════════════════════════════════════════════════════
-	
-	// Set world space (we'll handle camera-facing manually)
 	WidgetComponent->SetWidgetSpace(EWidgetSpace::World);
-	
-	// Geometry settings BEFORE widget creation
 	WidgetComponent->SetGeometryMode(EWidgetGeometryMode::Plane);
 	WidgetComponent->SetBlendMode(EWidgetBlendMode::Transparent);
 	WidgetComponent->SetTwoSided(false);
-	
-	// Enable ticking
 	WidgetComponent->SetTickMode(ETickMode::Enabled);
 	WidgetComponent->SetWindowFocusable(false);
-	
-	// Set pivot BEFORE setting draw size
 	WidgetComponent->SetPivot(FVector2D(0.5f, 1.0f));
-	
-	// ═══════════════════════════════════════════════════════════
-	// RESOLUTION SETTINGS
-	// ═══════════════════════════════════════════════════════════
 	
 	if (bUseDesiredSize)
 	{
-		// METHOD 1: Use desired size (BEST for quality)
-		WidgetComponent->SetDrawSize(WidgetDrawSize); // Physical world size
-		WidgetComponent->SetDrawAtDesiredSize(true);  // Render at widget's native resolution
+		WidgetComponent->SetDrawSize(WidgetDrawSize);
+		WidgetComponent->SetDrawAtDesiredSize(true);
 	}
 	else
 	{
-		// METHOD 2: Manual high-resolution render target
 		FVector2D HighResSize = WidgetDrawSize * ResolutionScale;
 		WidgetComponent->SetDrawSize(HighResSize);
 		WidgetComponent->SetDrawAtDesiredSize(false);
 	}
 	
-	// ═══════════════════════════════════════════════════════════
-	// SET WIDGET CLASS AND INITIALIZE
-	// ═══════════════════════════════════════════════════════════
-	
-	// NOW set the widget class (after all quality settings)
 	WidgetComponent->SetWidgetClass(InteractionWidgetClass);
-	
-	// Set position
 	WidgetComponent->SetRelativeLocation(WidgetOffset);
-	
-	// Attach to root
 	WidgetComponent->AttachToComponent(
 		Owner->GetRootComponent(),
 		FAttachmentTransformRules::KeepRelativeTransform
 	);
 	
-	// CRITICAL: Initialize widget to apply all settings
 	WidgetComponent->InitWidget();
-	
-	// Force redraw to ensure quality settings are applied
 	WidgetComponent->RequestRedraw();
-	
-	// ═══════════════════════════════════════════════════════════
-	// FINAL SETTINGS
-	// ═══════════════════════════════════════════════════════════
-	
-	// Background
 	WidgetComponent->SetBackgroundColor(FLinearColor::Transparent);
-	
-	// Hidden by default
 	WidgetComponent->SetVisibility(false);
 
 	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Created high-quality widget for %s (Type: %s, CameraFacing: %s)"), 
@@ -175,13 +131,8 @@ void UInteractableManager::AutoFindMeshes()
 		MeshesToHighlight.Num(), *Owner->GetName());
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// INTERACTABLE INTERFACE - BASIC
-// ═══════════════════════════════════════════════════════════════════════
-
 void UInteractableManager::OnInteract_Implementation(AActor* Interactor)
 {
-	// For Tap or simple interactions
 	switch (Config.InteractionType)
 	{
 	case EInteractionType::IT_Tap:
@@ -200,7 +151,6 @@ void UInteractableManager::OnInteract_Implementation(AActor* Interactor)
 		break;
 		
 	default:
-		// Hold/Mash interactions handled by their own functions
 		UE_LOG(LogInteractable, Warning, TEXT("InteractableManager: OnInteract called on non-tap interaction type"));
 		break;
 	}
@@ -213,37 +163,29 @@ bool UInteractableManager::CanInteract_Implementation(AActor* Interactor) const
 
 void UInteractableManager::OnBeginFocus_Implementation(AActor* Interactor)
 {
-	// Store current interactor for camera-facing
 	CurrentInteractor = Interactor;
 
-	// Apply highlight
 	if (bEnableHighlight)
 	{
 		ApplyHighlight(true);
 	}
 
-	// Show widget
 	if (WidgetComponent)
 	{
 		WidgetComponent->SetVisibility(true);
 
-		// Update widget with interaction-type-specific text
 		if (UInteractableWidget* Widget = Cast<UInteractableWidget>(WidgetComponent->GetWidget()))
 		{
 			UpdateWidgetText();
 			Widget->SetWidgetState(EInteractionWidgetState::IWS_Idle);
 			Widget->SetProgressBarVisible(false);
-			
-			// CRITICAL: Force widget update to ensure crisp rendering
 			WidgetComponent->RequestRedraw();
 		}
 
-		// Face camera immediately
 		if (bAlwaysFaceCamera && Interactor)
 		{
-			UpdateWidgetRotationToFaceCamera(Interactor, 0.0f); // Instant snap on focus
-			
-			// Start continuous updates if update rate > 0
+			UpdateWidgetRotationToFaceCamera(Interactor, 0.0f);
+
 			if (CameraFacingUpdateRate > 0.0f)
 			{
 				StartCameraFacingUpdates();
@@ -251,7 +193,6 @@ void UInteractableManager::OnBeginFocus_Implementation(AActor* Interactor)
 		}
 	}
 
-	// Broadcast event
 	OnFocusBegin.Broadcast(Interactor);
 
 	UE_LOG(LogInteractable, Verbose, TEXT("InteractableManager: Begin focus on %s (Type: %s)"), 
@@ -260,19 +201,15 @@ void UInteractableManager::OnBeginFocus_Implementation(AActor* Interactor)
 
 void UInteractableManager::OnEndFocus_Implementation(AActor* Interactor)
 {
-	// Clear current interactor
 	CurrentInteractor = nullptr;
 
-	// Stop camera-facing updates
 	StopCameraFacingUpdates();
 
-	// Remove highlight
 	if (bEnableHighlight)
 	{
 		ApplyHighlight(false);
 	}
 
-	// Hide widget
 	if (WidgetComponent)
 	{
 		if (UInteractableWidget* Widget = Cast<UInteractableWidget>(WidgetComponent->GetWidget()))
@@ -285,7 +222,6 @@ void UInteractableManager::OnEndFocus_Implementation(AActor* Interactor)
 		WidgetComponent->SetVisibility(false);
 	}
 
-	// Broadcast event
 	OnFocusEnd.Broadcast(Interactor);
 
 	UE_LOG(LogInteractable, Verbose, TEXT("InteractableManager: End focus on %s"), *GetOwner()->GetName());
@@ -322,10 +258,6 @@ FInteractableHighlightStyle UInteractableManager::GetHighlightStyle_Implementati
 	return Style;
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// INTERACTABLE INTERFACE - HOLD INTERACTION
-// ═══════════════════════════════════════════════════════════════════════
-
 float UInteractableManager::GetTapHoldThreshold_Implementation() const
 {
 	return Config.InteractionType == EInteractionType::IT_Hold ? 0.0f : Config.TapHoldThreshold;
@@ -345,21 +277,19 @@ void UInteractableManager::OnHoldInteractionStart_Implementation(AActor* Interac
 	}
 
 	SetProgressBarVisible(true);
-	
-	// Update camera facing for progress bar visibility
+
 	if (bAlwaysFaceCamera && Interactor)
 	{
 		UpdateWidgetRotationToFaceCamera(Interactor, 0.0f);
 	}
-	
+
 	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Hold start on %s"), *GetOwner()->GetName());
 }
 
 void UInteractableManager::OnHoldInteractionUpdate_Implementation(AActor* Interactor, float Progress)
 {
 	UpdateProgress(Progress, false);
-	
-	// Update camera facing during hold (only if no continuous timer)
+
 	if (bAlwaysFaceCamera && CameraFacingUpdateRate <= 0.0f && Interactor)
 	{
 		UpdateWidgetRotationToFaceCamera(Interactor, 0.0f);
@@ -397,10 +327,6 @@ FText UInteractableManager::GetHoldInteractionText_Implementation() const
 	return Config.HoldText;
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// INTERACTABLE INTERFACE - MASH INTERACTION
-// ═══════════════════════════════════════════════════════════════════════
-
 int32 UInteractableManager::GetRequiredMashCount_Implementation() const
 {
 	return Config.RequiredMashCount;
@@ -421,13 +347,12 @@ void UInteractableManager::OnMashInteractionStart_Implementation(AActor* Interac
 
 	SetProgressBarVisible(true);
 	OnMashProgress.Broadcast(Interactor, 0, Config.RequiredMashCount);
-	
-	// Update camera facing for progress bar visibility
+
 	if (bAlwaysFaceCamera && Interactor)
 	{
 		UpdateWidgetRotationToFaceCamera(Interactor, 0.0f);
 	}
-	
+
 	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Mash start on %s"), *GetOwner()->GetName());
 }
 
@@ -435,8 +360,7 @@ void UInteractableManager::OnMashInteractionUpdate_Implementation(AActor* Intera
 {
 	UpdateProgress(Progress, false);
 	OnMashProgress.Broadcast(Interactor, CurrentCount, RequiredCount);
-	
-	// Update camera facing during mash (only if no continuous timer)
+
 	if (bAlwaysFaceCamera && CameraFacingUpdateRate <= 0.0f && Interactor)
 	{
 		UpdateWidgetRotationToFaceCamera(Interactor, 0.0f);
@@ -505,19 +429,13 @@ void UInteractableManager::OnContinuousInteractionEnd_Implementation(AActor* Int
 	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Continuous interaction ended on %s"), *GetOwner()->GetName());
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// INTERACTABLE INTERFACE - TOOLTIP
-// ═══════════════════════════════════════════════════════════════════════
-
 bool UInteractableManager::HasTooltip_Implementation() const
 {
-	// Can be overridden in Blueprint
 	return false;
 }
 
 UObject* UInteractableManager::GetTooltipData_Implementation() const
 {
-	// Can be overridden in Blueprint
 	return nullptr;
 }
 
@@ -525,10 +443,6 @@ FVector UInteractableManager::GetTooltipWorldLocation_Implementation() const
 {
 	return GetOwner()->GetActorLocation() + WidgetOffset;
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// PROGRESS BAR SUPPORT
-// ═══════════════════════════════════════════════════════════════════════
 
 void UInteractableManager::UpdateProgress(float Progress, bool bIsDepleting)
 {
@@ -583,20 +497,14 @@ void UInteractableManager::SetProgressBarVisible(bool bVisible)
 	}
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// BLUEPRINT CALLABLE
-// ═══════════════════════════════════════════════════════════════════════
-
 void UInteractableManager::SetCameraFacingEnabled(bool bEnabled)
 {
 	bAlwaysFaceCamera = bEnabled;
-	
+
 	if (bEnabled && CurrentInteractor && WidgetComponent && WidgetComponent->IsVisible())
 	{
-		// Face camera immediately
 		UpdateWidgetRotationToFaceCamera(CurrentInteractor, 0.0f);
-		
-		// Start continuous updates if needed
+
 		if (CameraFacingUpdateRate > 0.0f)
 		{
 			StartCameraFacingUpdates();
@@ -604,14 +512,9 @@ void UInteractableManager::SetCameraFacingEnabled(bool bEnabled)
 	}
 	else
 	{
-		// Stop updates
 		StopCameraFacingUpdates();
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// CAMERA-FACING LOGIC (SINGLE RESPONSIBILITY: Widget rotation)
-// ═══════════════════════════════════════════════════════════════════════
 
 void UInteractableManager::UpdateWidgetRotationToFaceCamera(AActor* Interactor, float DeltaTime)
 {
@@ -620,7 +523,6 @@ void UInteractableManager::UpdateWidgetRotationToFaceCamera(AActor* Interactor, 
 		return;
 	}
 
-	// Get camera location and rotation
 	FVector CameraLocation;
 	FRotator CameraRotation;
 	if (!GetInteractorCamera(Interactor, CameraLocation, CameraRotation))
@@ -628,31 +530,23 @@ void UInteractableManager::UpdateWidgetRotationToFaceCamera(AActor* Interactor, 
 		return;
 	}
 
-	// Calculate direction from widget to camera
 	const FVector WidgetLocation = WidgetComponent->GetComponentLocation();
 	const FVector DirectionToCamera = (CameraLocation - WidgetLocation).GetSafeNormal();
 
-	// Calculate target rotation (face camera)
 	FRotator TargetRotation = DirectionToCamera.Rotation();
-	
-	// Get current rotation
 	FRotator CurrentRotation = WidgetComponent->GetComponentRotation();
 
-	// Apply rotation (smooth or instant)
 	FRotator NewRotation;
-	
+
 	if (RotationSmoothSpeed > 0.0f && DeltaTime > 0.0f)
 	{
-		// Smooth interpolation
 		NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, RotationSmoothSpeed);
 	}
 	else
 	{
-		// Instant snap
 		NewRotation = TargetRotation;
 	}
 
-	// Set world rotation
 	WidgetComponent->SetWorldRotation(NewRotation);
 }
 
@@ -663,20 +557,12 @@ bool UInteractableManager::GetInteractorCamera(AActor* Interactor, FVector& OutC
 		return false;
 	}
 
-	// ─────────────────────────────────────────────────────────────────────
-	// METHOD 1: Try to get from player controller (most common)
-	// ─────────────────────────────────────────────────────────────────────
-	
 	if (APlayerController* PC = Cast<APlayerController>(Interactor))
 	{
 		PC->GetPlayerViewPoint(OutCameraLocation, OutCameraRotation);
 		return true;
 	}
 
-	// ─────────────────────────────────────────────────────────────────────
-	// METHOD 2: Try to get from character's controller
-	// ─────────────────────────────────────────────────────────────────────
-	
 	if (APawn* Pawn = Cast<APawn>(Interactor))
 	{
 		if (APlayerController* PC = Cast<APlayerController>(Pawn->GetController()))
@@ -686,10 +572,6 @@ bool UInteractableManager::GetInteractorCamera(AActor* Interactor, FVector& OutC
 		}
 	}
 
-	// ─────────────────────────────────────────────────────────────────────
-	// METHOD 3: Try to find camera component on interactor
-	// ─────────────────────────────────────────────────────────────────────
-	
 	if (UCameraComponent* CameraComp = Interactor->FindComponentByClass<UCameraComponent>())
 	{
 		OutCameraLocation = CameraComp->GetComponentLocation();
@@ -697,10 +579,6 @@ bool UInteractableManager::GetInteractorCamera(AActor* Interactor, FVector& OutC
 		return true;
 	}
 
-	// ─────────────────────────────────────────────────────────────────────
-	// METHOD 4: Fallback to actor location/rotation
-	// ─────────────────────────────────────────────────────────────────────
-	
 	OutCameraLocation = Interactor->GetActorLocation();
 	OutCameraRotation = Interactor->GetActorRotation();
 	return true;
@@ -713,10 +591,8 @@ void UInteractableManager::StartCameraFacingUpdates()
 		return;
 	}
 
-	// Clear existing timer
 	StopCameraFacingUpdates();
 
-	// Start new timer
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().SetTimer(
@@ -724,7 +600,7 @@ void UInteractableManager::StartCameraFacingUpdates()
 			this,
 			&UInteractableManager::UpdateCameraFacingTimer,
 			CameraFacingUpdateRate,
-			true // Looping
+			true
 		);
 
 		UE_LOG(LogInteractable, Verbose, TEXT("InteractableManager: Started camera-facing timer (Rate: %.3fs)"),
@@ -748,14 +624,9 @@ void UInteractableManager::UpdateCameraFacingTimer()
 	}
 	else
 	{
-		// Stop timer if no longer needed
 		StopCameraFacingUpdates();
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// HELPER FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════
 
 void UInteractableManager::UpdateWidgetText()
 {
@@ -793,7 +664,6 @@ FText UInteractableManager::GetDisplayTextForCurrentType() const
 		return Config.MashText;
 			
 	case EInteractionType::IT_TapOrHold:
-		// Show both options on separate lines
 		return FText::Format(
 			FText::FromString("{0}\n{1}"),
 			Config.TapText,
@@ -813,10 +683,6 @@ bool UInteractableManager::SupportsProgressBar() const
 		|| Config.InteractionType == EInteractionType::IT_TapOrHold
 		|| Config.InteractionType == EInteractionType::IT_Mash;
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// HIGHLIGHT
-// ═══════════════════════════════════════════════════════════════════════
 
 void UInteractableManager::ApplyHighlight(bool bHighlight)
 {

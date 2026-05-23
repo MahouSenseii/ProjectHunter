@@ -1,6 +1,3 @@
-// Equipment/Library/EquipmentFunctionLibrary.cpp
-// PH-1.1 — Equipment Function Library (skeleton)
-
 #include "Equipment/Library/EquipmentFunctionLibrary.h"
 
 #include "Item/ItemInstance.h"

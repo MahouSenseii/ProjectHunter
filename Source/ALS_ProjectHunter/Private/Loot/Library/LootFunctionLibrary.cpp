@@ -1,12 +1,6 @@
-// Loot/Library/LootFunctionLibrary.cpp
-
 #include "Loot/Library/LootFunctionLibrary.h"
 #include "Loot/Generation/LootGenerator.h"
 #include "Engine/DataTable.h"
-
-// ═══════════════════════════════════════════════════════════════════════
-// RARITY UTILITIES
-// ═══════════════════════════════════════════════════════════════════════
 
 FText ULootFunctionLibrary::GetDropRarityDisplayName(EDropRarity Rarity)
 {
@@ -26,12 +20,12 @@ FLinearColor ULootFunctionLibrary::GetDropRarityColor(EDropRarity Rarity)
 {
 	switch (Rarity)
 	{
-		case EDropRarity::DR_Common:     return FLinearColor(0.8f, 0.8f, 0.8f);     // Gray
-		case EDropRarity::DR_Uncommon:   return FLinearColor(0.2f, 0.8f, 0.2f);     // Green
-		case EDropRarity::DR_Rare:       return FLinearColor(0.2f, 0.4f, 1.0f);     // Blue
-		case EDropRarity::DR_Epic:       return FLinearColor(0.6f, 0.2f, 0.9f);     // Purple
-		case EDropRarity::DR_Legendary:  return FLinearColor(1.0f, 0.6f, 0.0f);     // Orange
-		case EDropRarity::DR_Mythical:   return FLinearColor(1.0f, 0.2f, 0.2f);     // Red
+		case EDropRarity::DR_Common:     return FLinearColor(0.8f, 0.8f, 0.8f);
+		case EDropRarity::DR_Uncommon:   return FLinearColor(0.2f, 0.8f, 0.2f);
+		case EDropRarity::DR_Rare:       return FLinearColor(0.2f, 0.4f, 1.0f);
+		case EDropRarity::DR_Epic:       return FLinearColor(0.6f, 0.2f, 0.9f);
+		case EDropRarity::DR_Legendary:  return FLinearColor(1.0f, 0.6f, 0.0f);
+		case EDropRarity::DR_Mythical:   return FLinearColor(1.0f, 0.2f, 0.2f);
 		default:                         return FLinearColor::White;
 	}
 }
@@ -64,10 +58,6 @@ float ULootFunctionLibrary::GetRarityMultiplier(EDropRarity Rarity)
 	}
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// LOOT TABLE UTILITIES
-// ═══════════════════════════════════════════════════════════════════════
-
 bool ULootFunctionLibrary::IsValidLootTableHandle(const FDataTableRowHandle& Handle)
 {
 	return FLootGenerator::GetLootTableFromHandle(Handle) != nullptr;
@@ -76,42 +66,38 @@ bool ULootFunctionLibrary::IsValidLootTableHandle(const FDataTableRowHandle& Han
 float ULootFunctionLibrary::GetLootTableTotalWeight(const FDataTableRowHandle& Handle)
 {
 	const FLootTable* Table = FLootGenerator::GetLootTableFromHandle(Handle);
-	
+
 	if (!Table)
 	{
 		return 0.0f;
 	}
-	
+
 	return Table->GetTotalWeight();
 }
 
 int32 ULootFunctionLibrary::GetLootTableEntryCount(const FDataTableRowHandle& Handle)
 {
 	const FLootTable* Table = FLootGenerator::GetLootTableFromHandle(Handle);
-	
+
 	if (!Table)
 	{
 		return 0;
 	}
-	
+
 	return Table->Entries.Num();
 }
 
 int32 ULootFunctionLibrary::GetCorruptedEntryCount(const FDataTableRowHandle& Handle)
 {
 	const FLootTable* Table = FLootGenerator::GetLootTableFromHandle(Handle);
-	
+
 	if (!Table)
 	{
 		return 0;
 	}
-	
+
 	return Table->GetCorruptedEntries().Num();
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// LOOT ENTRY UTILITIES
-// ═══════════════════════════════════════════════════════════════════════
 
 float ULootFunctionLibrary::GetEntryDropPercentage(const FLootEntry& Entry, float TotalTableWeight)
 {
@@ -119,7 +105,7 @@ float ULootFunctionLibrary::GetEntryDropPercentage(const FLootEntry& Entry, floa
 	{
 		return 0.0f;
 	}
-	
+
 	float EffectiveWeight = Entry.GetEffectiveWeight();
 	return (EffectiveWeight / TotalTableWeight) * 100.0f;
 }
@@ -128,10 +114,6 @@ bool ULootFunctionLibrary::IsValidLootEntry(const FLootEntry& Entry)
 {
 	return Entry.IsValid();
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// CORRUPTION UTILITIES
-// ═══════════════════════════════════════════════════════════════════════
 
 FText ULootFunctionLibrary::GetCorruptionTypeName(ECorruptionType Type)
 {
@@ -150,9 +132,9 @@ FLinearColor ULootFunctionLibrary::GetCorruptionTypeColor(ECorruptionType Type)
 	switch (Type)
 	{
 		case ECorruptionType::CT_None:    return FLinearColor::White;
-		case ECorruptionType::CT_Minor:   return FLinearColor(0.6f, 0.3f, 0.6f);    // Light purple
-		case ECorruptionType::CT_Major:   return FLinearColor(0.4f, 0.0f, 0.4f);    // Dark purple
-		case ECorruptionType::CT_Abyssal: return FLinearColor(0.1f, 0.0f, 0.1f);    // Near black
+		case ECorruptionType::CT_Minor:   return FLinearColor(0.6f, 0.3f, 0.6f);
+		case ECorruptionType::CT_Major:   return FLinearColor(0.4f, 0.0f, 0.4f);
+		case ECorruptionType::CT_Abyssal: return FLinearColor(0.1f, 0.0f, 0.1f);
 		default:                          return FLinearColor::White;
 	}
 }
@@ -168,10 +150,6 @@ float ULootFunctionLibrary::GetCorruptionSeverity(ECorruptionType Type)
 		default:                          return 0.0f;
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// SOURCE TYPE UTILITIES
-// ═══════════════════════════════════════════════════════════════════════
 
 FText ULootFunctionLibrary::GetLootSourceTypeName(ELootSourceType Type)
 {
@@ -192,7 +170,7 @@ FText ULootFunctionLibrary::GetLootSourceTypeName(ELootSourceType Type)
 FLootDropSettings ULootFunctionLibrary::GetDefaultSettingsForSourceType(ELootSourceType Type)
 {
 	FLootDropSettings Settings;
-	
+
 	switch (Type)
 	{
 		case ELootSourceType::LST_NPC:
@@ -200,73 +178,67 @@ FLootDropSettings ULootFunctionLibrary::GetDefaultSettingsForSourceType(ELootSou
 			Settings.MaxDrops = 2;
 			Settings.SourceRarity = EDropRarity::DR_Common;
 			break;
-			
+
 		case ELootSourceType::LST_Chest:
 			Settings.MinDrops = 1;
 			Settings.MaxDrops = 4;
 			Settings.SourceRarity = EDropRarity::DR_Uncommon;
 			Settings.RarityBonusChance = 0.1f;
 			break;
-			
+
 		case ELootSourceType::LST_Breakable:
 			Settings.MinDrops = 0;
 			Settings.MaxDrops = 1;
 			Settings.SourceRarity = EDropRarity::DR_Common;
 			Settings.DropChanceMultiplier = 0.3f;
 			break;
-			
+
 		case ELootSourceType::LST_Boss:
 			Settings.MinDrops = 2;
 			Settings.MaxDrops = 5;
 			Settings.SourceRarity = EDropRarity::DR_Rare;
 			Settings.RarityBonusChance = 0.25f;
 			break;
-			
+
 		case ELootSourceType::LST_Quest:
 			Settings.MinDrops = 1;
 			Settings.MaxDrops = 1;
 			Settings.SourceRarity = EDropRarity::DR_Rare;
-			Settings.DropChanceMultiplier = 1.0f; // Guaranteed
+			Settings.DropChanceMultiplier = 1.0f;
 			break;
-			
+
 		case ELootSourceType::LST_Crafting:
 			Settings.MinDrops = 1;
 			Settings.MaxDrops = 1;
 			Settings.SourceRarity = EDropRarity::DR_Uncommon;
 			break;
-			
+
 		case ELootSourceType::LST_Shop:
 			Settings.MinDrops = 5;
 			Settings.MaxDrops = 10;
 			Settings.SourceRarity = EDropRarity::DR_Uncommon;
 			Settings.RarityBonusChance = 0.05f;
 			break;
-			
+
 		default:
 			break;
 	}
-	
+
 	return Settings;
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// MATH UTILITIES
-// ═══════════════════════════════════════════════════════════════════════
-
 float ULootFunctionLibrary::ApplyLuckToDropChance(float BaseChance, float Luck)
 {
-	// Luck formula: Each point adds diminishing returns bonus
-	// 100 luck = ~20% more rare items
+	// Each luck point adds diminishing returns: 100 luck ≈ +20% rare items
 	float LuckBonus = Luck / (Luck + 500.0f);
-	
+
 	return FMath::Clamp(BaseChance * (1.0f + LuckBonus), 0.0f, 1.0f);
 }
 
 int32 ULootFunctionLibrary::ApplyMagicFindToQuantity(int32 BaseQuantity, float MagicFind)
 {
-	// Magic find formula: Linear bonus to quantity
-	// 100 MF = +50% quantity
+	// Linear bonus: 100 MF = +50% quantity
 	float Multiplier = 1.0f + (MagicFind / 200.0f);
-	
+
 	return FMath::Max(1, FMath::RoundToInt(BaseQuantity * Multiplier));
 }

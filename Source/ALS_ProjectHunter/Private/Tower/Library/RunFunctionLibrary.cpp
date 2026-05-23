@@ -1,15 +1,9 @@
-// Tower/Library/RunFunctionLibrary.cpp
-
 #include "Tower/Library/RunFunctionLibrary.h"
 #include "Tower/Subsystem/RunSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 
 DEFINE_LOG_CATEGORY(LogRunFunctionLibrary);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SUBSYSTEM ACCESS
-// ─────────────────────────────────────────────────────────────────────────────
 
 URunSubsystem* URunFunctionLibrary::GetRunSubsystem(const UObject* WorldContextObject)
 {
@@ -27,10 +21,6 @@ URunSubsystem* URunFunctionLibrary::GetRunSubsystem(const UObject* WorldContextO
 	UGameInstance* GI = World->GetGameInstance();
 	return GI ? GI->GetSubsystem<URunSubsystem>() : nullptr;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// STATE QUERIES
-// ─────────────────────────────────────────────────────────────────────────────
 
 ERunState URunFunctionLibrary::GetRunState(const UObject* WorldContextObject)
 {
@@ -60,10 +50,6 @@ int32 URunFunctionLibrary::GetTotalKills(const UObject* WorldContextObject)
 	const URunSubsystem* RS = GetRunSubsystem(WorldContextObject);
 	return RS ? RS->GetTotalKills() : 0;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FORMATTING
-// ─────────────────────────────────────────────────────────────────────────────
 
 FString URunFunctionLibrary::FormatRunTime(float Seconds)
 {

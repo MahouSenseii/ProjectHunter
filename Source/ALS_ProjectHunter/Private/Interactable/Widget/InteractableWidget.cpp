@@ -1,5 +1,3 @@
-// Interactable/Widget/InteractableWidget.cpp
-
 #include "Interactable/Widget/InteractableWidget.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
@@ -23,15 +21,11 @@ namespace InteractableWidgetMaterialParams
 	const FName BackgroundColor(TEXT("BackgroundColor"));
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// CONSTRUCTOR — seeds KeyboardIcons and GamepadIcons with nullptr slots
-// so every key appears in the Blueprint details panel ready to assign.
-// ═══════════════════════════════════════════════════════════════════════
-
+// Seeds KeyboardIcons and GamepadIcons with nullptr slots so every key appears
+// in the Blueprint details panel ready to assign.
 UInteractableWidget::UInteractableWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	// ── Keyboard: Letters ────────────────────────────────────────────────
 	KeyboardIcons.Add(EKeys::A, nullptr);
 	KeyboardIcons.Add(EKeys::B, nullptr);
 	KeyboardIcons.Add(EKeys::C, nullptr);
@@ -59,7 +53,6 @@ UInteractableWidget::UInteractableWidget(const FObjectInitializer& ObjectInitial
 	KeyboardIcons.Add(EKeys::Y, nullptr);
 	KeyboardIcons.Add(EKeys::Z, nullptr);
 
-	// ── Keyboard: Number row ─────────────────────────────────────────────
 	KeyboardIcons.Add(EKeys::Zero,  nullptr);
 	KeyboardIcons.Add(EKeys::One,   nullptr);
 	KeyboardIcons.Add(EKeys::Two,   nullptr);
@@ -71,7 +64,6 @@ UInteractableWidget::UInteractableWidget(const FObjectInitializer& ObjectInitial
 	KeyboardIcons.Add(EKeys::Eight, nullptr);
 	KeyboardIcons.Add(EKeys::Nine,  nullptr);
 
-	// ── Keyboard: Numpad ─────────────────────────────────────────────────
 	KeyboardIcons.Add(EKeys::NumPadZero,     nullptr);
 	KeyboardIcons.Add(EKeys::NumPadOne,      nullptr);
 	KeyboardIcons.Add(EKeys::NumPadTwo,      nullptr);
@@ -88,7 +80,6 @@ UInteractableWidget::UInteractableWidget(const FObjectInitializer& ObjectInitial
 	KeyboardIcons.Add(EKeys::Decimal,        nullptr);
 	KeyboardIcons.Add(EKeys::Divide,         nullptr);
 
-	// ── Keyboard: Function keys ──────────────────────────────────────────
 	KeyboardIcons.Add(EKeys::F1,  nullptr);
 	KeyboardIcons.Add(EKeys::F2,  nullptr);
 	KeyboardIcons.Add(EKeys::F3,  nullptr);
@@ -102,7 +93,6 @@ UInteractableWidget::UInteractableWidget(const FObjectInitializer& ObjectInitial
 	KeyboardIcons.Add(EKeys::F11, nullptr);
 	KeyboardIcons.Add(EKeys::F12, nullptr);
 
-	// ── Keyboard: Navigation / editing ───────────────────────────────────
 	KeyboardIcons.Add(EKeys::SpaceBar,  nullptr);
 	KeyboardIcons.Add(EKeys::Enter,     nullptr);
 	KeyboardIcons.Add(EKeys::Escape,    nullptr);
@@ -115,13 +105,11 @@ UInteractableWidget::UInteractableWidget(const FObjectInitializer& ObjectInitial
 	KeyboardIcons.Add(EKeys::PageUp,    nullptr);
 	KeyboardIcons.Add(EKeys::PageDown,  nullptr);
 
-	// ── Keyboard: Arrow keys ─────────────────────────────────────────────
 	KeyboardIcons.Add(EKeys::Up,    nullptr);
 	KeyboardIcons.Add(EKeys::Down,  nullptr);
 	KeyboardIcons.Add(EKeys::Left,  nullptr);
 	KeyboardIcons.Add(EKeys::Right, nullptr);
 
-	// ── Keyboard: Modifiers ───────────────────────────────────────────────
 	KeyboardIcons.Add(EKeys::LeftShift,   nullptr);
 	KeyboardIcons.Add(EKeys::RightShift,  nullptr);
 	KeyboardIcons.Add(EKeys::LeftControl, nullptr);
@@ -132,7 +120,6 @@ UInteractableWidget::UInteractableWidget(const FObjectInitializer& ObjectInitial
 	KeyboardIcons.Add(EKeys::NumLock,     nullptr);
 	KeyboardIcons.Add(EKeys::ScrollLock,  nullptr);
 
-	// ── Keyboard: Punctuation / symbols ──────────────────────────────────
 	KeyboardIcons.Add(EKeys::Tilde,        nullptr); // ` ~
 	KeyboardIcons.Add(EKeys::Hyphen,       nullptr); // - _
 	KeyboardIcons.Add(EKeys::Equals,       nullptr); // = +
@@ -145,57 +132,36 @@ UInteractableWidget::UInteractableWidget(const FObjectInitializer& ObjectInitial
 	KeyboardIcons.Add(EKeys::Period,       nullptr); // . >
 	KeyboardIcons.Add(EKeys::Slash,        nullptr); // / ?
 
-	// ── Gamepad: Face buttons ─────────────────────────────────────────────
-	// Bottom = A (Xbox) / Cross (PS)
-	// Right  = B (Xbox) / Circle (PS)
-	// Left   = X (Xbox) / Square (PS)
-	// Top    = Y (Xbox) / Triangle (PS)
 	GamepadIcons.Add(EKeys::Gamepad_FaceButton_Bottom, nullptr);
 	GamepadIcons.Add(EKeys::Gamepad_FaceButton_Right,  nullptr);
 	GamepadIcons.Add(EKeys::Gamepad_FaceButton_Left,   nullptr);
 	GamepadIcons.Add(EKeys::Gamepad_FaceButton_Top,    nullptr);
 
-	// ── Gamepad: Shoulders & triggers ────────────────────────────────────
-	// LB/L1, RB/R1, LT/L2, RT/R2
 	GamepadIcons.Add(EKeys::Gamepad_LeftShoulder,  nullptr);
 	GamepadIcons.Add(EKeys::Gamepad_RightShoulder, nullptr);
 	GamepadIcons.Add(EKeys::Gamepad_LeftTrigger,   nullptr);
 	GamepadIcons.Add(EKeys::Gamepad_RightTrigger,  nullptr);
 
-	// ── Gamepad: Thumbstick clicks ────────────────────────────────────────
-	// L3, R3
 	GamepadIcons.Add(EKeys::Gamepad_LeftThumbstick,  nullptr);
 	GamepadIcons.Add(EKeys::Gamepad_RightThumbstick, nullptr);
 
-	// ── Gamepad: D-Pad ────────────────────────────────────────────────────
 	GamepadIcons.Add(EKeys::Gamepad_DPad_Up,    nullptr);
 	GamepadIcons.Add(EKeys::Gamepad_DPad_Down,  nullptr);
 	GamepadIcons.Add(EKeys::Gamepad_DPad_Left,  nullptr);
 	GamepadIcons.Add(EKeys::Gamepad_DPad_Right, nullptr);
 
-	// ── Gamepad: System buttons ───────────────────────────────────────────
-	// Special_Left  = Select / Back / Share / View
-	// Special_Right = Start / Menu / Options
 	GamepadIcons.Add(EKeys::Gamepad_Special_Left,  nullptr);
 	GamepadIcons.Add(EKeys::Gamepad_Special_Right, nullptr);
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// LIFECYCLE
-// ═══════════════════════════════════════════════════════════════════════
 
 void UInteractableWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	// Detect initial input mode
 	bIsUsingGamepad = DetectGamepadMode();
 	bLastInputModeGamepad = bIsUsingGamepad;
 
-	// Initialize border material
 	UpdateBorderMaterial();
-
-	// Set initial state
 	SetWidgetState(EInteractionWidgetState::IWS_Idle);
 
 	UE_LOG(LogInteractableWidget, Log, TEXT("InteractableWidget constructed (Gamepad: %s)"),
@@ -232,18 +198,13 @@ void UInteractableWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 	TickState(InDeltaTime);
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// PUBLIC API
-// ═══════════════════════════════════════════════════════════════════════
-
 void UInteractableWidget::SetInteractionData(UInputAction* InputAction, const FText& Description)
 {
 	if (!InputAction)
 	{
 		UE_LOG(LogInteractableWidget, Warning, TEXT("SetInteractionData called with null InputAction!"));
 		CurrentInputKey = EKeys::Invalid;
-		
-		// Still update description
+
 		if (InteractionDescription)
 		{
 			InteractionDescription->SetText(Description);
@@ -251,12 +212,7 @@ void UInteractableWidget::SetInteractionData(UInputAction* InputAction, const FT
 		return;
 	}
 
-	// ═══════════════════════════════════════════════
-	// QUERY ENHANCED INPUT FOR BOUND KEY
-	// ═══════════════════════════════════════════════
 	FKey BoundKey = GetBoundKeyForInputAction(InputAction);
-	
-	// Use the direct key setter
 	SetInteractionDataWithKey(BoundKey, Description);
 
 	UE_LOG(LogInteractableWidget, Verbose, TEXT("SetInteractionData: InputAction='%s', BoundKey='%s', Description='%s'"),
@@ -267,13 +223,11 @@ void UInteractableWidget::SetInteractionDataWithKey(const FKey& Key, const FText
 {
 	CurrentInputKey = Key;
 
-	// Update description text
 	if (InteractionDescription)
 	{
 		InteractionDescription->SetText(Description);
 	}
 
-	// Update icon for new key
 	UpdateKeyIcon();
 
 	UE_LOG(LogInteractableWidget, Verbose, TEXT("SetInteractionDataWithKey: Key='%s', Description='%s'"),
@@ -291,31 +245,25 @@ void UInteractableWidget::SetWidgetState(EInteractionWidgetState NewState)
 	CurrentState = NewState;
 	StateTimer = 0.0f;
 
-	// State entry logic
 	switch (NewState)
 	{
 		case EInteractionWidgetState::IWS_Idle:
-			// Reset progress for idle
 			CurrentProgress = 0.0f;
-			LastSetProgress = -1.0f;  // Force update
+			LastSetProgress = -1.0f;
 			break;
 
 		case EInteractionWidgetState::IWS_Holding:
 		case EInteractionWidgetState::IWS_Mashing:
-			// Progress will be set externally
 			break;
 
 		case EInteractionWidgetState::IWS_Completed:
-			// Flash at full progress
 			CurrentProgress = 1.0f;
 			break;
 
 		case EInteractionWidgetState::IWS_Cancelled:
-			// Keep current progress, will deplete
 			break;
 	}
 
-	// Immediate material update
 	UpdateMaterialParameters();
 
 	UE_LOG(LogInteractableWidget, Verbose, TEXT("State changed: %s -> %s"),
@@ -333,17 +281,14 @@ void UInteractableWidget::SetProgressBarVisible(bool bVisible)
 
 void UInteractableWidget::SetProgress(float Progress)
 {
-	// Only update if in appropriate state
-	if (CurrentState != EInteractionWidgetState::IWS_Holding && 
+	if (CurrentState != EInteractionWidgetState::IWS_Holding &&
 		CurrentState != EInteractionWidgetState::IWS_Mashing)
 	{
 		return;
 	}
 
-	// Clamp and check for change
 	float NewProgress = FMath::Clamp(Progress, 0.0f, 1.0f);
-	
-	// Only update material if progress actually changed (optimization)
+
 	if (FMath::Abs(NewProgress - LastSetProgress) > 0.001f)
 	{
 		CurrentProgress = NewProgress;
@@ -354,18 +299,13 @@ void UInteractableWidget::SetProgress(float Progress)
 
 void UInteractableWidget::RefreshInputMode()
 {
-	// Rebuild material for new input mode (square vs circle)
 	UpdateBorderMaterial();
-	
-	// Update icon (might need to switch from keyboard to gamepad key)
 	UpdateKeyIcon();
 }
 
 void UInteractableWidget::Show()
 {
 	SetVisibility(ESlateVisibility::HitTestInvisible);
-	
-	// Reset to idle when shown
 	SetWidgetState(EInteractionWidgetState::IWS_Idle);
 }
 
@@ -373,10 +313,6 @@ void UInteractableWidget::Hide()
 {
 	SetVisibility(ESlateVisibility::Collapsed);
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// INTERNAL - STATE TICK
-// ═══════════════════════════════════════════════════════════════════════
 
 void UInteractableWidget::TickState(float DeltaTime)
 {
@@ -386,16 +322,13 @@ void UInteractableWidget::TickState(float DeltaTime)
 	{
 		case EInteractionWidgetState::IWS_Idle:
 		{
-			// Idle animation (shimmer/pulse effect)
 			if (bEnableIdleAnimation && BorderMID)
 			{
 				AnimationTime += DeltaTime * IdleAnimationSpeed;
-				
-				// Set animation phase parameter for material
-				BorderMID->SetScalarParameterValue(InteractableWidgetMaterialParams::AnimationPhase, AnimationTime);
-				
-				// Optional: Subtle progress pulse (0.0 to ~0.1 range)
-				const float IdlePulse = (FMath::Sin(AnimationTime * 2.0f) * 0.5f + 0.5f) * 0.05f;
+
+			BorderMID->SetScalarParameterValue(InteractableWidgetMaterialParams::AnimationPhase, AnimationTime);
+
+			const float IdlePulse = (FMath::Sin(AnimationTime * 2.0f) * 0.5f + 0.5f) * 0.05f;
 				ApplyBorderProgress(IdlePulse);
 			}
 			break;
@@ -404,8 +337,6 @@ void UInteractableWidget::TickState(float DeltaTime)
 		case EInteractionWidgetState::IWS_Holding:
 		case EInteractionWidgetState::IWS_Mashing:
 		{
-			// Progress is set externally via SetProgress()
-			// Nothing to tick here - material updates happen in SetProgress()
 			break;
 		}
 
@@ -418,11 +349,9 @@ void UInteractableWidget::TickState(float DeltaTime)
 			}
 			else
 			{
-				// Pulse effect during flash
 				float FlashAlpha = 1.0f - (StateTimer / CompletionFlashDuration);
 				if (BorderMID)
 				{
-					// Bright flash fading out
 					FLinearColor FlashColor = FillColorCompleted;
 					FlashColor.A = FlashAlpha;
 					BorderMID->SetVectorParameterValue(FName("FillColor"), FlashColor);
@@ -433,8 +362,7 @@ void UInteractableWidget::TickState(float DeltaTime)
 
 		case EInteractionWidgetState::IWS_Cancelled:
 		{
-			// Deplete progress over time
-			float DepleteSpeed = 2.0f;  // 0.5 seconds to fully deplete
+			float DepleteSpeed = 2.0f;
 			CurrentProgress = FMath::Max(0.0f, CurrentProgress - (DeltaTime * DepleteSpeed));
 			
 			UpdateMaterialParameters();
@@ -449,10 +377,6 @@ void UInteractableWidget::TickState(float DeltaTime)
 	}
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// INTERNAL - MATERIAL MANAGEMENT
-// ═══════════════════════════════════════════════════════════════════════
-
 void UInteractableWidget::UpdateBorderMaterial()
 {
 	if (!Img_FillBorder)
@@ -461,7 +385,6 @@ void UInteractableWidget::UpdateBorderMaterial()
 		return;
 	}
 
-	// Select material based on input mode
 	UMaterialInterface* SourceMaterial = bIsUsingGamepad ? CircleBorderMaterial : SquareBorderMaterial;
 
 	if (!SourceMaterial)
@@ -471,11 +394,9 @@ void UInteractableWidget::UpdateBorderMaterial()
 		return;
 	}
 
-	// Create dynamic material instance
 	BorderMID = UMaterialInstanceDynamic::Create(SourceMaterial, this);
 	Img_FillBorder->SetBrushFromMaterial(BorderMID);
 
-	// Initialize material parameters
 	UpdateMaterialParameters();
 
 	UE_LOG(LogInteractableWidget, Verbose, TEXT("Created border material: %s"),
@@ -489,14 +410,10 @@ void UInteractableWidget::UpdateMaterialParameters()
 		return;
 	}
 
-	// Set progress (0.0 to 1.0 - controls border fill amount)
 	ApplyBorderProgress(CurrentProgress);
 
-	// Set fill color based on current state
 	const FLinearColor FillColor = GetCurrentFillColor();
 	BorderMID->SetVectorParameterValue(InteractableWidgetMaterialParams::FillColor, FillColor);
-
-	// Set background color (unfilled portion)
 	BorderMID->SetVectorParameterValue(InteractableWidgetMaterialParams::BackgroundColor, BorderBackgroundColor);
 }
 
@@ -532,10 +449,6 @@ FLinearColor UInteractableWidget::GetCurrentFillColor() const
 	}
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// INTERNAL - ICON MANAGEMENT (REFACTORED TO USE FKey)
-// ═══════════════════════════════════════════════════════════════════════
-
 void UInteractableWidget::UpdateKeyIcon()
 {
 	if (!Img_Key)
@@ -543,10 +456,8 @@ void UInteractableWidget::UpdateKeyIcon()
 		return;
 	}
 
-	// Early out if key is invalid
 	if (!CurrentInputKey.IsValid())
 	{
-		// Show fallback or hide
 		if (FallbackIcon)
 		{
 			Img_Key->SetBrushFromTexture(FallbackIcon);
@@ -561,14 +472,8 @@ void UInteractableWidget::UpdateKeyIcon()
 		return;
 	}
 
-	// ═══════════════════════════════════════════════
-	// SELECT ICON MAP BASED ON INPUT MODE
-	// ═══════════════════════════════════════════════
 	const TMap<FKey, TObjectPtr<UTexture2D>>& IconMap = bIsUsingGamepad ? GamepadIcons : KeyboardIcons;
 
-	// ═══════════════════════════════════════════════
-	// DIRECT KEY LOOKUP (FKey → Texture)
-	// ═══════════════════════════════════════════════
 	if (const TObjectPtr<UTexture2D>* FoundIcon = IconMap.Find(CurrentInputKey))
 	{
 		if (*FoundIcon)
@@ -583,9 +488,6 @@ void UInteractableWidget::UpdateKeyIcon()
 		}
 	}
 
-	// ═══════════════════════════════════════════════
-	// FALLBACK: Use generic icon if specific key not found
-	// ═══════════════════════════════════════════════
 	if (FallbackIcon)
 	{
 		Img_Key->SetBrushFromTexture(FallbackIcon);
@@ -596,19 +498,12 @@ void UInteractableWidget::UpdateKeyIcon()
 		return;
 	}
 
-	// ═══════════════════════════════════════════════
-	// NO ICON FOUND - HIDE
-	// ═══════════════════════════════════════════════
 	Img_Key->SetVisibility(ESlateVisibility::Collapsed);
 	
 	UE_LOG(LogInteractableWidget, Warning, TEXT("No icon found for key '%s' in %s mode (no fallback configured)"),
 		*CurrentInputKey.ToString(),
 		bIsUsingGamepad ? TEXT("Gamepad") : TEXT("Keyboard"));
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// INTERNAL - INPUT DETECTION
-// ═══════════════════════════════════════════════════════════════════════
 
 bool UInteractableWidget::DetectGamepadMode() const
 {
@@ -618,10 +513,6 @@ bool UInteractableWidget::DetectGamepadMode() const
 		return false;
 	}
 
-	// Check for any recent gamepad input
-	// This is a simple heuristic - for production, use InputDeviceMapper or similar
-	
-	// Check analog sticks
 	if (FMath::Abs(PC->GetInputAnalogKeyState(EKeys::Gamepad_LeftX)) > 0.1f ||
 		FMath::Abs(PC->GetInputAnalogKeyState(EKeys::Gamepad_LeftY)) > 0.1f ||
 		FMath::Abs(PC->GetInputAnalogKeyState(EKeys::Gamepad_RightX)) > 0.1f ||
@@ -630,7 +521,6 @@ bool UInteractableWidget::DetectGamepadMode() const
 		return true;
 	}
 
-	// Check common gamepad buttons (face buttons, shoulders)
 	static const TArray<FKey> GamepadKeys = {
 		EKeys::Gamepad_FaceButton_Bottom,
 		EKeys::Gamepad_FaceButton_Right,
@@ -653,10 +543,6 @@ bool UInteractableWidget::DetectGamepadMode() const
 	return false;
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// INTERNAL - ENHANCED INPUT KEY QUERY
-// ═══════════════════════════════════════════════════════════════════════
-
 FKey UInteractableWidget::GetBoundKeyForInputAction(UInputAction* InputAction) const
 {
 	if (!InputAction)
@@ -672,27 +558,16 @@ FKey UInteractableWidget::GetBoundKeyForInputAction(UInputAction* InputAction) c
 		return EKeys::Invalid;
 	}
 
-	// ═══════════════════════════════════════════════
-	// QUERY ALL ACTIVE MAPPING CONTEXTS
-	// ═══════════════════════════════════════════════
 	TArray<FKey> BoundKeys;
-	
-	// Get all active mapping contexts
 	TArray<FEnhancedActionKeyMapping> Mappings = Subsystem->GetAllPlayerMappableActionKeyMappings();
-	
+
 	for (const FEnhancedActionKeyMapping& Mapping : Mappings)
 	{
 		if (Mapping.Action == InputAction)
 		{
-			// Found a binding for this action
 			FKey MappedKey = Mapping.Key;
-			
-			// ═══════════════════════════════════════════════
-			// FILTER BY INPUT MODE
-			// ═══════════════════════════════════════════════
 			bool bIsGamepadKey = MappedKey.IsGamepadKey();
-			
-			// If current mode matches this key type, use it
+
 			if (bIsUsingGamepad == bIsGamepadKey)
 			{
 				UE_LOG(LogInteractableWidget, Verbose, TEXT("Found bound key '%s' for InputAction '%s' (Mode: %s)"),
@@ -702,15 +577,11 @@ FKey UInteractableWidget::GetBoundKeyForInputAction(UInputAction* InputAction) c
 				
 				return MappedKey;
 			}
-			
-			// Store for fallback
+
 			BoundKeys.Add(MappedKey);
 		}
 	}
 
-	// ═══════════════════════════════════════════════
-	// FALLBACK: Return first found key (wrong mode is better than nothing)
-	// ═══════════════════════════════════════════════
 	if (BoundKeys.Num() > 0)
 	{
 		UE_LOG(LogInteractableWidget, Verbose, TEXT("Using fallback key '%s' for InputAction '%s' (mode mismatch)"),
@@ -719,9 +590,6 @@ FKey UInteractableWidget::GetBoundKeyForInputAction(UInputAction* InputAction) c
 		return BoundKeys[0];
 	}
 
-	// ═══════════════════════════════════════════════
-	// NO BINDING FOUND
-	// ═══════════════════════════════════════════════
 	UE_LOG(LogInteractableWidget, Warning, TEXT("No key binding found for InputAction '%s'!"),
 		*InputAction->GetName());
 	

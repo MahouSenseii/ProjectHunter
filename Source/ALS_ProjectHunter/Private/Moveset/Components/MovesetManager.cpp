@@ -1,4 +1,3 @@
-// Character/Component/MovesetManager.cpp
 #include "Moveset/Components/MovesetManager.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
@@ -29,10 +28,6 @@ void UMovesetManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(UMovesetManager, SocketedMovesetsArray);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Socketing
-// ─────────────────────────────────────────────────────────────────────────────
-
 bool UMovesetManager::SocketMoveset(EEquipmentSlot WeaponSlot,
 	const FMovesetInstance& Moveset, FMovesetInstance& OutPreviousMoveset)
 {
@@ -48,7 +43,6 @@ bool UMovesetManager::SocketMoveset(EEquipmentSlot WeaponSlot,
 		return false;
 	}
 
-	// Compatibility check
 	UItemInstance* WeaponItem = EquipmentManager->GetEquippedItem(WeaponSlot);
 	if (!WeaponItem)
 	{
@@ -65,7 +59,6 @@ bool UMovesetManager::SocketMoveset(EEquipmentSlot WeaponSlot,
 		return false;
 	}
 
-	// Return any previously socketed moveset
 	FMovesetInstance* Existing = SocketedMovesetsMap.Find(WeaponSlot);
 	if (Existing)
 	{
@@ -73,7 +66,6 @@ bool UMovesetManager::SocketMoveset(EEquipmentSlot WeaponSlot,
 		OutPreviousMoveset = *Existing;
 	}
 
-	// Socket the new moveset
 	FMovesetInstance NewMoveset = Moveset;
 	SetMovesetEntry(WeaponSlot, NewMoveset);
 	GrantMovesetAbilities(WeaponSlot, *SocketedMovesetsMap.Find(WeaponSlot));
@@ -138,10 +130,6 @@ int32 UMovesetManager::GetMovesetLevelForSlot(EEquipmentSlot WeaponSlot) const
 	return Found ? Found->CurrentLevel : 0;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Corruption
-// ─────────────────────────────────────────────────────────────────────────────
-
 bool UMovesetManager::CorruptMoveset(EEquipmentSlot WeaponSlot)
 {
 	FMovesetInstance* Moveset = SocketedMovesetsMap.Find(WeaponSlot);
@@ -156,7 +144,6 @@ bool UMovesetManager::CorruptMoveset(EEquipmentSlot WeaponSlot)
 		return false;
 	}
 
-	// Weighted random selection
 	const int32 TotalWeight = Data->WeightNoChange + Data->WeightEnhanced
 		+ Data->WeightBricked + Data->WeightTransmuted;
 
@@ -200,9 +187,7 @@ bool UMovesetManager::CorruptMoveset(EEquipmentSlot WeaponSlot)
 	switch (Result)
 	{
 	case EMovesetCorruptionResult::MCR_Enhanced:
-		// +1 level beyond normal cap
 		Moveset->CurrentLevel = FMath::Min(Moveset->CurrentLevel + 1, Data->MaxLevel + 1);
-		// Grant bonus ability if defined
 		if (Data->CorruptionBonusAbilityClass && AbilitySystemComponent)
 		{
 			FGameplayAbilitySpec Spec(Data->CorruptionBonusAbilityClass, Moveset->CurrentLevel);
@@ -213,7 +198,6 @@ bool UMovesetManager::CorruptMoveset(EEquipmentSlot WeaponSlot)
 		break;
 
 	case EMovesetCorruptionResult::MCR_Bricked:
-		// Destroy the moveset
 		RevokeMovesetAbilities(WeaponSlot);
 		RemoveMovesetEntry(WeaponSlot);
 		UE_LOG(LogMovesetManager, Log, TEXT("CorruptMoveset: Bricked — moveset destroyed"));
@@ -234,15 +218,10 @@ bool UMovesetManager::CorruptMoveset(EEquipmentSlot WeaponSlot)
 		break;
 	}
 
-	// Update the entry in the array so it replicates
 	SetMovesetEntry(WeaponSlot, *Moveset);
 	OnMovesetCorrupted.Broadcast(WeaponSlot, Result);
 	return true;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// XP & Leveling
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UMovesetManager::AwardMovesetXP(EEquipmentSlot WeaponSlot, int64 XPAmount)
 {
@@ -270,7 +249,6 @@ void UMovesetManager::AwardMovesetXP(EEquipmentSlot WeaponSlot, int64 XPAmount)
 
 	Moveset->CurrentXP += XPAmount;
 
-	// Check for level-ups (may level multiple times from a large XP award)
 	while (Moveset->CanLevelUp(Data->MaxLevel))
 	{
 		const int64 Required = Data->GetXPRequiredForLevel(Moveset->CurrentLevel + 1);
@@ -300,10 +278,6 @@ void UMovesetManager::AwardMovesetXPToAll(int64 XPAmount)
 	}
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Ability grant / revoke
-// ─────────────────────────────────────────────────────────────────────────────
-
 void UMovesetManager::GrantMovesetAbilities(EEquipmentSlot Slot, FMovesetInstance& Moveset)
 {
 	if (!AbilitySystemComponent || !Moveset.IsValid())
@@ -317,14 +291,12 @@ void UMovesetManager::GrantMovesetAbilities(EEquipmentSlot Slot, FMovesetInstanc
 		return;
 	}
 
-	// Grant primary ability
 	if (Data->PrimaryAbilityClass)
 	{
 		FGameplayAbilitySpec Spec(Data->PrimaryAbilityClass, Moveset.CurrentLevel);
 		Moveset.GrantedAbilityHandles.Add(AbilitySystemComponent->GiveAbility(Spec));
 	}
 
-	// Grant combo abilities
 	for (TSubclassOf<UGameplayAbility> ComboClass : Data->ComboAbilityClasses)
 	{
 		if (ComboClass)
@@ -334,7 +306,6 @@ void UMovesetManager::GrantMovesetAbilities(EEquipmentSlot Slot, FMovesetInstanc
 		}
 	}
 
-	// Grant corruption bonus ability if applicable
 	if (Moveset.bIsCorrupted
 		&& Moveset.CorruptionResult == EMovesetCorruptionResult::MCR_Enhanced
 		&& Data->CorruptionBonusAbilityClass)
@@ -371,14 +342,9 @@ void UMovesetManager::ApplyLevelUp(EEquipmentSlot Slot, FMovesetInstance& Movese
 		return;
 	}
 
-	// Revoke then re-grant at the new level so ability specs pick up the new level value
 	RevokeMovesetAbilities(Slot);
 	GrantMovesetAbilities(Slot, Moveset);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Equipment change callback
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UMovesetManager::HandleEquipmentChanged(EEquipmentSlot Slot,
 	UItemInstance* NewItem, UItemInstance* OldItem)
@@ -398,7 +364,6 @@ void UMovesetManager::HandleEquipmentChanged(EEquipmentSlot Slot,
 
 	if (NewItem)
 	{
-		// New weapon equipped — re-grant any socketed moveset abilities
 		FMovesetInstance* Moveset = SocketedMovesetsMap.Find(Slot);
 		if (Moveset && Moveset->IsValid())
 		{
@@ -408,16 +373,10 @@ void UMovesetManager::HandleEquipmentChanged(EEquipmentSlot Slot,
 	}
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Map / array helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
 void UMovesetManager::SetMovesetEntry(EEquipmentSlot Slot, const FMovesetInstance& Moveset)
 {
-	// Update map
 	SocketedMovesetsMap.FindOrAdd(Slot) = Moveset;
 
-	// Update array (for replication)
 	for (FEquipmentSlotMovesetEntry& Entry : SocketedMovesetsArray)
 	{
 		if (Entry.Slot == Slot)
@@ -452,10 +411,6 @@ void UMovesetManager::OnRep_SocketedMovesets()
 	RebuildMovesetsMap();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Server RPCs
-// ─────────────────────────────────────────────────────────────────────────────
-
 void UMovesetManager::Server_SocketMoveset_Implementation(EEquipmentSlot WeaponSlot,
 	FMovesetInstance Moveset)
 {
@@ -473,10 +428,6 @@ void UMovesetManager::Server_CorruptMoveset_Implementation(EEquipmentSlot Weapon
 {
 	CorruptMoveset(WeaponSlot);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Initialisation
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UMovesetManager::CacheComponents()
 {

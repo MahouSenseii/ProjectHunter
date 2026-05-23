@@ -1,4 +1,3 @@
-// Character/Component/MonsterModifierComponent.cpp
 #include "AI/Components/MonsterModifierComponent.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
@@ -18,21 +17,18 @@ DEFINE_LOG_CATEGORY(LogMonsterModifier);
 UMonsterModifierComponent::UMonsterModifierComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	SetIsReplicatedByDefault(false); // State is authority-only
+	SetIsReplicatedByDefault(false);
 }
 
 void UMonsterModifierComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Auto-roll on BeginPlay if we have authority
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
 		RollAndApplyMods();
 	}
 }
-
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 void UMonsterModifierComponent::RollAndApplyMods()
 {
@@ -42,9 +38,7 @@ void UMonsterModifierComponent::RollAndApplyMods()
 	}
 	bModsApplied = true;
 
-	// OPT: Cache the resolved pointer to avoid repeated LoadSynchronous() calls.
-	// Each LoadSynchronous() hits the asset system even if the asset is warm,
-	// which adds up during bulk spawns (e.g. pool recycling a wave of mobs).
+
 	if (!CachedSpawnConfig)
 	{
 		CachedSpawnConfig = SpawnConfig.LoadSynchronous();
@@ -58,12 +52,9 @@ void UMonsterModifierComponent::RollAndApplyMods()
 		return;
 	}
 
-	// Roll per-instance base-stat variation BEFORE the Normal-tier early return.
-	// This is what makes two Normal Goblins mechanically different — every mob
-	// gets a small randomised HP/damage/resist/movespeed spread regardless of tier.
+
 	RollBaseStatVariation();
 
-	// Determine tier
 	if (ForcedTier != EMonsterTier::MT_Normal || AssignedTier != EMonsterTier::MT_Normal)
 	{
 		AssignedTier = (ForcedTier != EMonsterTier::MT_Normal) ? ForcedTier : AssignedTier;
@@ -75,14 +66,12 @@ void UMonsterModifierComponent::RollAndApplyMods()
 
 	if (AssignedTier == EMonsterTier::MT_Normal)
 	{
-		// Normal monsters get no mod rows, but still benefit from the base-stat
-		// variation rolled above — so they're never identical clones.
+
 		FullDisplayName = GetOwner()->GetClass()->GetDisplayNameText();
 		OnMonsterModsApplied.Broadcast(AssignedTier, FullDisplayName);
 		return;
 	}
 
-	// Load modifier table
 	UDataTable* ModTable = Config->ModifierTable.LoadSynchronous();
 	if (!ModTable)
 	{
@@ -90,7 +79,6 @@ void UMonsterModifierComponent::RollAndApplyMods()
 		return;
 	}
 
-	// Determine mod count
 	int32 NumMods = 0;
 	switch (AssignedTier)
 	{
@@ -101,18 +89,15 @@ void UMonsterModifierComponent::RollAndApplyMods()
 		NumMods = FMath::RandRange(Config->RareModMin, Config->RareModMax);
 		break;
 	case EMonsterTier::MT_Unique:
-		// Unique monsters have fixed mods â€” set externally via AppliedMods before RollAndApplyMods
 		NumMods = 0;
 		break;
 	default:
 		break;
 	}
 
-	// Roll mods
 	TArray<FMonsterModRow> RolledMods = RollMods(NumMods, AssignedTier, ModTable);
 	AppliedMods.Append(RolledMods);
 
-	// Apply mods to ASC
 	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(GetOwner());
 	UAbilitySystemComponent* ASC = ASCInterface ? ASCInterface->GetAbilitySystemComponent() : nullptr;
 
@@ -142,38 +127,31 @@ void UMonsterModifierComponent::RerollMods()
 {
 	if (!GetOwner() || !GetOwner()->HasAuthority()) { return; }
 
-	// â”€â”€ Clean up previously applied GEs so they don't stack â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+	
 	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(GetOwner());
 	UAbilitySystemComponent* ASC = ASCInterface ? ASCInterface->GetAbilitySystemComponent() : nullptr;
 
 	ClearAppliedRuntimeMods(ASC);
 	AppliedMods.Empty();
 
-	// Reset the per-instance variation so the reroll also re-rolls base stats.
-	// Without this, a pooled mob keeps its previous life's variation.
+
 	BaseStatVariation = FMonsterStatVariation();
 
-	// Reset the idempotency guard so RollAndApplyMods runs fresh
 	bModsApplied = false;
 	AssignedTier = (ForcedTier != EMonsterTier::MT_Normal) ? ForcedTier : EMonsterTier::MT_Normal;
 
 	RollAndApplyMods();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Per-instance base-stat variation
-// ─────────────────────────────────────────────────────────────────────────────
-
 void UMonsterModifierComponent::RollBaseStatVariation()
 {
 	if (BaseStatVariation.bRolled)
 	{
-		return; // Idempotent — already rolled this life
+		return;
 	}
 
 	if (!bEnableBaseStatVariation)
 	{
-		// Mark as rolled so we don't re-enter; leave multipliers at 1.0.
 		BaseStatVariation.bRolled = true;
 		return;
 	}
@@ -192,8 +170,6 @@ void UMonsterModifierComponent::RollBaseStatVariation()
 		: 0.0f;
 	BaseStatVariation.bRolled = true;
 
-	// Apply movespeed variation directly to CharacterMovement — mirrors how
-	// ApplyMod handles the per-mod MoveSpeedMultiplier.
 	if (!FMath::IsNearlyEqual(BaseStatVariation.MoveSpeedMultiplier, 1.0f))
 	{
 		if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
@@ -217,10 +193,6 @@ void UMonsterModifierComponent::RollBaseStatVariation()
 	OnBaseStatVariationRolled.Broadcast(BaseStatVariation);
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Mod rolling â€” weighted random selection matching FAffixGenerator pattern
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 TArray<FMonsterModRow> UMonsterModifierComponent::RollMods(int32 NumMods,
 	EMonsterTier Tier, const UDataTable* Table) const
 {
@@ -230,7 +202,6 @@ TArray<FMonsterModRow> UMonsterModifierComponent::RollMods(int32 NumMods,
 		return Result;
 	}
 
-	// Gather eligible rows â€” store copies to avoid const_cast UB on DataTable memory.
 	TArray<FMonsterModRow> EligibleRows;
 	TArray<int32> Weights;
 	int32 TotalWeight = 0;
@@ -252,17 +223,13 @@ TArray<FMonsterModRow> UMonsterModifierComponent::RollMods(int32 NumMods,
 		return Result;
 	}
 
-	// Ensure we never try to roll more mods than available unique rows
 	NumMods = FMath::Min(NumMods, EligibleRows.Num());
-
-	// Track selected indices to avoid duplicates
 	TSet<int32> SelectedIndices;
 
 	for (int32 i = 0; i < NumMods; ++i)
 	{
-		// Rebuild pool without already-selected entries
 		int32 RemainingWeight = 0;
-		TArray<TPair<int32, int32>> Pool; // index, weight
+		TArray<TPair<int32, int32>> Pool;
 		for (int32 j = 0; j < EligibleRows.Num(); ++j)
 		{
 			if (!SelectedIndices.Contains(j))
@@ -294,9 +261,6 @@ TArray<FMonsterModRow> UMonsterModifierComponent::RollMods(int32 NumMods,
 	return Result;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Mod application
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 void UMonsterModifierComponent::ApplyMod(const FMonsterModRow& Mod, UAbilitySystemComponent* ASC)
 {
@@ -305,7 +269,6 @@ void UMonsterModifierComponent::ApplyMod(const FMonsterModRow& Mod, UAbilitySyst
 		return;
 	}
 
-	// Apply the spawn GE (infinite persistent buff)
 	if (Mod.OnSpawnGE)
 	{
 		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
@@ -320,7 +283,6 @@ void UMonsterModifierComponent::ApplyMod(const FMonsterModRow& Mod, UAbilitySyst
 		}
 	}
 
-	// Grant ability (e.g. Teleporting, Flamebearer)
 	if (Mod.GrantedAbilityClass)
 	{
 		FGameplayAbilitySpec AbilitySpec(Mod.GrantedAbilityClass, 1);
@@ -331,7 +293,6 @@ void UMonsterModifierComponent::ApplyMod(const FMonsterModRow& Mod, UAbilitySyst
 		}
 	}
 
-	// Apply gameplay tags for AI/behaviour branching
 	if (Mod.GrantedTags.Num() > 0)
 	{
 		ASC->AddLooseGameplayTags(Mod.GrantedTags);
@@ -339,7 +300,6 @@ void UMonsterModifierComponent::ApplyMod(const FMonsterModRow& Mod, UAbilitySyst
 		GrantedLooseTagGrants.Add(Mod.GrantedTags);
 	}
 
-	// Apply movement speed multiplier (was previously a dead data field)
 	if (!FMath::IsNearlyEqual(Mod.MoveSpeedMultiplier, 1.0f))
 	{
 		if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
@@ -406,9 +366,6 @@ void UMonsterModifierComponent::ClearAppliedRuntimeMods(UAbilitySystemComponent*
 	AppliedMoveSpeedMultiplier = 1.0f;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Display name assembly
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 FText UMonsterModifierComponent::BuildDisplayName(const TArray<FMonsterModRow>& Mods) const
 {
@@ -444,14 +401,8 @@ FText UMonsterModifierComponent::BuildDisplayName(const TArray<FMonsterModRow>& 
 	return FText::FromString(Full);
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Combined multipliers
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 float UMonsterModifierComponent::GetCombinedHPMultiplier() const
 {
-	// Per-instance variation is folded in so Normal-tier mobs (which have no
-	// AppliedMods) still get a non-1.0 HP multiplier.
 	float Combined = BaseStatVariation.HPMultiplier;
 	for (const FMonsterModRow& Mod : AppliedMods)
 	{

@@ -1,5 +1,3 @@
-// Character/Component/CharacterSystemCoordinatorComponent.cpp
-
 #include "Character/Components/CharacterSystemCoordinatorComponent.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
@@ -15,10 +13,6 @@
 
 DEFINE_LOG_CATEGORY(LogCharacterSystemCoordinator);
 
-// ═══════════════════════════════════════════════════════════════════════
-// LIFECYCLE
-// ═══════════════════════════════════════════════════════════════════════
-
 UCharacterSystemCoordinatorComponent::UCharacterSystemCoordinatorComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
@@ -33,7 +27,6 @@ void UCharacterSystemCoordinatorComponent::BeginPlay()
 
 	if (bWired)
 	{
-		// Handles late join, possession churn, and component re-registration.
 		return;
 	}
 
@@ -56,15 +49,8 @@ void UCharacterSystemCoordinatorComponent::EndPlay(const EEndPlayReason::Type En
 	Super::EndPlay(EndPlayReason);
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-//  SINGLE MANAGER DISCOVERY PASS
-// ═══════════════════════════════════════════════════════════════════════
-
 void UCharacterSystemCoordinatorComponent::CacheManagerReferences()
 {
-	// One pass at BeginPlay replaces per-frame FindComponentByClass calls in managers.
-	// After PH-0.4 lands, grep Source/ for FindComponentByClass<UStatsManager> etc.
-	// in domain hot paths and route them through this coordinator instead.
 	AActor* Owner = GetOwner();
 	
 	if (!Owner)
@@ -84,27 +70,20 @@ void UCharacterSystemCoordinatorComponent::CacheManagerReferences()
 	EquipmentPresentation = Owner->FindComponentByClass<UEquipmentPresentationComponent>();
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-//  CROSS-SYSTEM LISTENER WIRING
-// ═══════════════════════════════════════════════════════════════════════
-
 void UCharacterSystemCoordinatorComponent::BindCrossSystemListeners()
 {
-	// Equipment -> Coordinator (stats + presentation).
 	if (EquipmentManager)
 	{
 		EquipmentManager->OnEquipmentChanged.AddDynamic(
 			this, &UCharacterSystemCoordinatorComponent::HandleEquipmentChanged);
 	}
 
-	// ── Presentation → Coordinator (downstream cosmetic listeners) ────────
 	if (EquipmentPresentation)
 	{
 		EquipmentPresentation->OnWeaponUpdated.AddDynamic(
 			this, &UCharacterSystemCoordinatorComponent::HandleEquipmentPresentationUpdated);
 	}
 
-	// ── Warm up: apply equipment stats + visuals already in the slot array ─
 	// Needed for save-game loads and pool recycling where items arrive before
 	// BeginPlay on the coordinator fires (e.g. server-side actor recycling).
 	if (EquipmentManager)
@@ -153,15 +132,9 @@ void UCharacterSystemCoordinatorComponent::UnbindCrossSystemListeners()
 	}
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// PH-0.3: CROSS-SYSTEM HANDLERS
-// ═══════════════════════════════════════════════════════════════════════
-
 void UCharacterSystemCoordinatorComponent::HandleEquipmentChanged(
 	EEquipmentSlot Slot, UItemInstance* NewItem, UItemInstance* OldItem)
 {
-	// ── 1. Stats (server-authoritative) ────────────────────────────────────
-	// The coordinator is the single place stats are applied/removed on equip events.
 	if (StatsManager && EquipmentManager && EquipmentManager->bApplyStatsOnEquip
 		&& GetOwner() && GetOwner()->HasAuthority())
 	{
@@ -175,8 +148,6 @@ void UCharacterSystemCoordinatorComponent::HandleEquipmentChanged(
 		}
 	}
 
-	// ── 2. Visual / Presentation (cosmetic — runs on all machines) ─────────
-	// The presentation component owns all mesh / runtime-actor lifecycle.
 	if (EquipmentPresentation && EquipmentManager && EquipmentManager->bAutoUpdateWeapons)
 	{
 		EquipmentPresentation->HandleEquipmentChanged(Slot, NewItem);
@@ -188,9 +159,6 @@ void UCharacterSystemCoordinatorComponent::HandleEquipmentChanged(
 void UCharacterSystemCoordinatorComponent::HandleEquipmentPresentationUpdated(
 	EEquipmentSlot Slot, UItemInstance* NewItem)
 {
-	// Hook for systems that need to react after the visual is fully built
-	// (e.g. future cosmetic animations, FX attachment points).
-	// For now this is a deliberate no-op forward stub.
 	(void)Slot;
 	(void)NewItem;
 }

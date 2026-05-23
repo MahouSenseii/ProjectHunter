@@ -1,4 +1,3 @@
-// Character/HUD/StatusEffect/StatusEffectIconWidget.cpp
 #include "Character/HUD/StatusEffect/StatusEffectIconWidget.h"
 #include "AbilitySystemComponent.h"
 
@@ -14,7 +13,6 @@ void UStatusEffectIconWidget::BindToEffect(UAbilitySystemComponent* InASC,
 	EffectHandle = InHandle;
 	bExpiredBroadcast = false;
 
-	// Cache total duration for normalised progress
 	TotalDuration = 0.0f;
 	CachedRemainingTime = 0.0f;
 
@@ -33,7 +31,6 @@ void UStatusEffectIconWidget::BindToEffect(UAbilitySystemComponent* InASC,
 			}
 			else
 			{
-				// Infinite / instant — display as permanent
 				TotalDuration = -1.0f;
 				CachedRemainingTime = -1.0f;
 			}
@@ -54,7 +51,7 @@ float UStatusEffectIconWidget::GetNormalisedProgress() const
 {
 	if (TotalDuration <= 0.0f)
 	{
-		return 1.0f; // Permanent effect — always full
+		return 1.0f;
 	}
 	return FMath::Clamp(CachedRemainingTime / TotalDuration, 0.0f, 1.0f);
 }
@@ -77,7 +74,6 @@ void UStatusEffectIconWidget::NativeTick(const FGeometry& MyGeometry, float InDe
 	const FActiveGameplayEffect* AGE = ASC->GetActiveGameplayEffect(EffectHandle);
 	if (!AGE)
 	{
-		// Effect was removed externally
 		if (!bExpiredBroadcast)
 		{
 			bExpiredBroadcast = true;
@@ -100,5 +96,4 @@ void UStatusEffectIconWidget::NativeTick(const FGeometry& MyGeometry, float InDe
 			BP_OnEffectExpired();
 		}
 	}
-	// Infinite effects: no time update needed
 }

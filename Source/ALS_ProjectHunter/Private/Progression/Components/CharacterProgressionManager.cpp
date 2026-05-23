@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Progression/Components/CharacterProgressionManager.h"
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystemComponent.h"
@@ -58,7 +56,6 @@ void UCharacterProgressionManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Cache references
 	CachedASC = GetAbilitySystemComponent();
 	CachedAttributeSet = GetAttributeSet();
 
@@ -67,17 +64,10 @@ void UCharacterProgressionManager::BeginPlay()
 		CharacterProgressionManagerPrivate::TrySyncPlayerLevelAttribute(CachedASC.Get(), Level);
 	}
 
-	// Rebuild the fast-lookup cache from the replicated array
-	// (handles save-game loads and listen-server clients)
 	RebuildSpentStatPointsCache();
 
-	// Calculate initial XP requirement
 	XPToNextLevel = GetXPForLevel(Level + 1);
 }
-
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* XP CALCULATION FUNCTIONS */
-/* ═══════════════════════════════════════════════════════════════════════ */
 
 void UCharacterProgressionManager::AwardExperienceFromKill(APHBaseCharacter* KilledCharacter)
 {
@@ -93,51 +83,37 @@ void UCharacterProgressionManager::AwardExperienceFromKill(APHBaseCharacter* Kil
 		return;
 	}
 
-	// 1. Get base XP from killed character
 	int64 BaseXP = KilledCharacter->GetXPReward();
 
-	// 2. Get player's XP modifiers from AttributeSet
 	UHunterAttributeSet* AttrSet = GetAttributeSet();
 	if (!AttrSet)
 	{
 		UE_LOG(LogCharacterProgressionManager, Warning, TEXT("AwardExperienceFromKill: No AttributeSet found"));
-		AwardExperience(BaseXP); // Award without bonuses
+		AwardExperience(BaseXP);
 		return;
 	}
 
-	float GlobalXP = AttrSet->GetGlobalXPGain();           // Party/event bonuses
-	float LocalXP = AttrSet->GetLocalXPGain();             // Item bonuses
-	// N-03 FIX: XPGainMultiplier attribute defaults to 0.0f in the AttributeSet, which would
-	// zero all XP. Clamp to >= 1.0f so an un-initialized attribute has a neutral effect.
-	float MoreXP = FMath::Max(AttrSet->GetXPGainMultiplier(), 1.0f); // Multiplicative bonuses
-	float Penalty = AttrSet->GetXPPenalty();               // Penalties (e.g. death / curse penalties)
+	float GlobalXP = AttrSet->GetGlobalXPGain();
+	float LocalXP = AttrSet->GetLocalXPGain();
+	// XPGainMultiplier defaults to 0.0f in the AttributeSet; clamp to >= 1.0f for neutral effect.
+	float MoreXP = FMath::Max(AttrSet->GetXPGainMultiplier(), 1.0f);
+	float Penalty = AttrSet->GetXPPenalty();
 
-	// 3. Calculate level difference penalty
-	// Positive value = player is higher level than the enemy => reduced XP
-	// Negative value = enemy is higher level => no penalty (full XP)
 	int32 LevelDiff = Level - KilledCharacter->GetCharacterLevel();
 	float LevelPenalty = CalculateLevelPenalty(LevelDiff);
 
-	// 4. Apply PoE2-style formula
-	// Increased (additive): 1 + (Global + Local) / 100
 	float IncreasedMultiplier = 1.0f + (GlobalXP + LocalXP) / 100.0f;
-
-	// Final multiplier: Increased × More × Penalty × LevelPenalty
 	float FinalMultiplier = IncreasedMultiplier * MoreXP * Penalty * LevelPenalty;
 
-	// Calculate final XP
 	int64 FinalXP = FMath::RoundToInt64(BaseXP * FinalMultiplier);
-	FinalXP = FMath::Max(FinalXP, 1LL); // Minimum 1 XP
+	FinalXP = FMath::Max(FinalXP, 1LL);
 
-	// 5. Award XP
 	CurrentXP += FinalXP;
 	CheckForLevelUp();
 
-	// 6. Log for debugging
 	UE_LOG(LogCharacterProgressionManager, Log, TEXT("XP Awarded: %lld (Base: %lld, Increased: %.2fx, More: %.2fx, Penalty: %.2fx, Level Penalty: %.2fx)"),
 		FinalXP, BaseXP, IncreasedMultiplier, MoreXP, Penalty, LevelPenalty);
 
-	// 7. Broadcast event
 	OnXPGained.Broadcast(FinalXP, BaseXP, FinalMultiplier);
 }
 
@@ -153,71 +129,34 @@ void UCharacterProgressionManager::AwardExperience(int64 Amount)
 		return;
 	}
 
-	// Get XP bonuses (but no level penalty)
 	UHunterAttributeSet* AttrSet = GetAttributeSet();
 	float GlobalXP = AttrSet ? AttrSet->GetGlobalXPGain() : 0.0f;
 	float LocalXP  = AttrSet ? AttrSet->GetLocalXPGain()  : 0.0f;
-	// N-03 FIX: Clamp MoreXP >= 1.0f — attribute defaults to 0.0f which would zero all XP
 	float MoreXP   = FMath::Max(AttrSet ? AttrSet->GetXPGainMultiplier() : 1.0f, 1.0f);
-	// BUG FIX: XPPenalty (death penalty, curses, etc.) must apply to ALL XP awards,
-	// not just kill XP. AwardExperienceFromKill already multiplied by Penalty; this
-	// direct-award path was skipping it, making penalties irrelevant for quest/event XP.
-	// XPPenalty defaults to 1.0f (neutral), so this has zero effect when no penalty is active.
+	// XPPenalty must apply to all XP awards (quest/event XP previously skipped it).
+	// Defaults to 1.0f so there is no effect when no penalty is active.
 	float Penalty  = FMath::Max(AttrSet ? AttrSet->GetXPPenalty() : 1.0f, 0.0f);
 
-	// Calculate final XP
 	float IncreasedMultiplier = 1.0f + (GlobalXP + LocalXP) / 100.0f;
 	float FinalMultiplier = IncreasedMultiplier * MoreXP * Penalty;
 
 	int64 FinalXP = FMath::RoundToInt64(Amount * FinalMultiplier);
 	FinalXP = FMath::Max(FinalXP, 1LL);
 
-	// Award XP
 	CurrentXP += FinalXP;
 	CheckForLevelUp();
 
-	// Broadcast event
 	OnXPGained.Broadcast(FinalXP, Amount, FinalMultiplier);
 }
 
 float UCharacterProgressionManager::CalculateLevelPenalty(int32 LevelDifference) const
 {
-	// PoE2-style level penalty curve
-	if (LevelDifference <= -5)
-	{
-		// Enemy 5+ levels higher: No penalty (100%)
-		return 1.0f;
-	}
-	else if (LevelDifference <= 5)
-	{
-		// Within ±5 levels: No penalty (100%)
-		return 1.0f;
-	}
-	else if (LevelDifference <= 10)
-	{
-		// 6-10 levels lower: 20% penalty
-		return 0.8f;
-	}
-	else if (LevelDifference <= 20)
-	{
-		// 11-20 levels lower: 50% penalty
-		return 0.5f;
-	}
-	else if (LevelDifference <= 30)
-	{
-		// 21-30 levels lower: 75% penalty
-		return 0.25f;
-	}
-	else
-	{
-		// 31+ levels lower: 95% penalty
-		return 0.05f;
-	}
+	if (LevelDifference <= 5)  { return 1.0f;  }  // within ±5 levels or enemy is higher
+	if (LevelDifference <= 10) { return 0.8f;  }  // 6-10 levels lower: 20% penalty
+	if (LevelDifference <= 20) { return 0.5f;  }  // 11-20 levels lower: 50% penalty
+	if (LevelDifference <= 30) { return 0.25f; }  // 21-30 levels lower: 75% penalty
+	return 0.05f;                                  // 31+ levels lower: 95% penalty
 }
-
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* LEVELING FUNCTIONS */
-/* ═══════════════════════════════════════════════════════════════════════ */
 
 void UCharacterProgressionManager::LevelUp()
 {
@@ -245,23 +184,16 @@ void UCharacterProgressionManager::CheckForLevelUp()
 		return;
 	}
 
-	// Check if we've reached the XP threshold
 	while (CurrentXP >= XPToNextLevel && Level < MaxLevel)
 	{
-		// Deduct XP for this level
 		CurrentXP -= XPToNextLevel;
-
-		// Level up
 		Level++;
 		OnLevelUpInternal();
-
-		// Calculate next level requirement
 		XPToNextLevel = GetXPForLevel(Level + 1);
 
 		UE_LOG(LogCharacterProgressionManager, Log, TEXT("Level Up! New Level: %d, XP to next: %lld"), Level, XPToNextLevel);
 	}
 
-	// If at max level, cap XP
 	if (Level >= MaxLevel)
 	{
 		CurrentXP = 0;
@@ -300,10 +232,6 @@ float UCharacterProgressionManager::GetTotalXPGainPercent() const
 	return AttrSet->GetGlobalXPGain() + AttrSet->GetLocalXPGain();
 }
 
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* STAT POINT FUNCTIONS */
-/* ═══════════════════════════════════════════════════════════════════════ */
-
 bool UCharacterProgressionManager::SpendStatPoint(FName AttributeName)
 {
 	if (!GetOwner()->HasAuthority())
@@ -312,14 +240,12 @@ bool UCharacterProgressionManager::SpendStatPoint(FName AttributeName)
 		return false;
 	}
 
-	// Check if we have unspent points
 	if (UnspentStatPoints <= 0)
 	{
 		UE_LOG(LogCharacterProgressionManager, Warning, TEXT("SpendStatPoint: No unspent stat points"));
 		return false;
 	}
 
-	// Validate attribute name
 	if (AttributeName.IsNone())
 	{
 		UE_LOG(LogCharacterProgressionManager, Warning, TEXT("SpendStatPoint: Invalid attribute name"));
@@ -334,10 +260,8 @@ bool UCharacterProgressionManager::SpendStatPoint(FName AttributeName)
 		return false;
 	}
 
-	// Deduct stat point
 	UnspentStatPoints--;
 
-	// --- Update replicated TArray ---
 	bool bFound = false;
 	for (FStatPointSpending& Spending : SpentStatPoints)
 	{
@@ -353,11 +277,9 @@ bool UCharacterProgressionManager::SpendStatPoint(FName AttributeName)
 		SpentStatPoints.Add(FStatPointSpending(AttributeName, 1));
 	}
 
-	// --- Update fast-lookup TMap cache ---
 	int32& CachedCount = SpentStatPointsCache.FindOrAdd(AttributeName, 0);
 	CachedCount++;
 
-	// Broadcast event
 	OnStatPointSpent.Broadcast(AttributeName, UnspentStatPoints);
 
 	UE_LOG(LogCharacterProgressionManager, Log, TEXT("Stat Point Spent: %s (Remaining: %d)"), *AttributeName.ToString(), UnspentStatPoints);
@@ -372,16 +294,11 @@ bool UCharacterProgressionManager::ResetStatPoints(int32 Cost)
 		return false;
 	}
 
-	// TODO: Check gold/currency for cost
-	// if (PlayerCurrency < Cost) return false;
-
-	// Remove all stat points from attributes
 	for (const FStatPointSpending& Spending : SpentStatPoints)
 	{
 		RemoveStatPointFromAttribute(Spending.AttributeName, Spending.PointsSpent);
 	}
 
-	// Refund all stat points
 	UnspentStatPoints = TotalStatPoints;
 	SpentStatPoints.Empty();
 	SpentStatPointsCache.Empty();
@@ -393,7 +310,6 @@ bool UCharacterProgressionManager::ResetStatPoints(int32 Cost)
 
 int32 UCharacterProgressionManager::GetStatPointsSpentOn(FName AttributeName) const
 {
-	// O(1) lookup via the fast-lookup cache (rebuilt from replicated array on BeginPlay/OnRep)
 	if (const int32* Found = SpentStatPointsCache.Find(AttributeName))
 	{
 		return *Found;
@@ -401,43 +317,28 @@ int32 UCharacterProgressionManager::GetStatPointsSpentOn(FName AttributeName) co
 	return 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* INTERNAL FUNCTIONS */
-/* ═══════════════════════════════════════════════════════════════════════ */
-
 int64 UCharacterProgressionManager::CalculateXPForLevel(int32 TargetLevel) const
 {
-	// Exponential curve: BaseXP * Level^Exponent
-	// Example: 5 * 50^1.3 = ~800 XP for level 50
 	float XP = BaseXPPerLevel * FMath::Pow(static_cast<float>(TargetLevel), XPScalingExponent);
 	return FMath::RoundToInt64(XP);
 }
 
 void UCharacterProgressionManager::OnLevelUpInternal()
 {
-	// Award stat points
 	int32 StatPointsAwarded = StatPointsPerLevel;
 	UnspentStatPoints += StatPointsAwarded;
 	TotalStatPoints += StatPointsAwarded;
 
-	// Award skill points
 	int32 SkillPointsAwarded = SkillPointsPerLevel;
 	UnspentSkillPoints += SkillPointsAwarded;
 
-	// Update XP requirement
 	XPToNextLevel = GetXPForLevel(Level + 1);
 
 	CharacterProgressionManagerPrivate::TrySyncPlayerLevelAttribute(GetAbilitySystemComponent(), Level);
 
-	// Broadcast event
 	OnLevelUp.Broadcast(Level, StatPointsAwarded, SkillPointsAwarded);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Q-2: Single authoritative attribute-name → FGameplayAttribute mapping.
-//       Referenced by both ApplyStatPointToAttribute and RemoveStatPointFromAttribute
-//       so adding a new primary stat only requires editing this one function.
-// ─────────────────────────────────────────────────────────────────────────────
 FGameplayAttribute UCharacterProgressionManager::GetAttributeForStatName(FName StatName)
 {
 	if (StatName == "Strength")     return UHunterAttributeSet::GetStrengthAttribute();
@@ -451,12 +352,6 @@ FGameplayAttribute UCharacterProgressionManager::GetAttributeForStatName(FName S
 	return FGameplayAttribute{};
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// C-2 / C-3 fix: use a pre-configured Blueprint GE class (no runtime NewObject).
-//   StatPointGEClasses["Strength"] should point to a Blueprint GE that is
-//   Infinite with a single +1 Additive modifier on the Strength attribute.
-//   We store every FActiveGameplayEffectHandle so respec can remove them cleanly.
-// ─────────────────────────────────────────────────────────────────────────────
 bool UCharacterProgressionManager::ApplyStatPointToAttribute(FName AttributeName)
 {
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
@@ -466,7 +361,6 @@ bool UCharacterProgressionManager::ApplyStatPointToAttribute(FName AttributeName
 		return false;
 	}
 
-	// Validate the attribute name maps to a known FGameplayAttribute
 	const FGameplayAttribute Attribute = GetAttributeForStatName(AttributeName);
 	if (!Attribute.IsValid())
 	{
@@ -475,7 +369,6 @@ bool UCharacterProgressionManager::ApplyStatPointToAttribute(FName AttributeName
 		return false;
 	}
 
-	// Look up the designer-configured GE class for this attribute
 	const TSubclassOf<UGameplayEffect>* GEClassPtr = StatPointGEClasses.Find(AttributeName);
 	if (!GEClassPtr || !(*GEClassPtr))
 	{
@@ -486,7 +379,6 @@ bool UCharacterProgressionManager::ApplyStatPointToAttribute(FName AttributeName
 		return false;
 	}
 
-	// Apply the Infinite GE; store its handle for later removal (respec)
 	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
 	Context.AddSourceObject(GetOwner());
 
@@ -511,9 +403,6 @@ bool UCharacterProgressionManager::ApplyStatPointToAttribute(FName AttributeName
 	return false;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// C-2 fix: remove exactly PointsToRemove stored handles — no counter-GE stacking.
-// ─────────────────────────────────────────────────────────────────────────────
 void UCharacterProgressionManager::RemoveStatPointFromAttribute(FName AttributeName, int32 PointsToRemove)
 {
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
@@ -547,9 +436,6 @@ void UCharacterProgressionManager::RemoveStatPointFromAttribute(FName AttributeN
 		ToRemove, *AttributeName.ToString());
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// P-4: Rebuild fast-lookup TMap from the replicated TArray.
-// ─────────────────────────────────────────────────────────────────────────────
 void UCharacterProgressionManager::RebuildSpentStatPointsCache()
 {
 	SpentStatPointsCache.Empty(SpentStatPoints.Num());

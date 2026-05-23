@@ -1,11 +1,5 @@
-// Item/Library/ItemFunctionLibrary.cpp
-
 #include "Item/Library/ItemFunctionLibrary.h"
 #include "Item/ItemInstance.h"
-
-// ═══════════════════════════════════════════════
-// RARITY & DISPLAY (Hunter Manga)
-// ═══════════════════════════════════════════════
 
 FLinearColor UItemFunctionLibrary::GetRarityColor(EItemRarity Rarity)
 {
@@ -34,10 +28,10 @@ FText UItemFunctionLibrary::GetAffixCountText(EItemRarity Rarity)
 {
 	int32 MinPre, MaxPre, MinSuf, MaxSuf;
 	GetAffixCountByRarity(Rarity, MinPre, MaxPre, MinSuf, MaxSuf);
-	
+
 	int32 MinTotal = MinPre + MinSuf;
 	int32 MaxTotal = MaxPre + MaxSuf;
-	
+
 	if (MinTotal == 0 && MaxTotal == 0)
 	{
 		return FText::FromString("No Affixes");
@@ -52,10 +46,6 @@ FText UItemFunctionLibrary::GetAffixCountText(EItemRarity Rarity)
 	}
 }
 
-// ═══════════════════════════════════════════════
-// AFFIX FORMATTING
-// ═══════════════════════════════════════════════
-
 FString UItemFunctionLibrary::FormatAffixValue(
 	float Value,
 	EAttributeDisplayFormat Format,
@@ -65,72 +55,72 @@ FString UItemFunctionLibrary::FormatAffixValue(
 	const FText& CustomText)
 {
 	FString FormattedValue;
-	
+
 	switch (Format)
 	{
 		case EAttributeDisplayFormat::ADF_Additive:
-			FormattedValue = FString::Printf(TEXT("+%d to %s"), 
+			FormattedValue = FString::Printf(TEXT("+%d to %s"),
 				FMath::RoundToInt(Value), *AttributeName.ToString());
 			break;
 
 		case EAttributeDisplayFormat::ADF_FlatNegative:
-			FormattedValue = FString::Printf(TEXT("-%d to %s"), 
+			FormattedValue = FString::Printf(TEXT("-%d to %s"),
 				FMath::RoundToInt(FMath::Abs(Value)), *AttributeName.ToString());
 			break;
 
 		case EAttributeDisplayFormat::ADF_Percent:
-			FormattedValue = FString::Printf(TEXT("+%d%% %s"), 
+			FormattedValue = FString::Printf(TEXT("+%d%% %s"),
 				FMath::RoundToInt(Value), *AttributeName.ToString());
 			break;
 
 		case EAttributeDisplayFormat::ADF_MinMax:
-			FormattedValue = FString::Printf(TEXT("Adds %d-%d %s"), 
+			FormattedValue = FString::Printf(TEXT("Adds %d-%d %s"),
 				FMath::RoundToInt(MinValue), FMath::RoundToInt(MaxValue), *AttributeName.ToString());
 			break;
 
 		case EAttributeDisplayFormat::ADF_Increase:
-			FormattedValue = FString::Printf(TEXT("%d%% increased %s"), 
+			FormattedValue = FString::Printf(TEXT("%d%% increased %s"),
 				FMath::RoundToInt(Value), *AttributeName.ToString());
 			break;
 
 		case EAttributeDisplayFormat::ADF_More:
-			FormattedValue = FString::Printf(TEXT("%d%% more %s"), 
+			FormattedValue = FString::Printf(TEXT("%d%% more %s"),
 				FMath::RoundToInt(Value), *AttributeName.ToString());
 			break;
 
 		case EAttributeDisplayFormat::ADF_Less:
-			FormattedValue = FString::Printf(TEXT("%d%% less %s"), 
+			FormattedValue = FString::Printf(TEXT("%d%% less %s"),
 				FMath::RoundToInt(Value), *AttributeName.ToString());
 			break;
 
 		case EAttributeDisplayFormat::ADF_Chance:
-			FormattedValue = FString::Printf(TEXT("%d%% chance to %s"), 
+			FormattedValue = FString::Printf(TEXT("%d%% chance to %s"),
 				FMath::RoundToInt(Value), *AttributeName.ToString());
 			break;
 
 		case EAttributeDisplayFormat::ADF_Duration:
-			FormattedValue = FString::Printf(TEXT("%.1fs duration to %s"), 
+			FormattedValue = FString::Printf(TEXT("%.1fs duration to %s"),
 				Value, *AttributeName.ToString());
 			break;
 
 		case EAttributeDisplayFormat::ADF_Cooldown:
-			FormattedValue = FString::Printf(TEXT("%.1fs cooldown on %s"), 
+			FormattedValue = FString::Printf(TEXT("%.1fs cooldown on %s"),
 				Value, *AttributeName.ToString());
 			break;
 
 		case EAttributeDisplayFormat::ADF_SkillGrant:
-			FormattedValue = FString::Printf(TEXT("Grants [%s] Level %d"), 
+			FormattedValue = FString::Printf(TEXT("Grants [%s] Level %d"),
 				*AttributeName.ToString(), FMath::RoundToInt(Value));
 			break;
 
 		case EAttributeDisplayFormat::ADF_CustomText:
-			FormattedValue = CustomText.IsEmpty() ? 
+			FormattedValue = CustomText.IsEmpty() ?
 				FString::Printf(TEXT("%d %s"), FMath::RoundToInt(Value), *AttributeName.ToString()) :
 				CustomText.ToString();
 			break;
 
 		default:
-			FormattedValue = FString::Printf(TEXT("%d %s"), 
+			FormattedValue = FString::Printf(TEXT("%d %s"),
 				FMath::RoundToInt(Value), *AttributeName.ToString());
 			break;
 	}
@@ -155,10 +145,6 @@ FString UItemFunctionLibrary::GetModifyTypeSymbol(EModifyType ModifyType)
 	return ::GetModifyTypeSymbol(ModifyType);
 }
 
-// ═══════════════════════════════════════════════
-// RANK POINTS / TIER FUNCTIONS
-// ═══════════════════════════════════════════════
-
 int32 UItemFunctionLibrary::GetRankPointsValue(ERankPoints Points)
 {
 	return ::GetRankPointsValue(Points);
@@ -167,7 +153,7 @@ int32 UItemFunctionLibrary::GetRankPointsValue(ERankPoints Points)
 FText UItemFunctionLibrary::GetTierName(ERankPoints Points)
 {
 	int32 Value = GetRankPointsValue(Points);
-	
+
 	if (Value < 0)
 	{
 		return FText::Format(FText::FromString("Cursed (Tier {0})"), FMath::Abs(Value));
@@ -191,44 +177,29 @@ bool UItemFunctionLibrary::CompareAffixRank(const FPHAttributeData& AffixA, cons
 	return GetRankPointsValue(AffixA.RankPoints) > GetRankPointsValue(AffixB.RankPoints);
 }
 
-// ═══════════════════════════════════════════════
-// NAME GENERATION (Hunter Manga Style)
-// ═══════════════════════════════════════════════
-
 FText UItemFunctionLibrary::GenerateItemName(
 	const FPHItemStats& ItemStats,
 	const FItemBase& ItemBase,
 	EItemRarity Rarity)
 {
-	// Grade F/E: Just base name
 	if (Rarity <= EItemRarity::IR_GradeE)
 	{
 		return ItemBase.ItemName;
 	}
 
-	// Grade SS (EX-Rank): [Preset Unique Name]
-	// Unique items use their base name as the preset unique name
 	if (Rarity == EItemRarity::IR_GradeSS || ItemBase.bIsUnique)
 	{
 		return FText::Format(FText::FromString("[{0}]"), ItemBase.ItemName);
 	}
 
-	// Grade A/S (Legendary): Use GenerateLegendaryName or preset name
-	// For now, treat as [Legendary Name]
 	if (Rarity >= EItemRarity::IR_GradeA)
 	{
-		// Could use procedural legendary name or preset
 		return FText::Format(FText::FromString("[{0}]"), ItemBase.ItemName);
 	}
 
-	// Grade D/C/B: Generate from affixes (PoE-style)
-	// Format: "PrefixName BaseItemName SuffixName"
-	// Example: "Dragon's Katana of the Fang"
-	
 	FText BestPrefixName;
 	FText BestSuffixName;
 
-	// Find highest-ranked prefix with a name
 	if (ItemStats.Prefixes.Num() > 0)
 	{
 		const FPHAttributeData* BestPrefix = nullptr;
@@ -253,7 +224,6 @@ FText UItemFunctionLibrary::GenerateItemName(
 		}
 	}
 
-	// Find highest-ranked suffix with a name
 	if (ItemStats.Suffixes.Num() > 0)
 	{
 		const FPHAttributeData* BestSuffix = nullptr;
@@ -278,34 +248,29 @@ FText UItemFunctionLibrary::GenerateItemName(
 		}
 	}
 
-	// Build name: "PrefixName BaseItemName SuffixName"
 	FString FullName;
-	
+
 	if (!BestPrefixName.IsEmpty() && !BestSuffixName.IsEmpty())
 	{
-		// Both prefix and suffix: "Dragon's Katana of the Fang"
-		FullName = FString::Printf(TEXT("%s %s %s"), 
-			*BestPrefixName.ToString(), 
-			*ItemBase.ItemName.ToString(), 
+		FullName = FString::Printf(TEXT("%s %s %s"),
+			*BestPrefixName.ToString(),
+			*ItemBase.ItemName.ToString(),
 			*BestSuffixName.ToString());
 	}
 	else if (!BestPrefixName.IsEmpty())
 	{
-		// Prefix only: "Dragon's Katana"
-		FullName = FString::Printf(TEXT("%s %s"), 
-			*BestPrefixName.ToString(), 
+		FullName = FString::Printf(TEXT("%s %s"),
+			*BestPrefixName.ToString(),
 			*ItemBase.ItemName.ToString());
 	}
 	else if (!BestSuffixName.IsEmpty())
 	{
-		// Suffix only: "Katana of the Fang"
-		FullName = FString::Printf(TEXT("%s %s"), 
-			*ItemBase.ItemName.ToString(), 
+		FullName = FString::Printf(TEXT("%s %s"),
+			*ItemBase.ItemName.ToString(),
 			*BestSuffixName.ToString());
 	}
 	else
 	{
-		// No affix names: Just base name
 		FullName = ItemBase.ItemName.ToString();
 	}
 
@@ -314,29 +279,18 @@ FText UItemFunctionLibrary::GenerateItemName(
 
 FText UItemFunctionLibrary::GenerateLegendaryName(int32 Seed)
 {
-	// TODO: Implement procedural legendary name generation
-	// Hunter Manga style names like:
-	// - "Demon's Fang"
-	// - "Shadow Whisper"
-	// - "Eternal Frost"
-	// - "Dragon's Wrath"
-	// - "Starfall"
-	
 	return FText::FromString("Legendary Item");
 }
 
 FText UItemFunctionLibrary::GetPrefixName(const FPHAttributeData& Affix)
 {
-	// Use the affix's preset AffixName if available
 	if (!Affix.AffixName.IsEmpty())
 	{
 		return Affix.AffixName;
 	}
 
-	// Fallback: Generate from attribute name (for backwards compatibility)
 	FString AttrName = Affix.AttributeName.ToString();
-	
-	// Simple mapping examples:
+
 	if (AttrName.Contains("Fire")) return FText::FromString("Flaming");
 	if (AttrName.Contains("Ice")) return FText::FromString("Frozen");
 	if (AttrName.Contains("Lightning")) return FText::FromString("Shocking");
@@ -346,22 +300,19 @@ FText UItemFunctionLibrary::GetPrefixName(const FPHAttributeData& Affix)
 	if (AttrName.Contains("Strength")) return FText::FromString("Mighty");
 	if (AttrName.Contains("Dexterity")) return FText::FromString("Swift");
 	if (AttrName.Contains("Intelligence")) return FText::FromString("Sage's");
-	
+
 	return FText::FromString("Enhanced");
 }
 
 FText UItemFunctionLibrary::GetSuffixName(const FPHAttributeData& Affix)
 {
-	// Use the affix's preset AffixName if available
 	if (!Affix.AffixName.IsEmpty())
 	{
 		return Affix.AffixName;
 	}
 
-	// Fallback: Generate from attribute name (for backwards compatibility)
 	FString AttrName = Affix.AttributeName.ToString();
-	
-	// Simple mapping examples:
+
 	if (AttrName.Contains("Strength")) return FText::FromString("of the Bear");
 	if (AttrName.Contains("Dexterity")) return FText::FromString("of the Falcon");
 	if (AttrName.Contains("Intelligence")) return FText::FromString("of the Owl");
@@ -372,13 +323,9 @@ FText UItemFunctionLibrary::GetSuffixName(const FPHAttributeData& Affix)
 	if (AttrName.Contains("Speed")) return FText::FromString("of Swiftness");
 	if (AttrName.Contains("Life")) return FText::FromString("of Life");
 	if (AttrName.Contains("Mana")) return FText::FromString("of Mana");
-	
+
 	return FText::FromString("of Power");
 }
-
-// ═══════════════════════════════════════════════
-// DAMAGE CALCULATION (PoE2 Style)
-// ═══════════════════════════════════════════════
 
 FDamageRange UItemFunctionLibrary::CalculateFinalDamage(
 	FDamageRange BaseDamage,
@@ -387,26 +334,24 @@ FDamageRange UItemFunctionLibrary::CalculateFinalDamage(
 	float MorePercent)
 {
 	// PoE2 Formula: Base → +Flat → ×(1 + Increased/100) → ×(1 + More/100)
-	
+
 	float FinalMin = BaseDamage.MinDamage + FlatAdded;
 	float FinalMax = BaseDamage.MaxDamage + FlatAdded;
-	
-	// Apply Increased
+
 	if (IncreasedPercent != 0.0f)
 	{
 		float IncreasedMult = 1.0f + (IncreasedPercent / 100.0f);
 		FinalMin *= IncreasedMult;
 		FinalMax *= IncreasedMult;
 	}
-	
-	// Apply More
+
 	if (MorePercent != 0.0f)
 	{
 		float MoreMult = 1.0f + (MorePercent / 100.0f);
 		FinalMin *= MoreMult;
 		FinalMax *= MoreMult;
 	}
-	
+
 	return FDamageRange(FinalMin, FinalMax);
 }
 
@@ -425,38 +370,29 @@ FDamageRange UItemFunctionLibrary::CalculateCriticalDamage(
 	);
 }
 
-// ═══════════════════════════════════════════════
-// DEFENSE CALCULATION (Hunter Manga)
-// ═══════════════════════════════════════════════
-
 float UItemFunctionLibrary::CalculateFinalResistance(
 	float BaseResistance,
 	float FlatAdded,
 	float IncreasedPercent)
 {
 	float FinalResist = BaseResistance + FlatAdded;
-	
+
 	if (IncreasedPercent != 0.0f)
 	{
 		FinalResist *= (1.0f + IncreasedPercent / 100.0f);
 	}
-	
-	// Cap at 100%
+
 	return FMath::Clamp(FinalResist, 0.0f, 100.0f);
 }
 
 float UItemFunctionLibrary::CalculateArmorReduction(float Armor, float IncomingDamage)
 {
-	// PoE2-style: Armor / (Armor + 10 × Damage)
+	// PoE2-style: Armor / (Armor + 10 × Damage), capped at 90%
 	if (IncomingDamage <= 0.0f) return 1.0f;
-	
-	float Reduction = Armor / (Armor + 10.0f * IncomingDamage);
-	return FMath::Clamp(Reduction, 0.0f, 0.9f); // Cap at 90%
-}
 
-// ═══════════════════════════════════════════════
-// WEIGHT & INVENTORY (Hunter Manga)
-// ═══════════════════════════════════════════════
+	float Reduction = Armor / (Armor + 10.0f * IncomingDamage);
+	return FMath::Clamp(Reduction, 0.0f, 0.9f);
+}
 
 float UItemFunctionLibrary::CalculateMaxWeightFromStrength(
 	int32 Strength,
@@ -469,13 +405,9 @@ float UItemFunctionLibrary::GetOverweightPercentage(float CurrentWeight, float M
 {
 	if (MaxWeight <= 0.0f) return 0.0f;
 	if (CurrentWeight <= MaxWeight) return 0.0f;
-	
+
 	return (CurrentWeight - MaxWeight) / MaxWeight;
 }
-
-// ═══════════════════════════════════════════════
-// ITEM VALIDATION & REQUIREMENTS
-// ═══════════════════════════════════════════════
 
 bool UItemFunctionLibrary::MeetsItemRequirements(
 	const FItemStatRequirement& Requirements,
@@ -505,10 +437,6 @@ int32 UItemFunctionLibrary::GetRequiredLevel(const FItemStatRequirement& Require
 	return Requirements.RequiredLevel;
 }
 
-// ═══════════════════════════════════════════════
-// AFFIX GENERATION HELPERS
-// ═══════════════════════════════════════════════
-
 void UItemFunctionLibrary::GetAffixCountByRarity(
 	EItemRarity Rarity,
 	int32& OutMinPrefixes,
@@ -516,52 +444,50 @@ void UItemFunctionLibrary::GetAffixCountByRarity(
 	int32& OutMinSuffixes,
 	int32& OutMaxSuffixes)
 {
-	// Hunter Manga / ORV style affix counts (F-SS Grade System)
 	switch (Rarity)
 	{
-		case EItemRarity::IR_GradeF:  // Grade F (Common) - No affixes
+		case EItemRarity::IR_GradeF:
 			OutMinPrefixes = 0; OutMaxPrefixes = 0;
 			OutMinSuffixes = 0; OutMaxSuffixes = 0;
 			break;
-			
-		case EItemRarity::IR_GradeE:  // Grade E (Uncommon) - 1-2 affixes
+
+		case EItemRarity::IR_GradeE:
 			OutMinPrefixes = 0; OutMaxPrefixes = 1;
 			OutMinSuffixes = 0; OutMaxSuffixes = 1;
 			break;
-			
-		// FIX: Affix counts below were higher than what FAffixGenerator::GetAffixCountByRarity
-		// actually rolls, causing the UI to advertise more affixes than items ever receive.
-		// All values now match the authoritative AffixGenerator table exactly.
-		case EItemRarity::IR_GradeD:  // Grade D (Rare) - 1-2 affixes
+
+		// Values below match FAffixGenerator::GetAffixCountByRarity exactly so
+		// the UI doesn't advertise more affixes than items ever receive.
+		case EItemRarity::IR_GradeD:
 			OutMinPrefixes = 1; OutMaxPrefixes = 1;
 			OutMinSuffixes = 0; OutMaxSuffixes = 1;
 			break;
 
-		case EItemRarity::IR_GradeC:  // Grade C (Elite) - 2-3 affixes
+		case EItemRarity::IR_GradeC:
 			OutMinPrefixes = 1; OutMaxPrefixes = 2;
 			OutMinSuffixes = 1; OutMaxSuffixes = 1;
 			break;
 
-		case EItemRarity::IR_GradeB:  // Grade B (Named) - 2-4 affixes
+		case EItemRarity::IR_GradeB:
 			OutMinPrefixes = 1; OutMaxPrefixes = 2;
 			OutMinSuffixes = 1; OutMaxSuffixes = 2;
 			break;
 
-		case EItemRarity::IR_GradeA:  // Grade A (Legendary) - 4-5 affixes
+		case EItemRarity::IR_GradeA:
 			OutMinPrefixes = 2; OutMaxPrefixes = 3;
 			OutMinSuffixes = 2; OutMaxSuffixes = 2;
 			break;
-			
-		case EItemRarity::IR_GradeS:  // Grade S (Mythic) - 6 affixes (max)
+
+		case EItemRarity::IR_GradeS:
 			OutMinPrefixes = 3; OutMaxPrefixes = 3;
 			OutMinSuffixes = 3; OutMaxSuffixes = 3;
 			break;
-			
-		case EItemRarity::IR_GradeSS:  // Grade SS (EX-Rank) - Fixed unique affixes
+
+		case EItemRarity::IR_GradeSS:
 			OutMinPrefixes = 0; OutMaxPrefixes = 0;
 			OutMinSuffixes = 0; OutMaxSuffixes = 0;
 			break;
-			
+
 		default:
 			OutMinPrefixes = 0; OutMaxPrefixes = 0;
 			OutMinSuffixes = 0; OutMaxSuffixes = 0;
@@ -580,20 +506,16 @@ float UItemFunctionLibrary::GetRarityValueMultiplier(EItemRarity Rarity)
 		case EItemRarity::IR_GradeB:  return 10.0f;
 		case EItemRarity::IR_GradeA:  return 25.0f;
 		case EItemRarity::IR_GradeS:  return 100.0f;
-		case EItemRarity::IR_GradeSS: return 1000.0f;  // EX-Rank!
+		case EItemRarity::IR_GradeSS: return 1000.0f;
 		default: return 1.0f;
 	}
 }
-
-// ═══════════════════════════════════════════════
-// ITEM COMPARISON
-// ═══════════════════════════════════════════════
 
 int32 UItemFunctionLibrary::CompareItemDamage(const FItemBase& ItemA, const FItemBase& ItemB)
 {
 	float DamageA = ItemA.WeaponStats.MinPhysicalDamage + ItemA.WeaponStats.MaxPhysicalDamage;
 	float DamageB = ItemB.WeaponStats.MinPhysicalDamage + ItemB.WeaponStats.MaxPhysicalDamage;
-	
+
 	if (DamageA < DamageB) return -1;
 	if (DamageA > DamageB) return 1;
 	return 0;
@@ -609,10 +531,10 @@ int32 UItemFunctionLibrary::CompareItemValue(const FItemBase& ItemA, const FItem
 int32 UItemFunctionLibrary::CompareItemInstanceValue(const UItemInstance* ItemA, const UItemInstance* ItemB)
 {
 	if (!ItemA || !ItemB) return 0;
-	
+
 	int32 ValueA = ItemA->GetCalculatedValue();
 	int32 ValueB = ItemB->GetCalculatedValue();
-	
+
 	if (ValueA < ValueB) return -1;
 	if (ValueA > ValueB) return 1;
 	return 0;
@@ -621,10 +543,10 @@ int32 UItemFunctionLibrary::CompareItemInstanceValue(const UItemInstance* ItemA,
 int32 UItemFunctionLibrary::CompareItemInstanceRarity(const UItemInstance* ItemA, const UItemInstance* ItemB)
 {
 	if (!ItemA || !ItemB) return 0;
-	
+
 	uint8 RarityA = static_cast<uint8>(ItemA->Rarity);
 	uint8 RarityB = static_cast<uint8>(ItemB->Rarity);
-	
+
 	if (RarityA < RarityB) return -1;
 	if (RarityA > RarityB) return 1;
 	return 0;
@@ -633,18 +555,14 @@ int32 UItemFunctionLibrary::CompareItemInstanceRarity(const UItemInstance* ItemA
 int32 UItemFunctionLibrary::CompareItemInstanceWeight(const UItemInstance* ItemA, const UItemInstance* ItemB)
 {
 	if (!ItemA || !ItemB) return 0;
-	
+
 	float WeightA = ItemA->GetTotalWeight();
 	float WeightB = ItemB->GetTotalWeight();
-	
+
 	if (WeightA < WeightB) return -1;
 	if (WeightA > WeightB) return 1;
 	return 0;
 }
-
-// ═══════════════════════════════════════════════
-// UTILITY FUNCTIONS
-// ═══════════════════════════════════════════════
 
 EDefenseType UItemFunctionLibrary::DamageTypeToResistance(EDamageType DamageType)
 {

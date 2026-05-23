@@ -1,5 +1,3 @@
-// Item/WeaponPlacementActor.cpp
-
 #include "Item/WeaponPlacementActor.h"
 
 #include "Item/ItemInstance.h"
@@ -51,13 +49,11 @@ void AWeaponPlacementActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 int32 AWeaponPlacementActor::SpawnIntoWorld()
 {
-	// Idempotent — if we already registered an item, do nothing.
 	if (RegisteredItemID != INDEX_NONE)
 	{
 		return RegisteredItemID;
 	}
 
-	// ── Validate ─────────────────────────────────────────────────────────
 	if (BaseItemHandle.IsNull() || BaseItemHandle.DataTable == nullptr)
 	{
 		UE_LOG(LogTemp, Warning,
@@ -82,12 +78,10 @@ int32 AWeaponPlacementActor::SpawnIntoWorld()
 		return INDEX_NONE;
 	}
 
-	// ── Construct the item instance ──────────────────────────────────────
 	// Outer = the GroundItemSubsystem so the item's lifetime is tied to the
-	// subsystem (which itself owns it via its UPROPERTY map).  This means
-	// the item will outlive *this* actor cleanly if bRemoveOnDestroyed is
-	// flipped off — useful for "drop the placement marker after spawn"
-	// editor workflows.
+	// subsystem (which itself owns it via its UPROPERTY map). This means the
+	// item will outlive *this* actor cleanly if bRemoveOnDestroyed is off —
+	// useful for "drop the placement marker after spawn" editor workflows.
 	UItemInstance* NewItem = NewObject<UItemInstance>(GroundItems);
 	if (!NewItem)
 	{
@@ -105,7 +99,6 @@ int32 AWeaponPlacementActor::SpawnIntoWorld()
 		return INDEX_NONE;
 	}
 
-	// ── Register with the ground subsystem at our transform ──────────────
 	RegisteredItemID = GroundItems->AddItemToGround(
 		NewItem,
 		GetActorLocation(),

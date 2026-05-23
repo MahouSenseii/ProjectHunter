@@ -1,4 +1,3 @@
-// Tower/Subsystem/PortalSubsystem.cpp
 #include "Tower/Subsystem/PortalSubsystem.h"
 #include "Interactable/Actors/Portal/PortalActor.h"
 
@@ -15,8 +14,6 @@ void UPortalSubsystem::Deinitialize()
 	PortalRegistry.Empty();
 	Super::Deinitialize();
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UPortalSubsystem::RegisterPortal(FName PortalID, APortalActor* Portal)
 {

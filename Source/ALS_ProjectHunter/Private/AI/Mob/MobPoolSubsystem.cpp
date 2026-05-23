@@ -1,4 +1,3 @@
-// AI/Mob/MobPoolSubsystem.cpp
 #include "AI/Mob/MobPoolSubsystem.h"
 #include "Character/PHBaseCharacter.h"
 #include "AbilitySystemComponent.h"
@@ -11,19 +10,11 @@
 
 DEFINE_LOG_CATEGORY(LogMobPool);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UWorldSubsystem interface
-// ─────────────────────────────────────────────────────────────────────────────
-
 void UMobPoolSubsystem::Deinitialize()
 {
 	DrainAllPools();
 	Super::Deinitialize();
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Public API
-// ─────────────────────────────────────────────────────────────────────────────
 
 APHBaseCharacter* UMobPoolSubsystem::Acquire(
 	TSubclassOf<APHBaseCharacter> MobClass,
@@ -42,7 +33,6 @@ APHBaseCharacter* UMobPoolSubsystem::Acquire(
 		return nullptr;
 	}
 
-	// ── Try to recycle from pool ─────────────────────────────────────────
 	if (TArray<TWeakObjectPtr<APHBaseCharacter>>* ClassPool = Pool.Find(MobClass.Get()))
 	{
 		while (ClassPool->Num() > 0)
@@ -50,16 +40,12 @@ APHBaseCharacter* UMobPoolSubsystem::Acquire(
 			TWeakObjectPtr<APHBaseCharacter> Weak = ClassPool->Pop(EAllowShrinking::No);
 			if (!Weak.IsValid())
 			{
-				continue; // GC'd since we pooled it — skip stale entry
+				continue;
 			}
 
 			APHBaseCharacter* Mob = Weak.Get();
 			PrepareMobForReuse(Mob, Location, Rotation);
 
-			// OPT: Compact stale entries while we're here.  After popping
-			// through invalid entries above, the array may still contain
-			// stale weak pointers at the front.  RemoveAll is O(n) but only
-			// runs when we actually found a valid mob, which is the hot path.
 			ClassPool->RemoveAll([](const TWeakObjectPtr<APHBaseCharacter>& W)
 			{
 				return !W.IsValid();
@@ -73,7 +59,6 @@ APHBaseCharacter* UMobPoolSubsystem::Acquire(
 		}
 	}
 
-	// ── Pool empty — spawn fresh (hidden, just like MobManager::HiddenSpawn) ─
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride =
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -89,7 +74,7 @@ APHBaseCharacter* UMobPoolSubsystem::Acquire(
 		return nullptr;
 	}
 
-	// Make invisible and inert — the caller (MobManager) will finalize
+	// Invisible and inert until the caller (MobManager) finalizes placement.
 	Mob->SetActorHiddenInGame(true);
 	Mob->SetActorEnableCollision(false);
 
@@ -123,17 +108,14 @@ void UMobPoolSubsystem::Release(APHBaseCharacter* Mob)
 	UClass* MobClass = Mob->GetClass();
 	TArray<TWeakObjectPtr<APHBaseCharacter>>& ClassPool = Pool.FindOrAdd(MobClass);
 
-	// FIX #2: Compact stale (GC'd) weak pointers BEFORE checking the pool
-	// size.  Without this, Num() counts dead entries so the pool can appear
-	// full (e.g. 20/20) while holding zero valid actors, causing every Release
-	// to destroy the mob rather than pool it — silently defeating the entire
-	// optimization after any mass-death event.
+	// Compact stale weak pointers before checking pool size: Num() counts dead
+	// entries and can make the pool appear full while holding zero valid actors,
+	// causing every Release to destroy rather than pool after a mass-death event.
 	ClassPool.RemoveAll([](const TWeakObjectPtr<APHBaseCharacter>& W)
 	{
 		return !W.IsValid();
 	});
 
-	// If pool is full after compaction, destroy the incoming mob
 	if (ClassPool.Num() >= MaxPoolSizePerClass)
 	{
 		UE_LOG(LogMobPool, Verbose,
@@ -143,7 +125,6 @@ void UMobPoolSubsystem::Release(APHBaseCharacter* Mob)
 		return;
 	}
 
-	// Deactivate and reset
 	DeactivateMob(Mob);
 	ResetMobState(Mob);
 
@@ -205,20 +186,14 @@ int32 UMobPoolSubsystem::GetTotalPooledCount() const
 	return Total;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Internal helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
 void UMobPoolSubsystem::ResetMobState(APHBaseCharacter* Mob) const
 {
 	if (!Mob) { return; }
 
 
 
-	// ── 2. Clear GAS state (effects, tags, abilities) ────────────────────
 	if (UAbilitySystemComponent* ASC = Mob->GetAbilitySystemComponent())
 	{
-		// Remove all active gameplay effects (buffs, debuffs, DoTs, modifiers).
 		// UAbilitySystemComponent has no RemoveAllActiveEffects(); iterate handles instead.
 		TArray<FActiveGameplayEffectHandle> ActiveHandles = ASC->GetActiveEffects(FGameplayEffectQuery());
 		for (const FActiveGameplayEffectHandle& Handle : ActiveHandles)
@@ -226,12 +201,10 @@ void UMobPoolSubsystem::ResetMobState(APHBaseCharacter* Mob) const
 			ASC->RemoveActiveGameplayEffect(Handle);
 		}
 
-		// Remove all loose gameplay tags
 		FGameplayTagContainer OwnedTags;
 		ASC->GetOwnedGameplayTags(OwnedTags);
 		for (const FGameplayTag& Tag : OwnedTags)
 		{
-			// RemoveLooseGameplayTag with count -1 removes all stacks
 			const int32 Count = ASC->GetTagCount(Tag);
 			for (int32 i = 0; i < Count; ++i)
 			{
@@ -240,22 +213,15 @@ void UMobPoolSubsystem::ResetMobState(APHBaseCharacter* Mob) const
 		}
 	}
 
-	// ── 3. Remove abilities so they can be re-granted fresh ──────────────
 	Mob->RemoveAllAbilities();
 
-	// ── 4. Reset MonsterModifierComponent if present ─────────────────────
 	if (UMonsterModifierComponent* ModComp = Mob->FindComponentByClass<UMonsterModifierComponent>())
 	{
-		// FIX #3: For MT_Unique monsters, AppliedMods is populated externally
-		// (scripted encounter data) BEFORE RollAndApplyMods is called, because
-		// RollAndApplyMods rolls 0 mods for Unique and iterates whatever is
-		// already in AppliedMods.  Clearing AppliedMods here (the old code)
-		// meant a recycled Unique mob re-spawned with no modifiers or name —
-		// it kept its Unique tier color but had no actual mod effects.
-		//
-		// Preserve AppliedMods for Unique-tier mobs so RerollMods can
-		// re-apply the same fixed mods on the next life.
-		// For all other tiers, clear it — RerollMods will re-roll fresh mods.
+		// For MT_Unique monsters, AppliedMods is populated externally before RollAndApplyMods
+		// is called (RollAndApplyMods rolls 0 mods for Unique and iterates whatever is already
+		// in AppliedMods). Clearing it here would cause a recycled Unique to re-spawn with no
+		// mod effects. Preserve it so RerollMods can re-apply the same fixed mods next life.
+		// For all other tiers, clear it so RerollMods re-rolls fresh mods.
 		if (ModComp->ForcedTier != EMonsterTier::MT_Unique)
 		{
 			ModComp->AppliedMods.Empty();
@@ -263,7 +229,6 @@ void UMobPoolSubsystem::ResetMobState(APHBaseCharacter* Mob) const
 
 		ModComp->AssignedTier = EMonsterTier::MT_Normal;
 		ModComp->FullDisplayName = FText::GetEmpty();
-		// The bModsApplied flag is protected — RerollMods resets it internally
 	}
 
 }
@@ -303,40 +268,26 @@ void UMobPoolSubsystem::PrepareMobForReuse(
 {
 	if (!Mob) { return; }
 
-	// Reset state from the previous life
 	ResetMobState(Mob);
 
-	// Teleport to new location
 	Mob->SetActorLocationAndRotation(Location, Rotation, false, nullptr, ETeleportType::ResetPhysics);
 
-	// Re-initialize attributes to defaults and re-grant abilities
 	Mob->InitializeAttributes();
 	Mob->GiveDefaultAbilities();
 	Mob->ApplyStartupEffects();
 
-	// POOL-FIX: Restore Health / Mana / Stamina to their authored initial values.
-	//
-	// The problem: ResetMobState() stripped every active GE (including
-	// HunterGE_DerivedPrimaryVitals which sets MaxHealth/MaxStamina via MMC) and
-	// left current attribute values at their death-state (0).
-	// ApplyStartupEffects() above re-applies the GE modifiers so MaxHealth etc.
-	// are correct again, but the CURRENT Health is still 0.
-	//
-	// The fix: call NotifyAbilitySystemReady() which runs InitializeFromDataAsset,
-	// which re-sets attribute bases AND re-applies the Instant "set Health=MaxHealth"
-	// initialization effects, bringing the mob back to full vitals.
-	//
-	// Why ResetStatsInitialization() first: bHasInitializedConfiguredStats is
-	// already true from the mob's first life.  Without clearing it,
-	// TryInitializeConfiguredStats() short-circuits and the call is a no-op.
+	// ResetMobState() stripped every active GE including HunterGE_DerivedPrimaryVitals,
+	// leaving current Health/Mana/Stamina at death-state (0). ApplyStartupEffects() restores
+	// Max values but not Current values. NotifyAbilitySystemReady() re-runs InitializeFromDataAsset
+	// which re-applies the Instant "set Health=MaxHealth" effects.
+	// ResetStatsInitialization() must be called first because bHasInitializedConfiguredStats
+	// is already true from the mob's first life and would short-circuit the call.
 	if (UStatsManager* Stats = Mob->FindComponentByClass<UStatsManager>())
 	{
 		Stats->ResetStatsInitialization();
 		Stats->NotifyAbilitySystemReady();
 	}
 
-	// The mob remains hidden/inert — the caller (MobManager::FinalizeSpawn)
-	// will handle making it visible, enabling collision, and starting AI.
 	Mob->SetActorHiddenInGame(true);
 	Mob->SetActorEnableCollision(false);
 

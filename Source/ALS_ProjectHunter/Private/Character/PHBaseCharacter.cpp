@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Character/PHBaseCharacter.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "AbilitySystem/HunterAbilitySystemComponent.h"
@@ -45,44 +43,32 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) 
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Create Ability System Component
 	AbilitySystemComponent = CreateDefaultSubobject<UHunterAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
-	// Create Attribute Set
 	AttributeSet = CreateDefaultSubobject<UHunterAttributeSet>(TEXT("AttributeSet"));
 
-	// Create Progression Manager
 	ProgressionManager = CreateDefaultSubobject<UCharacterProgressionManager>(TEXT("ProgressionManager"));
 
-	// Create Equipment Component
 	EquipmentManager = CreateDefaultSubobject<UEquipmentManager>(TEXT("EquipmentComponent"));
 
-	// Create Stats Manager
 	StatsManager = CreateDefaultSubobject<UStatsManager>(TEXT("Stats Manager"));
-	
-	// Create Tag Manager
+
 	TagManager = CreateDefaultSubobject<UTagManager>(TEXT("TagManager"));
-	
-	
-	// Create Combat Manager — owns the damage pipeline for this character.
-	// Weapons and unarmed hits both route through this. Assign DamageApplicationGE
-	// and RecoveryApplicationGE in Blueprint defaults.
+
+	// Owns the damage pipeline for this character. Weapons and unarmed hits both route through this.
+	// Assign DamageApplicationGE and RecoveryApplicationGE in Blueprint defaults.
 	CombatManager = CreateDefaultSubobject<UCombatManager>(TEXT("CombatManager"));
 
-	// Create Combat Status Manager - assign GE classes in Blueprint defaults.
 	CombatStatusManager = CreateDefaultSubobject<UCombatStatusManager>(TEXT("CombatStatusManager"));
 
-	// Combat front door for Blueprint and C++ callers. Heavy math stays in CombatManager.
 	CombatSystemManager = CreateDefaultSubobject<UCombatSystemManagerComponent>(TEXT("CombatSystemManager"));
 
-	// PH-0.4: Equipment Presentation Component — visual weapon actors and mesh attachment.
 	// Does not replicate; each machine rebuilds presentation from replicated slot state.
 	EquipmentPresentation = CreateDefaultSubobject<UEquipmentPresentationComponent>(TEXT("EquipmentPresentation"));
 
-	// PH-0.4: Character System Coordinator — single wiring layer for cross-manager listeners.
-	// APHBaseCharacter is a composition root; orchestration logic must NOT live inline here.
+	// Single wiring layer for cross-manager listeners. Orchestration logic must NOT live inline here.
 	SystemCoordinator = CreateDefaultSubobject<UCharacterSystemCoordinatorComponent>(TEXT("SystemCoordinator"));
 }
 
@@ -122,7 +108,6 @@ void APHBaseCharacter::PostInitializeComponents()
 			PH_LOG_WARNING(LogPHBaseCharacter, "PostInitializeComponents recovered a null %s pointer on Character=%s with RecoveredComponent=%s. Compile and save this Blueprint.", TEXT(#Member), *GetName(), *GetNameSafe(Member)); \
 	}
 
-	// UActorComponent subobjects — FindComponentByClass recovers each one.
 	PH_RECOVER_COMPONENT(AbilitySystemComponent, UHunterAbilitySystemComponent)
 	PH_RECOVER_COMPONENT(ProgressionManager,     UCharacterProgressionManager)
 	PH_RECOVER_COMPONENT(EquipmentManager,       UEquipmentManager)
@@ -136,8 +121,6 @@ void APHBaseCharacter::PostInitializeComponents()
 
 #undef PH_RECOVER_COMPONENT
 
-	// AttributeSet is a plain UObject subobject (not UActorComponent), so
-	// FindObject<T>(outer, name) is used with the exact CreateDefaultSubobject name.
 	if (!AttributeSet)
 	{
 		AttributeSet = FindObject<UHunterAttributeSet>(this, TEXT("AttributeSet"));
@@ -242,8 +225,7 @@ void APHBaseCharacter::OnRep_PlayerState()
 	{
 		InitializeAbilitySystem();
 
-		// Same safety net as PossessedBy — for clients where PlayerState replication
-		// is what makes the ASC available.
+		// Same safety net as PossessedBy — for clients where PlayerState replication makes the ASC available.
 		if (TagManager && !TagManager->IsInitialized())
 		{
 			TagManager->Initialize(AbilitySystemComponent);
@@ -260,10 +242,6 @@ void APHBaseCharacter::OnRep_Controller()
 		InitializeAbilitySystem();
 	}
 }
-
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* INITIALIZATION */
-/* ═══════════════════════════════════════════════════════════════════════ */
 
 bool APHBaseCharacter::EnsureAttributeSetRegisteredWithAbilitySystem()
 {
@@ -373,29 +351,23 @@ void APHBaseCharacter::InitializeAbilitySystem()
 		return;
 	}
 
-	// --- First-time initialization from here down ---
-
 	if (TagManager)
 	{
 		TagManager->Initialize(AbilitySystemComponent);
 	}
 
-	// Initialize attributes with base values
 	InitializeAttributes();
 
-	// Grant default abilities
 	if (HasAuthority())
 	{
 		GiveDefaultAbilities();
 		ApplyStartupEffects();
 	}
 
-	// Bind to attribute changes
 	BindAttributeDelegates();
 
 	bAbilitySystemInitialized = true;
 
-	// Call virtual function for subclass initialization
 	OnAbilitySystemInitialized();
 
 	if (TagManager)
@@ -424,10 +396,6 @@ void APHBaseCharacter::InitializeAttributes()
 		return;
 	}
 	
-	// Base attributes will be set by:
-	// 1. StartupEffects (for base values)
-	// 2. ProgressionManager (for stat points)
-	// 3. EquipmentComponent (for item stats)
 }
 
 void APHBaseCharacter::BindAttributeDelegates()
@@ -437,14 +405,12 @@ void APHBaseCharacter::BindAttributeDelegates()
 		return;
 	}
 
-	// Bind to health changes
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
 		AttributeSet->GetHealthAttribute()).AddUObject(this, &APHBaseCharacter::HandleHealthChanged);
 }
 
 void APHBaseCharacter::OnAbilitySystemInitialized()
 {
-	// Override in subclasses for custom initialization
 }
 
 
@@ -460,8 +426,6 @@ int32 APHBaseCharacter::GetCharacterLevel() const
 
 int64 APHBaseCharacter::GetXPReward() const
 {
-	// I-10 FIX: Apply XPRewardMultiplier so designers can tune per-enemy XP budgets
-	// in Blueprint/DataAsset without touching code. Previously hard-coded to Level*100.
 	return static_cast<int64>(GetCharacterLevel() * 100 * XPRewardMultiplier);
 }
 
@@ -472,14 +436,8 @@ void APHBaseCharacter::AwardExperienceFromKill(APHBaseCharacter* KilledCharacter
 		return;
 	}
 
-	// Delegate to ProgressionManager
 	ProgressionManager->AwardExperienceFromKill(KilledCharacter);
 }
-
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* COMBAT & HEALTH */
-/* ═══════════════════════════════════════════════════════════════════════ */
-
 
 float APHBaseCharacter::GetHealth() const
 {
@@ -522,10 +480,6 @@ void APHBaseCharacter::HandleHealthChanged(const FOnAttributeChangeData& Data)
 }
 
 
-/* ═══════════════════════════════════════════════════════════════════════ */
-/* ABILITIES */
-/* ═══════════════════════════════════════════════════════════════════════ */
-
 void APHBaseCharacter::GiveDefaultAbilities()
 {
 	if (!HasAuthority() || !AbilitySystemComponent)
@@ -555,7 +509,6 @@ void APHBaseCharacter::GiveDefaultAbilities()
 		UE_LOG(LogPHBaseCharacter, Error, TEXT("GiveDefaultAbilities: Character=%s has DefaultAbilitySets but ASC=%s is not UHunterAbilitySystemComponent."), *GetName(), *GetNameSafe(AbilitySystemComponent));
 	}
 
-	// Legacy direct grants. New abilities should prefer DefaultAbilitySets.
 	for (TSubclassOf<UGameplayAbility>& AbilityClass : DefaultAbilities)
 	{
 		if (AbilityClass)
@@ -583,7 +536,6 @@ void APHBaseCharacter::ApplyStartupEffects()
 		EffectiveStartupEffects.Add(UHunterGE_DerivedPrimaryVitals::StaticClass());
 	}
 
-	// Apply all startup effects
 	for (TSubclassOf<UGameplayEffect>& EffectClass : EffectiveStartupEffects)
 	{
 		if (EffectClass)
@@ -616,7 +568,6 @@ void APHBaseCharacter::RemoveAllAbilities()
 		GrantedAbilitySetHandles.Empty();
 	}
 
-	// Remove legacy direct grants.
 	for (FGameplayAbilitySpecHandle& Handle : GrantedAbilityHandles)
 	{
 		AbilitySystemComponent->ClearAbility(Handle);

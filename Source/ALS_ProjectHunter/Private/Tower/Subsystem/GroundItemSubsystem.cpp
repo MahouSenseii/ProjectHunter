@@ -1,5 +1,3 @@
-// Tower/Subsystem/GroundItemSubsystem.cpp
-
 #include "Tower/Subsystem/GroundItemSubsystem.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Tower/Actors/ISMContainerActor.h"
@@ -10,10 +8,6 @@
 #include "DrawDebugHelpers.h"
 
 DEFINE_LOG_CATEGORY(LogGroundItemSubsystem);
-
-// ═══════════════════════════════════════════════════════════════════════
-// SUBSYSTEM LIFECYCLE
-// ═══════════════════════════════════════════════════════════════════════
 
 void UGroundItemSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -35,17 +29,12 @@ void UGroundItemSubsystem::Deinitialize()
 	}
 	
 	Super::Deinitialize();
-	
+
 	UE_LOG(LogGroundItemSubsystem, Log, TEXT("GroundItemSubsystem: Deinitialized"));
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// ISM MANAGEMENT
-// ═══════════════════════════════════════════════════════════════════════
-
 void UGroundItemSubsystem::EnsureISMContainerExists()
 {
-	// WS-2 FIX: TWeakObjectPtr::IsValid() returns false if the actor was GC'd.
 	if (ISMContainerActor.IsValid())
 	{
 		return;
@@ -132,7 +121,6 @@ void UGroundItemSubsystem::UpdateIndexAfterSwap(UInstancedStaticMeshComponent* I
 {
 	if (RemovedIndex == LastIndex)
 	{
-		// The removed instance WAS the last one; no swap occurred, nothing to update.
 		return;
 	}
 	
@@ -143,8 +131,6 @@ void UGroundItemSubsystem::UpdateIndexAfterSwap(UInstancedStaticMeshComponent* I
 		{
 			Data.InstanceIndex = RemovedIndex;
 
-			// Keep the animation bookkeeping in sync so Tick addresses the
-			// correct ISM slot after the swap-pop.
 			if (ISMContainerActor.IsValid())
 			{
 				ISMContainerActor->UpdateItemAnimationIndex(Pair.Key, RemovedIndex);
@@ -153,14 +139,10 @@ void UGroundItemSubsystem::UpdateIndexAfterSwap(UInstancedStaticMeshComponent* I
 			UE_LOG(LogGroundItemSubsystem, Verbose,
 				TEXT("UpdateIndexAfterSwap: Item %d moved from ISM index %d to %d after swap removal"),
 				Pair.Key, LastIndex, RemovedIndex);
-			return; // Only one item can hold LastIndex; stop once found.
+			return;
 		}
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// PRIMARY API
-// ═══════════════════════════════════════════════════════════════════════
 
 int32 UGroundItemSubsystem::AddItemToGround(UItemInstance* Item, FVector Location, FRotator Rotation)
 {
@@ -192,17 +174,13 @@ int32 UGroundItemSubsystem::AddItemToGround(UItemInstance* Item, FVector Locatio
 		return -1;
 	}
 
-	// Build the final rotation: start from the caller's rotation, then apply
-	// per-item overrides defined on the FItemBase DataTable row.
 	FRotator FinalRotation = Rotation;
 	if (const FItemBase* BaseData = Item->GetBaseData())
 	{
 		if (BaseData->bFlipGroundMeshRotation)
 		{
-			// 180° pitch flip — turns a "blade-up" mesh so the blade faces down
 			FinalRotation.Pitch += 180.0f;
 		}
-		// Additive offset on top of any flip (fine-tunes per-item resting angle)
 		FinalRotation += BaseData->GroundMeshRotationOffset;
 	}
 
@@ -221,10 +199,9 @@ int32 UGroundItemSubsystem::AddItemToGround(UItemInstance* Item, FVector Locatio
 	InstanceLocations.Add(ItemID, Location);
 	ItemISMData.Add(ItemID, FGroundItemISMData(ISM, ISMInstanceIndex, Mesh));
 
-	// P-3 FIX: Keep the reverse map in sync for O(1) GetInstanceID lookups.
+
 	InstanceToIDMap.Add(Item, ItemID);
 
-	// Register with the container actor so it can drive spin + bob animation.
 	if (ISMContainerActor.IsValid())
 	{
 		ISMContainerActor->RegisterItemForAnimation(ItemID, ISM, ISMInstanceIndex, Location, FinalRotation);
@@ -238,15 +215,11 @@ int32 UGroundItemSubsystem::AddItemToGround(UItemInstance* Item, FVector Locatio
 
 UItemInstance* UGroundItemSubsystem::RemoveItemFromGround(int32 ItemID)
 {
-	// ═══════════════════════════════════════════════
-	// FIX: Guard against concurrent removal operations
-	// ═══════════════════════════════════════════════
 	if (bIsProcessingRemoval)
 	{
 		PH_LOG_WARNING(LogGroundItemSubsystem, "RemoveItemFromGround deferred ItemID=%d because a removal was already in progress.", ItemID);
 
-		// WS-1 FIX: Lock before touching PendingRemovals — async loaders or
-		// parallel-for tasks could call RemoveItemFromGround concurrently.
+
 		FScopeLock Lock(&PendingRemovalsCS);
 		PendingRemovals.AddUnique(ItemID);
 		return nullptr;
@@ -256,7 +229,6 @@ UItemInstance* UGroundItemSubsystem::RemoveItemFromGround(int32 ItemID)
 
 	UItemInstance* Result = RemoveItemFromGroundInternal(ItemID);
 
-	// Process any queued removals
 	{
 		FScopeLock Lock(&PendingRemovalsCS);
 		while (PendingRemovals.Num() > 0)
@@ -291,15 +263,7 @@ UItemInstance* UGroundItemSubsystem::RemoveItemFromGroundInternal(int32 ItemID)
 
 		if (InstanceIndex >= 0 && InstanceIndex <= LastIndex)
 		{
-			// P-3 FIX: Emulate swap-and-pop so removal is effectively O(1).
-			// UInstancedStaticMeshComponent has no RemoveInstanceSwap, so we do it
-			// manually:
-			//   1. If this isn't already the last slot, overwrite it with the last
-			//      instance's world transform — the visual result is identical.
-			//   2. Call RemoveInstance on the last slot: O(1) because no indices
-			//      after it need shifting.
-			//   3. UpdateIndexAfterSwap then fixes only the single bookkeeping entry
-			//      whose index moved from LastIndex to InstanceIndex.
+
 			if (InstanceIndex != LastIndex)
 			{
 				FTransform LastTransform;
@@ -326,13 +290,12 @@ UItemInstance* UGroundItemSubsystem::RemoveItemFromGroundInternal(int32 ItemID)
 		PH_LOG_WARNING(LogGroundItemSubsystem, "RemoveItemFromGround found no valid ISM data for ItemID=%d.", ItemID);
 	}
 
-	// P-3 FIX: Remove from reverse lookup map to keep it in sync.
+	
 	if (Item)
 	{
 		InstanceToIDMap.Remove(Item);
 	}
 
-	// Unregister from animation so the container stops animating this instance.
 	if (ISMContainerActor.IsValid())
 	{
 		ISMContainerActor->UnregisterItemFromAnimation(ItemID);
@@ -344,10 +307,6 @@ UItemInstance* UGroundItemSubsystem::RemoveItemFromGroundInternal(int32 ItemID)
 
 	return Item;
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// BATCH OPERATIONS
-// ═══════════════════════════════════════════════════════════════════════
 
 TArray<UItemInstance*> UGroundItemSubsystem::RemoveMultipleItemsFromGround(const TArray<int32>& ItemIDs)
 {
@@ -361,12 +320,7 @@ TArray<UItemInstance*> UGroundItemSubsystem::RemoveMultipleItemsFromGround(const
 
 	bIsProcessingRemoval = true;
 
-	// OPT-ISM: Collect all affected ISM components so we can batch the render
-	// state rebuild.  Without this, each RemoveInstance call can trigger an
-	// individual MarkRenderStateDirty → N separate rebuilds for N removals.
 	TSet<UInstancedStaticMeshComponent*> AffectedISMs;
-
-	// Sort by ISM index descending for efficient removal
 	TArray<TPair<int32, int32>> SortedItems;
 	for (int32 ItemID : ItemIDs)
 	{
@@ -393,8 +347,7 @@ TArray<UItemInstance*> UGroundItemSubsystem::RemoveMultipleItemsFromGround(const
 		}
 	}
 
-	// OPT-ISM: Single render state rebuild per affected ISM component
-	// (instead of one per removal). This is the key perf win for batch pickup.
+
 	for (UInstancedStaticMeshComponent* ISM : AffectedISMs)
 	{
 		if (ISM && IsValid(ISM))
@@ -407,10 +360,6 @@ TArray<UItemInstance*> UGroundItemSubsystem::RemoveMultipleItemsFromGround(const
 
 	return RemovedItems;
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// QUERIES
-// ═══════════════════════════════════════════════════════════════════════
 
 UItemInstance* UGroundItemSubsystem::GetItemByID(int32 ItemID) const
 {
@@ -489,7 +438,7 @@ int32 UGroundItemSubsystem::GetInstanceID(UItemInstance* Item) const
 		return -1;
 	}
 
-	// P-3 FIX: O(1) reverse-map lookup replaces the previous O(n) linear scan.
+
 	if (const int32* FoundID = InstanceToIDMap.Find(Item))
 	{
 		return *FoundID;
@@ -505,10 +454,7 @@ int32 UGroundItemSubsystem::FindItemByISMInstance(UInstancedStaticMeshComponent*
 		return INDEX_NONE;
 	}
 
-	// Linear scan over ItemISMData. Ground item counts are typically small (< a few
-	// hundred per area), so this is acceptable. A reverse TMap<(ISM,idx)→ID> would
-	// be O(1) but requires maintaining a composite-key map across add/remove/swap —
-	// the current O(n) scan keeps the bookkeeping simpler for now.
+
 	for (const TPair<int32, FGroundItemISMData>& Pair : ItemISMData)
 	{
 		if (Pair.Value.ISMComponent == ISMComponent && Pair.Value.InstanceIndex == InstanceIndex)
@@ -545,7 +491,6 @@ void UGroundItemSubsystem::UpdateItemLocation(int32 ItemID, FVector NewLocation)
 
 void UGroundItemSubsystem::ClearAllItems()
 {
-	// Clear animation bookkeeping first (before ISM instances are destroyed)
 	if (ISMContainerActor.IsValid())
 	{
 		ISMContainerActor->ClearAllAnimationState();
@@ -562,15 +507,11 @@ void UGroundItemSubsystem::ClearAllItems()
 	GroundItems.Empty();
 	InstanceLocations.Empty();
 	ItemISMData.Empty();
-	InstanceToIDMap.Empty(); // P-3 FIX: keep reverse map in sync
+	InstanceToIDMap.Empty();
 	PendingRemovals.Empty();
 
 	UE_LOG(LogGroundItemSubsystem, Log, TEXT("ClearAllItems: All ground items cleared"));
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// DEBUG
-// ═══════════════════════════════════════════════════════════════════════
 
 #if WITH_EDITOR
 void UGroundItemSubsystem::DebugDrawAllItems(float Duration)

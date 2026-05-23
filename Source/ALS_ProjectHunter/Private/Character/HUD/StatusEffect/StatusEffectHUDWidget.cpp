@@ -1,4 +1,3 @@
-// Character/HUD/StatusEffect/StatusEffectHUDWidget.cpp
 #include "Character/HUD/StatusEffect/StatusEffectHUDWidget.h"
 #include "Character/HUD/StatusEffect/StatusEffectIconWidget.h"
 #include "AbilitySystemComponent.h"
@@ -9,10 +8,6 @@
 #include "Components/HorizontalBoxSlot.h"
 
 DEFINE_LOG_CATEGORY(LogStatusEffectHUD);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UHunterHUDBaseWidget overrides
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UStatusEffectHUDWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
 {
@@ -31,14 +26,12 @@ void UStatusEffectHUDWidget::NativeInitializeForCharacter(APHBaseCharacter* Char
 		return;
 	}
 
-	// Subscribe to GE add/remove
 	OnEffectAddedHandle = ASC->OnActiveGameplayEffectAddedDelegateToSelf.AddUObject(
 		this, &UStatusEffectHUDWidget::OnGameplayEffectAdded);
 
 	OnEffectRemovedHandle = ASC->OnAnyGameplayEffectRemovedDelegate().AddUObject(
 		this, &UStatusEffectHUDWidget::OnGameplayEffectRemoved);
 
-	// Populate with already-active effects (e.g., if HUD opens mid-session)
 	{
 		const FGameplayEffectQuery Query =
 			StatusEffectTagFilter.IsEmpty()
@@ -63,7 +56,6 @@ void UStatusEffectHUDWidget::NativeInitializeForCharacter(APHBaseCharacter* Char
 
 void UStatusEffectHUDWidget::NativeReleaseCharacter()
 {
-	// Unbind delegates
 	if (BoundCharacter.IsValid())
 	{
 		IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(BoundCharacter.Get());
@@ -80,7 +72,6 @@ void UStatusEffectHUDWidget::NativeReleaseCharacter()
 	OnEffectAddedHandle.Reset();
 	OnEffectRemovedHandle.Reset();
 
-	// Clear all icons
 	for (auto& Pair : ActiveIcons)
 	{
 		if (Pair.Value)
@@ -91,10 +82,6 @@ void UStatusEffectHUDWidget::NativeReleaseCharacter()
 	}
 	ActiveIcons.Empty();
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Public API
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UStatusEffectHUDWidget::RefreshAllIcons()
 {
@@ -115,7 +102,6 @@ void UStatusEffectHUDWidget::RefreshAllIcons()
 		return;
 	}
 
-	// Remove all current icons
 	for (auto& Pair : ActiveIcons)
 	{
 		if (Pair.Value)
@@ -126,7 +112,6 @@ void UStatusEffectHUDWidget::RefreshAllIcons()
 	}
 	ActiveIcons.Empty();
 
-	// Re-add from current state
 	{
 		const FGameplayEffectQuery Query =
 			StatusEffectTagFilter.IsEmpty()
@@ -144,10 +129,6 @@ void UStatusEffectHUDWidget::RefreshAllIcons()
 		}
 	}
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GE event handlers
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UStatusEffectHUDWidget::OnGameplayEffectAdded(UAbilitySystemComponent* ASC,
 	const FGameplayEffectSpec& Spec, FActiveGameplayEffectHandle Handle)
@@ -173,10 +154,6 @@ void UStatusEffectHUDWidget::OnGameplayEffectRemoved(const FActiveGameplayEffect
 	RemoveIconForHandle(Effect.Handle);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Icon helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
 void UStatusEffectHUDWidget::AddIconForEffect(UAbilitySystemComponent* ASC,
 	FActiveGameplayEffectHandle Handle,
 	const FGameplayEffectSpec& Spec)
@@ -190,7 +167,7 @@ void UStatusEffectHUDWidget::AddIconForEffect(UAbilitySystemComponent* ASC,
 
 	if (ActiveIcons.Contains(Handle))
 	{
-		return; // Already showing
+		return;
 	}
 
 	if (ActiveIcons.Num() >= MaxVisibleIcons)
@@ -207,21 +184,18 @@ void UStatusEffectHUDWidget::AddIconForEffect(UAbilitySystemComponent* ASC,
 		return;
 	}
 
-	// Gather effect data
 	FGameplayTagContainer GrantedTags;
 	Spec.GetAllGrantedTags(GrantedTags);
 
 	UTexture2D* Icon = BP_GetIconForEffect(GrantedTags);
 	const bool bIsBuff = BP_IsEffectBuff(GrantedTags);
 
-	// Build display name from the GE asset tag if available
 	FText EffectName = FText::GetEmpty();
 	if (Spec.Def != nullptr)
 	{
 		EffectName = FText::FromString(Spec.Def->GetName());
 	}
 
-	// Create icon widget
 	UStatusEffectIconWidget* IconWidget =
 		CreateWidget<UStatusEffectIconWidget>(GetOwningPlayer(), IconWidgetClass);
 	if (!IconWidget)
@@ -231,7 +205,6 @@ void UStatusEffectHUDWidget::AddIconForEffect(UAbilitySystemComponent* ASC,
 
 	IconWidget->BindToEffect(ASC, Handle, Icon, EffectName, bIsBuff);
 
-	// Add to container
 	UHorizontalBoxSlot* HSlot = Container->AddChildToHorizontalBox(IconWidget);
 	if (Slot)
 	{
@@ -269,8 +242,8 @@ void UStatusEffectHUDWidget::RemoveIconForHandle(FActiveGameplayEffectHandle Han
 bool UStatusEffectHUDWidget::PassesTagFilter(const FGameplayTagContainer& GrantedTags) const
 {
 	if (StatusEffectTagFilter.IsEmpty())
-	{ 
-		return true; // No filter set — show everything
+	{
+		return true;
 	}
 	return GrantedTags.HasAnyExact(StatusEffectTagFilter);
 }

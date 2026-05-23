@@ -1,12 +1,8 @@
-// Copyright © 2025 MahouSensei
-// Author: Quentin Davis
-
 #include "Character/HUD/HunterHUDBaseWidget.h"
 #include "Character/PHBaseCharacter.h"
 
 void UHunterHUDBaseWidget::InitializeForCharacter(APHBaseCharacter* Character)
 {
-	// Release any previous binding cleanly before rebinding
 	if (BoundCharacter.IsValid())
 	{
 		ReleaseCharacter();
@@ -36,7 +32,6 @@ void UHunterHUDBaseWidget::ReleaseCharacter()
 
 void UHunterHUDBaseWidget::NativeDestruct()
 {
-	// Clean up any live delegate handles before the widget is garbage-collected
 	ReleaseCharacter();
 	Super::NativeDestruct();
 }

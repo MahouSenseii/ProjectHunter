@@ -1,5 +1,3 @@
-// Tags/Debug/TagDebugManager.cpp
-
 #include "Tags/Debug/TagDebugManager.h"
 #include "Tags/Components/TagManager.h"
 #include "Engine/Engine.h"
@@ -7,41 +5,25 @@
 
 DEFINE_LOG_CATEGORY(LogTagDebugManager);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
-
 namespace TagDebugPrivate
 {
-    // On-screen message display duration — long enough to act as "persistent"
-    // since we overwrite by key rather than letting them expire.
     constexpr float PersistentDuration = 3600.f;
 
-    // ── Colour palette ────────────────────────────────────────────────────────
-
-    // Category header rows
     const FColor HeaderColor(155, 155, 165);
 
-    // Active tag colours per semantic group
-    const FColor ActiveLifeDeathColor(230, 230, 50);   // yellow  — life/death states
-    const FColor ActiveThresholdColor(100, 210, 255);  // cyan    — resource thresholds
-    const FColor ActiveMovementColor(80,  200, 120);   // green   — movement/sprint
-    const FColor ActiveCombatColor(255, 165, 50);      // orange  — combat states
-    const FColor ActiveAilmentColor(220,  80,  80);    // red     — ailments/debuffs
-    const FColor ActiveImmunityColor(200, 200, 80);    // gold    — immunities
-    const FColor ActiveEffectColor(100, 180, 255);     // sky-blue— active GE effects
-    const FColor ActiveOtherColor(200, 200, 200);      // white   — unknown/misc tags
+    const FColor ActiveLifeDeathColor(230, 230, 50);
+    const FColor ActiveThresholdColor(100, 210, 255);
+    const FColor ActiveMovementColor(80,  200, 120);
+    const FColor ActiveCombatColor(255, 165, 50);
+    const FColor ActiveAilmentColor(220,  80,  80);
+    const FColor ActiveImmunityColor(200, 200, 80);
+    const FColor ActiveEffectColor(100, 180, 255);
+    const FColor ActiveOtherColor(200, 200, 200);
 
-    // Inactive (tag is OFF) — always the same dim grey regardless of group
     const FColor InactiveColor(55, 55, 55);
 
-    // Panel title bar
     const FColor TitleColor(180, 180, 190);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FTagDebugManager — constructor / defaults
-// ─────────────────────────────────────────────────────────────────────────────
 
 FTagDebugManager::FTagDebugManager()
     : bEnableDebug(false)
@@ -54,7 +36,7 @@ FTagDebugManager::FTagDebugManager()
     , bShowMovement(true)
     , bShowCombat(true)
     , bShowAilments(true)
-    , bShowImmunities(false)   // off by default — rarely interesting at runtime
+    , bShowImmunities(false)
     , bShowEffects(true)
     , bShowOther(true)
     , bCacheInitialized(false)
@@ -62,14 +44,8 @@ FTagDebugManager::FTagDebugManager()
 {
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
 FString FTagDebugManager::GetShortTagName(const FGameplayTag& Tag)
 {
-    // Strip only the top-level root prefix ("Condition." / "Effect.") so that
-    // "Self.Stunned" and "Target.Stunned" remain distinct in the display.
     const FString Name = Tag.GetTagName().ToString();
 
     static const TCHAR* const Prefixes[] = {
@@ -89,8 +65,6 @@ FString FTagDebugManager::GetShortTagName(const FGameplayTag& Tag)
     return Name;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 bool FTagDebugManager::CheckForTagChanges(UTagManager* TagManager)
 {
     if (!TagManager)
@@ -101,7 +75,6 @@ bool FTagDebugManager::CheckForTagChanges(UTagManager* TagManager)
     FGameplayTagContainer CurrentTags;
     if (!TagManager->GetOwnedTags(CurrentTags))
     {
-        // ASC not ready yet — treat as changed so the "no ASC" banner is redrawn.
         return !bCacheInitialized;
     }
 
@@ -114,8 +87,6 @@ bool FTagDebugManager::CheckForTagChanges(UTagManager* TagManager)
 
     return false;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 void FTagDebugManager::ClearDrawnMessages()
 {
@@ -131,14 +102,9 @@ void FTagDebugManager::ClearDrawnMessages()
     CachedDisplayLines.Reset();
     CachedLineColors.Reset();
 
-    // Invalidate cache so the first re-enable always forces a full redraw.
     bCacheInitialized = false;
     CachedActiveTags.Reset();
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BuildDisplayLines
-// ─────────────────────────────────────────────────────────────────────────────
 
 void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
                                          const FGameplayTagContainer& OwnedTags,
@@ -148,7 +114,6 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
     OutLines.Reset();
     OutColors.Reset();
 
-    // ── Title bar ─────────────────────────────────────────────────────────────
     const FString OwnerName = (TagManager && TagManager->GetOwner())
                             ? TagManager->GetOwner()->GetName()
                             : TEXT("Unknown");
@@ -163,15 +128,8 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
         return;
     }
 
-    // ── Tag group helper ──────────────────────────────────────────────────────
-    //
-    // Each logical group is described inline below. We accumulate a TSet of all
-    // known tags as we go so that the "Other" group can exclude them at the end.
-
     TSet<FGameplayTag> KnownTags;
 
-    // WriteGroup — draws a header + each tag in the group.
-    // bGroupVisible: respect the per-group filter toggle.
     auto WriteGroup = [&](const TCHAR* Header,
                           bool bGroupVisible,
                           const FColor& ActiveColor,
@@ -179,8 +137,6 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
     {
         if (!bGroupVisible)
         {
-            // Still register into KnownTags even when filtered out so "Other"
-            // doesn't accidentally absorb them.
             for (const FGameplayTag& Tag : GroupTags)
             {
                 if (Tag.IsValid()) { KnownTags.Add(Tag); }
@@ -188,7 +144,6 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
             return;
         }
 
-        // Decide whether this group has anything to show before emitting the header.
         bool bHasContent = false;
         for (const FGameplayTag& Tag : GroupTags)
         {
@@ -219,11 +174,8 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
         }
     };
 
-    // ── Groups ────────────────────────────────────────────────────────────────
-
     const FPHGameplayTags& T = FPHGameplayTags::Get();
 
-    // 1. Life / Death
     WriteGroup(TEXT("Life / Death"), bShowLifeDeath, TagDebugPrivate::ActiveLifeDeathColor,
     {
         T.Condition_Alive,
@@ -232,7 +184,6 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
         T.Condition_DeathPrevented,
     });
 
-    // 2. Resource Thresholds (driven by attribute-change delegates)
     WriteGroup(TEXT("Resource Thresholds"), bShowThresholds, TagDebugPrivate::ActiveThresholdColor,
     {
         T.Condition_OnFullHealth,    T.Condition_OnLowHealth,
@@ -241,7 +192,6 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
         T.Condition_OnFullArcaneShield, T.Condition_OnLowArcaneShield,
     });
 
-    // 3. Movement / Sprint (polled at 100 ms cadence by TagManager)
     WriteGroup(TEXT("Movement"), bShowMovement, TagDebugPrivate::ActiveMovementColor,
     {
         T.Condition_WhileMoving,
@@ -249,7 +199,6 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
         T.Condition_Sprinting,
     });
 
-    // 4. Combat — broad set covering action and interaction states
     WriteGroup(TEXT("Combat"), bShowCombat, TagDebugPrivate::ActiveCombatColor,
     {
         T.Condition_InCombat,
@@ -279,7 +228,6 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
         T.Condition_TargetIsCasting,
     });
 
-    // 5a. Ailments — Self
     WriteGroup(TEXT("Ailments (Self)"), bShowAilments, TagDebugPrivate::ActiveAilmentColor,
     {
         T.Condition_Self_Bleeding,
@@ -300,7 +248,6 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
         T.Condition_Self_ZeroArcaneShield,
     });
 
-    // 5b. Ailments — Target
     WriteGroup(TEXT("Ailments (Target)"), bShowAilments, TagDebugPrivate::ActiveAilmentColor,
     {
         T.Condition_Target_Bleeding,
@@ -314,7 +261,6 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
         T.Condition_Target_IsBlocking,
     });
 
-    // 6. Immunities
     WriteGroup(TEXT("Immunities"), bShowImmunities, TagDebugPrivate::ActiveImmunityColor,
     {
         T.Condition_ImmuneToCC,
@@ -326,7 +272,6 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
         T.Condition_CannotBeKnockedBack,
     });
 
-    // 7. Active GE Effects
     WriteGroup(TEXT("Effects"), bShowEffects, TagDebugPrivate::ActiveEffectColor,
     {
         T.Effect_Health_RegenActive,
@@ -338,7 +283,6 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
         T.Effect_Stamina_DegenActive,
     });
 
-    // 8. Other — any tags NOT covered by the groups above (GE-granted, ability, etc.)
     if (bShowOther)
     {
         TArray<FGameplayTag> OtherTags;
@@ -357,24 +301,18 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
 
             for (const FGameplayTag& Tag : OtherTags)
             {
-                // "Other" tags are always active (they're in the owned container).
                 OutLines.Add(FString::Printf(TEXT("  [●] %s"), *Tag.GetTagName().ToString()));
                 OutColors.Add(TagDebugPrivate::ActiveOtherColor);
             }
         }
     }
 
-    // Guarantee at least one line so the panel title is visible even when empty.
     if (OutLines.Num() == 1)
     {
         OutLines.Add(TEXT("  (no tags active)"));
         OutColors.Add(TagDebugPrivate::InactiveColor);
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DrawDebug — main entry point (called from UTagManager::TickComponent)
-// ─────────────────────────────────────────────────────────────────────────────
 
 void FTagDebugManager::DrawDebug(UTagManager* TagManager, UObject* WorldContext)
 {
@@ -384,17 +322,12 @@ void FTagDebugManager::DrawDebug(UTagManager* TagManager, UObject* WorldContext)
         return;
     }
 
-    // ── Change detection ──────────────────────────────────────────────────────
-    // All work is skipped when the tag container hasn't changed since last frame.
     const bool bTagsChanged = CheckForTagChanges(TagManager);
 
-    // ── Screen draw ───────────────────────────────────────────────────────────
     if (bDrawToScreen && GEngine)
     {
         if (bTagsChanged || CachedDisplayLines.IsEmpty())
         {
-            // Preserve old lines so we can skip re-submitting unchanged rows
-            // (avoids the per-line flicker that occurs on every AddOnScreenDebugMessage call).
             TArray<FString> OldLines;
             Swap(OldLines, CachedDisplayLines);
 
@@ -416,7 +349,6 @@ void FTagDebugManager::DrawDebug(UTagManager* TagManager, UObject* WorldContext)
                                                  /*bNewerOnTop=*/false);
             }
 
-            // Remove stale lines when the display shrinks (e.g. filter toggled).
             for (int32 i = CachedDisplayLines.Num(); i < LastDrawnLineCount; ++i)
             {
                 GEngine->RemoveOnScreenDebugMessage(static_cast<uint64>(BaseMessageKey + i));
@@ -430,7 +362,6 @@ void FTagDebugManager::DrawDebug(UTagManager* TagManager, UObject* WorldContext)
         ClearDrawnMessages();
     }
 
-    // ── Log output ────────────────────────────────────────────────────────────
     if (bLogToOutput && bTagsChanged)
     {
         const FString OwnerName = (TagManager && TagManager->GetOwner())

@@ -16,8 +16,6 @@ AEquippedItemRuntimeActor::AEquippedItemRuntimeActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	// Replicate so clients see the actor for visuals and client-predicted traces.
-	// Movement replication stays off because socket attachment drives placement.
 	bReplicates = true;
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));

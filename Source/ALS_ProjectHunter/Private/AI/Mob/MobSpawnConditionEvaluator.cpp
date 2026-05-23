@@ -1,4 +1,3 @@
-// AI/Mob/MobSpawnConditionEvaluator.cpp
 #include "AI/Mob/MobSpawnConditionEvaluator.h"
 #include "AI/Mob/MobManagerActor.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
@@ -21,7 +20,6 @@ bool UMobSpawnConditionEvaluator::IsRuleReady(const FMobSpecialSpawnRule& Rule,
 		return false;
 	}
 
-	// ── Lifetime gate ────────────────────────────────────────────────────────
 	switch (Rule.Lifetime)
 	{
 	case EMobSpawnRuleLifetime::OneShot:

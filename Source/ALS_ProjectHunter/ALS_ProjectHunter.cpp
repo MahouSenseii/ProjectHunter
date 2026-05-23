@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "ALS_ProjectHunter.h"
 #include "Modules/ModuleManager.h"
 

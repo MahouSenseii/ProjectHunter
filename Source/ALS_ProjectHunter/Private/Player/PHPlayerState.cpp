@@ -1,4 +1,3 @@
-// PHPlayerState.cpp
 #include "Player/PHPlayerState.h"
 #include "Net/UnrealNetwork.h"
 
@@ -18,19 +17,11 @@ void APHPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(APHPlayerState, CharacterSlotName);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Team
-// ─────────────────────────────────────────────────────────────────────────────
-
 void APHPlayerState::SetTeamID(uint8 NewTeamID)
 {
 	TeamID = NewTeamID;
 	UE_LOG(LogPHPlayerState, Log, TEXT("%s: TeamID set to %d"), *GetName(), NewTeamID);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Run state
-// ─────────────────────────────────────────────────────────────────────────────
 
 void APHPlayerState::AdvanceFloor()
 {

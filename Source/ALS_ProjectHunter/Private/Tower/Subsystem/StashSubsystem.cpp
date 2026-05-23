@@ -1,4 +1,3 @@
-// Tower/Subsystem/StashSubsystem.cpp
 #include "Tower/Subsystem/StashSubsystem.h"
 #include "Tower/Subsystem/StashSaveGame.h"
 #include "Item/ItemInstance.h"
@@ -17,14 +16,9 @@ void UStashSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UStashSubsystem::Deinitialize()
 {
-	// Flush any unsaved changes on shutdown
 	FlushDirtyTabs();
 	Super::Deinitialize();
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Initialisation
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UStashSubsystem::LoadStashHandles(const FString& CharacterSlotName)
 {
@@ -34,7 +28,6 @@ void UStashSubsystem::LoadStashHandles(const FString& CharacterSlotName)
 
 	const FString HandleSlot = CharacterSlotName + TEXT("_StashHandles");
 
-	// OPT-SAVE: Attempt to load persisted tab handles
 	if (UGameplayStatics::DoesSaveGameExist(HandleSlot, 0))
 	{
 		if (USaveGame* Raw = UGameplayStatics::LoadGameFromSlot(HandleSlot, 0))
@@ -55,7 +48,6 @@ void UStashSubsystem::LoadStashHandles(const FString& CharacterSlotName)
 		}
 	}
 
-	// Default tabs for brand-new characters
 	if (TabHandles.Num() == 0)
 	{
 		TabHandles.Add(FStashTabHandle(TEXT("Tab_0"), FText::FromString(TEXT("Main Stash")),       EStashTabType::STT_Normal));
@@ -68,10 +60,6 @@ void UStashSubsystem::LoadStashHandles(const FString& CharacterSlotName)
 		TabHandles.Num());
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Lazy tab loading
-// ─────────────────────────────────────────────────────────────────────────────
-
 bool UStashSubsystem::RequestTabData(int32 TabIndex)
 {
 	if (!IsValidTabIndex(TabIndex))
@@ -83,11 +71,9 @@ bool UStashSubsystem::RequestTabData(int32 TabIndex)
 
 	if (Handle.bIsLoaded)
 	{
-		// Already in memory — nothing to do
 		return true;
 	}
 
-	// Load from disk
 	const bool bLoaded = LoadTab(TabIndex);
 	if (bLoaded)
 	{
@@ -100,7 +86,6 @@ bool UStashSubsystem::RequestTabData(int32 TabIndex)
 	}
 	else
 	{
-		// No save data yet — create empty tab data in memory
 		FStashTabData NewData(Handle.TabID);
 		NewData.GridSize = (Handle.TabType == EStashTabType::STT_Quad)
 			? FIntPoint(24, 24) : FIntPoint(12, 12);
@@ -125,10 +110,6 @@ bool UStashSubsystem::IsTabLoaded(int32 TabIndex) const
 {
 	return IsValidTabIndex(TabIndex) && TabHandles[TabIndex].bIsLoaded;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Item management
-// ─────────────────────────────────────────────────────────────────────────────
 
 bool UStashSubsystem::AddItemToTab(int32 TabIndex, UItemInstance* Item, FIntPoint GridPos)
 {
@@ -155,7 +136,6 @@ bool UStashSubsystem::AddItemToTab(int32 TabIndex, UItemInstance* Item, FIntPoin
 		}
 	}
 
-	// Check position is not occupied
 	for (const FStashItemEntry& Entry : TabData->Items)
 	{
 		if (Entry.GridPosition == PlacePos)
@@ -178,7 +158,6 @@ bool UStashSubsystem::AddItemToTab(int32 TabIndex, UItemInstance* Item, FIntPoin
 
 bool UStashSubsystem::AddItemToTabAutoPlace(int32 TabIndex, UItemInstance* Item)
 {
-	// Delegate to AddItemToTab with the sentinel value that triggers auto-placement
 	return AddItemToTab(TabIndex, Item, FIntPoint(-1, -1));
 }
 
@@ -222,17 +201,12 @@ bool UStashSubsystem::MoveItem(int32 FromTabIndex, FIntPoint FromPos,
 
 	if (!AddItemToTab(ToTabIndex, Item, ToPos))
 	{
-		// Put it back
 		AddItemToTab(FromTabIndex, Item, FromPos);
 		return false;
 	}
 
 	return true;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Persistence
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UStashSubsystem::MarkTabDirty(int32 TabIndex)
 {
@@ -257,7 +231,6 @@ void UStashSubsystem::FlushDirtyTabs()
 		}
 	}
 
-	// OPT-SAVE: Always persist handles when any tab was saved (item counts may have changed)
 	if (bAnySaved)
 	{
 		SaveHandles();
@@ -279,10 +252,6 @@ void UStashSubsystem::UnloadCleanTabs()
 	}
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab management
-// ─────────────────────────────────────────────────────────────────────────────
-
 int32 UStashSubsystem::AddTab(const FText& Name, EStashTabType Type)
 {
 	const FName NewID = *FString::Printf(TEXT("Tab_%d"), TabHandles.Num());
@@ -298,10 +267,6 @@ void UStashSubsystem::RenameTab(int32 TabIndex, const FText& NewName)
 		MarkTabDirty(TabIndex);
 	}
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Internals
-// ─────────────────────────────────────────────────────────────────────────────
 
 FString UStashSubsystem::BuildTabSlotName(FName TabID) const
 {
@@ -340,7 +305,6 @@ void UStashSubsystem::SaveTab(int32 TabIndex)
 		return;
 	}
 
-	// OPT-SAVE: Serialize tab data into a USaveGame
 	UStashTabSaveGame* SaveObj = Cast<UStashTabSaveGame>(
 		UGameplayStatics::CreateSaveGameObject(UStashTabSaveGame::StaticClass()));
 	if (!SaveObj)
@@ -362,7 +326,6 @@ void UStashSubsystem::SaveTab(int32 TabIndex)
 		ItemSave.GridPosition  = Entry.GridPosition;
 		ItemSave.ItemClassPath = FSoftClassPath(Entry.Item->GetClass());
 
-		// Serialize UItemInstance → byte array via proxy archive
 		TArray<uint8> Bytes;
 		FMemoryWriter MemWriter(Bytes, true);
 		FObjectAndNameAsStringProxyArchive Ar(MemWriter, false);
@@ -381,7 +344,6 @@ void UStashSubsystem::SaveTab(int32 TabIndex)
 		SaveObj->Items.Num(), *Handle.TabID.ToString(), *SlotName);
 }
 
-// OPT-SAVE: Also persist the tab handles whenever dirty tabs are flushed
 void UStashSubsystem::SaveHandles()
 {
 	UStashHandlesSaveGame* SaveObj = Cast<UStashHandlesSaveGame>(
@@ -427,7 +389,6 @@ bool UStashSubsystem::LoadTab(int32 TabIndex)
 		return false;
 	}
 
-	// OPT-SAVE: Reconstruct tab data from the save object
 	FStashTabData TabData(TabSave->TabID);
 	TabData.GridSize = TabSave->GridSize;
 
@@ -448,7 +409,6 @@ bool UStashSubsystem::LoadTab(int32 TabIndex)
 			continue;
 		}
 
-		// Deserialize the item's SaveGame properties from the byte array
 		FMemoryReader MemReader(ItemSave.ItemBytes, true);
 		FObjectAndNameAsStringProxyArchive Ar(MemReader, true);
 		Ar.ArIsSaveGame = true;

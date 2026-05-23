@@ -1,11 +1,3 @@
-// Character/Component/EquipmentManager.cpp
-// PH-1.4 / PH-1.5 / follow-up split
-//
-// Owner:
-//   UEquipmentManager owns equipped slot state, replication, and broadcasts.
-// Helpers:
-//   FEquipmentMutationHelper, FEquipmentSlotResolver, FEquipmentReplicationHelper.
-
 #include "Equipment/Components/EquipmentManager.h"
 
 #include "Engine/ActorChannel.h"
@@ -78,7 +70,6 @@ UItemInstance* UEquipmentManager::GiveWeapon(
 	EItemRarity Rarity,
 	bool bGenerateAffixes)
 {
-	// ── Validate input ────────────────────────────────────────────────────
 	if (BaseItemHandle.IsNull() || BaseItemHandle.DataTable == nullptr)
 	{
 		UE_LOG(LogEquipmentManager, Warning,
@@ -94,9 +85,6 @@ UItemInstance* UEquipmentManager::GiveWeapon(
 		return nullptr;
 	}
 
-	// ── Construct the item instance ──────────────────────────────────────
-	// Outer = owning actor (player pawn).  Once equipped, EquippedItemsArray
-	// holds a hard ref so the item is GC-rooted independent of outer.
 	UItemInstance* NewItem = NewObject<UItemInstance>(OwnerActor);
 	if (!NewItem)
 	{
@@ -116,10 +104,6 @@ UItemInstance* UEquipmentManager::GiveWeapon(
 		return nullptr;
 	}
 
-	// ── Auto-equip via the normal path ───────────────────────────────────
-	// ES_None lets DetermineEquipmentSlot pick the canonical slot for the
-	// item type (MainHand for 1H weapon, TwoHand for 2H, etc.).  bSwapToBag
-	// = true so any currently-equipped item is preserved in inventory.
 	EquipItem(NewItem, EEquipmentSlot::ES_None, /*bSwapToBag*/ true);
 
 	UE_LOG(LogEquipmentManager, Log,
@@ -217,7 +201,6 @@ void UEquipmentManager::MulticastEquipmentChanged_Implementation(EEquipmentSlot 
 	(void)Slot;
 	(void)NewItem;
 	(void)OldItem;
-	// Client notifications are delivered through OnRep_EquippedItems only.
 }
 
 void UEquipmentManager::RebuildEquipmentMap()

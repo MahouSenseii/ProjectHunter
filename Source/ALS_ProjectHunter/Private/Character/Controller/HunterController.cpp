@@ -1,6 +1,3 @@
-// Character/Controller/HunterController.cpp
-// SIMPLIFIED - NO TICK DEPENDENCY!
-
 #include "Character/Controller/HunterController.h"
 
 #include "EnhancedActionKeyMapping.h"
@@ -19,14 +16,9 @@ AHunterController::AHunterController(const FObjectInitializer& ObjectInitializer
 void AHunterController::OnPossess(APawn* NewPawn)
 {
 	Super::OnPossess(NewPawn);
-	
-	// Cache component references
+
 	CacheComponents();
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// INPUT HANDLERS - Pure Delegation!
-// ═══════════════════════════════════════════════════════════════════════
 
 void AHunterController::Interact(const FInputActionValue& Value)
 {
@@ -35,12 +27,11 @@ void AHunterController::Interact(const FInputActionValue& Value)
 		return;
 	}
 
-	// Just route to InteractionManager - that's it!
-	if (Value.Get<bool>()) // Pressed
+	if (Value.Get<bool>())
 	{
 		InteractionManager->OnInteractPressed();
 	}
-	else // Released
+	else
 	{
 		InteractionManager->OnInteractReleased();
 	}
@@ -48,7 +39,6 @@ void AHunterController::Interact(const FInputActionValue& Value)
 
 void AHunterController::Menu(const FInputActionValue& Value) const
 {
-	// TODO: Implement menu logic
 	if (Value.Get<bool>())
 	{
 		UE_LOG(LogHunterController, Log, TEXT("Menu button pressed"));
@@ -68,7 +58,7 @@ const UInputAction* AHunterController::GetInputActionByName(const FString& InStr
 			if (Keymapping.Action && Keymapping.Action->GetFName() == InString)
 			{
 				FoundAction = Keymapping.Action;
-				break; // Found the Interact action, no need to search further.
+				break;
 			}
 		}
 		return FoundAction;
@@ -91,7 +81,6 @@ float AHunterController::GetElapsedSeconds(const UInputAction* Action) const
 			}
 		}
 	}
-	// If any step fails (e.g., the action is not found), return 0 to indicate no elapsed time.
 	return 0;
 }
 
@@ -101,7 +90,7 @@ bool AHunterController::DoOnce(FDoOnceState& State, bool bReset, bool bStartClos
 	{
 		State.bHasBeenInitialized = true;
 		State.bIsClosed = false;
-		return false; // Nothing should execute on reset
+		return false;
 	}
 
 	if (!State.bHasBeenInitialized)
@@ -110,7 +99,7 @@ bool AHunterController::DoOnce(FDoOnceState& State, bool bReset, bool bStartClos
 		if (bStartClosed)
 		{
 			State.bIsClosed = true;
-			return false; // Starts closed, skip execution
+			return false;
 		}
 	}
 
@@ -122,15 +111,10 @@ bool AHunterController::DoOnce(FDoOnceState& State, bool bReset, bool bStartClos
 
 	return false; 
 }
-// ═══════════════════════════════════════════════════════════════════════
-// INTERNAL METHODS
-// ═══════════════════════════════════════════════════════════════════════
-
 void AHunterController::CacheComponents()
 {
 	if (APawn* PossessedPawn = GetPawn())
 	{
-		// Cache InteractionManager
 		InteractionManager = PossessedPawn->FindComponentByClass<UInteractionManager>();
 		
 		if (!InteractionManager)

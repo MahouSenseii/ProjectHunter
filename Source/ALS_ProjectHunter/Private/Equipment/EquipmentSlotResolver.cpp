@@ -71,11 +71,6 @@ EEquipmentSlot FEquipmentSlotResolver::DetermineEquipmentSlot(const UEquipmentMa
 		return GetNextAvailableRingSlot(Manager);
 	}
 
-	// Linked-hand fallback for one-handed weapons:
-	//   MainHand canonical → try MainHand first, then OffHand, then displace MainHand.
-	//   OffHand  canonical → try OffHand  first, then MainHand, then displace OffHand.
-	// Dedicated off-hand-only items (shields, etc.) are not 1H weapons so they
-	// skip this block and always land on their canonical slot.
 	if (UEquipmentFunctionLibrary::IsOneHandedWeapon(Item)
 		&& (CanonicalSlot == EEquipmentSlot::ES_MainHand || CanonicalSlot == EEquipmentSlot::ES_OffHand))
 	{
@@ -91,7 +86,6 @@ EEquipmentSlot FEquipmentSlotResolver::DetermineEquipmentSlot(const UEquipmentMa
 		{
 			return FallbackSlot;
 		}
-		// Both slots occupied — displace the canonical slot; old item goes to inventory.
 		return CanonicalSlot;
 	}
 
@@ -105,11 +99,6 @@ bool FEquipmentSlotResolver::CanEquipToSlot(const UEquipmentManager& Manager, UI
 		return true;
 	}
 
-	// Allow a one-handed weapon to be placed into either hand via the normal
-	// (non-ground-pickup) EquipItem() path. Both rules are needed for the
-	// linked-hand fallback in DetermineEquipmentSlot: without the MainHand
-	// rule an OffHand-canonical 1H weapon redirected to MainHand would be
-	// silently rejected here.
 	if (UEquipmentFunctionLibrary::IsOneHandedWeapon(Item)
 		&& (Slot == EEquipmentSlot::ES_MainHand || Slot == EEquipmentSlot::ES_OffHand))
 	{
@@ -144,11 +133,6 @@ bool FEquipmentSlotResolver::TryEquipGroundPickupItem(UEquipmentManager& Manager
 
 	if (UEquipmentFunctionLibrary::IsOneHandedWeapon(Item))
 	{
-		// Canonical-first, linked-hand fallback priority for ground pickups:
-		//   MainHand canonical: empty MH → empty OH → displace MH → displace OH
-		//   OffHand  canonical: empty OH → empty MH → displace OH → displace MH
-		// This mirrors DetermineEquipmentSlot so that ground-pickup and
-		// inventory-equip paths behave identically.
 		const EEquipmentSlot PrimarySlot  = (CanonicalSlot == EEquipmentSlot::ES_OffHand)
 			? EEquipmentSlot::ES_OffHand
 			: EEquipmentSlot::ES_MainHand;
@@ -159,10 +143,6 @@ bool FEquipmentSlotResolver::TryEquipGroundPickupItem(UEquipmentManager& Manager
 		const bool bPrimaryEmpty  = !Manager.IsSlotOccupied(PrimarySlot);
 		const bool bFallbackEmpty = !Manager.IsSlotOccupied(FallbackSlot);
 
-		// Two-handed weapon currently equipped blocks either hand slot
-		// regardless, because CanEquipGroundPickupToSlot will still need
-		// to swap the two-hand item to the bag. Keep that check via the
-		// helper below.
 		auto CanUseSlot = [&](EEquipmentSlot Slot) -> bool
 		{
 			return EquipmentSlotResolverPrivate::CanEquipGroundPickupToSlot(Manager, Item, Slot, bSwapToBag);
@@ -178,12 +158,10 @@ bool FEquipmentSlotResolver::TryEquipGroundPickupItem(UEquipmentManager& Manager
 		}
 		else if (CanUseSlot(PrimarySlot))
 		{
-			// Both hands occupied — displace the primary slot to bag.
 			ChosenSlot = PrimarySlot;
 		}
 		else if (CanUseSlot(FallbackSlot))
 		{
-			// Last resort — displace the fallback slot to bag.
 			ChosenSlot = FallbackSlot;
 		}
 		else
@@ -193,7 +171,6 @@ bool FEquipmentSlotResolver::TryEquipGroundPickupItem(UEquipmentManager& Manager
 	}
 	else if (CanonicalSlot == EEquipmentSlot::ES_OffHand)
 	{
-		// Dedicated off-hand-only items (shields, etc.) — no hand-link fallback.
 		ChosenSlot = EEquipmentSlot::ES_OffHand;
 	}
 

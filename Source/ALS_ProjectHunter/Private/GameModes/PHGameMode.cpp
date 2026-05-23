@@ -1,4 +1,3 @@
-// PHGameMode.cpp
 #include "GameModes/PHGameMode.h"
 #include "PHGameplayTags.h"
 #include "Player/PHPlayerState.h"
@@ -12,7 +11,6 @@ DEFINE_LOG_CATEGORY(LogPHGameMode);
 
 APHGameMode::APHGameMode()
 {
-	// N-01/N-02 FIX: Wire custom PlayerState and GameState classes
 	PlayerStateClass = APHPlayerState::StaticClass();
 	GameStateClass   = APHGameState::StaticClass();
 }
@@ -22,15 +20,8 @@ void APHGameMode::BeginPlay()
 	Super::BeginPlay();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Player spawn
-// ─────────────────────────────────────────────────────────────────────────────
-
 AActor* APHGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
-	// Default behaviour — pick a random PlayerStart.
-	// Override in a Blueprint subclass or C++ subclass to implement
-	// checkpoint / safe-zone respawn logic.
 	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
@@ -43,10 +34,6 @@ void APHGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewP
 		return;
 	}
 
-	// The pawn should already be possessed by now.
-	// APHBaseCharacter owns GAS initialization in BeginPlay/PossessedBy.
-	// Do not grant abilities or startup effects here; doing so duplicates the
-	// authoritative initialization path on first player spawn.
 	if (APHBaseCharacter* HunterChar = Cast<APHBaseCharacter>(NewPlayer->GetPawn()))
 	{
 		UE_LOG(LogPHGameMode, Log,
@@ -55,20 +42,11 @@ void APHGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewP
 	}
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Match lifecycle
-// ─────────────────────────────────────────────────────────────────────────────
-
 bool APHGameMode::ReadyToStartMatch_Implementation()
 {
-	// Single-player: always ready.
-	// For multiplayer: override to check NumPlayers >= MinPlayers, etc.
 	return true;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Player death / respawn
-// ─────────────────────────────────────────────────────────────────────────────
 
 void APHGameMode::OnPlayerDied(AController* DeadPlayer, AController* Killer)
 {
@@ -84,8 +62,7 @@ void APHGameMode::OnPlayerDied(AController* DeadPlayer, AController* Killer)
 
 	if (!bAutoRespawn)
 	{
-		// Manual respawn — the player must press a button.
-		// UI / Blueprint handles showing the respawn prompt.
+
 		return;
 	}
 
@@ -95,7 +72,6 @@ void APHGameMode::OnPlayerDied(AController* DeadPlayer, AController* Killer)
 		return;
 	}
 
-	// Delayed respawn via timer
 	FTimerHandle RespawnTimer;
 	TWeakObjectPtr<AController> WeakController = DeadPlayer;
 
@@ -118,13 +94,11 @@ void APHGameMode::RespawnPlayer(AController* Controller)
 		return;
 	}
 
-	// Destroy the old pawn if still alive
 	if (APawn* OldPawn = Controller->GetPawn())
 	{
 		OldPawn->Destroy();
 	}
 
-	// Use the engine's restart flow which calls ChoosePlayerStart + SpawnDefaultPawnFor
 	RestartPlayer(Controller);
 
 	UE_LOG(LogPHGameMode, Log,

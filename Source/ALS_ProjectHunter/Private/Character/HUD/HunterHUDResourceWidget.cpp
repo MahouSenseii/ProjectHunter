@@ -1,14 +1,7 @@
-// Copyright © 2025 MahouSensei
-// Author: Quentin Davis
-
 #include "Character/HUD/HunterHUDResourceWidget.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "Character/PHBaseCharacter.h"
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Internal helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UHunterHUDResourceWidget::ResolveAttributesFromResourceType()
 {
@@ -37,10 +30,6 @@ void UHunterHUDResourceWidget::ResolveAttributesFromResourceType()
 	}
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HunterHUDBaseWidget overrides
-// ─────────────────────────────────────────────────────────────────────────────
-
 void UHunterHUDResourceWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
 {
 	ResolveAttributesFromResourceType();
@@ -52,7 +41,6 @@ void UHunterHUDResourceWidget::NativeInitializeForCharacter(APHBaseCharacter* Ch
 		return;
 	}
 
-	// ── Snapshot initial values ──────────────────────────────────────────────
 	if (CurrentAttribute.IsValid())
 	{
 		bool bFound = false;
@@ -71,7 +59,6 @@ void UHunterHUDResourceWidget::NativeInitializeForCharacter(APHBaseCharacter* Ch
 		CachedReserved = FMath::Max(ASC->GetGameplayAttributeValue(ReservedAttribute, bFound), 0.f);
 	}
 
-	// ── Bind live attribute change delegates ─────────────────────────────────
 	if (CurrentAttribute.IsValid())
 	{
 		CurrentHandle = ASC->GetGameplayAttributeValueChangeDelegate(CurrentAttribute)
@@ -90,7 +77,6 @@ void UHunterHUDResourceWidget::NativeInitializeForCharacter(APHBaseCharacter* Ch
 			.AddUObject(this, &UHunterHUDResourceWidget::HandleReservedChanged);
 	}
 
-	// Send the initial state to Blueprint immediately
 	BroadcastResourceState();
 }
 
@@ -127,10 +113,6 @@ void UHunterHUDResourceWidget::NativeReleaseCharacter()
 	}
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Accessors
-// ─────────────────────────────────────────────────────────────────────────────
-
 float UHunterHUDResourceWidget::GetFillPercent() const
 {
 	return (CachedMax > 0.f) ? FMath::Clamp(CachedCurrent / CachedMax, 0.f, 1.f) : 0.f;
@@ -140,10 +122,6 @@ float UHunterHUDResourceWidget::GetReservedPercent() const
 {
 	return (CachedMax > 0.f) ? FMath::Clamp(CachedReserved / CachedMax, 0.f, 1.f) : 0.f;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GAS attribute callbacks
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UHunterHUDResourceWidget::HandleCurrentChanged(const FOnAttributeChangeData& Data)
 {

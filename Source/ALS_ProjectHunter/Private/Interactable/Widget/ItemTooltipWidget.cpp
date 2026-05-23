@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Interactable/Widget/ItemTooltipWidget.h"
 
 #include "Blueprint/WidgetTree.h"
@@ -16,7 +13,7 @@ void UItemTooltipWidget::SetGradeVisuals(EItemRarity Grade)
 
 FLinearColor UItemTooltipWidget::GetGradeColor(EItemRarity Grade) const
 {
-	return FLinearColor::White; //TODO: setup the get grade.
+	return FLinearColor::White;
 }
 
 void UItemTooltipWidget::PopulateBaseStats(UItemInstance* Item)

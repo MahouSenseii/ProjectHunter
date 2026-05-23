@@ -1,4 +1,3 @@
-// Data/MonsterModifierData.cpp
 #include "Data/MonsterModifierData.h"
 
 float UMonsterSpawnConfig::GetEffectiveMagicChance(int32 AreaLevel, float MagicFind) const
@@ -11,7 +10,7 @@ float UMonsterSpawnConfig::GetEffectiveMagicChance(int32 AreaLevel, float MagicF
 float UMonsterSpawnConfig::GetEffectiveRareChance(int32 AreaLevel, float MagicFind) const
 {
 	const float LevelBonus = FMath::Max(0, AreaLevel - 1) * RareChancePerAreaLevel;
-	const float MFBonus    = MagicFind * MagicFindChanceScalar * 0.5f; // Half MF weight for rares
+	const float MFBonus    = MagicFind * MagicFindChanceScalar * 0.5f;
 	return FMath::Clamp(BaseRareChance + LevelBonus + MFBonus, 0.0f, 1.0f);
 }
 

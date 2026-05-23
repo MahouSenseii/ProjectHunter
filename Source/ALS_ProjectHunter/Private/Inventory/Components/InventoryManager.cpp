@@ -1,5 +1,3 @@
-// Character/Component/InventoryManager.cpp
-
 #include "Inventory/Components/InventoryManager.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
@@ -21,12 +19,11 @@ UInventoryManager::UInventoryManager()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 
-	// N-04 FIX: Enable replication so the server has an accurate copy of the
-	// inventory, allowing server-side ownership checks (e.g. ServerEquipItem).
+	// Enable replication so the server has an accurate copy of the inventory,
+	// allowing server-side ownership checks (e.g. ServerEquipItem).
 	SetIsReplicatedByDefault(true);
 }
 
-// N-04 FIX: Register replicated properties
 void UInventoryManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -61,17 +58,12 @@ bool UInventoryManager::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* B
 void UInventoryManager::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	// Reserve space for max slots
+
 	Items.Reserve(MaxSlots);
-	
-	UE_LOG(LogInventoryManager, Log, TEXT("InventoryManager: Initialized with %d slots, %.1f max weight"), 
+
+	UE_LOG(LogInventoryManager, Log, TEXT("InventoryManager: Initialized with %d slots, %.1f max weight"),
 		MaxSlots, MaxWeight);
 }
-
-// ═══════════════════════════════════════════════
-// BASIC OPERATIONS
-// ═══════════════════════════════════════════════
 
 bool UInventoryManager::AddItem(UItemInstance* Item)
 {
@@ -153,10 +145,6 @@ void UInventoryManager::DropItemAtSlot(int32 SlotIndex, FVector DropLocation)
 	FInventoryRemover::DropItemAtSlot(*this, SlotIndex, DropLocation);
 }
 
-// ═══════════════════════════════════════════════
-// STACKING
-// ═══════════════════════════════════════════════
-
 bool UInventoryManager::TryStackItem(UItemInstance* Item)
 {
 	if (!HasInventoryWriteAuthority(TEXT("TryStackItem")))
@@ -186,10 +174,6 @@ UItemInstance* UInventoryManager::SplitStack(UItemInstance* Item, int32 Amount)
 
 	return FInventoryStackHandler::SplitStack(*this, Item, Amount);
 }
-
-// ═══════════════════════════════════════════════
-// QUERIES
-// ═══════════════════════════════════════════════
 
 bool UInventoryManager::IsFull() const
 {
@@ -258,14 +242,8 @@ int32 UInventoryManager::FindSlotForItem(UItemInstance* Item) const
 
 bool UInventoryManager::ContainsItem(UItemInstance* Item) const
 {
-	// B-4 FIX: Delegates to FindSlotForItem so the search logic lives in one place.
-	// Returns true if the item occupies any slot in this inventory.
 	return FindSlotForItem(Item) != INDEX_NONE;
 }
-
-// ═══════════════════════════════════════════════
-// SEARCH & FILTER
-// ═══════════════════════════════════════════════
 
 TArray<UItemInstance*> UInventoryManager::FindItemsByBaseID(FName BaseItemID) const
 {
@@ -292,10 +270,6 @@ int32 UInventoryManager::GetTotalQuantityOfItem(FName BaseItemID) const
 	return UInventoryFunctionLibrary::GetTotalQuantityOfItem(Items, BaseItemID);
 }
 
-// ═══════════════════════════════════════════════
-// ORGANIZATION
-// ═══════════════════════════════════════════════
-
 void UInventoryManager::SortInventory(ESortMode SortMode)
 {
 	if (!HasInventoryWriteAuthority(TEXT("SortInventory")))
@@ -307,7 +281,7 @@ void UInventoryManager::SortInventory(ESortMode SortMode)
 
 	BroadcastInventoryChanged();
 
-	UE_LOG(LogInventoryManager, Log, TEXT("InventoryManager: Sorted inventory by %s"), 
+	UE_LOG(LogInventoryManager, Log, TEXT("InventoryManager: Sorted inventory by %s"),
 		*UEnum::GetValueAsString(SortMode));
 }
 
@@ -322,7 +296,7 @@ void UInventoryManager::CompactInventory()
 
 	BroadcastInventoryChanged();
 
-	UE_LOG(LogInventoryManager, Log, TEXT("InventoryManager: Compacted inventory (%d items)"), 
+	UE_LOG(LogInventoryManager, Log, TEXT("InventoryManager: Compacted inventory (%d items)"),
 		GetItemCount());
 }
 
@@ -334,16 +308,12 @@ void UInventoryManager::ClearAll()
 	}
 
 	Items.Empty(MaxSlots);
-	
+
 	BroadcastInventoryChanged();
 	UpdateWeight();
-	
+
 	UE_LOG(LogInventoryManager, Log, TEXT("InventoryManager: Cleared all items"));
 }
-
-// ═══════════════════════════════════════════════
-// WEIGHT MANAGEMENT (Hunter Manga)
-// ═══════════════════════════════════════════════
 
 void UInventoryManager::UpdateMaxWeightFromStrength(int32 Strength)
 {
@@ -369,10 +339,6 @@ bool UInventoryManager::WouldExceedWeight(UItemInstance* Item) const
 {
 	return FInventoryWeightCalculator::WouldExceedWeight(*this, Item);
 }
-
-// ═══════════════════════════════════════════════
-// PRIVATE HELPERS
-// ═══════════════════════════════════════════════
 
 void UInventoryManager::UpdateWeight()
 {
@@ -415,14 +381,8 @@ bool UInventoryManager::HasInventoryWriteAuthority(const TCHAR* FunctionName) co
 	return false;
 }
 
-// ═══════════════════════════════════════════════
-// N-04 FIX: Replication callback
-// ═══════════════════════════════════════════════
-
 void UInventoryManager::OnRep_Items()
 {
-	// Items array has been replicated from the server to the owning client.
-	// Rebroadcast delegates so the inventory UI and weight bar refresh correctly.
 	BroadcastInventoryChanged();
 	UpdateWeight();
 

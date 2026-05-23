@@ -15,9 +15,6 @@ namespace TagManagerPrivate
 	constexpr float LowResourceThreshold = 0.35f;
 	constexpr float MovementSpeedThresholdSq = 25.f;
 
-	// N-06 FIX: Refresh interval in seconds. Attribute-based conditions are driven by
-	// GAS delegates (zero cost at rest). The tick now only re-checks movement/sprint
-	// state at this cadence rather than every frame.
 	constexpr float ConditionRefreshInterval = 0.1f;
 
 	float GetEffectiveMaxValue(const float EffectiveMaxValue, const float RawMaxValue)
@@ -39,13 +36,6 @@ void UTagManager::BeginPlay()
 
 	if (!ASC)
 	{
-		// ── Duplicate-component guard ─────────────────────────────────────────
-		// PHBaseCharacter creates a TagManager via CreateDefaultSubobject and
-		// initializes it from InitializeAbilitySystem() BEFORE Super::BeginPlay().
-		// If this BeginPlay is firing with a null ASC it usually means a second
-		// TagManager was added in Blueprint's Components panel on top of the C++
-		// one.  Detect that case: if the owner already has an initialized TagManager
-		// that is NOT this instance, we're the duplicate — bail and warn.
 		{
 			TArray<UTagManager*> AllManagers;
 			if (GetOwner())
@@ -74,7 +64,6 @@ void UTagManager::BeginPlay()
 					*GetNameSafe(GetOwner()),
 					*GetName(),
 					*GetNameSafe(GetOwner()->GetClass()));
-				// Disable tick and bail — this instance should never run
 				SetComponentTickEnabled(false);
 				return;
 			}
@@ -100,9 +89,6 @@ void UTagManager::BeginPlay()
 	}
 
 #if !UE_BUILD_SHIPPING
-	// If bEnableDebug is set in the Details panel before play-in-editor,
-	// make sure tick is running so the "No ASC" diagnostic is visible even
-	// when Initialize() was not yet called with a valid ASC.
 	if (DebugManager.bEnableDebug)
 	{
 		SetComponentTickEnabled(true);
@@ -124,9 +110,6 @@ void UTagManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComp
 	(void)ThisTickFunction;
 
 #if !UE_BUILD_SHIPPING
-	// Draw BEFORE the ASC null check so the panel shows a "No ASC" diagnostic
-	// even when Initialize() hasn't been called yet with a valid ASC.
-	// This lets developers see immediately whether the TagManager is wired up.
 	if (DebugManager.bEnableDebug)
 	{
 		DebugManager.DrawDebug(this, this);
@@ -138,20 +121,12 @@ void UTagManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComp
 		return;
 	}
 
-	// OPT-TAG: Flush coalesced attribute-change refreshes (dirty flag set by
-	// BindAttributeChangeDelegates callbacks). This replaces the old approach
-	// where every delegate callback immediately called RefreshBaseConditionTags(),
-	// which in heavy combat could fire 5-10x per frame for the same result.
 	if (bBaseConditionsDirty)
 	{
 		bBaseConditionsDirty = false;
 		RefreshBaseConditionTags();
 	}
 
-	// N-06 FIX: Only re-check movement/sprint state at a reduced cadence (100ms).
-	// Attribute-based conditions (health, mana, stamina) are now event-driven via
-	// GAS delegates bound in BindAttributeChangeDelegates(), so we don't need to
-	// poll them every frame here.
 	ConditionRefreshAccumulator += DeltaTime;
 	if (ConditionRefreshAccumulator >= TagManagerPrivate::ConditionRefreshInterval)
 	{
@@ -174,10 +149,6 @@ void UTagManager::Initialize(UAbilitySystemComponent* InASC)
 
 	ASC = InASC;
 
-	// Enable tick when ASC is valid for normal operation.
-	// Also keep tick enabled when debug is active so the panel can display a
-	// "No ASC available" diagnostic even before the ASC is wired up — this
-	// makes misconfigured characters immediately visible instead of silent.
 #if UE_BUILD_SHIPPING
 	SetComponentTickEnabled(ASC != nullptr);
 #else
@@ -194,11 +165,7 @@ void UTagManager::Initialize(UAbilitySystemComponent* InASC)
 
 	ApplyPendingStates();
 
-	// N-06 FIX: Bind GAS attribute-change delegates so resource conditions update
-	// reactively instead of being polled every frame.
 	BindAttributeChangeDelegates();
-
-	// Initial full refresh (establishes baseline state on first Init)
 	RefreshBaseConditionTags();
 }
 
@@ -365,10 +332,6 @@ void UTagManager::RefreshBaseConditionTags()
 		: HasTag(Tags.Condition_Sprinting);
 	SetTagState(Tags.Condition_Sprinting, bSprintRequested);
 
-	// N-07 FIX: Removed the self-referential "const bool bBlocking = HasTag(...); SetTagState(..., bBlocking);"
-	// pattern — reading the tag and immediately writing the same value back is a pure no-op.
-	// Condition_Self_IsBlocking must be set externally by the blocking ability / combat system.
-
 	const bool bInCombat = HasTag(Tags.Condition_InCombat)
 		|| HasTag(Tags.Condition_TakingDamage)
 		|| HasTag(Tags.Condition_DealingDamage)
@@ -439,10 +402,6 @@ const UHunterAttributeSet* UTagManager::GetHunterAttributeSet() const
 	return ASC ? ASC->GetSet<UHunterAttributeSet>() : nullptr;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Debug helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
 void UTagManager::SetTagDebugEnabled(bool bEnable)
 {
 #if UE_BUILD_SHIPPING
@@ -452,11 +411,8 @@ void UTagManager::SetTagDebugEnabled(bool bEnable)
 	const bool bWasEnabled = DebugManager.bEnableDebug;
 	DebugManager.bEnableDebug = bEnable;
 
-	// Keep tick alive whenever debug is on, even when ASC hasn't been set yet.
-	// When debug is turned off, fall back to ASC-driven tick control.
 	SetComponentTickEnabled(bEnable || ASC != nullptr);
 
-	// One extra DrawDebug pass with bEnableDebug=false clears stale messages.
 	if (bWasEnabled && !DebugManager.bEnableDebug)
 	{
 		DebugManager.DrawDebug(this, this);
@@ -475,14 +431,8 @@ bool UTagManager::GetOwnedTags(FGameplayTagContainer& OutTags) const
 	return true;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// N-06 FIX: Event-driven attribute refresh helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
 void UTagManager::RefreshMovementConditionTags()
 {
-	// Called at reduced cadence (100ms) from Tick; only handles movement/sprint
-	// because these require polling the character velocity / gait state.
 	if (!ASC)
 	{
 		return;
@@ -501,7 +451,6 @@ void UTagManager::RefreshMovementConditionTags()
 		: HasTag(Tags.Condition_Sprinting);
 	SetTagState(Tags.Condition_Sprinting, bSprintRequested);
 
-	// Keep InCombat/OutOfCombat updated here too (relies on tag state, not attribute polling)
 	const bool bInCombat = HasTag(Tags.Condition_TakingDamage)
 		|| HasTag(Tags.Condition_DealingDamage)
 		|| HasTag(Tags.Condition_RecentlyHit)
@@ -537,22 +486,18 @@ void UTagManager::BindAttributeChangeDelegates()
 		AttributeDelegateBindings.Add({ Attribute, Handle });
 	};
 
-	// Health
 	BindAttributeChange(UHunterAttributeSet::GetHealthAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxHealthAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveHealthAttribute());
 
-	// Mana
 	BindAttributeChange(UHunterAttributeSet::GetManaAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxManaAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveManaAttribute());
 
-	// Stamina
 	BindAttributeChange(UHunterAttributeSet::GetStaminaAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxStaminaAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveStaminaAttribute());
 
-	// Arcane Shield
 	BindAttributeChange(UHunterAttributeSet::GetArcaneShieldAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxArcaneShieldAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveArcaneShieldAttribute());

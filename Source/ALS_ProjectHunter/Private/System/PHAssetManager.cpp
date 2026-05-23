@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Pt9 Settings.
-
-
 #include "System/PHAssetManager.h"
 #include "PHGameplayTags.h"
 

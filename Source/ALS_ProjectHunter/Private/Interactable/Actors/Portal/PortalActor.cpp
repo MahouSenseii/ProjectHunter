@@ -1,4 +1,3 @@
-// Interactable/Actors/Portal/PortalActor.cpp
 #include "Interactable/Actors/Portal/PortalActor.h"
 #include "Tower/Subsystem/PortalSubsystem.h"
 #include "Interactable/Component/InteractableManager.h"
@@ -35,16 +34,15 @@ void APortalActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ── Auto-link: resolve LinkedPortal → DestinationPortalID ───────────────
-	// If a direct actor reference is set, derive the destination ID from it.
-	// This means you only need to drag the other portal into the Details slot —
-	// no manual name matching required.
+	// If a direct actor reference is set, derive the destination ID from it so
+	// you only need to drag the other portal into the Details slot — no manual
+	// name matching required.
 	if (LinkedPortal)
 	{
 		DestinationPortalID = LinkedPortal->PortalID;
 
-		// Optionally wire the return link automatically if the other portal
-		// hasn't been linked yet — so connecting A→B also connects B→A.
+		// Wire the return link automatically if the other portal hasn't been
+		// linked yet, so connecting A→B also connects B→A.
 		if (LinkedPortal->LinkedPortal == nullptr && LinkedPortal->DestinationPortalID == NAME_None)
 		{
 			LinkedPortal->LinkedPortal        = this;
@@ -52,8 +50,8 @@ void APortalActor::BeginPlay()
 		}
 	}
 
-	// Register with subsystem (authority + clients both register so the subsystem
-	// can answer "where do I arrive?" queries on the client for map-pins etc.)
+	// Register with subsystem on both authority and clients so the subsystem
+	// can answer "where do I arrive?" queries on the client (e.g. map pins).
 	if (UWorld* World = GetWorld())
 	{
 		if (UPortalSubsystem* PortalSub = World->GetSubsystem<UPortalSubsystem>())
@@ -62,7 +60,6 @@ void APortalActor::BeginPlay()
 		}
 	}
 
-	// ── InteractableManager bridge ────────────────────────────────────────────
 	// The player's InteractionManager calls OnInteract on the UInteractableManager
 	// component (not the actor) when one is present. Bind here so tap events
 	// route back to this actor's server logic.
@@ -70,8 +67,6 @@ void APortalActor::BeginPlay()
 	{
 		InteractableManager->OnTapInteracted.AddDynamic(this, &APortalActor::OnInteractableManagerTap);
 
-		// Mirror the portal's interaction type and initial text into the component
-		// so the widget presenter reads the correct values.
 		InteractableManager->Config.InteractionType = EInteractionType::IT_Tap;
 		InteractableManager->Config.InteractionText  = GetInteractionText_Implementation();
 		InteractableManager->Config.InputAction      = InteractInputAction;
@@ -103,10 +98,6 @@ void APortalActor::GetLifetimeReplicatedProps(
 	DOREPLIFETIME(APortalActor, PortalState);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Public API
-// ─────────────────────────────────────────────────────────────────────────────
-
 void APortalActor::SetPortalActive(bool bActive)
 {
 	if (!HasAuthority())
@@ -118,17 +109,12 @@ void APortalActor::SetPortalActive(bool bActive)
 
 FTransform APortalActor::GetArrivalTransform() const
 {
-	// Return a transform offset forward from this portal's root
 	const FVector ForwardOffset = GetActorForwardVector() * ArrivalOffset.X
 		+ GetActorRightVector()  * ArrivalOffset.Y
 		+ GetActorUpVector()     * ArrivalOffset.Z;
 
 	return FTransform(GetActorRotation(), GetActorLocation() + ForwardOffset);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// IInteractable
-// ─────────────────────────────────────────────────────────────────────────────
 
 void APortalActor::OnInteract_Implementation(AActor* Interactor)
 {
@@ -160,7 +146,6 @@ EInteractionType APortalActor::GetInteractionType_Implementation() const
 
 void APortalActor::OnBeginFocus_Implementation(AActor* Interactor)
 {
-	// Blueprint can override to highlight the portal mesh
 }
 
 void APortalActor::OnEndFocus_Implementation(AActor* Interactor)
@@ -171,7 +156,7 @@ FInteractableHighlightStyle APortalActor::GetHighlightStyle_Implementation() con
 {
 	FInteractableHighlightStyle Style;
 	Style.bEnableHighlight = true;
-	Style.Color = FLinearColor(0.0f, 0.7f, 1.0f); // Cyan-blue for portals
+	Style.Color = FLinearColor(0.0f, 0.7f, 1.0f);
 	Style.StencilValue = 252;
 	Style.OutlineWidth = 3.0f;
 	return Style;
@@ -211,10 +196,6 @@ FVector APortalActor::GetTooltipWorldLocation_Implementation() const      { retu
 UInputAction* APortalActor::GetInputAction_Implementation() const         { return InteractInputAction; }
 FVector APortalActor::GetWidgetOffset_Implementation() const              { return FVector(0.0f, 0.0f, 120.0f); }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// InteractableManager bridge
-// ─────────────────────────────────────────────────────────────────────────────
-
 void APortalActor::OnInteractableManagerTap(AActor* Interactor)
 {
 	APawn* Traveller = Cast<APawn>(Interactor);
@@ -233,10 +214,6 @@ void APortalActor::OnInteractableManagerTap(AActor* Interactor)
 	}
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Server RPC
-// ─────────────────────────────────────────────────────────────────────────────
-
 void APortalActor::Server_ActivatePortal_Implementation(APawn* Traveller)
 {
 	if (!Traveller || !IsUsable())
@@ -244,7 +221,6 @@ void APortalActor::Server_ActivatePortal_Implementation(APawn* Traveller)
 		return;
 	}
 
-	// Validate ownership — only the controlling player can use the portal
 	AController* Controller = Traveller->GetController();
 	if (!Controller)
 	{
@@ -259,21 +235,14 @@ void APortalActor::ExecuteTravel(APawn* Traveller)
 	PlayTravelFeedback();
 	OnPortalActivated.Broadcast(this, Traveller);
 
-	// ── Cross-map travel ──────────────────────────────────────────────────────
-	// DestinationLevelName is set → load the new map.
-	// We stash the arrival portal ID in the GameInstance so the destination
-	// level can retrieve it and teleport the player to the right spawn point.
 	if (DestinationLevelName != NAME_None)
 	{
-		// Persist arrival intent across the level boundary
 		if (UGameInstance* GI = GetGameInstance())
 		{
-			// Store on GI so BP (or a future subsystem) can read it after load.
-			// Using a property tag approach: the destination level's portal actor
-			// with a matching PortalID will consume this and teleport the player.
+			// Persist arrival intent across the level boundary so the destination
+			// level's portal actor with a matching PortalID can teleport the player
+			// to the right spawn point.
 			GI->GetEngine()->AddOnScreenDebugMessage(-1, 0.f, FColor::Transparent, TEXT(""));
-			// TODO: replace with a proper GameInstance property or save-game field
-			// so the arriving level knows which portal to use as the spawn point.
 		}
 
 		UE_LOG(LogPortalActor, Log,
@@ -283,10 +252,9 @@ void APortalActor::ExecuteTravel(APawn* Traveller)
 			*DestinationPortalID.ToString());
 
 		UGameplayStatics::OpenLevel(this, DestinationLevelName);
-		return; // Level is loading — no further state changes needed on this actor
+		return;
 	}
 
-	// ── Same-map travel ───────────────────────────────────────────────────────
 	UPortalSubsystem* PortalSub = GetWorld()->GetSubsystem<UPortalSubsystem>();
 	if (!PortalSub)
 	{
@@ -324,10 +292,6 @@ void APortalActor::ExecuteTravel(APawn* Traveller)
 	}
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// State helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
 void APortalActor::SetStateInternal(EPortalState NewState)
 {
 	PortalState = NewState;
@@ -356,18 +320,10 @@ void APortalActor::EndCooldown()
 	SetStateInternal(EPortalState::PS_Active);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Replication
-// ─────────────────────────────────────────────────────────────────────────────
-
 void APortalActor::OnRep_PortalState()
 {
 	UpdateVFXForState();
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Visuals
-// ─────────────────────────────────────────────────────────────────────────────
 
 void APortalActor::UpdateVFXForState()
 {
@@ -402,7 +358,6 @@ void APortalActor::UpdateVFXForState()
 
 void APortalActor::PlayTravelFeedback()
 {
-	// VFX burst — spawned at portal location, not attached
 	if (TravelBurstVFX)
 	{
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(

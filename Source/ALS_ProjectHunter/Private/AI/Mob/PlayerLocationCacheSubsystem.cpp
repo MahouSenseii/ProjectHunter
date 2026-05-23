@@ -1,6 +1,3 @@
-// AI/Mob/PlayerLocationCacheSubsystem.cpp
-// PH-8.1 — Player Location Cache Subsystem (skeleton)
-
 #include "AI/Mob/PlayerLocationCacheSubsystem.h"
 
 #include "Engine/World.h"
@@ -74,5 +71,4 @@ void UPlayerLocationCacheSubsystem::RefreshSnapshots()
 		Snapshots.Add(MoveTemp(Snap));
 	}
 
-	// TODO PH-8.3: handle seamless travel and possession churn explicitly.
 }

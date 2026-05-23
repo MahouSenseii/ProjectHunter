@@ -1,6 +1,3 @@
-// Copyright © 2025 MahouSensei
-// Author: Quentin Davis
-
 #include "AbilitySystem/HunterAbilitySystemComponent.h"
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystem/Effects/HunterGE_HealthRegen.h"
@@ -60,11 +57,9 @@ namespace HunterAbilitySystemComponentPrivate
 	}
 }
 
-// Define log category
 DEFINE_LOG_CATEGORY(LogHunterGAS);
 
 #if !UE_BUILD_SHIPPING
-// Console variable to toggle effect debugging
 static TAutoConsoleVariable<int32> CVarDebugEffects(
 	TEXT("Hunter.Debug.Effects"),
 	0,
@@ -75,7 +70,6 @@ static TAutoConsoleVariable<int32> CVarDebugEffects(
 	ECVF_Cheat
 );
 
-// Console variable for debug message duration
 static TAutoConsoleVariable<float> CVarDebugEffectsDuration(
 	TEXT("Hunter.Debug.EffectsDuration"),
 	3.0f,
@@ -486,7 +480,6 @@ void UHunterAbilitySystemComponent::EffectApplied(UAbilitySystemComponent* Abili
 	EffectAssetTags.Broadcast(TagContainer);
 
 #if !UE_BUILD_SHIPPING
-	// Show debug if enabled
 	if (CVarDebugEffects.GetValueOnGameThread() > 0)
 	{
 		ShowEffectDebug(EffectSpec, TagContainer);
@@ -523,7 +516,6 @@ void UHunterAbilitySystemComponent::StartSprintStaminaDegen()
 		return;
 	}
 
-	// N-13 FIX: Cache these values so TickSprintStaminaDegen does not re-query every tick.
 	CachedDegenRate   = FMath::Max(AttributeSet->GetStaminaDegenRate(), 0.f);
 	CachedDegenAmount = FMath::Max(AttributeSet->GetStaminaDegenAmount(), 0.f);
 	if (CachedDegenRate <= 0.f || CachedDegenAmount <= 0.f)
@@ -532,8 +524,6 @@ void UHunterAbilitySystemComponent::StartSprintStaminaDegen()
 		return;
 	}
 
-	// OPT-SPRINT: Pre-build the GE spec once at sprint start so TickSprintStaminaDegen
-	// only updates the SetByCaller magnitude instead of allocating context + spec 10x/sec.
 	if (SprintStaminaDrainGE)
 	{
 		FGameplayEffectContextHandle Context = MakeEffectContext();
@@ -572,7 +562,6 @@ void UHunterAbilitySystemComponent::StopSprintStaminaDegen()
 		World->GetTimerManager().ClearTimer(SprintStaminaDegenTimerHandle);
 	}
 
-	// OPT-SPRINT: Release cached spec — it holds refs to the context/effect CDO.
 	CachedSprintDrainSpec = FGameplayEffectSpecHandle();
 
 	if (bSprintDegenEffectTagApplied)
@@ -734,7 +723,6 @@ void UHunterAbilitySystemComponent::StopPassiveRegen()
 	StaminaRegenAccumulator      = 0.f;
 	ArcaneShieldRegenAccumulator = 0.f;
 
-	// Remove the RegenActive loose tags that were added in StartPassiveRegen.
 	const FPHGameplayTags& PHT = FPHGameplayTags::Get();
 	RemoveLooseGameplayTag(PHT.Effect_Health_RegenActive);
 	RemoveLooseGameplayTag(PHT.Effect_Mana_RegenActive);
@@ -791,9 +779,6 @@ void UHunterAbilitySystemComponent::TickPassiveRegen()
 		bAnyChanged = true;
 	};
 
-	// ── Health ────────────────────────────────────────────────────────────
-	// Gated by Effect.Health.RegenActive. Remove the tag to pause regen
-	// (e.g. a "CannotRegenHP" status GE can simply remove this loose tag).
 	if (HasMatchingGameplayTag(Tags.Effect_Health_RegenActive))
 	{
 		const float Rate = AS->GetHealthRegenRate();
@@ -808,7 +793,6 @@ void UHunterAbilitySystemComponent::TickPassiveRegen()
 				const float CurHealth = FMath::Max(AS->GetHealth(), 0.f);
 				const float MaxHealth = FMath::Max(AS->GetMaxEffectiveHealth(), 0.f);
 
-				// Do not regen a dead character.
 				if (CurHealth > 0.f)
 				{
 					ApplyHeal(Amount, CurHealth, MaxHealth,
@@ -827,8 +811,6 @@ void UHunterAbilitySystemComponent::TickPassiveRegen()
 		HealthRegenAccumulator = 0.f;
 	}
 
-	// ── Mana ──────────────────────────────────────────────────────────────
-	// Gated by Effect.Mana.RegenActive.
 	if (HasMatchingGameplayTag(Tags.Effect_Mana_RegenActive))
 	{
 		const float Rate = AS->GetManaRegenRate();
@@ -858,9 +840,6 @@ void UHunterAbilitySystemComponent::TickPassiveRegen()
 		ManaRegenAccumulator = 0.f;
 	}
 
-	// ── Stamina ───────────────────────────────────────────────────────────
-	// Gated by Effect.Stamina.RegenActive AND suppressed while sprinting
-	// (the degen timer is running and regen would fight it).
 	if (HasMatchingGameplayTag(Tags.Effect_Stamina_RegenActive) &&
 	    !HasMatchingGameplayTag(Tags.Condition_Sprinting))
 	{
@@ -893,8 +872,6 @@ void UHunterAbilitySystemComponent::TickPassiveRegen()
 		StaminaRegenAccumulator = 0.f;
 	}
 
-	// ── ArcaneShield ──────────────────────────────────────────────────────
-	// Gated by Effect.ArcaneShield.RegenActive.
 	if (HasMatchingGameplayTag(Tags.Effect_ArcaneShield_RegenActive))
 	{
 		const float Rate = AS->GetArcaneShieldRegenRate();
@@ -952,7 +929,6 @@ void UHunterAbilitySystemComponent::ShowEffectDebug(const FGameplayEffectSpec& E
 	const AActor* HunterActor = GetOwner();
 	const FString OwnerName = HunterActor ? HunterActor->GetName() : TEXT("Unknown");
     
-	// Get magnitude info
 	FString MagnitudeInfo;
 	for (const FGameplayModifierInfo& Modifier : EffectDef->Modifiers)
 	{
@@ -964,7 +940,6 @@ void UHunterAbilitySystemComponent::ShowEffectDebug(const FGameplayEffectSpec& E
 		}
 	}
 
-	// Build debug message (using ASCII for compatibility)
 	const FString DebugMessage = FString::Printf(
 		TEXT("[EFFECT APPLIED] %s\nEffect: %s\nTags: %s%s"),
 		*OwnerName,
@@ -973,7 +948,6 @@ void UHunterAbilitySystemComponent::ShowEffectDebug(const FGameplayEffectSpec& E
 		*MagnitudeInfo
 	);
 
-	// On-screen message
 	if (GEngine)
 	{
 		const float Duration = CVarDebugEffectsDuration.GetValueOnGameThread();
@@ -987,7 +961,6 @@ void UHunterAbilitySystemComponent::ShowEffectDebug(const FGameplayEffectSpec& E
 		);
 	}
 
-	// Console log if level 2+
 	if (DebugLevel >= 2)
 	{
 		UE_LOG(LogHunterGAS, Log, TEXT("%s"), *DebugMessage);

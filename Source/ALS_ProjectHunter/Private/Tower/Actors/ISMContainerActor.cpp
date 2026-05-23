@@ -1,5 +1,3 @@
-// World/Actor/ISMContainerActor.cpp
-
 #include "Tower/Actors/ISMContainerActor.h"
 #include "Components/SceneComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -10,14 +8,9 @@ AISMContainerActor::AISMContainerActor()
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	bReplicates = false;
 
-	// Create root component
 	RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
 	SetRootComponent(RootSceneComponent);
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// TICK — spin + bob all registered ground items
-// ═══════════════════════════════════════════════════════════════════════
 
 void AISMContainerActor::Tick(float DeltaTime)
 {
@@ -30,8 +23,6 @@ void AISMContainerActor::Tick(float DeltaTime)
 
 	AnimationTime += DeltaTime;
 
-	// Collect ISM components that get dirty this frame so we only call
-	// MarkRenderStateDirty once per component instead of once per instance.
 	TSet<UInstancedStaticMeshComponent*> DirtyISMs;
 
 	for (auto& Pair : AnimationStates)
@@ -45,18 +36,15 @@ void AISMContainerActor::Tick(float DeltaTime)
 		const float T = AnimationTime;
 		const float Phase = State.PhaseOffset;
 
-		// ── Bob (Z sine wave) ───────────────────────────────────────────
 		const float BobZ = BobAmplitudeCm * FMath::Sin(T * BobFrequencyHz * TWO_PI + Phase);
 		FVector AnimLocation = State.BaseLocation;
 		AnimLocation.Z += BobZ;
 
-		// ── Spin (Yaw only — preserves Pitch/Roll from flip + offset) ───
 		const float YawDeg = FMath::Fmod(T * SpinDegreesPerSecond + FMath::RadiansToDegrees(Phase), 360.0f);
 
 		FRotator AnimRotation(State.BasePitch, YawDeg, State.BaseRoll);
 		FTransform AnimTransform(AnimRotation, AnimLocation, FVector::OneVector);
 
-		// Update without marking dirty — batch the dirty call below
 		State.ISMComponent->UpdateInstanceTransform(
 			State.InstanceIndex,
 			AnimTransform,
@@ -67,16 +55,11 @@ void AISMContainerActor::Tick(float DeltaTime)
 		DirtyISMs.Add(State.ISMComponent);
 	}
 
-	// One render-state invalidation per ISM component (not per instance)
 	for (UInstancedStaticMeshComponent* ISM : DirtyISMs)
 	{
 		ISM->MarkRenderStateDirty();
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// ANIMATION REGISTRATION
-// ═══════════════════════════════════════════════════════════════════════
 
 void AISMContainerActor::RegisterItemForAnimation(
 	int32 ItemID,

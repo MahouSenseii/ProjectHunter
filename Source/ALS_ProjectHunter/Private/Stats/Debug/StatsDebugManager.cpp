@@ -460,10 +460,6 @@ void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<F
 
 	RegisterStats(StatsManager);
 
-	// SM-P1 NOTE: GatherStatDefinitions is called a second time here because RegisterStats
-	// calls it internally for sync, and BuildDisplayLines needs the definitions for the
-	// display loop. Eliminating this requires passing pre-gathered definitions into
-	// RegisterStats (future refactor).
 	TArray<FStatInitializationEntry> Definitions;
 	StatsManager->GatherStatDefinitions(Definitions);
 
@@ -504,8 +500,6 @@ void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<F
 				*(Definition ? Definition->Category.ToString() : Entry.Category.ToString()));
 		}
 
-		// Debug output groups on the parsed parent/subcategory path so "Vital|Health"
-		// shows as nested headers instead of collapsing into a single flattened bucket.
 		if (ParsedCategory.MainCategory != ActiveMainCategory)
 		{
 			OutLines.Add(StatsDebugPrivate::BuildMainCategoryHeader(ParsedCategory.MainCategory));
@@ -603,31 +597,21 @@ void FStatsDebugManager::DrawDebug(UStatsManager* StatsManager, UObject* WorldCo
 	{
 		ClearDrawnMessages();
 		LastLogUpdateTimeSeconds = -DBL_MAX;
-		// Clear the value cache so re-enabling always forces a full first draw.
 		CachedLiveValues.Reset();
 		return;
 	}
 
-	// ── Change detection ──────────────────────────────────────────────────
-	// Skip all work unless at least one tracked stat value actually moved.
-	// This also handles the first call per stat (cache miss → treated as changed).
 	const bool bValuesChanged = CheckForValueChanges(StatsManager);
 
-	// ── Screen draw ───────────────────────────────────────────────────────
 	if (bDrawToScreen && GEngine)
 	{
 		if (bValuesChanged || CachedDisplayLines.IsEmpty())
 		{
-			// Swap old lines out so we can diff against them after the rebuild.
 			TArray<FString> OldLines;
 			Swap(OldLines, CachedDisplayLines);
 
 			BuildDisplayLines(StatsManager, CachedDisplayLines, CachedLineColors);
 
-			// Messages are persistent (duration = 1 hour) — we overwrite them
-			// individually instead of expiring the whole set every refresh cycle.
-			// Only lines whose text changed are submitted to the engine, keeping
-			// the per-line flicker that occurs when an unchanged line is re-added.
 			constexpr float PersistentDuration = 3600.f;
 
 			for (int32 LineIndex = 0; LineIndex < CachedDisplayLines.Num(); ++LineIndex)
@@ -646,8 +630,6 @@ void FStatsDebugManager::DrawDebug(UStatsManager* StatsManager, UObject* WorldCo
 				GEngine->AddOnScreenDebugMessage(MessageKey, PersistentDuration, LineColor, CachedDisplayLines[LineIndex], false);
 			}
 
-			// Remove any stale lines left over from a longer previous build
-			// (e.g. a filter was applied and the list shrank).
 			for (int32 LineIndex = CachedDisplayLines.Num(); LineIndex < LastDrawnLineCount; ++LineIndex)
 			{
 				GEngine->RemoveOnScreenDebugMessage(static_cast<uint64>(BaseMessageKey + LineIndex));
@@ -661,9 +643,6 @@ void FStatsDebugManager::DrawDebug(UStatsManager* StatsManager, UObject* WorldCo
 		ClearDrawnMessages();
 	}
 
-	// ── Log output ────────────────────────────────────────────────────────
-	// Still rate-limited to avoid drowning the output log with every frame a
-	// value ticks (e.g. during active stamina drain).
 	if (bLogToOutput && bValuesChanged)
 	{
 		const UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
@@ -682,7 +661,6 @@ void FStatsDebugManager::LogDebug(UStatsManager* StatsManager)
 		return;
 	}
 
-	// Only log when something actually changed to avoid per-frame spam.
 	if (!CheckForValueChanges(StatsManager))
 	{
 		return;
@@ -729,8 +707,6 @@ bool FStatsDebugManager::CheckForValueChanges(UStatsManager* StatsManager)
 
 		if (!PreviousValue)
 		{
-			// First time seeing this stat — record it and flag as changed so the
-			// initial state is drawn.
 			CachedLiveValues.Add(Entry.StatName, CurrentValue);
 			bAnyChanged = true;
 		}
@@ -769,7 +745,5 @@ void FStatsDebugManager::ClearDrawnMessages()
 	LastDrawnLineCount = 0;
 	CachedDisplayLines.Reset();
 	CachedLineColors.Reset();
-	// Invalidate value cache so the next enable does a full first draw
-	// rather than silently skipping because "nothing changed".
 	CachedLiveValues.Reset();
 }

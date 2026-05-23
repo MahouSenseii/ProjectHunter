@@ -1,4 +1,3 @@
-// Character/Component/CombatStatusManager.cpp
 #include "Combat/Components/CombatStatusManager.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "AbilitySystemComponent.h"
@@ -11,10 +10,6 @@ UCombatStatusManager::UCombatStatusManager()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Apply functions
-// ─────────────────────────────────────────────────────────────────────────────
 
 FCombatStatusApplyResult UCombatStatusManager::ApplyBleed(AActor* Target, float DamagePerTick,
 	float Duration, AActor* Instigator)
@@ -85,7 +80,6 @@ FCombatStatusApplyResult UCombatStatusManager::ApplyFreeze(AActor* Target, float
 		PH_LOG_WARNING(LogCombatStatusManager, "ApplyFreeze failed: FreezeEffectClass was not configured.");
 		return {};
 	}
-	// Freeze uses no SetByCaller — it's a pure CC, magnitude is always 1
 	return ApplyDoTEffect(FreezeEffectClass, Target,
 		1.0f, NAME_None, Duration, Instigator);
 }
@@ -115,10 +109,6 @@ FCombatStatusApplyResult UCombatStatusManager::ApplyShock(AActor* Target, float 
 		ClampedFraction, CombatStatusSetByCallerTags::Shock_AmpFraction, Duration, Instigator);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Query
-// ─────────────────────────────────────────────────────────────────────────────
-
 bool UCombatStatusManager::IsBleeding(AActor* Target) const
 {
 	return BleedEffectClass && HasActiveEffect(Target, BleedEffectClass);
@@ -140,7 +130,6 @@ int32 UCombatStatusManager::GetPoisonStacks(AActor* Target) const
 	{
 		return 0;
 	}
-	// GetGameplayEffectCount returns the number of active stacks for the given GE class.
 	return ASC->GetGameplayEffectCount(PoisonEffectClass, nullptr);
 }
 
@@ -168,10 +157,6 @@ bool UCombatStatusManager::IsShocked(AActor* Target) const
 {
 	return ShockEffectClass && HasActiveEffect(Target, ShockEffectClass);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Removal
-// ─────────────────────────────────────────────────────────────────────────────
 
 void UCombatStatusManager::CureBleed(AActor* Target)
 {
@@ -249,10 +234,6 @@ void UCombatStatusManager::CleanseAll(AActor* Target)
 	RemoveShock(Target);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Internal helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
 FCombatStatusApplyResult UCombatStatusManager::ApplyDoTEffect(
 	TSubclassOf<UGameplayEffect> EffectClass,
 	AActor* Target,
@@ -284,7 +265,6 @@ FCombatStatusApplyResult UCombatStatusManager::ApplyDoTEffect(
 		return Result;
 	}
 
-	// Build effect context — tracks instigator for source-aggregated stacking
 	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
 	Context.AddInstigator(Instigator ? Instigator : GetOwner(), GetOwner());
 
@@ -296,13 +276,11 @@ FCombatStatusApplyResult UCombatStatusManager::ApplyDoTEffect(
 		return Result;
 	}
 
-	// Override duration
 	if (Duration > 0.0f)
 	{
 		SpecHandle.Data->SetDuration(Duration, true);
 	}
 
-	// Set magnitude via SetByCaller (skip if no tag provided — e.g., Freeze)
 	if (SetByCallerTag != NAME_None && SetByCallerValue != 0.0f)
 	{
 		const FGameplayTag GameplayTag = FGameplayTag::RequestGameplayTag(SetByCallerTag, false);
@@ -318,12 +296,6 @@ FCombatStatusApplyResult UCombatStatusManager::ApplyDoTEffect(
 		}
 	}
 
-	// Apply to target.
-	// BUG FIX: Must call ApplyGameplayEffectSpecToTarget on the SOURCE ASC, not the target.
-	// Calling TargetASC->ApplyGameplayEffectSpecToTarget(..., TargetASC) made the target
-	// the applier of its own effect, breaking source-aggregated stacking and network
-	// prediction ownership. The spec context (instigator) is already correct because it
-	// was built from SourceASC->MakeEffectContext().
 	FActiveGameplayEffectHandle ActiveHandle =
 		SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 
@@ -350,7 +322,6 @@ void UCombatStatusManager::RemoveEffectByClass(AActor* Target,
 		return;
 	}
 
-	// Use class-based removal to strip all stacks of the given GE class.
 	ASC->RemoveActiveGameplayEffectBySourceEffect(EffectClass, nullptr, -1);
 
 	UE_LOG(LogCombatStatusManager, Log,

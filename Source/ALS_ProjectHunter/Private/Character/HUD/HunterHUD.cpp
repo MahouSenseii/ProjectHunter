@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Character/HUD/HunterHUD.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
@@ -12,45 +10,34 @@
 
 DEFINE_LOG_CATEGORY(LogHunterHUD);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AHUD overrides
-// ─────────────────────────────────────────────────────────────────────────────
-
 void AHunterHUD::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ── Tooltip widget ────────────────────────────────────────────────────
 	if (ItemTooltipWidgetClass && GetWorld())
 	{
 		ItemTooltipWidget = CreateWidget<UItemTooltipWidget>(GetWorld(), ItemTooltipWidgetClass);
 		if (ItemTooltipWidget)
 		{
-			ItemTooltipWidget->AddToViewport(100);  // High Z-order — always on top
+			ItemTooltipWidget->AddToViewport(100);
 			ItemTooltipWidget->SetVisibility(ESlateVisibility::Hidden);
 		}
 	}
 
-	// ── Stat widgets ──────────────────────────────────────────────────────
 	CreateStatWidgets();
 
-	// ── Pawn-change delegate: handles respawn / repossession ──────────────
+	// If the pawn is already possessed at BeginPlay (e.g. instant-spawn game mode),
+	// bind immediately without waiting for the first delegate fire.
 	if (APlayerController* PC = GetOwningPlayerController())
 	{
 		PC->OnPossessedPawnChanged.AddDynamic(this, &AHunterHUD::HandlePawnChanged);
 
-		// If the pawn is already possessed at BeginPlay (e.g. instant-spawn game mode),
-		// bind immediately without waiting for the first delegate fire.
 		if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(PC->GetPawn()))
 		{
 			BindWidgetsToCharacter(Character);
 		}
 	}
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tooltip management
-// ─────────────────────────────────────────────────────────────────────────────
 
 void AHunterHUD::ShowItemTooltip(UItemInstance* Item, FVector2D ScreenPosition)
 {
@@ -77,10 +64,6 @@ void AHunterHUD::ShowMashProgressWidget(const FText& Text, int32 INT32)
 void AHunterHUD::HideMashProgressWidget()
 {
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Private helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 void AHunterHUD::CreateStatWidgets()
 {
@@ -130,7 +113,6 @@ void AHunterHUD::BindWidgetsToCharacter(APHBaseCharacter* Character)
 {
 	if (!Character)
 	{
-		// Pawn was unpossessed (death / menu) — release all bindings cleanly.
 		if (HealthWidget)       { HealthWidget->ReleaseCharacter();       }
 		if (StaminaWidget)      { StaminaWidget->ReleaseCharacter();      }
 		if (ManaWidget)         { ManaWidget->ReleaseCharacter();         }

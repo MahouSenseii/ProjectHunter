@@ -1,4 +1,3 @@
-// Item/Moveset/MovesetData.cpp
 #include "Item/Moveset/MovesetData.h"
 #include "Curves/CurveFloat.h"
 

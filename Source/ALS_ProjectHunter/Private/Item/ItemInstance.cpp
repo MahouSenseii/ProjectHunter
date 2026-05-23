@@ -1,5 +1,3 @@
-// Item/ItemInstance.cpp
-
 #include "Item/ItemInstance.h"
 
 #include "Item/ItemInitializationHandler.h"
