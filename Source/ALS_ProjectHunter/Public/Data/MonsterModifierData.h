@@ -1,13 +1,5 @@
 // Data/MonsterModifierData.h
-// Monster Modifier System — global spawn config data asset.
-//
-// UMonsterSpawnConfig is defined here — one per game, referenced by GameMode or
-// WorldSettings. It controls tier spawn chances, mod counts, and pack sizes.
-//
-// All enum and struct types (EMonsterTier, EMonsterModType, FMonsterStatOverride,
-// FMonsterModRow) have been moved to AI/Library/MobEnumLibrary.h and
-// AI/Library/MobStructs.h to break the circular include that previously forced
-// every system needing EMonsterTier to pull in the full data-asset header.
+
 #pragma once
 
 #include "CoreMinimal.h"

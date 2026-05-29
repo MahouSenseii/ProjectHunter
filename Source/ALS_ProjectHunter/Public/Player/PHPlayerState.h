@@ -1,12 +1,5 @@
 // PHPlayerState.h
-//
-// Session-scoped player state. Lives on the server and replicates to all clients.
-// Holds only data that is relevant for the current session/run.
-//
-// Permadeath contract:
-//   - On death: everything here is discarded. The save file is written first.
-//   - Save file owns: HighestFloor, LifetimeKills, Stash.
-//   - This class owns: CurrentFloor, RunKills (current run only), CharacterSlotName.
+
 #pragma once
 
 #include "CoreMinimal.h"

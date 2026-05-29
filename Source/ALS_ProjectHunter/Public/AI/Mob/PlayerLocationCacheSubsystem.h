@@ -1,16 +1,5 @@
 // AI/Mob/PlayerLocationCacheSubsystem.h
-// PH-8.1 — Player Location Cache Subsystem (skeleton)
-//
-// OWNER:    Single shared snapshot of player pawn locations for spawn systems.
-// HELPERS:  None. Pure cache; refreshed on a configurable cadence.
-// LISTENERS: Spawn managers (AMobManagerActor and any other density/budget
-//           system) consume snapshots through GetPlayerSnapshots() instead
-//           of iterating GetPlayerControllerIterator() themselves.
-//
-// Roadmap tickets:
-//   PH-8.1 add subsystem (this file)
-//   PH-8.2 replace direct pawn iteration in spawn managers with this cache
-//   PH-8.3 cache invalidation + multiplayer correctness pass
+
 
 #pragma once
 

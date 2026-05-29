@@ -1,5 +1,4 @@
 // Loot/Library/LootFunctionLibrary.h
-// Loot/Library/LootFunctionLibrary.h
 #pragma once
 
 #include "CoreMinimal.h"
@@ -10,14 +9,7 @@
 
 /**
  * ULootFunctionLibrary - Static utility functions for loot system
- * 
- * SINGLE RESPONSIBILITY: Provide stateless utility functions
- * 
- * Provides:
- * - Rarity conversions and display
- * - Loot table validation
- * - Weight calculations
- * - Corruption utilities
+
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API ULootFunctionLibrary : public UBlueprintFunctionLibrary

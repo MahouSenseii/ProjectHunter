@@ -1,19 +1,5 @@
 // Character/Component/Interaction/InteractionWidgetPresenter.h
-// PH-4.3 — Owns all widget state and presentation logic for UInteractionManager.
-//
-// OWNER:    Widget instance lifecycle (screen HUD + world-space ground item widget),
-//           post-process outline/highlight for focused interactables.
-//           Follows the embedded-USTRUCT sub-manager pattern established in this codebase.
-//
-// What InteractionManager must NOT do after PH-4.3:
-//   × Create, position, or destroy UInteractableWidget or UWidgetComponent instances.
-//   × Read or write UMaterialInstanceDynamic outline parameters directly.
-//   × Compute screen-space positions for ground-item widgets.
-//
-// Usage:
-//   1. Declare as UPROPERTY(EditAnywhere, ..., meta=(ShowOnlyInnerProperties)) on UInteractionManager.
-//   2. Call Initialize(this, GetWorld()) from UInteractionManager::InitializeWidget().
-//   3. Delegate all widget/highlight calls to this presenter.
+
 
 #pragma once
 

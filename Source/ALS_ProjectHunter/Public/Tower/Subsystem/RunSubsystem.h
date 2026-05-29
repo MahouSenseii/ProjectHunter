@@ -1,27 +1,5 @@
 // Tower/Subsystem/RunSubsystem.h
-// Tracks the state of the active roguelite run across floor loads.
-//
-// WHY GameInstanceSubsystem?
-//   Floor number and session metadata must survive level transitions — each floor
-//   is a separate load. UWorldSubsystem is torn down on every floor change, so
-//   UGameInstanceSubsystem is used instead; it persists for the lifetime of the
-//   game instance.
-//
-// OWNER:    Current floor number, run-active flag, session metadata.
-//
-// What this subsystem must NOT own:
-//   × Character stats       — lives on StatsManager / HunterAttributeSet.
-//   × Inventory / equipment — lives on their own managers.
-//   × Any direct reference to the player character.
-//
-// Lifecycle:
-//   • StartRun()      — called when the player enters the tower (floor 1).
-//   • AdvanceFloor()  — called by PortalActor when a floor is cleared.
-//   • EndRun()        — called on player death; broadcasts session data then resets.
-//
-// Listeners:
-//   • FloorManagerActor  → binds OnFloorAdvanced to trigger DA generation.
-//   • End-of-run HUD     → binds OnRunEnded for the summary screen.
+
 
 #pragma once
 

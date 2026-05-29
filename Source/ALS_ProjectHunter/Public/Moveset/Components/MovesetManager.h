@@ -1,8 +1,5 @@
 // Character/Component/MovesetManager.h
-// Manages weapon movesets — PoE1-style skill sockets.
-// Lives on APHBaseCharacter.  Listens to EquipmentManager for weapon changes,
-// grants/revokes GAS abilities when a moveset is socketed/unsocketed, and
-// provides the corruption and XP-leveling APIs.
+
 #pragma once
 
 #include "CoreMinimal.h"

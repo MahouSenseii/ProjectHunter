@@ -1,17 +1,5 @@
 // Character/Component/CharacterSystemCoordinatorComponent.h
-// PH-0.1 — Character System Coordinator
-//
-// OWNER:    Cross-system bootstrap and listener wiring for character managers.
-// HELPERS:  None. Pure orchestration; no gameplay logic lives here.
-// LISTENERS: This component IS the listener boundary. Managers bind to each
-//            other exclusively through this coordinator — never directly.
-//
-// Completed tickets:
-//   PH-0.1 skeleton
-//   PH-0.2 manager discovery (CacheManagerReferences)
-//   PH-0.3 cross-manager listener binding (BindCrossSystemListeners)
-//   PH-0.4 PHBaseCharacter creates this component (see PHBaseCharacter.cpp)
-//   PH-0.5 idempotent wiring — never double-wires on late join / possession churn
+
 
 #pragma once
 

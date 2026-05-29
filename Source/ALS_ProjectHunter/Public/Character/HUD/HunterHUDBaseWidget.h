@@ -11,17 +11,6 @@ class APHBaseCharacter;
 
 /**
  * Abstract base for all player-stat HUD widgets.
- *
- * Lifecycle:
- *   AHunterHUD creates the widget and calls InitializeForCharacter() once the
- *   local pawn is ready.  On pawn change (respawn / repossession) the HUD calls
- *   ReleaseCharacter() followed by InitializeForCharacter() with the new pawn so
- *   all delegate handles are cleanly swapped over.
- *
- * Subclassing:
- *   Override NativeInitializeForCharacter() to bind to GAS attribute delegates or
- *   component delegates.  Override NativeReleaseCharacter() to remove those handles.
- *   Use the BlueprintImplementableEvent hooks to drive the actual UMG visuals in BP.
  */
 UCLASS(Abstract, BlueprintType, Blueprintable)
 class ALS_PROJECTHUNTER_API UHunterHUDBaseWidget : public UUserWidget

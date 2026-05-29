@@ -1,5 +1,5 @@
 // Loot/Library/LootEnum.h
-// Loot/Library/LootEnum.h
+
 #pragma once
 
 #include "CoreMinimal.h"

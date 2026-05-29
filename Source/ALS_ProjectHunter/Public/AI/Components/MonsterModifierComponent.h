@@ -1,7 +1,5 @@
 // Character/Component/MonsterModifierComponent.h
-// Applies FMonsterModRow entries to the owning enemy at spawn.
-// Add this component to enemy Blueprint classes.
-// Call RollAndApplyMods() from BeginPlay (or from the spawner after setting AreaLevel).
+
 #pragma once
 
 #include "CoreMinimal.h"

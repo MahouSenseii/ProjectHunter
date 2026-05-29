@@ -1,15 +1,5 @@
 // Interactable/Actors/Portal/PortalActor.h
-// Interactable portal that fast-travels the activating player to a registered destination.
-//
-// FLOW:
-//   1. Place APortalActor in a level.  Set PortalID and DestinationPortalID in the Details panel.
-//   2. At BeginPlay the actor registers itself with UPortalSubsystem::RegisterPortal().
-//   3. Player approaches and interacts (tap) → ServerActivate RPC fires on authority.
-//   4. Authority asks UPortalSubsystem for the destination portal's spawn transform.
-//   5. APlayerController::ClientTravel() (same-map) or SeamlessTravel (cross-map) moves the player.
-//
-// For now only same-map travel is implemented.  Cross-map travel requires a
-// session/level-streaming layer that can be added later.
+
 #pragma once
 
 #include "CoreMinimal.h"

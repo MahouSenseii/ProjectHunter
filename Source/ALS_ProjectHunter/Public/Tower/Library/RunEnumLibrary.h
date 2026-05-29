@@ -1,7 +1,5 @@
 // Tower/Library/RunEnumLibrary.h
-// Shared enums for the roguelite run system.
-// Include this alone when you only need to branch on run state
-// without pulling in the full subsystem.
+
 
 #pragma once
 

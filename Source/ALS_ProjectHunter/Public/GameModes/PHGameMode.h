@@ -1,12 +1,5 @@
 // PHGameMode.h
-// Game mode for Project Hunter.
-//
-// Inherits from AGameMode (not AGameModeBase) to get match-state management,
-// spectating, seamless travel support, and proper player spawn rules — all
-// required foundations for the eventual multiplayer transition.
-//
-// Currently single-player, but the multiplayer hooks are in place so the
-// migration is as painless as possible when the time comes.
+
 #pragma once
 
 #include "CoreMinimal.h"

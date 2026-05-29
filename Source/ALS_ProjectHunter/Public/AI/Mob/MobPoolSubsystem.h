@@ -1,29 +1,5 @@
 // AI/Mob/MobPoolSubsystem.h
-// World subsystem that manages per-class pools of mob actors.
-//
-// ─── WHY ────────────────────────────────────────────────────────────────────
-//   SpawnActor + Destroy is expensive: constructing UObjects, initializing
-//   components, running BeginPlay, and then tearing it all down every death
-//   creates GC pressure and frame spikes, especially with dozens of mobs.
-//
-//   The pool keeps "dead" actors hidden and inert.  When the manager needs a
-//   new mob, we teleport + reinitialize an existing one instead of spawning
-//   from scratch — roughly 10× cheaper on a warm pool.
-//
-// ─── USAGE ──────────────────────────────────────────────────────────────────
-//   // Acquire (creates if pool is empty)
-//   APHBaseCharacter* Mob = GetWorld()->GetSubsystem<UMobPoolSubsystem>()
-//       ->Acquire(MobClass, SpawnLoc, SpawnRot);
-//
-//   // Return when dead / no longer needed
-//   GetWorld()->GetSubsystem<UMobPoolSubsystem>()->Release(Mob);
-//
-// ─── NOTES ──────────────────────────────────────────────────────────────────
-//   • The subsystem does NOT own the actors — they live in the world like any
-//     other AActor.  The pool just keeps weak references.
-//   • Release() hides the actor, disables collision/AI, and strips GAS state.
-//   • Acquire() re-enables everything and calls a virtual reinit hook.
-//   • MaxPoolSizePerClass prevents unbounded memory use from idle actors.
+
 #pragma once
 
 #include "CoreMinimal.h"

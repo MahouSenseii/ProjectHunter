@@ -1,9 +1,5 @@
 // AI/Library/MobEnumLibrary.h
-// All enums for the Mob Manager / Spawner / Modifier system.
-//
-// Dependency rule: no project includes — only CoreMinimal.
-// Include this alone when you need to pass or switch on mob / spawn enums
-// without pulling in the full manager, rules, or data-asset headers.
+
 
 #pragma once
 

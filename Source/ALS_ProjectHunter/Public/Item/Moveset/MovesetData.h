@@ -1,6 +1,4 @@
 // Item/Moveset/MovesetData.h
-// Data asset that defines one weapon moveset (set of abilities + leveling curve).
-// Create one asset per moveset in the editor and reference it via FMovesetInstance.
 #pragma once
 
 #include "CoreMinimal.h"

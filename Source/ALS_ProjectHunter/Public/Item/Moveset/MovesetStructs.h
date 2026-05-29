@@ -1,9 +1,5 @@
 // Item/Moveset/MovesetStructs.h
-// Weapon Moveset System — PoE1-style skill sockets on weapons.
-// Movesets are equippable skill packages that grant abilities when
-// socketed into a compatible weapon.  They level independently,
-// accumulate XP from kills, and can be corrupted (fixed state,
-// but potentially with a bonus corruption outcome).
+
 #pragma once
 
 #include "CoreMinimal.h"

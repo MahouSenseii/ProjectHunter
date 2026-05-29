@@ -8,11 +8,10 @@
 #include "Stats/Components/StatsManager.h"
 #include "Components/BoxComponent.h"
 #include "NavigationSystem.h"
-#include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
-#include "Engine/OverlapResult.h"
+
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"

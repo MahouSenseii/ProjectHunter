@@ -11,17 +11,7 @@ class UCharacterProgressionManager;
 
 /**
  * HUD widget that tracks the player's XP and level via UCharacterProgressionManager.
- *
- * Data flow:
- *   AHunterHUD calls InitializeForCharacter() → NativeInitializeForCharacter() binds
- *   to the character's ProgressionManager OnXPGained and OnLevelUp delegates.
- *   On pawn change (respawn / repossession) the binding is released and re-established
- *   automatically through the base class lifecycle.
- *
- * Blueprint implementation:
- *   Implement OnXPBarUpdated   — drive the XP progress bar (CurrentXP / XPToNextLevel).
- *   Implement OnLevelUpEffect  — trigger level-up animation / fanfare.
- *   Use GetCurrentLevel / GetCurrentXP / GetXPToNextLevel for data-binding.
+
  */
 UCLASS(BlueprintType, Blueprintable)
 class ALS_PROJECTHUNTER_API UHunterHUD_XPWidget : public UHunterHUDBaseWidget

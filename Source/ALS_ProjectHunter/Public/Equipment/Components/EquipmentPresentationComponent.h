@@ -1,17 +1,5 @@
 // Character/Component/EquipmentPresentationComponent.h
-// PH-1.4 — Equipment Presentation Component (complete)
-//
-// OWNER:    Visual / runtime-actor side of equipment.
-// HELPERS:  Calls helpers in ItemStructs for socket resolution and attachment.
-//           Does NOT own gameplay state; purely cosmetic + runtime-actor lifecycle.
-// LISTENERS: Bound by UCharacterSystemCoordinatorComponent to
-//            UEquipmentManager::OnEquipmentChanged.
-//            Re-broadcasts as OnWeaponUpdated for downstream visual systems
-//            (FX, anim, moveset cosmetic hooks).
-//
-// Completed tickets:
-//   PH-1.3 skeleton
-//   PH-1.4 migrate attached-mesh / runtime-actor / socket / cleanup from UEquipmentManager
+
 
 #pragma once
 
@@ -35,13 +23,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	UItemInstance*, NewItem);
 
 /**
- * UEquipmentPresentationComponent
- *
- * Owns the visual side of equipment: attached meshes, runtime weapon actors,
- * socket resolution, and cleanup. UEquipmentManager must NOT touch
- * USkeletalMeshComponent or spawn/destroy weapon actors after PH-1.4.
- *
- * Entry-point: HandleEquipmentChanged() — bound by the coordinator.
+ * UEquipmentPresentationComponent.
  */
 UCLASS(ClassGroup = (ProjectHunter), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UEquipmentPresentationComponent : public UActorComponent

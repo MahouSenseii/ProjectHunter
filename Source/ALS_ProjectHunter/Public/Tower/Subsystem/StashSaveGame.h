@@ -1,9 +1,5 @@
 // Tower/Subsystem/StashSaveGame.h
-//
-// OPT-SAVE: Minimal save-game objects for the lazy-loading stash system.
-// Each stash tab gets its own save slot; handles are saved in a separate slot.
-// Item data is serialized as raw bytes via FObjectAndNameAsStringProxyArchive so
-// UItemInstance UObjects (with their SaveGame UPROPERTYs) survive round-tripping.
+
 #pragma once
 
 #include "CoreMinimal.h"

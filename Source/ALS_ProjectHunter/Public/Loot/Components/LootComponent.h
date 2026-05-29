@@ -14,25 +14,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogLootComponent, Log, All);
 
 /**
  * ULootComponent - Per-actor loot configuration
- * 
- * SINGLE RESPONSIBILITY: Hold actor-specific loot config and delegate to subsystem
- * 
- * DESIGN:
- * - Lightweight component (no generation logic)
- * - Stores source ID and spawn settings
- * - Delegates to LootSubsystem for actual generation
- * - Provides convenient actor-level API
- * 
- * USAGE:
- *   // On NPC Blueprint
- *   UPROPERTY()
- *   ULootComponent* LootComp;
- *   
- *   // Set source ID in editor
- *   LootComp->SourceID = "Goblin_Basic";
- *   
- *   // On death
- *   LootComp->DropLoot();
  */
 UCLASS(ClassGroup = (Loot), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API ULootComponent : public UActorComponent

@@ -1,30 +1,5 @@
 // AI/Mob/MobManagerActor.h
-// Placeable actor that manages a pool of enemies within a defined box area.
-//
-// ─── HOW TO USE ──────────────────────────────────────────────────────────────
-//   1. Drag BP_MobManager (child Blueprint) into the level.
-//   2. Set MobTypes array: add each enemy class + weight + optional cooldown.
-//   3. Resize the BoxComponent (SpawnArea) to cover the area you want.
-//   4. Ensure a NavMeshBoundsVolume covers the same region.
-//   5. Play — the manager ticks on SpawnInterval, filling up to MaxNumOfMobs.
-//
-// ─── SPAWN PIPELINE ──────────────────────────────────────────────────────────
-//   SpawnTick → CleanActiveMobs → population check
-//     → TrySpawnMob → weighted class selection
-//       → loop MaxSpawnAttempts:
-//           GetRandomSpawnLocation → NavMesh project → ground trace
-//           → HiddenSpawn (actor created hidden, no collision, AI off)
-//           → ValidateSpawnPoint (collision, distance, ground checks)
-//           → FinalizeSpawn  OR  destroy & retry
-//
-// ─── AI WANDER INTEGRATION ───────────────────────────────────────────────────
-//   Spawned mobs receive HomeLocation + WanderRadius via IMobWanderable.
-//   The Blueprint AI Controller reads those values to pick move targets.
-//   No C++ AI is required — set it all up in Blueprint.
-//
-// ─── MONSTER MODIFIER INTEGRATION ───────────────────────────────────────────
-//   If the spawned actor has a UMonsterModifierComponent, the manager sets
-//   AreaLevel and optionally ForcedTier before calling RollAndApplyMods.
+
 #pragma once
 
 #include "CoreMinimal.h"

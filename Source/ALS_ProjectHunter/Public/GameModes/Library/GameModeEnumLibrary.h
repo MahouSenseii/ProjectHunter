@@ -1,9 +1,5 @@
 // GameModes/Library/GameModeEnumLibrary.h
-// Enums for the PHGameState match management system.
-//
-// Dependency rule: no project includes — only CoreMinimal.
-// Include this alone when you need EPHMatchPhase without pulling in
-// the full APHGameState or AGameState hierarchy.
+
 
 #pragma once
 

@@ -10,9 +10,7 @@
 
 /**
  * Affix Tier - Different power levels of same affix
- * PoE2 Style: Higher tier = better stats, higher item level requirement
  * 
- * Example:
  * "Increased Physical Damage"
  *   Tier 1 (iLvl 1-10):   10-20%
  *   Tier 2 (iLvl 11-25):  21-35%

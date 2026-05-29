@@ -1,9 +1,5 @@
 // PHGameState.h
-//
-// N-02 FIX: Centralized replicated world state for match management.
-// Holds data that all clients need: match phase, elapsed time, global events.
-// Single-player uses this too — it provides a clean access point for world-level
-// queries without coupling to GameMode (which only exists on the server).
+
 #pragma once
 
 #include "CoreMinimal.h"

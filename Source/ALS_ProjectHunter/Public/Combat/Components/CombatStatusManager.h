@@ -1,29 +1,5 @@
 // Character/Component/CombatStatusManager.h
-// Convenience layer over GAS for applying Damage-over-Time effects.
-//
-// SETUP — Required GE assets (create in Content/GAS/Effects/DoT/):
-//   GE_DoT_Bleed   — HasDuration, Periodic tick, SetByCaller tag "DoT.Bleed.DamagePerTick"
-//   GE_DoT_Ignite  — HasDuration, Periodic tick, SetByCaller tag "DoT.Ignite.DamagePerTick"
-//   GE_DoT_Poison  — HasDuration, Periodic tick, SetByCaller tag "DoT.Poison.DamagePerTick"
-//                    Stacks: add duration (PoE-style)
-//   GE_DoT_Chill   — HasDuration, no tick, applies movement speed reduction
-//                    SetByCaller tag "DoT.Chill.Magnitude" (0.0 – 1.0 slow fraction)
-//   GE_DoT_Freeze  — HasDuration, removes control (root/stun GE), no tick
-//   GE_DoT_Shock   — HasDuration, no tick, amplifies incoming damage
-//                    SetByCaller tag "DoT.Shock.Magnitude" (0.0 – 0.5 amp fraction)
-//
-// STACKING:
-//   Bleed  — StackingType = AggregateBySource (each hit = separate stack, PoE1-style)
-//   Ignite — StackingType = AggregateBySource, Duration refresh on new apply
-//   Poison — StackingType = AggregateByTarget (all poisons share a stack counter)
-//   Chill  — StackingType = None (highest magnitude wins; handled by GE)
-//   Freeze — StackingType = None (refreshes duration)
-//   Shock  — StackingType = None (highest magnitude wins)
-//
-// CONDITION TAGS:
-//   Each GE asset should grant the corresponding Condition_Self_* tag from
-//   FPHGameplayTags so the HUD, behaviour tree and code conditions work
-//   automatically (e.g., Condition_Self_Bleeding, Condition_Self_Burned).
+
 #pragma once
 
 #include "CoreMinimal.h"

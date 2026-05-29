@@ -1,10 +1,5 @@
 // AI/Mob/MobSpawnConditionEvaluator.h
-// Stateless helper that evaluates FMobSpecialSpawnRule rows for AMobManagerActor.
-//
-// Lives in its own class (rather than inline on the manager) because:
-//   1. MobManagerActor.cpp is already ~1.4k lines — avoid adding more bloat.
-//   2. Keeps trigger-evaluation logic unit-testable in isolation.
-//   3. Matches the "split helpers" pattern from the project coding standards.
+
 #pragma once
 
 #include "CoreMinimal.h"

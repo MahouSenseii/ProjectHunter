@@ -1,19 +1,5 @@
 // Tower/Subsystem/PortalSubsystem.h
-// Lightweight registry that maps PortalIDs to APortalActor pointers.
-//
-// WHY a separate subsystem?
-//   APortalActor instances need to find each other by ID at runtime without
-//   iterating all actors every time.  UPortalSubsystem provides an O(1) TMap
-//   lookup and acts as the single source of truth for what portals exist in
-//   the current level.
-//
-// Lifecycle:
-//   • APortalActor::BeginPlay  → RegisterPortal()
-//   • APortalActor::EndPlay    → UnregisterPortal()
-//   • Portal finds destination → FindPortal()
-//
-// UWorldSubsystem is used (not UGameInstanceSubsystem) because portals are
-// level-bound.  The registry clears automatically when the world is torn down.
+
 #pragma once
 
 #include "CoreMinimal.h"

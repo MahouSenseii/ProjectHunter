@@ -1,17 +1,5 @@
 // Item/WeaponPlacementActor.h
-//
-// Editor-placeable item for "this weapon always lives at this exact spot."
-//
-// Drop one of these in a level, point its BaseItemHandle at any row in your
-// item DataTable, and on BeginPlay it will create a fresh UItemInstance and
-// register it with UGroundItemSubsystem at this actor's transform.  From the
-// player's perspective the item is indistinguishable from a dropped loot
-// item — same ISM rendering, same spin/bob, same pickup flow through
-// FGroundItemPickupManager.
-//
-// Use this for fixed-location pickups (tutorial weapons, quest rewards,
-// shrine offerings, etc.) without needing a chest, container, or any custom
-// pickup logic.
+
 
 #pragma once
 

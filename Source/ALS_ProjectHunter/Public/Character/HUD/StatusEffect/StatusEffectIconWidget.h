@@ -1,16 +1,5 @@
 // Character/HUD/StatusEffect/StatusEffectIconWidget.h
-// Single status-effect icon displayed in the strip:  [Icon] [Duration text]
-//
-// USAGE IN UMG:
-//   Create a Blueprint child of this class.  In the Blueprint event graph:
-//   • BP_OnIconDataSet(IconTexture, RemainingTime, bIsBuff) — update Image widget,
-//     time text, and tint the border accordingly.
-//   • BP_OnTimeUpdate(RemainingTime, Progress) — animate the radial/sweep bar.
-//   • BP_OnEffectExpired() — play a fade-out animation before RemoveFromParent.
-//
-// The C++ layer polls GAS each tick to update remaining time.  The Blueprint
-// layer is responsible for ALL visuals; no assumptions about widget hierarchy.
-#pragma once
+
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"

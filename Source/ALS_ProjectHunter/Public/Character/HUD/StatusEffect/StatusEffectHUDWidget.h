@@ -1,31 +1,5 @@
 // Character/HUD/StatusEffect/StatusEffectHUDWidget.h
-// Horizontal strip of UStatusEffectIconWidgets that reflects active GEs.
-//
-// ARCHITECTURE:
-//   This widget extends UHunterHUDBaseWidget so AHunterHUD can manage its
-//   lifetime with the same BindWidgetsToCharacter / HandlePawnChanged flow
-//   as the existing stat widgets.
-//
-// HOW IT WORKS:
-//   1. NativeInitializeForCharacter() subscribes to ASC's GE added/removed
-//      delegates.
-//   2. When a tagged GE is added, a UStatusEffectIconWidget is created and
-//      added to the UHorizontalBox (or whatever container BP provides via
-//      the IconContainerSlot binding).
-//   3. When the GE is removed (or the icon's BP_OnEffectExpired fires),
-//      the icon is removed from the container.
-//
-// BLUEPRINT SETUP:
-//   - Create a WBP_StatusEffectHUD Blueprint child.
-//   - Add a UHorizontalBox named "IconContainer" to your layout.
-//   - Set IconWidgetClass to your WBP_StatusEffectIcon Blueprint child.
-//   - Override BP_GetIconForEffect to return the right texture per tag.
-//   - Set IconContainerSlotName to "IconContainer".
-//
-// TAG FILTERING:
-//   Only GEs that grant at least one tag in StatusEffectTagFilter are shown.
-//   Leave the filter empty to show ALL active GEs (not recommended).
-//   Typical filter: "StatusEffect.Buff.*", "StatusEffect.Debuff.*"
+
 #pragma once
 
 #include "CoreMinimal.h"

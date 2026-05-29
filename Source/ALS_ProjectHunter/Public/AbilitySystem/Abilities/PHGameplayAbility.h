@@ -10,10 +10,6 @@ class UHunterAbilitySystemComponent;
 
 /**
  * Project Hunter gameplay ability base.
- *
- * This mirrors Lyra's useful activation metadata while staying PH-specific.
- * ARPG costs, stat reads, damage math, and equipment integration should remain
- * in PH systems and attribute helpers instead of being copied from Lyra.
  */
 UCLASS(Abstract, Blueprintable, HideCategories = Input)
 class ALS_PROJECTHUNTER_API UPHGameplayAbility : public UGameplayAbility

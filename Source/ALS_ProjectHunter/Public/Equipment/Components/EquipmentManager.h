@@ -1,21 +1,5 @@
 // Character/Component/EquipmentManager.h
-// PH-1.4 / PH-1.5 — Equipment Manager (state owner only)
-//
-// OWNER:    Equipped slot state — what is equipped, how it changes, when it broadcasts.
-//           Replication of EquippedItemsArray. Server-authority mutations.
-// HELPERS:  UEquipmentFunctionLibrary — stateless slot/rule/compatibility helpers.
-// LISTENERS: UCharacterSystemCoordinatorComponent binds to OnEquipmentChanged and
-//            routes stats (→UStatsManager) and visuals (→UEquipmentPresentationComponent).
-//
-// What this manager must NOT do after PH-1.4/1.5:
-//   × Touch USkeletalMeshComponent or spawn/destroy weapon actors.
-//   × Call UStatsManager directly.
-//   × Bind to another manager's delegate directly.
-//
-// Completed tickets:
-//   PH-1.2 inline slot rules replaced with UEquipmentFunctionLibrary calls
-//   PH-1.4 visual code moved to UEquipmentPresentationComponent
-//   PH-1.5 stat application moved to coordinator (Equipment→Stats listener)
+
 
 #pragma once
 
@@ -23,7 +7,6 @@
 #include "Components/ActorComponent.h"
 #include "Engine/DataTable.h"
 #include "Item/Library/ItemEnums.h"
-#include "Equipment/Library/EquipmentLog.h"
 #include "Equipment/Library/EquipmentStructs.h"
 #include "EquipmentManager.generated.h"
 
@@ -46,10 +29,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnEquipmentChanged,
 
 /**
  * UEquipmentManager
- *
- * Owns equipped slot state and its mutations. Broadcasts OnEquipmentChanged.
- * All cross-system effects (stats, visuals, moveset) happen through the
- * coordinator listener, NOT inside this manager.
  */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UEquipmentManager : public UActorComponent

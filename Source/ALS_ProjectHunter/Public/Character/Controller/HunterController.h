@@ -1,5 +1,5 @@
 // Character/Controller/HunterController.h
-// SIMPLIFIED - NO TICK DEPENDENCY!
+
 #pragma once
 
 #include "CoreMinimal.h"

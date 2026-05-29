@@ -6,11 +6,6 @@
 /**
  * Enum-based attribute selector for UStatsManager::GetAttributeByType().
  *
- * Use this instead of FName to avoid typos, get BP autocomplete, and remove
- * the runtime string-lookup overhead. Every attribute on UHunterAttributeSet
- * has a corresponding entry here.
- *
- * Grouped by category to match the AttributeSet's UPROPERTY categories.
  */
 UENUM(BlueprintType)
 enum class EHunterAttribute : uint8

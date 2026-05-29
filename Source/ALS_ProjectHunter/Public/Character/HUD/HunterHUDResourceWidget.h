@@ -14,27 +14,6 @@
 
 /**
  * HUD widget that tracks a three-part resource: Current, Max, and Reserved.
- *
- * Visual model:
- *
- *   ┌─────────────────────────────┬──────────┬──────────┐
- *   │  Current (active bar)       │ Reserved │  Empty   │
- *   └─────────────────────────────┴──────────┴──────────┘
- *   <─────────────────── Max ──────────────────────────>
- *
- *   FillPercent     = Current  / Max   → drive the filled portion of the bar
- *   ReservedPercent = Reserved / Max   → drive the locked/greyed portion
- *
- * Setup (choose one):
- *   A) Set ResourceType in Blueprint defaults. The correct attribute triplet
- *      is resolved automatically in NativeInitializeForCharacter.
- *   B) Leave ResourceType at its default and set CurrentAttribute, MaxAttribute,
- *      and ReservedAttribute directly for a fully custom mapping.
- *
- * Blueprint implementation:
- *   Implement OnResourceUpdated to drive your progress bar.
- *   Implement OnCurrentValueChanged / OnMaxValueChanged / OnReservedValueChanged
- *   for fine-grained reactions (e.g. flash on damage, clamp animation on overheal).
  */
 UCLASS(Abstract, BlueprintType, Blueprintable)
 class ALS_PROJECTHUNTER_API UHunterHUDResourceWidget : public UHunterHUDBaseWidget

@@ -26,24 +26,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnLootTableLoadedDelegate, FName, 
 
 /**
  * ULootSubsystem - Central loot generation and registry management
- * 
- * SINGLE RESPONSIBILITY: 
- * - Manage loot source registry (Source ID → Loot Table mapping)
- * - Generate loot from registered sources
- * - Coordinate with GroundItemSubsystem for spawning
- * 
- * DESIGN:
- * - World Subsystem (single instance per world)
- * - Lazy loading of loot tables (TSoftObjectPtr)
- * - Caching of loaded tables
- * - Server-authoritative loot generation
- * - Deterministic with seed support
- * 
- * FIXES APPLIED:
- * - Cache key now uses DataTable path (prevents collisions)
- * - Proper seed fallback generation
- * - Null safety checks
- */
+ * */
 UCLASS()
 class ALS_PROJECTHUNTER_API ULootSubsystem : public UWorldSubsystem
 {

@@ -1,11 +1,5 @@
 // AI/Library/MobStructs.h
-// All structs for the Mob Manager / Spawner / Modifier system.
-//
-// Dependency chain:
-//   MobEnumLibrary.h  →  MobStructs.h  →  (system headers)
-//
-// Include this alone when you only need to pass or receive mob / spawn data
-// (e.g. debug visualisation, analytics) without pulling in full manager headers.
+
 
 #pragma once
 

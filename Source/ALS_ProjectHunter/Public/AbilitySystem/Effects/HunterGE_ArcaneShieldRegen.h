@@ -6,9 +6,6 @@
 
 /**
  * Instant GE used by the passive-regen timer to restore ArcaneShield.
- * Modifier: Add on HunterAttributeSet.ArcaneShield, magnitude via Data.Recovery.ArcaneShield SetByCaller.
- * The timer sets the magnitude each tick via SetSetByCallerMagnitude before applying.
- * ArcaneShield regen is gated by the Effect.ArcaneShield.RegenActive tag (handled by the timer).
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UHunterGE_ArcaneShieldRegen : public UGameplayEffect
