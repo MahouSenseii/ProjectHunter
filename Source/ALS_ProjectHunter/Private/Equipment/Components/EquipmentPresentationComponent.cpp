@@ -1,8 +1,10 @@
 #include "Equipment/Components/EquipmentPresentationComponent.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
+#include "Character/ALSBaseCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Equipment/Components/EquipmentManager.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
 #include "Item/ItemInstance.h"
@@ -10,6 +12,36 @@
 #include "Equipment/Actors/EquippedItemRuntimeActor.h"
 
 DEFINE_LOG_CATEGORY(LogEquipmentPresentation);
+
+namespace EquipmentPresentationPrivate
+{
+	UItemInstance* FindPrimaryEquippedWeapon(const UEquipmentManager* EquipmentManager)
+	{
+		if (!EquipmentManager)
+		{
+			return nullptr;
+		}
+
+		constexpr EEquipmentSlot WeaponSlotPriority[] =
+		{
+			EEquipmentSlot::ES_TwoHand,
+			EEquipmentSlot::ES_MainHand,
+			EEquipmentSlot::ES_OffHand
+		};
+
+		for (const EEquipmentSlot Slot : WeaponSlotPriority)
+		{
+			UItemInstance* Item = EquipmentManager->GetEquippedItem(Slot);
+			const FItemBase* BaseData = Item ? Item->GetBaseData() : nullptr;
+			if (BaseData && BaseData->IsWeapon())
+			{
+				return Item;
+			}
+		}
+
+		return nullptr;
+	}
+}
 
 UEquipmentPresentationComponent::UEquipmentPresentationComponent()
 {
@@ -65,6 +97,26 @@ void UEquipmentPresentationComponent::HandleEquipmentChanged(EEquipmentSlot Slot
 	}
 
 	OnWeaponUpdated.Broadcast(Slot, NewItem);
+}
+
+void UEquipmentPresentationComponent::RefreshOverlayStateFromEquipment(const UEquipmentManager* EquipmentManager)
+{
+	AALSBaseCharacter* OwnerCharacter = Cast<AALSBaseCharacter>(GetOwner());
+	if (!OwnerCharacter)
+	{
+		return;
+	}
+
+	EALSOverlayState NewOverlayState = EALSOverlayState::Default;
+	if (const UItemInstance* WeaponItem = EquipmentPresentationPrivate::FindPrimaryEquippedWeapon(EquipmentManager))
+	{
+		if (const FItemBase* BaseData = WeaponItem->GetBaseData())
+		{
+			NewOverlayState =  BaseData->OverlayState;  
+		}
+	}
+
+	OwnerCharacter->SetOverlayState(NewOverlayState);
 }
 
 AEquippedItemRuntimeActor* UEquipmentPresentationComponent::GetActiveRuntimeItemActor(EEquipmentSlot Slot) const
@@ -310,3 +362,4 @@ FAttachmentTransformRules UEquipmentPresentationComponent::ConvertAttachmentRule
 		ItemRules.bWeldSimulatedBodies
 	);
 }
+

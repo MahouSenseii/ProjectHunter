@@ -10,6 +10,7 @@
 #include "Item/Library/AffixEnums.h"
 #include "Item/Library/ItemStructsLog.h"
 #include "AttributeSet.h"
+#include "Library/ALSCharacterEnumLibrary.h"
 #include "ItemStructs.generated.h"
 
 // Forward declarations
@@ -797,6 +798,9 @@ struct FItemBase : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Class")
 	EItemSubType ItemSubType = EItemSubType::IST_None;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Class")
+	EALSOverlayState OverlayState = EALSOverlayState::Default;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Class")
 	EItemRarity ItemRarity = EItemRarity::IR_GradeF;
@@ -1020,6 +1024,16 @@ struct FItemBase : public FTableRowBase
 	{
 		if (!IsValid()) return false;
 		if (BaseWeight < 0.0f) return false;
+
+		if (!IsItemSubTypeAllowedForItemType(ItemType, ItemSubType))
+		{
+			PH_LOG_ERROR(LogItemStructs,
+				"IsValidForInventory failed: Item '%s' has subtype %d, which is not valid for item type %d.",
+				*ItemID.ToString(),
+				static_cast<int32>(ItemSubType),
+				static_cast<int32>(ItemType));
+			return false;
+		}
 		
 		// Equipment should never be stackable
 		if (IsEquippable() && bStackable)

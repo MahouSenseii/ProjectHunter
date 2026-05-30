@@ -8,9 +8,11 @@
 #include "Item/Library/ItemStructs.h"
 #include "Equipment/Library/EquipmentEnums.h"
 #include "Equipment/Library/EquipmentLog.h"
+#include "Library/ALSCharacterEnumLibrary.h"
 #include "EquipmentPresentationComponent.generated.h"
 
 class UItemInstance;
+class UEquipmentManager;
 class USceneComponent;
 class USkeletalMeshComponent;
 class AEquippedItemRuntimeActor;
@@ -45,6 +47,10 @@ public:
 	/** Called when equipped state changes. Tears down old visual, builds new one. */
 	UFUNCTION()
 	void HandleEquipmentChanged(EEquipmentSlot Slot, UItemInstance* NewItem);
+
+	/** Updates the owner's ALS overlay from the currently equipped weapon. */
+	UFUNCTION(BlueprintCallable, Category = "ProjectHunter|Equipment|Presentation")
+	void RefreshOverlayStateFromEquipment(const UEquipmentManager* EquipmentManager);
 
 	// ─────────────────────────────────────────────────────────────
 	// ACCESSORS
@@ -98,6 +104,7 @@ protected:
 	/** Convert item-level attachment rules to the engine attachment rule struct. */
 	static FAttachmentTransformRules ConvertAttachmentRules(const FItemAttachmentRules& ItemRules);
 
+	
 private:
 	// ─────────────────────────────────────────────────────────────
 	// CACHED REFERENCES

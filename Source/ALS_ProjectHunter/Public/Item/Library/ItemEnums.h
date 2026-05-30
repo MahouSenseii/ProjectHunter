@@ -76,6 +76,91 @@ FORCEINLINE bool IsValidItemSubType(const EItemSubType SubType)
 	return SubType != EItemSubType::IST_None;
 }
 
+FORCEINLINE bool IsWeaponItemSubType(const EItemSubType SubType)
+{
+	switch (SubType)
+	{
+	case EItemSubType::IST_Sword:
+	case EItemSubType::IST_Katana:
+	case EItemSubType::IST_Greatsword:
+	case EItemSubType::IST_Dagger:
+	case EItemSubType::IST_Axe:
+	case EItemSubType::IST_Mace:
+	case EItemSubType::IST_Spear:
+	case EItemSubType::IST_Bow:
+	case EItemSubType::IST_Crossbow:
+	case EItemSubType::IST_Staff:
+	case EItemSubType::IST_Wand:
+	case EItemSubType::IST_Shield:
+		return true;
+	default:
+		return false;
+	}
+}
+
+FORCEINLINE bool IsArmorItemSubType(const EItemSubType SubType)
+{
+	switch (SubType)
+	{
+	case EItemSubType::IST_Helmet:
+	case EItemSubType::IST_Chest:
+	case EItemSubType::IST_Gloves:
+	case EItemSubType::IST_Boots:
+	case EItemSubType::IST_Legs:
+		return true;
+	default:
+		return false;
+	}
+}
+
+FORCEINLINE bool IsAccessoryItemSubType(const EItemSubType SubType)
+{
+	switch (SubType)
+	{
+	case EItemSubType::IST_Ring:
+	case EItemSubType::IST_Amulet:
+	case EItemSubType::IST_Belt:
+		return true;
+	default:
+		return false;
+	}
+}
+
+FORCEINLINE bool IsConsumableItemSubType(const EItemSubType SubType)
+{
+	switch (SubType)
+	{
+	case EItemSubType::IST_Potion:
+	case EItemSubType::IST_Scroll:
+	case EItemSubType::IST_Food:
+		return true;
+	default:
+		return false;
+	}
+}
+
+FORCEINLINE bool IsItemSubTypeAllowedForItemType(const EItemType ItemType, const EItemSubType SubType)
+{
+	if (SubType == EItemSubType::IST_None)
+	{
+		return true;
+	}
+
+	switch (ItemType)
+	{
+	case EItemType::IT_Weapon:
+		return IsWeaponItemSubType(SubType);
+	case EItemType::IT_Armor:
+		return IsArmorItemSubType(SubType);
+	case EItemType::IT_Accessory:
+		return IsAccessoryItemSubType(SubType);
+	case EItemType::IT_Consumable:
+		return IsConsumableItemSubType(SubType);
+	default:
+		return false;
+	}
+}
+
 /**
  * Item Rarity Grades - Solo Leveling / ORV Style (F-SS Grade System)
  * Hunter Manga progression system

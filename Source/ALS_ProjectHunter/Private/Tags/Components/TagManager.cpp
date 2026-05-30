@@ -21,6 +21,13 @@ namespace TagManagerPrivate
 	{
 		return EffectiveMaxValue > 0.f ? EffectiveMaxValue : FMath::Max(RawMaxValue, 0.f);
 	}
+
+	bool IsActivelySprinting(const APHBaseCharacter* HunterCharacter)
+	{
+		return HunterCharacter
+			&& HunterCharacter->GetDesiredGait() == EALSGait::Sprinting
+			&& HunterCharacter->GetGait() == EALSGait::Sprinting;
+	}
 }
 
 UTagManager::UTagManager()
@@ -327,10 +334,10 @@ void UTagManager::RefreshBaseConditionTags()
 	SetTagState(Tags.Condition_WhileMoving, bMoving);
 	SetTagState(Tags.Condition_WhileStationary, !bMoving);
 
-	const bool bSprintRequested = HunterCharacter
-		? HunterCharacter->GetDesiredGait() == EALSGait::Sprinting
+	const bool bActivelySprinting = HunterCharacter
+		? TagManagerPrivate::IsActivelySprinting(HunterCharacter)
 		: HasTag(Tags.Condition_Sprinting);
-	SetTagState(Tags.Condition_Sprinting, bSprintRequested);
+	SetTagState(Tags.Condition_Sprinting, bActivelySprinting);
 
 	const bool bInCombat = HasTag(Tags.Condition_InCombat)
 		|| HasTag(Tags.Condition_TakingDamage)
@@ -446,10 +453,10 @@ void UTagManager::RefreshMovementConditionTags()
 	SetTagState(Tags.Condition_WhileMoving, bMoving);
 	SetTagState(Tags.Condition_WhileStationary, !bMoving);
 
-	const bool bSprintRequested = HunterCharacter
-		? HunterCharacter->GetDesiredGait() == EALSGait::Sprinting
+	const bool bActivelySprinting = HunterCharacter
+		? TagManagerPrivate::IsActivelySprinting(HunterCharacter)
 		: HasTag(Tags.Condition_Sprinting);
-	SetTagState(Tags.Condition_Sprinting, bSprintRequested);
+	SetTagState(Tags.Condition_Sprinting, bActivelySprinting);
 
 	const bool bInCombat = HasTag(Tags.Condition_TakingDamage)
 		|| HasTag(Tags.Condition_DealingDamage)

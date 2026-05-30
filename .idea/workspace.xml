@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="6e0ae58a-e27b-4c8a-b048-4e73fae9c588" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/WBP_HunterHUD.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterMainHUDWidget.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterMainHUDWidget.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/Item/ItemBaseCustomization.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/Item/ItemBaseCustomization.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" beforeDir="false" afterPath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Config/DefaultEngine.ini" beforeDir="false" afterPath="$PROJECT_DIR$/Config/DefaultEngine.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/BP_HunterHUD.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/BP_HunterHUD.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/WPB_BaseBar.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/WPB_BaseBar.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/WPB_HealthBar.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/WPB_HealthBar.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/WPB_StaminaBar.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/WPB_StaminaBar.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/CharacterSystemCoordinatorComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/CharacterSystemCoordinatorComponent.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUD.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUD.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Components/EquipmentManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Components/EquipmentManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Components/EquipmentPresentationComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Components/EquipmentPresentationComponent.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Library/EquipmentFunctionLibrary.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Library/EquipmentFunctionLibrary.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tags/Components/TagManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tags/Components/TagManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUD.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUD.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUDResourceWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUDResourceWidget.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/StatusEffect/StatusEffectIconWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/StatusEffect/StatusEffectIconWidget.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Components/EquipmentPresentationComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Components/EquipmentPresentationComponent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/ItemEnums.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/ItemEnums.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/ItemStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/ItemStructs.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/ALS_ProjectHunterEditorModule.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/ALS_ProjectHunterEditorModule.cpp" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 7
+}]]></component>
+  <component name="ProjectId" id="3EQgWxTXxOZcSVwIKiCiHtrJM0n" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "ai.playground.ignore.import.keys.banner.in.settings": "true",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.30387.173" />
+        <option value="bundled-python-sdk-4762d8aabb82-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.30387.173" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="6e0ae58a-e27b-4c8a-b048-4e73fae9c588" name="Changes" comment="" />
+      <created>1780116244254</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1780116244254</updated>
+      <workItem from="1780116244679" duration="151000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

@@ -18,16 +18,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Actors/FloorManagerActor.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Objective/EscapeObjective.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Objective/FloorObjectiveBase.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Actors/FloorManagerActor.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Data/FloorDefinition.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Objective/EscapeObjective.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Objective/FloorObjectiveBase.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Components/CombatManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Components/CombatManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatEnumLibrary.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/WBP_HunterHUD.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Imports/CombatImports/GhostSamurai_Bundle/Katana/Apose/Defense/DefenseR/GhostSamurai_DefenseR_Pose.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Imports/CombatImports/GhostSamurai_Bundle/Katana/Apose/Defense/DefenseR/GhostSamurai_DefenseR_Pose.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Imports/CombatImports/Protector/Protector/Battle/Protector_Idle.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Imports/CombatImports/Protector/Protector/Battle/Protector_Idle.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Imports/CombatImports/SwordAnimsetPro/Animations/In-Place/Idle_Anim.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Imports/CombatImports/SwordAnimsetPro/Animations/In-Place/Idle_Anim.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Imports/CombatImports/SwordAnimsetPro/Animations/Root-Motion/Run_F_Anim.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Imports/CombatImports/SwordAnimsetPro/Animations/Root-Motion/Run_F_Anim.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Imports/CombatImports/Sword_Animations/Animations/01_Idle/Idle_Combat_Seq.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Imports/CombatImports/Sword_Animations/Animations/01_Idle/Idle_Combat_Seq.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/BP_HunterHUD.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/BP_HunterHUD.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/WPB_HealthBar.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/WPB_HealthBar.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/WPB_StaminaBar.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/WPB_StaminaBar.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUD.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUD.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Components/EquipmentManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Components/EquipmentManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUD.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUD.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUDResourceWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUDResourceWidget.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/StatusEffect/StatusEffectIconWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/StatusEffect/StatusEffectIconWidget.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,7 +42,6 @@
     <option name="firstShow" value="false" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="13" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="Git.Settings">
@@ -66,7 +69,6 @@
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystem/RunSubsystem.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystem/StashSubsystem.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/Data/BaseStatsDataCustomization.cpp" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../ProjectHunterTest/Source/ProjectHunterTest/PHGameplayTags.cpp" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="KubernetesApiPersistence">{}</component>
   <component name="KubernetesApiProvider">{
@@ -1085,6 +1087,7 @@
       <workItem from="1778273053162" duration="8733000" />
       <workItem from="1778327985278" duration="1630000" />
       <workItem from="1778863242199" duration="4992000" />
+      <workItem from="1780111327316" duration="1773000" />
     </task>
     <servers />
   </component>

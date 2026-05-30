@@ -159,6 +159,11 @@ void UCharacterSystemCoordinatorComponent::HandleEquipmentChanged(
 void UCharacterSystemCoordinatorComponent::HandleEquipmentPresentationUpdated(
 	EEquipmentSlot Slot, UItemInstance* NewItem)
 {
+	if (EquipmentPresentation && EquipmentManager)
+	{
+		EquipmentPresentation->RefreshOverlayStateFromEquipment(EquipmentManager);
+	}
+
 	(void)Slot;
 	(void)NewItem;
 }

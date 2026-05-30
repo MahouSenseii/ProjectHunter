@@ -2,6 +2,7 @@
 
 #include "PropertyEditorModule.h"
 #include "Data/BaseStatsDataCustomization.h"
+#include "Item/ItemBaseCustomization.h"
 
 class FALS_ProjectHunterEditorModule : public IModuleInterface
 {
@@ -12,6 +13,9 @@ public:
 		PropertyEditorModule.RegisterCustomClassLayout(
 			TEXT("BaseStatsData"),
 			FOnGetDetailCustomizationInstance::CreateStatic(&FBaseStatsDataCustomization::MakeInstance));
+		PropertyEditorModule.RegisterCustomPropertyTypeLayout(
+			TEXT("ItemBase"),
+			FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FItemBaseCustomization::MakeInstance));
 		PropertyEditorModule.NotifyCustomizationModuleChanged();
 	}
 
@@ -21,6 +25,7 @@ public:
 		{
 			FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>(TEXT("PropertyEditor"));
 			PropertyEditorModule.UnregisterCustomClassLayout(TEXT("BaseStatsData"));
+			PropertyEditorModule.UnregisterCustomPropertyTypeLayout(TEXT("ItemBase"));
 			PropertyEditorModule.NotifyCustomizationModuleChanged();
 		}
 	}

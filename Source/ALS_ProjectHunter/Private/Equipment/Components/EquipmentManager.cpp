@@ -1,6 +1,7 @@
 #include "Equipment/Components/EquipmentManager.h"
 
 #include "Engine/ActorChannel.h"
+#include "Equipment/Library/EquipmentLog.h"
 #include "Item/ItemInstance.h"
 #include "Net/UnrealNetwork.h"
 #include "Equipment/EquipmentMutationHelper.h"

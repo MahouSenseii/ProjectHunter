@@ -23,6 +23,11 @@ EEquipmentSlot UEquipmentFunctionLibrary::DetermineSlotForItem(const UItemInstan
 		return EEquipmentSlot::ES_None;
 	}
 
+	if (!IsItemSubTypeAllowedForItemType(BaseData->ItemType, BaseData->ItemSubType))
+	{
+		return EEquipmentSlot::ES_None;
+	}
+
 	switch (BaseData->ItemSubType)
 	{
 	case EItemSubType::IST_Helmet:
@@ -120,6 +125,11 @@ bool UEquipmentFunctionLibrary::IsTwoHanded(const UItemInstance* Item)
 
 	const FItemBase* BaseData = Item->GetBaseData();
 	if (!BaseData)
+	{
+		return false;
+	}
+
+	if (!BaseData->IsWeapon())
 	{
 		return false;
 	}
