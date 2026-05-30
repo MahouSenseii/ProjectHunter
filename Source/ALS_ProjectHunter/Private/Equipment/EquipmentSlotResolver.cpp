@@ -4,6 +4,7 @@
 #include "Equipment/Components/EquipmentManager.h"
 #include "Equipment/EquipmentMutationHelper.h"
 #include "Equipment/Library/EquipmentFunctionLibrary.h"
+#include "Equipment/Library/EquipmentLog.h"
 #include "Inventory/Components/InventoryManager.h"
 #include "Item/ItemInstance.h"
 
@@ -129,10 +130,11 @@ bool FEquipmentSlotResolver::TryEquipGroundPickupItem(UEquipmentManager& Manager
 		return false;
 	}
 
-	EEquipmentSlot ChosenSlot = DetermineEquipmentSlot(Manager, Item);
+	EEquipmentSlot ChosenSlot = EEquipmentSlot::ES_None;
 
 	if (UEquipmentFunctionLibrary::IsOneHandedWeapon(Item))
 	{
+		// Prefer the canonical hand, fall back to the other. Within each, prefer an empty slot.
 		const EEquipmentSlot PrimarySlot  = (CanonicalSlot == EEquipmentSlot::ES_OffHand)
 			? EEquipmentSlot::ES_OffHand
 			: EEquipmentSlot::ES_MainHand;
@@ -140,19 +142,16 @@ bool FEquipmentSlotResolver::TryEquipGroundPickupItem(UEquipmentManager& Manager
 			? EEquipmentSlot::ES_OffHand
 			: EEquipmentSlot::ES_MainHand;
 
-		const bool bPrimaryEmpty  = !Manager.IsSlotOccupied(PrimarySlot);
-		const bool bFallbackEmpty = !Manager.IsSlotOccupied(FallbackSlot);
-
 		auto CanUseSlot = [&](EEquipmentSlot Slot) -> bool
 		{
 			return EquipmentSlotResolverPrivate::CanEquipGroundPickupToSlot(Manager, Item, Slot, bSwapToBag);
 		};
 
-		if (bPrimaryEmpty && CanUseSlot(PrimarySlot))
+		if (!Manager.IsSlotOccupied(PrimarySlot) && CanUseSlot(PrimarySlot))
 		{
 			ChosenSlot = PrimarySlot;
 		}
-		else if (bFallbackEmpty && CanUseSlot(FallbackSlot))
+		else if (!Manager.IsSlotOccupied(FallbackSlot) && CanUseSlot(FallbackSlot))
 		{
 			ChosenSlot = FallbackSlot;
 		}
@@ -169,24 +168,24 @@ bool FEquipmentSlotResolver::TryEquipGroundPickupItem(UEquipmentManager& Manager
 			return false;
 		}
 	}
-	else if (CanonicalSlot == EEquipmentSlot::ES_OffHand)
+	else
 	{
-		ChosenSlot = EEquipmentSlot::ES_OffHand;
-	}
-
-	if (ChosenSlot == EEquipmentSlot::ES_None)
-	{
-		return false;
-	}
-
-	if (!EquipmentSlotResolverPrivate::CanEquipGroundPickupToSlot(Manager, Item, ChosenSlot, bSwapToBag))
-	{
-		return false;
+		// For all other item types (armor, accessories, rings, two-handers, etc.)
+		// DetermineEquipmentSlot handles ring rotation; CanonicalSlot is not sufficient alone.
+		ChosenSlot = DetermineEquipmentSlot(Manager, Item);
+		if (ChosenSlot == EEquipmentSlot::ES_None)
+		{
+			return false;
+		}
+		if (!EquipmentSlotResolverPrivate::CanEquipGroundPickupToSlot(Manager, Item, ChosenSlot, bSwapToBag))
+		{
+			return false;
+		}
 	}
 
 	FEquipmentMutationHelper::EquipItemInternal(Manager, Item, ChosenSlot, bSwapToBag, true);
 
-	if (Manager.GetEquippedItem(ChosenSlot) != Item)
+eeeeeeeeeee	if (Manager.GetEquippedItem(ChosenSlot) != Item)
 	{
 		return false;
 	}

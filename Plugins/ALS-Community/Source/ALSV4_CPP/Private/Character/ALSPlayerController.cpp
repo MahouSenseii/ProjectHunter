@@ -196,6 +196,14 @@ void AALSPlayerController::SprintAction(const FInputActionValue& Value)
 	}
 }
 
+void AALSPlayerController::SprintAction_Completed(const FInputActionValue& Value)
+{
+	if (PossessedCharacter)
+	{
+		PossessedCharacter->SprintAction(false);
+	}
+}
+
 void AALSPlayerController::AimAction(const FInputActionValue& Value)
 {
 	if (PossessedCharacter)

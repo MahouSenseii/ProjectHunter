@@ -67,6 +67,10 @@ protected:
 	UFUNCTION()
 	void SprintAction(const FInputActionValue& Value);
 
+	/** Called when the sprint input is released — stops sprinting. */
+	UFUNCTION()
+	void SprintAction_Completed(const FInputActionValue& Value);
+
 	UFUNCTION()
 	void AimAction(const FInputActionValue& Value);
 

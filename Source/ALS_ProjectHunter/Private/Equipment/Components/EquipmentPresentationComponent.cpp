@@ -247,6 +247,7 @@ void UEquipmentPresentationComponent::SpawnWeaponActor(EEquipmentSlot Slot, UIte
 
 	const FAttachmentTransformRules AttachRules = ConvertAttachmentRules(BaseData->AttachmentRules);
 	WeaponActor->AttachToComponent(CharacterMesh, AttachRules, SocketName);
+	WeaponActor->SetActorRelativeTransform(BaseData->HandAttachTransform);
 	WeaponActor->InitializeFromItem(Item, OwnerPawn, Slot);
 	SpawnedActors.Add(Slot, WeaponActor);
 	UE_LOG(LogEquipmentPresentation, Log,
@@ -275,6 +276,7 @@ void UEquipmentPresentationComponent::SpawnWeaponMesh(EEquipmentSlot Slot, UItem
 			SkeletalComp->SetSkeletalMesh(BaseData->SkeletalMesh);
 			SkeletalComp->RegisterComponent();
 			SkeletalComp->AttachToComponent(CharacterMesh, AttachRules, SocketName);
+			SkeletalComp->SetRelativeTransform(BaseData->HandAttachTransform);
 			NewComponent = SkeletalComp;
 
 			UE_LOG(LogEquipmentPresentation, Verbose,
@@ -292,6 +294,7 @@ void UEquipmentPresentationComponent::SpawnWeaponMesh(EEquipmentSlot Slot, UItem
 			StaticComp->SetStaticMesh(BaseData->StaticMesh);
 			StaticComp->RegisterComponent();
 			StaticComp->AttachToComponent(CharacterMesh, AttachRules, SocketName);
+			StaticComp->SetRelativeTransform(BaseData->HandAttachTransform);
 			NewComponent = StaticComp;
 
 			UE_LOG(LogEquipmentPresentation, Verbose,

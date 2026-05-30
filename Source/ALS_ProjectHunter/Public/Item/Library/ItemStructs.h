@@ -934,6 +934,18 @@ struct FItemBase : public FTableRowBase
 		meta = (EditCondition = "ItemType == EItemType::IT_Weapon || ItemType == EItemType::IT_Armor || ItemType == EItemType::IT_Accessory", EditConditionHides))
 	FItemAttachmentRules AttachmentRules;
 
+	/**
+	 * Relative transform applied after the item is snapped to its hand socket.
+	 * Use this to fine-tune position, rotation, and scale per item without
+	 * modifying the skeleton socket itself.
+	 * Location = offset from socket origin (cm).
+	 * Rotation = relative rotation from socket orientation.
+	 * Scale    = mesh scale multiplier (1,1,1 = no change).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Attachment",
+		meta = (EditCondition = "ItemType == EItemType::IT_Weapon || ItemType == EItemType::IT_Armor || ItemType == EItemType::IT_Accessory", EditConditionHides))
+	FTransform HandAttachTransform = FTransform::Identity;
+
 	// ═══════════════════════════════════════════════
 	// BASE STATS (Equipment Only)
 	// ═══════════════════════════════════════════════
@@ -1092,14 +1104,19 @@ struct FItemBase : public FTableRowBase
 		return WeaponActorClass;
 	}
 
-	/** Get socket name for context */
+	/**
+	 * Get the socket name explicitly mapped to a context ("MainHand", "OffHand", "TwoHand").
+	 * Returns NAME_None if the context has no explicit entry — callers should fall back to
+	 * AttachmentSocket themselves. Never returns AttachmentSocket implicitly so that
+	 * ResolveSocketForSlot can distinguish "mapped" from "not found".
+	 */
 	FName GetSocketForContext(FName Context) const
 	{
 		if (const FName* ContextSocket = ContextualSockets.Find(Context))
 		{
 			return *ContextSocket;
 		}
-		return AttachmentSocket;
+		return NAME_None;
 	}
 
 	/**

@@ -616,6 +616,7 @@ public:
 private:
 	/** Generate rare/legendary name for high-grade items */
 	FText GenerateRareName() const;
+	
 
 	/** Apply consumable effects to target */
 	bool ApplyConsumableEffects(AActor* Target);
