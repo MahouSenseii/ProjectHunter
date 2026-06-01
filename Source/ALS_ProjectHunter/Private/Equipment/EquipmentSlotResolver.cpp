@@ -185,7 +185,7 @@ bool FEquipmentSlotResolver::TryEquipGroundPickupItem(UEquipmentManager& Manager
 
 	FEquipmentMutationHelper::EquipItemInternal(Manager, Item, ChosenSlot, bSwapToBag, true);
 
-eeeeeeeeeee	if (Manager.GetEquippedItem(ChosenSlot) != Item)
+	if (Manager.GetEquippedItem(ChosenSlot) != Item)
 	{
 		return false;
 	}
