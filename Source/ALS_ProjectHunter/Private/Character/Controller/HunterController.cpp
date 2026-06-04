@@ -3,7 +3,7 @@
 #include "EnhancedActionKeyMapping.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
-#include "Character/Component/Interaction/InteractionManager.h"
+#include "Character/Components/Interaction/InteractionManager.h"
 #include "GameFramework/Pawn.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHunterController, Log, All);

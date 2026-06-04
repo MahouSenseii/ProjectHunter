@@ -1,6 +1,6 @@
 #include "Loot/Subsystems/LootSubsystem.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
-#include "Tower/Subsystem/GroundItemSubsystem.h"
+#include "Tower/Subsystems/GroundItemSubsystem.h"
 #include "Item/ItemInstance.h"
 #include "Engine/AssetManager.h"
 #include "Engine/DataTable.h"

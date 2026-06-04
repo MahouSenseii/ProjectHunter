@@ -1,7 +1,7 @@
 #include "Item/WeaponPlacementActor.h"
 
 #include "Item/ItemInstance.h"
-#include "Tower/Subsystem/GroundItemSubsystem.h"
+#include "Tower/Subsystems/GroundItemSubsystem.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 

@@ -3,7 +3,7 @@
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Equipment/Components/EquipmentManager.h"
 #include "Equipment/Components/EquipmentPresentationComponent.h"
-#include "Character/Component/Interaction/InteractionManager.h"
+#include "Character/Components/Interaction/InteractionManager.h"
 #include "Inventory/Components/InventoryManager.h"
 #include "Stats/Components/StatsManager.h"
 #include "Combat/Components/CombatManager.h"

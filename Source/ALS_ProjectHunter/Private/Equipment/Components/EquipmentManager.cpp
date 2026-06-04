@@ -4,9 +4,9 @@
 #include "Equipment/Library/EquipmentLog.h"
 #include "Item/ItemInstance.h"
 #include "Net/UnrealNetwork.h"
-#include "Equipment/EquipmentMutationHelper.h"
-#include "Equipment/EquipmentReplicationHelper.h"
-#include "Equipment/EquipmentSlotResolver.h"
+#include "Equipment/Helpers/EquipmentMutationHelper.h"
+#include "Equipment/Helpers/EquipmentReplicationHelper.h"
+#include "Equipment/Helpers/EquipmentSlotResolver.h"
 
 DEFINE_LOG_CATEGORY(LogEquipmentManager);
 

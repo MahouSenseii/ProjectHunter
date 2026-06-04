@@ -168,6 +168,8 @@ public:
 	{
 		return EquipmentManager;
 	}
+	
+	
 
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	UStatsManager* GetStatsManager() const

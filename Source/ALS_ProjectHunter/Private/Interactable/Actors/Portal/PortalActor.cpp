@@ -1,5 +1,5 @@
 #include "Interactable/Actors/Portal/PortalActor.h"
-#include "Tower/Subsystem/PortalSubsystem.h"
+#include "Tower/Subsystems/PortalSubsystem.h"
 #include "Interactable/Component/InteractableManager.h"
 #include "Components/StaticMeshComponent.h"
 #include "NiagaraComponent.h"

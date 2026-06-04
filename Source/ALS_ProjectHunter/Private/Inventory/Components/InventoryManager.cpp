@@ -5,12 +5,12 @@
 #include "Engine/NetConnection.h"
 #include "Item/ItemInstance.h"
 #include "Net/UnrealNetwork.h"
-#include "Inventory/InventoryAdder.h"
-#include "Inventory/InventoryRemover.h"
-#include "Inventory/InventoryStackHandler.h"
-#include "Inventory/InventorySwapper.h"
-#include "Inventory/InventoryValidator.h"
-#include "Inventory/InventoryWeightCalculator.h"
+#include "Inventory/Helpers/InventoryAdder.h"
+#include "Inventory/Helpers/InventoryRemover.h"
+#include "Inventory/Helpers/InventoryStackHandler.h"
+#include "Inventory/Helpers/InventorySwapper.h"
+#include "Inventory/Helpers/InventoryValidator.h"
+#include "Inventory/Helpers/InventoryWeightCalculator.h"
 #include "Inventory/Library/InventoryFunctionLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogInventoryManager);
