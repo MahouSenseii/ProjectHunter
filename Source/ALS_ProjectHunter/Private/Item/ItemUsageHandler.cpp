@@ -6,6 +6,7 @@
 #include "Item/ItemInstance.h"
 #include "Item/ItemStackingHandler.h"
 #include "Item/Library/ItemLog.h"
+#include "Stats/Components/StatsManager.h"
 
 void FItemUsageHandler::ApplyAffixesToCharacter(UItemInstance& Item, UAbilitySystemComponent* ASC)
 {
@@ -14,33 +15,28 @@ void FItemUsageHandler::ApplyAffixesToCharacter(UItemInstance& Item, UAbilitySys
 		return;
 	}
 
-	RemoveAffixesFromCharacter(Item, ASC);
+	// C-FIX: this function used to loop the affixes, LOG "Applied affix", set
+	// bEffectsActive = true — and never apply anything. UStatsManager /
+	// FEquipmentStatsApplier is the single real application path (handles
+	// dedupe by item GUID, server authority, and weapon/armor base stats), so
+	// route there instead of maintaining a second GE pipeline.
+	AActor* OwnerActor = ASC->GetOwnerActor();
+	UStatsManager* StatsManager = OwnerActor
+		? OwnerActor->FindComponentByClass<UStatsManager>()
+		: nullptr;
 
-	const TArray<FPHAttributeData> AllAffixes = Item.Stats.GetAllStats();
-	for (const FPHAttributeData& Affix : AllAffixes)
+	if (!StatsManager)
 	{
-		if (!Affix.bIsIdentified)
-		{
-			continue;
-		}
-
-		if (Affix.bIsLocalToWeapon || Affix.bAffectsBaseWeaponStatsDirectly)
-		{
-			continue;
-		}
-
-		if (!Affix.ModifiedAttribute.IsValid())
-		{
-			continue;
-		}
-
-		UE_LOG(LogItemInstance, Log, TEXT("Applied affix: %s = %f (Corrupted: %s)"),
-			*Affix.AttributeName.ToString(),
-			Affix.RolledStatValue,
-			Affix.IsCorruptedAffix() ? TEXT("YES") : TEXT("NO"));
+		PH_LOG_WARNING(LogItemInstance,
+			"ApplyAffixesToCharacter: %s has no UStatsManager - affixes from '%s' were NOT applied. "
+			"Equip items through EquipmentManager/StatsManager instead.",
+			*GetNameSafe(OwnerActor), *Item.GetName());
+		Item.bEffectsActive = false;
+		return;
 	}
 
-	Item.bEffectsActive = true;
+	StatsManager->ApplyEquipmentStats(&Item);
+	Item.bEffectsActive = StatsManager->HasEquipmentStatsApplied(&Item);
 }
 
 void FItemUsageHandler::RemoveAffixesFromCharacter(UItemInstance& Item, UAbilitySystemComponent* ASC)
@@ -50,6 +46,14 @@ void FItemUsageHandler::RemoveAffixesFromCharacter(UItemInstance& Item, UAbility
 		return;
 	}
 
+	// Route through the real application path (mirrors ApplyAffixesToCharacter).
+	AActor* OwnerActor = ASC->GetOwnerActor();
+	if (UStatsManager* StatsManager = OwnerActor ? OwnerActor->FindComponentByClass<UStatsManager>() : nullptr)
+	{
+		StatsManager->RemoveEquipmentStats(&Item);
+	}
+
+	// Legacy cleanup: older saves / direct callers may still have handles here.
 	for (const FActiveGameplayEffectHandle& Handle : Item.AppliedEffectHandles)
 	{
 		ASC->RemoveActiveGameplayEffect(Handle);

@@ -28,6 +28,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix Generator")
 	FSoftObjectPath SuffixDataTablePath = FSoftObjectPath(TEXT("/Game/Data/Items/DT_Suffixes"));
 
+	/**
+	 * Path to ENCHANT affix DataTable (DT_Enchants).
+	 * Enchants are applied post-generation (enchanting bench / special currency),
+	 * not during normal item generation.  Stored separately in FPHItemStats::Enchants.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix Generator")
+	FSoftObjectPath EnchantDataTablePath = FSoftObjectPath(TEXT("/Game/Data/Items/DT_Enchants"));
+
 	/** Default weight for affixes without explicit weight */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix Generator")
 	int32 DefaultAffixWeight = 100;
@@ -73,11 +81,27 @@ public:
 	// ═══════════════════════════════════════════════
 
 	/**
-	 * Get the appropriate DataTable for the given affix type
-	 * @param AffixType - Prefix or Suffix
+	 * Get the appropriate DataTable for the given affix type.
+	 * Supports Prefix, Suffix, and Enchant.  Returns nullptr for unsupported types.
+	 * @param AffixType - Prefix, Suffix, or Enchant
 	 * @return DataTable pointer or nullptr if not found
 	 */
 	UDataTable* GetAffixDataTable(EAffixes AffixType) const;
+
+	/**
+	 * Roll one enchant from DT_Enchants and store it in OutStats.Enchants.
+	 * Replaces any existing enchant (items can only have one at a time).
+	 * @param BaseItem  - Item to enchant (used for type filtering)
+	 * @param ItemLevel - Used to pick the correct affix tier
+	 * @param Seed      - Random seed
+	 * @param OutStats  - Stats struct to write the enchant into
+	 * @return True if an enchant was successfully rolled
+	 */
+	bool ApplyEnchant(
+		const FItemBase& BaseItem,
+		int32 ItemLevel,
+		int32 Seed,
+		FPHItemStats& OutStats) const;
 
 private:
 	// ═══════════════════════════════════════════════
@@ -108,19 +132,21 @@ private:
 		FRandomStream& RandStream) const;
 
 	/**
-	 * Build available affix pool filtered by corruption
-	 * @param AffixType - Prefix or Suffix (routes to correct DataTable)
+	 * Build available affix pool filtered by corruption and group exclusion.
+	 * @param AffixType      - Prefix or Suffix (routes to correct DataTable)
 	 * @param bCorruptedOnly - If true, only return negative affixes
+	 * @param ExcludeAffixes - Exact AttributeNames already rolled (no duplicates)
+	 * @param ExcludeGroups  - AffixGroups already represented (no same-category duplicates)
 	 */
 	// I-09 FIX: ExcludeAffixes is now TSet<FName> for O(1) Contains() instead of O(n).
-	// RollAffixesWithCorruption builds the set from TArray for backward compat.
 	TArray<FPHAttributeData*> BuildAffixPoolByCorruption(
 		EAffixes AffixType,
 		EItemType ItemType,
 		EItemSubType ItemSubType,
 		int32 ItemLevel,
 		bool bCorruptedOnly,
-		const TSet<FName>& ExcludeAffixes) const;
+		const TSet<FName>& ExcludeAffixes,
+		const TSet<FName>& ExcludeGroups = TSet<FName>()) const;
 
 	/**
 	 * Select random affix from pool (weighted)
@@ -146,6 +172,9 @@ private:
 	/** Cached SUFFIX DataTable (lazy-loaded) */
 	mutable UDataTable* CachedSuffixTable = nullptr;
 
+	/** Cached ENCHANT DataTable (lazy-loaded) */
+	mutable UDataTable* CachedEnchantTable = nullptr;
+
 	/**
 	 * P-1 FIX: Cached row pointers for each DataTable.
 	 * GetAllRows<> scans every row on every call — caching here reduces per-item-generation
@@ -155,12 +184,16 @@ private:
 	 */
 	mutable TArray<FPHAttributeData*> CachedPrefixRows;
 	mutable TArray<FPHAttributeData*> CachedSuffixRows;
+	mutable TArray<FPHAttributeData*> CachedEnchantRows;
 
 	/** Track if we've attempted to load prefixes (prevents repeated failures) */
 	mutable bool bPrefixLoadAttempted = false;
 
 	/** Track if we've attempted to load suffixes (prevents repeated failures) */
 	mutable bool bSuffixLoadAttempted = false;
+
+	/** Track if we've attempted to load enchants (prevents repeated failures) */
+	mutable bool bEnchantLoadAttempted = false;
 
 	// ═══════════════════════════════════════════════
 	// INTERNAL HELPERS - SINGLE RESPONSIBILITY
@@ -177,4 +210,10 @@ private:
 	 * SINGLE RESPONSIBILITY: Load SUFFIX table only
 	 */
 	UDataTable* LoadSuffixDataTable() const;
+
+	/**
+	 * Load and cache ENCHANT DataTable
+	 * SINGLE RESPONSIBILITY: Load ENCHANT table only
+	 */
+	UDataTable* LoadEnchantDataTable() const;
 };

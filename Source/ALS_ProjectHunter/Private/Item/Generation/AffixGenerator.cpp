@@ -13,10 +13,16 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 {
 	FPHItemStats Stats;
 
+	// I-02 FIX (completed): a single seeded stream drives EVERY roll in this
+	// function — implicits, unique affixes, prefixes, and suffixes — so a stored
+	// Seed reproduces the item exactly. The unseeded RollValue() overload pulls
+	// from the global RNG and must not be used here.
+	FRandomStream RandStream(Seed);
+
 	Stats.Implicits = BaseItem.ImplicitMods;
 	for (FPHAttributeData& Implicit : Stats.Implicits)
 	{
-		Implicit.RollValue();
+		Implicit.RollValue(RandStream);
 		Implicit.GenerateUID();
 	}
 
@@ -25,7 +31,7 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 		Stats.Prefixes = BaseItem.UniqueAffixes;
 		for (FPHAttributeData& Affix : Stats.Prefixes)
 		{
-			Affix.RollValue();
+			Affix.RollValue(RandStream);
 			Affix.GenerateUID();
 		}
 		Stats.bAffixesGenerated = true;
@@ -34,8 +40,6 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 
 	int32 MinPrefixes, MaxPrefixes, MinSuffixes, MaxSuffixes;
 	GetAffixCountByRarity(Rarity, MinPrefixes, MaxPrefixes, MinSuffixes, MaxSuffixes);
-
-	FRandomStream RandStream(Seed);
 	const int32 NumPrefixes = RandStream.RandRange(MinPrefixes, MaxPrefixes);
 	const int32 NumSuffixes = RandStream.RandRange(MinSuffixes, MaxSuffixes);
 
@@ -79,11 +83,95 @@ UDataTable* FAffixGenerator::GetAffixDataTable(EAffixes AffixType) const
 		case EAffixes::AF_Suffix:
 			return LoadSuffixDataTable();
 
+		case EAffixes::AF_Enchant:
+			return LoadEnchantDataTable();
+
 		default:
 			UE_LOG(LogAffixGenerator, Warning, TEXT("AffixGenerator: Unsupported affix type %d"),
 				static_cast<int32>(AffixType));
 			return nullptr;
 	}
+}
+
+UDataTable* FAffixGenerator::LoadEnchantDataTable() const
+{
+	if (CachedEnchantTable && IsValid(CachedEnchantTable))
+	{
+		return CachedEnchantTable;
+	}
+
+	if (bEnchantLoadAttempted && !CachedEnchantTable)
+	{
+		return nullptr;
+	}
+
+	bEnchantLoadAttempted = true;
+	CachedEnchantTable = Cast<UDataTable>(EnchantDataTablePath.TryLoad());
+
+	if (!CachedEnchantTable)
+	{
+		UE_LOG(LogAffixGenerator, Error, TEXT("AffixGenerator: Failed to load ENCHANT DataTable from '%s'"),
+			*EnchantDataTablePath.ToString());
+	}
+	else
+	{
+		CachedEnchantRows.Reset();
+		CachedEnchantTable->GetAllRows<FPHAttributeData>("LoadEnchantDataTable", CachedEnchantRows);
+
+		UE_LOG(LogAffixGenerator, Log, TEXT("AffixGenerator: Loaded ENCHANT DataTable with %d rows"),
+			CachedEnchantRows.Num());
+	}
+
+	return CachedEnchantTable;
+}
+
+bool FAffixGenerator::ApplyEnchant(
+	const FItemBase& BaseItem,
+	int32 ItemLevel,
+	int32 Seed,
+	FPHItemStats& OutStats) const
+{
+	LoadEnchantDataTable();
+	if (CachedEnchantRows.Num() == 0)
+	{
+		UE_LOG(LogAffixGenerator, Warning, TEXT("AffixGenerator::ApplyEnchant: No enchants loaded."));
+		return false;
+	}
+
+	// Filter pool by item type, subtype, and level — same rules as regular affixes.
+	TArray<FPHAttributeData*> Pool;
+	Pool.Reserve(CachedEnchantRows.Num());
+	for (FPHAttributeData* Row : CachedEnchantRows)
+	{
+		if (!Row) continue;
+		if (!Row->IsAllowedOnItemType(BaseItem.ItemType)) continue;
+		if (!Row->IsAllowedOnSubType(BaseItem.ItemSubType)) continue;
+		if (!Row->IsValidForItemLevel(ItemLevel)) continue;
+		Pool.Add(Row);
+	}
+
+	if (Pool.Num() == 0)
+	{
+		UE_LOG(LogAffixGenerator, Warning,
+			TEXT("AffixGenerator::ApplyEnchant: No valid enchants for item type %d at level %d."),
+			static_cast<int32>(BaseItem.ItemType), ItemLevel);
+		return false;
+	}
+
+	FRandomStream RandStream(Seed);
+	const FPHAttributeData* Selected = SelectRandomAffix(Pool, RandStream);
+	if (!Selected)
+	{
+		return false;
+	}
+
+	FPHAttributeData Rolled = CreateRolledAffix(*Selected, RandStream);
+	Rolled.AffixType = EAffixes::AF_Enchant;
+
+	// Items can only hold one enchant at a time — replace any existing one.
+	OutStats.Enchants.Reset(1);
+	OutStats.Enchants.Add(Rolled);
+	return true;
 }
 
 UDataTable* FAffixGenerator::LoadPrefixDataTable() const
@@ -167,7 +255,12 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 	TArray<FPHAttributeData> RolledAffixes;
 	// TSet for O(1) Contains() lookups instead of O(n) TArray::Contains.
 	TSet<FName> ExcludedAffixes;
+	// Group exclusion: prevents two affixes from the same AffixGroup rolling on
+	// the same item (e.g. two different "fire damage" affixes).  Mirrors the
+	// POE2 affix-conflict system.  Affixes with AffixGroup == NAME_None are exempt.
+	TSet<FName> ExcludedGroups;
 	ExcludedAffixes.Reserve(Count);
+	ExcludedGroups.Reserve(Count);
 
 	RolledAffixes.Reserve(Count);
 
@@ -178,7 +271,7 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 
 		TArray<FPHAttributeData*> AvailableAffixes = BuildAffixPoolByCorruption(
 			AffixType, ItemType, ItemSubType, ItemLevel,
-			bShouldBeCorrupted, ExcludedAffixes
+			bShouldBeCorrupted, ExcludedAffixes, ExcludedGroups
 		);
 
 		if (AvailableAffixes.Num() == 0)
@@ -187,7 +280,7 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 			{
 				AvailableAffixes = BuildAffixPoolByCorruption(
 					AffixType, ItemType, ItemSubType, ItemLevel,
-					false, ExcludedAffixes
+					false, ExcludedAffixes, ExcludedGroups
 				);
 			}
 
@@ -214,6 +307,10 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 		}
 
 		ExcludedAffixes.Add(SelectedAffix->AttributeName);
+		if (SelectedAffix->AffixGroup != NAME_None)
+		{
+			ExcludedGroups.Add(SelectedAffix->AffixGroup);
+		}
 	}
 
 	return RolledAffixes;
@@ -225,7 +322,8 @@ TArray<FPHAttributeData*> FAffixGenerator::BuildAffixPoolByCorruption(
 	EItemSubType ItemSubType,
 	int32 ItemLevel,
 	bool bCorruptedOnly,
-	const TSet<FName>& ExcludeAffixes) const
+	const TSet<FName>& ExcludeAffixes,
+	const TSet<FName>& ExcludeGroups) const
 {
 	TArray<FPHAttributeData*> Pool;
 
@@ -240,7 +338,9 @@ TArray<FPHAttributeData*> FAffixGenerator::BuildAffixPoolByCorruption(
 	}
 
 	const TArray<FPHAttributeData*>& AllAffixes =
-		(AffixType == EAffixes::AF_Prefix) ? CachedPrefixRows : CachedSuffixRows;
+		(AffixType == EAffixes::AF_Prefix)  ? CachedPrefixRows  :
+		(AffixType == EAffixes::AF_Enchant) ? CachedEnchantRows :
+		                                       CachedSuffixRows;
 
 	Pool.Reserve(AllAffixes.Num() / 4);
 
@@ -251,7 +351,14 @@ TArray<FPHAttributeData*> FAffixGenerator::BuildAffixPoolByCorruption(
 			continue;
 		}
 
+		// Exclude by exact affix name (prevents exact duplicate)
 		if (ExcludeAffixes.Contains(Affix->AttributeName))
+		{
+			continue;
+		}
+
+		// Exclude by group (prevents two affixes from the same category, e.g. two fire-damage mods)
+		if (Affix->AffixGroup != NAME_None && ExcludeGroups.Contains(Affix->AffixGroup))
 		{
 			continue;
 		}

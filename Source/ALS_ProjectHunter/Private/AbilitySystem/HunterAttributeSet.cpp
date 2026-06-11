@@ -89,6 +89,14 @@ UHunterAttributeSet::UHunterAttributeSet()
 	// Without explicit initialization both default to 0.0f, zeroing all XP gain.
 	InitXPPenalty(1.0f);
 	InitXPGainMultiplier(1.0f);
+
+	// CritMultiplier is a direct damage multiplier applied on a critical hit.
+	// CombatManager falls back to 1.5f when the attribute is <= 0, but that
+	// fallback is bypassed the moment any item modifier adds to the attribute
+	// (e.g. +0.5 from gear sets it to 0.5f, not 2.0f).  Initialise here so
+	// item bonuses correctly stack on top of the base value.
+	InitCritMultiplier(1.5f);
+	InitSpellsCritMultiplier(1.5f);
 }
 
 void UHunterAttributeSet::SetIsInitializingStats(bool bInInitializing)

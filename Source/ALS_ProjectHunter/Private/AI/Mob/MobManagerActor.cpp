@@ -191,6 +191,8 @@ void AMobManagerActor::StopAndClear()
 	{
 		if (Weak.IsValid())
 		{
+			Weak->OnDeath.RemoveDynamic(this, &AMobManagerActor::OnMobDeathEvent);
+
 			if (CachedPoolSubsystem)
 			{
 				CachedPoolSubsystem->Release(Weak.Get());
@@ -940,6 +942,13 @@ void AMobManagerActor::FinalizeSpawn(APHBaseCharacter* Mob, const FVector& Spawn
 
 	ActiveMobs.Add(TWeakObjectPtr<APHBaseCharacter>(Mob));
 
+	// Death hookup: Blueprint death logic calls APHBaseCharacter::NotifyDeath(Killer),
+	// which broadcasts OnDeath exactly once (server-side). Binding here is what
+	// drives kill counting, OnMobDied, and the pool-recycle timer. AddUniqueDynamic
+	// keeps pooled re-spawns from double-binding to the same manager.
+	Mob->ResetDeathState();
+	Mob->OnDeath.AddUniqueDynamic(this, &AMobManagerActor::OnMobDeathEvent);
+
 	if (Mob->Implements<UMobWanderable>())
 	{
 		IMobWanderable::Execute_SetHomeLocation(Mob, SpawnLocation);
@@ -1079,6 +1088,10 @@ void AMobManagerActor::ApplyModifierComponent(APHBaseCharacter* Mob)
 void AMobManagerActor::OnMobDeathEvent(APHBaseCharacter* DeadMob, AActor* Killer)
 {
 	if (!DeadMob) { return; }
+
+	// Unbind so a pooled actor re-acquired by a DIFFERENT manager can't notify
+	// this one on its next death.
+	DeadMob->OnDeath.RemoveDynamic(this, &AMobManagerActor::OnMobDeathEvent);
 
 	ActiveMobs.RemoveAll([DeadMob](const TWeakObjectPtr<APHBaseCharacter>& Weak)
 	{

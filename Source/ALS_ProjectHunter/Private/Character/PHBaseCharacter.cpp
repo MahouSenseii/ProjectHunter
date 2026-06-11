@@ -439,6 +439,31 @@ void APHBaseCharacter::AwardExperienceFromKill(APHBaseCharacter* KilledCharacter
 	ProgressionManager->AwardExperienceFromKill(KilledCharacter);
 }
 
+void APHBaseCharacter::NotifyDeath(AActor* Killer)
+{
+	// Server authoritative: BlueprintAuthorityOnly already blocks client BP calls,
+	// this guards direct C++ callers as well.
+	if (!HasAuthority())
+	{
+		PH_LOG_WARNING(LogPHBaseCharacter,
+			"NotifyDeath called without authority on %s - ignored.", *GetName());
+		return;
+	}
+
+	// Latch: BP death flows can fire from several places (health delegate,
+	// montage notify, ability). Only the first call broadcasts.
+	if (bHasDied)
+	{
+		return;
+	}
+	bHasDied = true;
+
+	PH_LOG(LogPHBaseCharacter, Log, "NotifyDeath: %s killed by %s.",
+		*GetName(), *GetNameSafe(Killer));
+
+	OnDeath.Broadcast(this, Killer);
+}
+
 float APHBaseCharacter::GetHealth() const
 {
 	if (StatsManager)

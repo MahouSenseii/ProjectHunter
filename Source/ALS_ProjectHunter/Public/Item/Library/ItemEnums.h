@@ -165,14 +165,14 @@ FORCEINLINE bool IsItemSubTypeAllowedForItemType(const EItemType ItemType, const
  * Item Rarity Grades - Solo Leveling / ORV Style (F-SS Grade System)
  * Hunter Manga progression system
  * 
- * Grade F: Common Hunter gear (0 affixes)
- * Grade E: Uncommon drops (1-2 affixes)
- * Grade D: Rare drops (2-3 affixes)
- * Grade C: Elite equipment (3-4 affixes)
- * Grade B: Named items (4-5 affixes)
- * Grade A: Legendary artifacts (5-6 affixes)
- * Grade S: Mythic/National Treasure (6 affixes max)
- * Grade SS: EX-Rank items (fixed unique affixes)
+ * Grade F:  Common Hunter gear        — 0 prefix, 0 suffix          (0 total)
+ * Grade E:  Uncommon drops            — 0-1 prefix, 0-1 suffix      (0-2 total)
+ * Grade D:  Rare drops                — 1 prefix,   0-1 suffix      (1-2 total)
+ * Grade C:  Elite equipment           — 1-2 prefix, 1 suffix        (2-3 total)
+ * Grade B:  Named items               — 1-2 prefix, 1-2 suffix      (2-4 total)
+ * Grade A:  Legendary artifacts       — 2-3 prefix, 2 suffix        (4-5 total)
+ * Grade S:  Mythic / National Treasure — 2-3 prefix, 2-3 suffix     (4-6 total)
+ * Grade SS: EX-Rank (unique)          — fixed affixes, not randomly rolled
  */
 UENUM(BlueprintType)
 enum class EItemRarity : uint8

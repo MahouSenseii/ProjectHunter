@@ -222,7 +222,45 @@ public:
 	/** Is this character an NPC? */
 	UFUNCTION(BlueprintPure, Category = "Character")
 	virtual bool IsNPC() const { return false; }
-	
+
+
+	/* ═══════════════════════════════════════════════════════════════════════ */
+	/* DEATH (Blueprint-driven) */
+	/* ═══════════════════════════════════════════════════════════════════════ */
+
+	/**
+	 * Broadcast exactly once when this character dies.
+	 *
+	 * Blueprint death logic stays the orchestrator: when your BP decides the
+	 * character is dead (ragdoll, montage, loot, etc.), call NotifyDeath(Killer)
+	 * as one extra node. That single call is what lets C++ systems react —
+	 * AMobManagerActor binds here for kill counts, OnMobDied, and pool recycling.
+	 *
+	 * Do not broadcast this delegate directly; NotifyDeath guards against
+	 * double-fire and enforces server authority.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Character|Death")
+	FOnDeath OnDeath;
+
+	/**
+	 * Single entry point for declaring this character dead.
+	 * Call from your Blueprint death event (server side). Safe to call multiple
+	 * times — only the first call broadcasts OnDeath.
+	 * @param Killer  The actor credited with the kill (may be null).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Character|Death", BlueprintAuthorityOnly)
+	virtual void NotifyDeath(AActor* Killer);
+
+	/** True once NotifyDeath has fired (until ResetDeathState, e.g. pool reuse). */
+	UFUNCTION(BlueprintPure, Category = "Character|Death")
+	bool IsDead() const { return bHasDied; }
+
+	/**
+	 * Clears the death latch so a pooled/recycled actor can die again.
+	 * Called by AMobManagerActor::FinalizeSpawn and UMobPoolSubsystem::ResetMobState.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Character|Death")
+	virtual void ResetDeathState() { bHasDied = false; }
 
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* PROGRESSION (Shared System) */
@@ -303,6 +341,10 @@ protected:
 
 	UPROPERTY()
 	bool bAbilitySystemInitialized = false;
+
+	/** Death latch — set by NotifyDeath, cleared by ResetDeathState. */
+	UPROPERTY(Transient)
+	bool bHasDied = false;
 	
 	UPROPERTY()
 	TArray<FGameplayAbilitySpecHandle> GrantedAbilityHandles;

@@ -410,6 +410,15 @@ struct FPHAttributeData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Affix")
 	FText AffixName;
 
+	/**
+	 * Mutual-exclusion group.  Only one affix per group may appear on an item.
+	 * E.g., all "added fire damage" affixes share group "FireDamage" so a second
+	 * fire-damage affix can never roll alongside the first (POE2 affix conflict rule).
+	 * Leave as NAME_None to skip group enforcement for this affix.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Affix")
+	FName AffixGroup = NAME_None;
+
 	/** Rank points for quality (-10 to +10) - Also determines weight (higher tier = rarer) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Affix")
 	ERankPoints RankPoints = ERankPoints::RP_0;
@@ -638,6 +647,14 @@ struct FPHItemStats
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Stats")
 	TArray<FPHAttributeData> Crafted;
 
+	/**
+	 * Enchant slot.  Holds up to one enchantment (applied via the enchanting bench /
+	 * special currency).  Separate from Crafted so Blueprint UI can display them
+	 * distinctly — same as POE2 showing enchants in a separate tooltip section.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Stats")
+	TArray<FPHAttributeData> Enchants;
+
 	UPROPERTY(SaveGame, BlueprintReadOnly, Category = "Stats")
 	bool bAffixesGenerated = false;
 
@@ -646,7 +663,7 @@ struct FPHItemStats
 	/** Get total count of all stats (zero allocation) */
 	FORCEINLINE int32 GetTotalStatCount() const
 	{
-		return Implicits.Num() + Prefixes.Num() + Suffixes.Num() + Crafted.Num();
+		return Implicits.Num() + Prefixes.Num() + Suffixes.Num() + Crafted.Num() + Enchants.Num();
 	}
 
 	/** Get all stats combined - OPTIMIZED with Reserve() */
@@ -658,6 +675,7 @@ struct FPHItemStats
 		All.Append(Prefixes);
 		All.Append(Suffixes);
 		All.Append(Crafted);
+		All.Append(Enchants);
 		return All;
 	}
 
@@ -669,6 +687,7 @@ struct FPHItemStats
 		for (const FPHAttributeData& Stat : Prefixes) { Callback(Stat); }
 		for (const FPHAttributeData& Stat : Suffixes) { Callback(Stat); }
 		for (const FPHAttributeData& Stat : Crafted) { Callback(Stat); }
+		for (const FPHAttributeData& Stat : Enchants) { Callback(Stat); }
 	}
 
 	/** Zero-allocation iteration with index */
@@ -680,6 +699,7 @@ struct FPHItemStats
 		for (const FPHAttributeData& Stat : Prefixes) { Callback(Stat, Index++); }
 		for (const FPHAttributeData& Stat : Suffixes) { Callback(Stat, Index++); }
 		for (const FPHAttributeData& Stat : Crafted) { Callback(Stat, Index++); }
+		for (const FPHAttributeData& Stat : Enchants) { Callback(Stat, Index++); }
 	}
 
 	/** Zero-allocation find with predicate */
@@ -690,6 +710,7 @@ struct FPHItemStats
 		for (const FPHAttributeData& Stat : Prefixes) { if (Pred(Stat)) return &Stat; }
 		for (const FPHAttributeData& Stat : Suffixes) { if (Pred(Stat)) return &Stat; }
 		for (const FPHAttributeData& Stat : Crafted) { if (Pred(Stat)) return &Stat; }
+		for (const FPHAttributeData& Stat : Enchants) { if (Pred(Stat)) return &Stat; }
 		return nullptr;
 	}
 
@@ -701,7 +722,7 @@ struct FPHItemStats
 		});
 	}
 
-	/** Get affix count (prefixes + suffixes only) */
+	/** Get affix count (prefixes + suffixes only, excluding implicits/crafted/enchants) */
 	int32 GetTotalAffixCount() const
 	{
 		return Prefixes.Num() + Suffixes.Num();
@@ -714,6 +735,7 @@ struct FPHItemStats
 		for (const FPHAttributeData& Stat : Prefixes) { if (!Stat.bIsIdentified) return true; }
 		for (const FPHAttributeData& Stat : Suffixes) { if (!Stat.bIsIdentified) return true; }
 		for (const FPHAttributeData& Stat : Crafted) { if (!Stat.bIsIdentified) return true; }
+		for (const FPHAttributeData& Stat : Enchants) { if (!Stat.bIsIdentified) return true; }
 		return false;
 	}
 
@@ -753,6 +775,7 @@ struct FPHItemStats
 		Prefixes.Empty();
 		Suffixes.Empty();
 		Crafted.Empty();
+		Enchants.Empty();
 		bAffixesGenerated = false;
 	}
 };

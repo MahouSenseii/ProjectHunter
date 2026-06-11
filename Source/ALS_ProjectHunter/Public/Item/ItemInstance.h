@@ -105,6 +105,42 @@ public:
 	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter")
 	bool bIdentified = true;
 
+	/**
+	 * Reinforcement level (0 = unenhanced, max 999).
+	 * Each successful reinforce attempt increments this by 1.
+	 * The success chance decreases as the level rises — each attempt becomes
+	 * progressively harder (success-chance logic is NOT yet implemented;
+	 * this field is the persistent counter that logic will read/write).
+	 *
+	 * Stat effect of the current level is calculated in GetReinforcementMultiplier().
+	 * The formula is a placeholder and will be tuned alongside the success-chance curve.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter",
+		meta = (ClampMin = "0", ClampMax = "999"))
+	int32 Quality = 0;
+
+	/**
+	 * Returns the stat multiplier for the current reinforcement level.
+	 * Placeholder formula — tune alongside the success-chance curve once
+	 * the reinforcement system is implemented.
+	 * Currently: logarithmic growth so early levels give noticeable gains
+	 * but the curve flattens heavily toward 999 (avoids exponential blow-up).
+	 *   Level   0 → ×1.000
+	 *   Level  10 → ×1.024
+	 *   Level 100 → ×1.046
+	 *   Level 500 → ×1.062
+	 *   Level 999 → ×1.069
+	 * TODO: replace with final tuned formula before shipping the reinforce system.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Item|Hunter")
+	float GetReinforcementMultiplier() const
+	{
+		if (Quality <= 0) return 1.0f;
+		// log10(1 + level) / log10(1000) gives a 0–1 range over the full 999 span.
+		// Scale to a max +7% bonus at level 999 (placeholder; adjust the 0.07f constant).
+		return 1.0f + (FMath::LogX(10.0f, 1.0f + static_cast<float>(Quality)) / FMath::LogX(10.0f, 1000.0f)) * 0.07f;
+	}
+
 	/** Generated display name (cached for performance) */
 	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated, Category = "Item|Hunter")
 	FText DisplayName;

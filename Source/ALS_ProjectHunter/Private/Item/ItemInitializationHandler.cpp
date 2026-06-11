@@ -56,6 +56,14 @@ void FItemInitializationHandler::InitializeWithCorruption(UItemInstance& Item, F
 	Item.Rarity = InRarity;
 	CorruptionChance = FMath::Clamp(CorruptionChance, 0.0f, 1.0f);
 
+	// Honor the SetSeed contract ("0 = generate random"): items initialized
+	// without an explicit seed (e.g. direct Blueprint Initialize calls) get a
+	// real random seed HERE so the stored value reproduces this exact item.
+	if (Item.Seed == 0)
+	{
+		Item.Seed = FMath::RandRange(1, MAX_int32 - 1);
+	}
+
 	if (!Item.HasValidBaseData())
 	{
 		PH_LOG_ERROR(LogItemInstance, "InitializeWithCorruption failed: Invalid base item handle %s.",
@@ -98,10 +106,12 @@ void FItemInitializationHandler::InitializeWithCorruption(UItemInstance& Item, F
 			}
 			else
 			{
+				// Seeded so Grade-F / no-affix items are reproducible too.
+				FRandomStream ImplicitStream(Item.Seed);
 				Item.Stats.Implicits = Base->ImplicitMods;
 				for (FPHAttributeData& Implicit : Item.Stats.Implicits)
 				{
-					Implicit.RollValue();
+					Implicit.RollValue(ImplicitStream);
 					Implicit.GenerateUID();
 				}
 			}

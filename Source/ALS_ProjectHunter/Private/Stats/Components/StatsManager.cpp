@@ -350,34 +350,16 @@ float UStatsManager::GetCovenant() const
 
 float UStatsManager::GetMagicFind() const
 {
-	UHunterAttributeSet* AttrSet = GetAttributeSet();
-	if (!AttrSet)
-	{
-		return 0.0f;
-	}
-
 	return GetLuck() * 0.5f;
 }
 
 float UStatsManager::GetItemFind() const
 {
-	UHunterAttributeSet* AttrSet = GetAttributeSet();
-	if (!AttrSet)
-	{
-		return 0.0f;
-	}
-
 	return GetLuck() * 0.25f;
 }
 
 float UStatsManager::GetGoldFind() const
 {
-	UHunterAttributeSet* AttrSet = GetAttributeSet();
-	if (!AttrSet)
-	{
-		return 0.0f;
-	}
-
 	return GetLuck() * 0.75f;
 }
 

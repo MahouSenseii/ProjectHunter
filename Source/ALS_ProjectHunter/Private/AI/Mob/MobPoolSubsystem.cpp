@@ -190,7 +190,10 @@ void UMobPoolSubsystem::ResetMobState(APHBaseCharacter* Mob) const
 {
 	if (!Mob) { return; }
 
-
+	// Clear the death latch so the recycled actor can broadcast OnDeath again
+	// next life. Without this, NotifyDeath() on the reused mob is a no-op and
+	// managers never hear about its death.
+	Mob->ResetDeathState();
 
 	if (UAbilitySystemComponent* ASC = Mob->GetAbilitySystemComponent())
 	{
