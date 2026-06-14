@@ -17,6 +17,13 @@ public:
     void UpdateTooltip(UItemInstance* Item);
 
 protected:
+    /**
+     * Fired after the C++ population pass so a Blueprint child can extend the
+     * tooltip (extra sections, animations) without replacing the base logic.
+     */
+    UFUNCTION(BlueprintImplementableEvent, Category = "Tooltip")
+    void OnTooltipUpdated(UItemInstance* Item);
+
     // ═══════════════════════════════════════════════
     // HEADER SECTION (Name + Icon)
     // ═══════════════════════════════════════════════
@@ -69,7 +76,10 @@ protected:
     
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
     FLinearColor Color_GradeF;
-    
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
+    FLinearColor Color_GradeE;
+
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
     FLinearColor Color_GradeD;
     

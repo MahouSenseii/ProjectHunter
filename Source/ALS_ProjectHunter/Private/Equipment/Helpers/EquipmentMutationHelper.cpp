@@ -143,8 +143,13 @@ UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Ma
 		return nullptr;
 	}
 
+	// An equipped two-hander only conflicts with the HAND slots. The old
+	// condition (Slot != ES_TwoHand) displaced the two-hander when equipping
+	// ANYTHING — a helmet or ring would silently unequip your weapon.
 	UItemInstance* OldTwoHandItem = nullptr;
-	if (Slot != EEquipmentSlot::ES_TwoHand)
+	const bool bIncomingHandSlot =
+		Slot == EEquipmentSlot::ES_MainHand || Slot == EEquipmentSlot::ES_OffHand;
+	if (bIncomingHandSlot)
 	{
 		OldTwoHandItem = Manager.GetEquippedItem(EEquipmentSlot::ES_TwoHand);
 		if (OldTwoHandItem)

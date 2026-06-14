@@ -115,8 +115,14 @@ private:
 	UPROPERTY()
 	bool bRunActive = false;
 
-	/** World time (seconds) captured at StartRun. Used for elapsed time calc. */
-	float RunStartTimeSeconds = 0.f;
+	/**
+	 * FPlatformTime::Seconds() captured at StartRun. Real (process) time, NOT
+	 * world time — world time resets on OpenLevel, which would corrupt the run
+	 * clock for runs that cross map loads. Includes pause time by design.
+	 * Double because FPlatformTime values are large; float would lose
+	 * sub-second precision on long machine uptimes.
+	 */
+	double RunStartTimeSeconds = 0.0;
 
 	/** Accumulated display data — written on AdvanceFloor and frozen on EndRun. */
 	UPROPERTY()

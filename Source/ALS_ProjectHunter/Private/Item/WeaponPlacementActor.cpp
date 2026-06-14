@@ -78,10 +78,7 @@ int32 AWeaponPlacementActor::SpawnIntoWorld()
 		return INDEX_NONE;
 	}
 
-	// Outer = the GroundItemSubsystem so the item's lifetime is tied to the
-	// subsystem (which itself owns it via its UPROPERTY map). This means the
-	// item will outlive *this* actor cleanly if bRemoveOnDestroyed is off —
-	// useful for "drop the placement marker after spawn" editor workflows.
+
 	UItemInstance* NewItem = NewObject<UItemInstance>(GroundItems);
 	if (!NewItem)
 	{

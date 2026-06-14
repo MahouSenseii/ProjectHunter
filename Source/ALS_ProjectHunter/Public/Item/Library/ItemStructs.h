@@ -601,20 +601,20 @@ struct FPHAttributeData : public FTableRowBase
 	}
 
 	/**
-	 * Get weight for random selection (inverse of RankPoints)
-	 * Higher tier = rarer = lower weight
+	 * Get weight for random selection (inverse of RankPoints tier distance).
+	 * RP_0 = most common (weight 1000); each tier away from 0 is rarer —
+	 * both higher quality tiers AND deeper corruption tiers.
+	 *
+	 * FIX: the old formula returned weight 1 for RankValue <= 0, making RP_0
+	 * affixes 1000x rarer than RP_1 — a cliff no table author would expect.
+	 * Relative rarity between positive tiers is preserved
+	 * (1000/(1+r) vs 1000/r — near-identical ratios).
 	 */
 	int32 GetWeight() const
 	{
-		int32 RankValue = GetRankPointsValue(RankPoints);
-		
-		if (RankValue <= 0)
-		{
-			return 1;
-		}
-		
-		int32 Weight = 1000 / FMath::Max(1, RankValue);
-		return FMath::Clamp(Weight, 1, 1000);
+		const int32 RankValue = GetRankPointsValue(RankPoints);
+		const int32 TierDistance = FMath::Abs(RankValue);
+		return FMath::Clamp(1000 / (1 + TierDistance), 1, 1000);
 	}
 	
 	bool IsCorruptedAffix() const { return AffixType == EAffixes::AF_Corrupted; }
@@ -804,9 +804,14 @@ struct FItemBase : public FTableRowBase
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Identity")
 	FName ItemID = NAME_None;
 
-	/** Only set name for unique items (Grade SS / EX-Rank) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Display", 
-		meta = (EditCondition = "bIsUnique", EditConditionHides))
+	/**
+	 * Base display name for the item ("Iron Sword", "Leather Hood").
+	 * Every item needs one — non-unique gear composes its final name around it
+	 * ("Flaming Iron Sword of Haste"), uniques display it directly/bracketed.
+	 * (Previously hidden behind bIsUnique, which left all non-unique items
+	 * with blank names in-game.)
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Display")
 	FText ItemName = FText::GetEmpty();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Display", meta = (MultiLine = "true"))

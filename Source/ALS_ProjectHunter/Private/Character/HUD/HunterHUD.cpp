@@ -4,6 +4,7 @@
 #include "Character/PHBaseCharacter.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "GameFramework/PlayerController.h"
+#include "Menu/Widgets/MenuRootWidget.h"
 #include "TimerManager.h"
 #include "Interactable/Widget/ItemTooltipWidget.h"
 
@@ -91,6 +92,13 @@ void AHunterHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		MainHUDWidget = nullptr;
 	}
 
+	if (MenuRootWidget)
+	{
+		MenuRootWidget->ReleaseCharacter();
+		MenuRootWidget->RemoveFromParent();
+		MenuRootWidget = nullptr;
+	}
+
 	if (ItemTooltipWidget)
 	{
 		ItemTooltipWidget->RemoveFromParent();
@@ -98,6 +106,133 @@ void AHunterHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 
 	Super::EndPlay(EndPlayReason);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MENU
+// ─────────────────────────────────────────────────────────────────────────────
+
+void AHunterHUD::ToggleMenu()
+{
+	if (IsMenuOpen())
+	{
+		CloseMenu();
+	}
+	else
+	{
+		OpenMenu(EMenuType::MT_None);
+	}
+}
+
+void AHunterHUD::OpenMenu(const EMenuType MenuType)
+{
+	if (!EnsureMenuRootWidget())
+	{
+		return;
+	}
+
+	MenuRootWidget->SetVisibility(ESlateVisibility::Visible);
+	MenuRootWidget->OpenMenu(MenuType);
+	ApplyMenuInputMode(true);
+
+	UE_LOG(LogHunterHUD, Log, TEXT("OpenMenu: menu opened on page %d."),
+		static_cast<int32>(MenuRootWidget->GetActiveMenuType()));
+}
+
+void AHunterHUD::CloseMenu()
+{
+	if (!IsMenuOpen())
+	{
+		return;
+	}
+
+	MenuRootWidget->SetVisibility(ESlateVisibility::Collapsed);
+	ApplyMenuInputMode(false);
+
+	UE_LOG(LogHunterHUD, Log, TEXT("CloseMenu: menu closed."));
+}
+
+bool AHunterHUD::IsMenuOpen() const
+{
+	return MenuRootWidget && MenuRootWidget->GetVisibility() == ESlateVisibility::Visible;
+}
+
+bool AHunterHUD::EnsureMenuRootWidget()
+{
+	if (MenuRootWidget)
+	{
+		return true;
+	}
+
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC)
+	{
+		return false;
+	}
+
+	if (!MenuRootWidgetClass)
+	{
+		PH_LOG_WARNING(LogHunterHUD,
+			"EnsureMenuRootWidget: MenuRootWidgetClass is not set on %s. "
+			"Assign your WBP_MenuRoot in the HUD Blueprint defaults.",
+			*GetNameSafe(this));
+		return false;
+	}
+
+	MenuRootWidget = CreateWidget<UMenuRootWidget>(PC, MenuRootWidgetClass);
+	if (!MenuRootWidget)
+	{
+		PH_LOG_WARNING(LogHunterHUD, "EnsureMenuRootWidget: CreateWidget failed for %s.",
+			*GetNameSafe(MenuRootWidgetClass));
+		return false;
+	}
+
+	// Created hidden; OpenMenu flips visibility. Kept alive (with cached pages)
+	// for the lifetime of the HUD.
+	MenuRootWidget->SetVisibility(ESlateVisibility::Collapsed);
+	MenuRootWidget->AddToPlayerScreen(MenuZOrder);
+
+	if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(PC->GetPawn()))
+	{
+		MenuRootWidget->InitializeForCharacter(Character);
+	}
+
+	UE_LOG(LogHunterHUD, Log, TEXT("EnsureMenuRootWidget: created %s (Z=%d)."),
+		*GetNameSafe(MenuRootWidget), MenuZOrder);
+
+	return true;
+}
+
+void AHunterHUD::ApplyMenuInputMode(const bool bMenuOpen) const
+{
+	if (!bManageInputMode)
+	{
+		return;
+	}
+
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC)
+	{
+		return;
+	}
+
+	if (bMenuOpen)
+	{
+		FInputModeGameAndUI InputMode;
+		if (MenuRootWidget)
+		{
+			InputMode.SetWidgetToFocus(MenuRootWidget->TakeWidget());
+		}
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		InputMode.SetHideCursorDuringCapture(false);
+		PC->SetInputMode(InputMode);
+		PC->bShowMouseCursor = true;
+	}
+	else
+	{
+		PC->SetInputMode(FInputModeGameOnly());
+		PC->bShowMouseCursor = false;
+	}
 }
 
 void AHunterHUD::ShowItemTooltip(UItemInstance* Item, FVector2D ScreenPosition)
@@ -118,12 +253,14 @@ void AHunterHUD::HideItemTooltip()
 	}
 }
 
-void AHunterHUD::ShowMashProgressWidget(const FText& Text, int32 INT32)
+void AHunterHUD::ShowMashProgressWidget(const FText& Text, int32 RequiredCount)
 {
+	BP_OnShowMashProgress(Text, RequiredCount);
 }
 
 void AHunterHUD::HideMashProgressWidget()
 {
+	BP_OnHideMashProgress();
 }
 
 void AHunterHUD::CreateMainHUDWidget()
@@ -179,6 +316,19 @@ void AHunterHUD::BindWidgetsToCharacter(APHBaseCharacter* Character) const
 		Character ? *GetNameSafe(Character->GetClass()) : TEXT("None"));
 
 	MainHUDWidget->BindToCharacter(Character);
+
+	// Keep the menu (and all of its cached pages) bound to the same character.
+	if (MenuRootWidget)
+	{
+		if (Character)
+		{
+			MenuRootWidget->InitializeForCharacter(Character);
+		}
+		else
+		{
+			MenuRootWidget->ReleaseCharacter();
+		}
+	}
 }
 
 void AHunterHUD::HandlePawnChanged(APawn* OldPawn, APawn* NewPawn)

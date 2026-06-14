@@ -4,6 +4,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "Character/Components/Interaction/InteractionManager.h"
+#include "Character/HUD/HunterHUD.h"
 #include "GameFramework/Pawn.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHunterController, Log, All);
@@ -37,11 +38,22 @@ void AHunterController::Interact(const FInputActionValue& Value)
 	}
 }
 
-void AHunterController::Menu(const FInputActionValue& Value) const
+void AHunterController::Menu(const FInputActionValue& Value)
 {
-	if (Value.Get<bool>())
+	if (!Value.Get<bool>())
 	{
-		UE_LOG(LogHunterController, Log, TEXT("Menu button pressed"));
+		return;
+	}
+
+	if (AHunterHUD* HunterHUD = Cast<AHunterHUD>(GetHUD()))
+	{
+		HunterHUD->ToggleMenu();
+	}
+	else
+	{
+		UE_LOG(LogHunterController, Warning,
+			TEXT("Menu: HUD is not an AHunterHUD (current: %s) — set HUD Class in your GameMode."),
+			*GetNameSafe(GetHUD()));
 	}
 }
 

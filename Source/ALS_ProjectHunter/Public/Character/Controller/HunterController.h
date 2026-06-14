@@ -56,9 +56,12 @@ public:
 	void Interact(const FInputActionValue& Value);
 	
 	/**
-	 * Menu input handler
+	 * Menu input handler — toggles the tabbed menu on AHunterHUD.
+	 * BlueprintCallable so the BP controller's EnhancedInputAction event can
+	 * route here with a single node (pass the action's bool value).
 	 */
-	void Menu(const FInputActionValue& Value) const;
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void Menu(const FInputActionValue& Value);
 	
 	/* Relays input action*/
 	UFUNCTION(BlueprintCallable)

@@ -1,6 +1,7 @@
 #include "Item/ItemNameBuilder.h"
 
 #include "Item/ItemInstance.h"
+#include "Item/Library/ItemFunctionLibrary.h"
 
 FText FItemNameBuilder::GetDisplayName(UItemInstance& Item)
 {
@@ -56,34 +57,16 @@ FText FItemNameBuilder::GetDisplayName(UItemInstance& Item)
 	}
 	else
 	{
-		switch (Item.Rarity)
-		{
-		case EItemRarity::IR_GradeF:
-		case EItemRarity::IR_GradeE:
-		case EItemRarity::IR_GradeD:
-		case EItemRarity::IR_GradeC:
-		case EItemRarity::IR_GradeB:
-			Item.DisplayName = FText::Format(
-				FText::FromString("{0}{1}"),
-				FText::FromString(NamePrefix),
-				Base->ItemName);
-			break;
-
-		case EItemRarity::IR_GradeA:
-		case EItemRarity::IR_GradeS:
-			Item.DisplayName = FText::Format(
-				FText::FromString("{0}{1}"),
-				FText::FromString(NamePrefix),
-				GenerateRareName(Item));
-			break;
-
-		default:
-			Item.DisplayName = FText::Format(
-				FText::FromString("{0}{1}"),
-				FText::FromString(NamePrefix),
-				Base->ItemName);
-			break;
-		}
+		// Route through the affix-aware composer (it was fully implemented but
+		// previously had no callers):
+		//   F/E        → base name
+		//   D/C/B      → "<BestPrefix> <Base> <BestSuffix>" from rolled AffixNames
+		//   A/S/SS     → "[Base]"
+		// Falls back to the plain base name when no affix has an AffixName.
+		Item.DisplayName = FText::Format(
+			FText::FromString("{0}{1}"),
+			FText::FromString(NamePrefix),
+			UItemFunctionLibrary::GenerateItemName(Item.Stats, *Base, Item.Rarity));
 	}
 
 	Item.bHasNameBeenGenerated = true;

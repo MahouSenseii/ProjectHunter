@@ -379,6 +379,7 @@ DEFINE_GAMEPLAY_TAG(Condition_Self_IsStaggered)
 DEFINE_GAMEPLAY_TAG(Condition_Self_StaminaDepleted)
 DEFINE_GAMEPLAY_TAG(Condition_Self_IsInvincible)
 DEFINE_GAMEPLAY_TAG(State_Self_ExecutingSkill)
+DEFINE_GAMEPLAY_TAG(Gameplay_AbilityInputBlocked)
 
 DEFINE_GAMEPLAY_TAG(Data_More_Physical)
 DEFINE_GAMEPLAY_TAG(Data_More_Fire)
@@ -917,6 +918,7 @@ void FPHGameplayTags::RegisterSetByCallerDamageTags()
 	Condition_Self_StaminaDepleted = T.AddNativeGameplayTag("Condition.Self.StaminaDepleted", TEXT("Stamina is at zero. Required condition for stagger on incoming hits."));
 	Condition_Self_IsInvincible    = T.AddNativeGameplayTag("Condition.Self.IsInvincible",    TEXT("Character has invincibility frames active. Routes EHitResponse::Invincible — negates damage and ailments."));
 	State_Self_ExecutingSkill      = T.AddNativeGameplayTag("State.Self.ExecutingSkill",      TEXT("Character is mid-execution of an active skill. Suppresses stagger trigger even at zero stamina."));
+	Gameplay_AbilityInputBlocked   = T.AddNativeGameplayTag("Gameplay.AbilityInputBlocked",   TEXT("While present on the ASC, ProcessAbilityInput clears and ignores all ability input (stuns, cutscenes, menus)."));
 
 	Data_More_Physical   = T.AddNativeGameplayTag("Data.More.Physical",   TEXT("SetByCaller: X% more physical damage. Stacks multiplicatively."));
 	Data_More_Fire       = T.AddNativeGameplayTag("Data.More.Fire",       TEXT("SetByCaller: X% more fire damage. Stacks multiplicatively."));

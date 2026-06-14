@@ -65,10 +65,25 @@ void UInteractableManager::CreateWidgetComponent()
 	WidgetComponent->SetGeometryMode(EWidgetGeometryMode::Plane);
 	WidgetComponent->SetBlendMode(EWidgetBlendMode::Transparent);
 	WidgetComponent->SetTwoSided(false);
+	// Tick mode stays Enabled, but we drive the component tick EXPLICITLY with
+	// focus visibility (see OnBeginFocus/OnEndFocus). Do NOT use
+	// ETickMode::Automatic here: a widget component that starts hidden
+	// self-disables its tick, and SetVisibility(true) never re-enables it —
+	// widget components only draw during tick, so the prompt never renders.
+	// Explicit enable/disable gets the same perf win (hidden prompts cost
+	// nothing) without the engine quirk.
 	WidgetComponent->SetTickMode(ETickMode::Enabled);
 	WidgetComponent->SetWindowFocusable(false);
 	WidgetComponent->SetPivot(FVector2D(0.5f, 1.0f));
 	
+	// The render target's PIXEL resolution equals DrawSize, and the quad's
+	// WORLD size is DrawSize (cm) × component scale. Sharpness therefore comes
+	// from rendering at DrawSize × ResolutionScale pixels and compensating the
+	// component scale by 1/ResolutionScale so the world size stays identical.
+	// (The old "high res" path skipped the compensation — it just made a
+	// physically larger widget. And desired-size mode lets the engine shrink
+	// the render target to the authored widget size every frame, which is the
+	// classic source of blurry prompts.)
 	if (bUseDesiredSize)
 	{
 		WidgetComponent->SetDrawSize(WidgetDrawSize);
@@ -76,11 +91,12 @@ void UInteractableManager::CreateWidgetComponent()
 	}
 	else
 	{
-		FVector2D HighResSize = WidgetDrawSize * ResolutionScale;
-		WidgetComponent->SetDrawSize(HighResSize);
+		const float Scale = FMath::Clamp(ResolutionScale, 0.5f, 4.0f);
+		WidgetComponent->SetDrawSize(WidgetDrawSize * Scale);
 		WidgetComponent->SetDrawAtDesiredSize(false);
+		WidgetComponent->SetRelativeScale3D(FVector(1.0f / Scale));
 	}
-	
+
 	WidgetComponent->SetWidgetClass(InteractionWidgetClass);
 	WidgetComponent->SetRelativeLocation(WidgetOffset);
 	WidgetComponent->AttachToComponent(
@@ -91,7 +107,10 @@ void UInteractableManager::CreateWidgetComponent()
 	WidgetComponent->InitWidget();
 	WidgetComponent->RequestRedraw();
 	WidgetComponent->SetBackgroundColor(FLinearColor::Transparent);
+
+	// Start dormant: hidden AND not ticking. OnBeginFocus wakes both up.
 	WidgetComponent->SetVisibility(false);
+	WidgetComponent->SetComponentTickEnabled(false);
 
 	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Created high-quality widget for %s (Type: %s, CameraFacing: %s)"), 
 		*Owner->GetName(),
@@ -163,15 +182,27 @@ bool UInteractableManager::CanInteract_Implementation(AActor* Interactor) const
 
 void UInteractableManager::OnBeginFocus_Implementation(AActor* Interactor)
 {
+	// Refcounted focus: visuals turn ON with the FIRST focuser only.
+	// CurrentInteractor always tracks the most recent one (camera facing).
+	const int32 LiveFocusersBefore = CompactFocusingInteractors();
+	if (Interactor)
+	{
+		FocusingInteractors.AddUnique(Interactor);
+	}
 	CurrentInteractor = Interactor;
 
-	if (bEnableHighlight)
+	const bool bFirstFocuser = (LiveFocusersBefore == 0);
+
+	if (bEnableHighlight && bFirstFocuser)
 	{
 		ApplyHighlight(true);
 	}
 
 	if (WidgetComponent)
 	{
+		// Wake the component: tick must come back on with visibility — widget
+		// components only draw during tick (see CreateWidgetComponent note).
+		WidgetComponent->SetComponentTickEnabled(true);
 		WidgetComponent->SetVisibility(true);
 
 		if (UInteractableWidget* Widget = Cast<UInteractableWidget>(WidgetComponent->GetWidget()))
@@ -195,12 +226,31 @@ void UInteractableManager::OnBeginFocus_Implementation(AActor* Interactor)
 
 	OnFocusBegin.Broadcast(Interactor);
 
-	UE_LOG(LogInteractable, Verbose, TEXT("InteractableManager: Begin focus on %s (Type: %s)"), 
-		*GetOwner()->GetName(), *UEnum::GetValueAsString(Config.InteractionType));
+	UE_LOG(LogInteractable, Verbose, TEXT("InteractableManager: Begin focus on %s (Type: %s, Focusers: %d)"),
+		*GetOwner()->GetName(), *UEnum::GetValueAsString(Config.InteractionType), FocusingInteractors.Num());
 }
 
 void UInteractableManager::OnEndFocus_Implementation(AActor* Interactor)
 {
+	// Refcounted focus: visuals turn OFF only when the LAST focuser leaves.
+	FocusingInteractors.RemoveAll([Interactor](const TWeakObjectPtr<AActor>& Weak)
+	{
+		return !Weak.IsValid() || Weak.Get() == Interactor;
+	});
+	const int32 LiveFocusers = CompactFocusingInteractors();
+
+	if (LiveFocusers > 0)
+	{
+		// Someone is still looking — retarget camera facing to a remaining focuser.
+		if (CurrentInteractor == Interactor)
+		{
+			CurrentInteractor = FocusingInteractors.Last().Get();
+		}
+
+		OnFocusEnd.Broadcast(Interactor);
+		return;
+	}
+
 	CurrentInteractor = nullptr;
 
 	StopCameraFacingUpdates();
@@ -219,12 +269,24 @@ void UInteractableManager::OnEndFocus_Implementation(AActor* Interactor)
 			Widget->SetProgress(0.0f);
 		}
 
+		// Back to dormant: hidden prompts shouldn't tick (perf with many
+		// interactables); OnBeginFocus re-enables both.
 		WidgetComponent->SetVisibility(false);
+		WidgetComponent->SetComponentTickEnabled(false);
 	}
 
 	OnFocusEnd.Broadcast(Interactor);
 
 	UE_LOG(LogInteractable, Verbose, TEXT("InteractableManager: End focus on %s"), *GetOwner()->GetName());
+}
+
+int32 UInteractableManager::CompactFocusingInteractors()
+{
+	FocusingInteractors.RemoveAll([](const TWeakObjectPtr<AActor>& Weak)
+	{
+		return !Weak.IsValid();
+	});
+	return FocusingInteractors.Num();
 }
 
 EInteractionType UInteractableManager::GetInteractionType_Implementation() const

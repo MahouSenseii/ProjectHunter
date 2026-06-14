@@ -337,17 +337,16 @@ void UInteractionManager::CheckForInteractables()
 		DebugManager.DrawInteractionRange(CameraLocation, TraceManager.InteractionDistance);
 	}
 
-	TScriptInterface<IInteractable> NewInteractable = TraceManager.TraceForActorInteractable();
+	// Focus requires a camera trace hit first; dot gates only validate that
+	// traced target against the camera and owning player's forward vector.
+	TScriptInterface<IInteractable> NewInteractable = TraceManager.FindBestActorInteractable();
 
 	int32 NewGroundItemID = INDEX_NONE;
 	if (!NewInteractable.GetInterface())
 	{
-		NewGroundItemID = TraceManager.FindGroundItemByTrace();
-
-		if (NewGroundItemID == INDEX_NONE)
-		{
-			TraceManager.FindNearestGroundItem(NewGroundItemID);
-		}
+		// Ground items are selected from camera-ray candidates, then ranked by
+		// dot product so overlapping loot picks the item the player is aiming at.
+		NewGroundItemID = TraceManager.FindGroundItemByTrace(CurrentGroundItemID);
 	}
 
 	if (GetCurrentInteractableObject() != NewInteractable.GetObject())
@@ -554,6 +553,15 @@ bool UInteractionManager::InteractWithActor(AActor* TargetActor)
 		}
 
 		return false;
+	}
+
+	// Remote client: route the authoritative interaction through OUR Server RPC
+	// (player-owned component — target-actor Server RPCs from clients are
+	// dropped by the engine). The local execution below still runs for
+	// immediate presentation; target actors gate gameplay on HasAuthority.
+	if (!Owner->HasAuthority())
+	{
+		Server_InteractWithActor(TargetActor, ClientLocation);
 	}
 
 	if (UInteractableManager* InteractableComp = TargetActor->FindComponentByClass<UInteractableManager>())
@@ -793,6 +801,16 @@ void UInteractionManager::BeginOrAdvanceActorMashInteraction(
 	{
 		if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
 		{
+			// Remote client: authoritative completion via our Server RPC;
+			// local Execute stays for presentation.
+			if (AActor* Owner = GetOwner(); Owner && !Owner->HasAuthority())
+			{
+				if (AActor* TargetActor = ResolveInteractionActor(ActiveInteractableObjectPtr))
+				{
+					Server_NotifyMashComplete(TargetActor, Owner->GetActorLocation());
+				}
+			}
+
 			IInteractable::Execute_OnMashInteractionComplete(ActiveInteractableObjectPtr, GetOwner());
 		}
 		WidgetPresenter.SetCompletedState();
@@ -883,6 +901,17 @@ void UInteractionManager::CompleteActiveHoldInteraction()
 
 	if (UObject* ActiveInteractableObjectPtr = GetActiveInteractableObject())
 	{
+		// Remote client: the authoritative completion goes through our Server
+		// RPC; the local Execute below remains for presentation (widget /
+		// component BP events). See SERVER RPCs note in the header.
+		if (AActor* Owner = GetOwner(); Owner && !Owner->HasAuthority())
+		{
+			if (AActor* TargetActor = ResolveInteractionActor(ActiveInteractableObjectPtr))
+			{
+				Server_NotifyHoldComplete(TargetActor, Owner->GetActorLocation());
+			}
+		}
+
 		IInteractable::Execute_OnHoldInteractionComplete(ActiveInteractableObjectPtr, GetOwner());
 	}
 
@@ -1212,4 +1241,101 @@ void UInteractionManager::Server_PickupAndEquip_Implementation(
 	}
 
 	PickupManager.PickupAndEquip(ItemID);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERVER-SIDE ACTOR INTERACTION
+// ─────────────────────────────────────────────────────────────────────────────
+
+bool UInteractionManager::ValidateServerInteraction(AActor* TargetActor)
+{
+	AActor* Owner = GetOwner();
+	if (!Owner || !IsValid(TargetActor))
+	{
+		return false;
+	}
+
+	// Validate against the SERVER's view of the pawn — the client-reported
+	// location is informational only and never trusted for range checks.
+	return ValidatorManager.ValidateActorInteraction(
+		TargetActor,
+		Owner->GetActorLocation(),
+		TraceManager.InteractionDistance);
+}
+
+UObject* UInteractionManager::ResolveInteractableObjectOnActor(AActor* TargetActor) const
+{
+	if (!IsValid(TargetActor))
+	{
+		return nullptr;
+	}
+
+	if (UInteractableManager* InteractableComp = TargetActor->FindComponentByClass<UInteractableManager>())
+	{
+		return InteractableComp;
+	}
+
+	if (TargetActor->GetClass()->ImplementsInterface(UInteractable::StaticClass()))
+	{
+		return TargetActor;
+	}
+
+	return nullptr;
+}
+
+void UInteractionManager::Server_InteractWithActor_Implementation(AActor* TargetActor, FVector ClientLocation)
+{
+	if (!ValidateServerInteraction(TargetActor))
+	{
+		UE_LOG(LogInteractionManager, Warning,
+			TEXT("Server_InteractWithActor: validation failed for target %s"),
+			*GetNameSafe(TargetActor));
+		return;
+	}
+
+	if (UObject* InteractableObject = ResolveInteractableObjectOnActor(TargetActor))
+	{
+		if (IInteractable::Execute_CanInteract(InteractableObject, GetOwner()))
+		{
+			IInteractable::Execute_OnInteract(InteractableObject, GetOwner());
+		}
+	}
+}
+
+void UInteractionManager::Server_NotifyHoldComplete_Implementation(AActor* TargetActor, FVector ClientLocation)
+{
+	if (!ValidateServerInteraction(TargetActor))
+	{
+		UE_LOG(LogInteractionManager, Warning,
+			TEXT("Server_NotifyHoldComplete: validation failed for target %s"),
+			*GetNameSafe(TargetActor));
+		return;
+	}
+
+	if (UObject* InteractableObject = ResolveInteractableObjectOnActor(TargetActor))
+	{
+		if (IInteractable::Execute_CanInteract(InteractableObject, GetOwner()))
+		{
+			IInteractable::Execute_OnHoldInteractionComplete(InteractableObject, GetOwner());
+		}
+	}
+}
+
+void UInteractionManager::Server_NotifyMashComplete_Implementation(AActor* TargetActor, FVector ClientLocation)
+{
+	if (!ValidateServerInteraction(TargetActor))
+	{
+		UE_LOG(LogInteractionManager, Warning,
+			TEXT("Server_NotifyMashComplete: validation failed for target %s"),
+			*GetNameSafe(TargetActor));
+		return;
+	}
+
+	if (UObject* InteractableObject = ResolveInteractableObjectOnActor(TargetActor))
+	{
+		if (IInteractable::Execute_CanInteract(InteractableObject, GetOwner()))
+		{
+			IInteractable::Execute_OnMashInteractionComplete(InteractableObject, GetOwner());
+		}
+	}
 }

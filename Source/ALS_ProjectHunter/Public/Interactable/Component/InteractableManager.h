@@ -52,11 +52,22 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Widget")
 	FVector2D WidgetDrawSize = FVector2D(300, 80);
 
-	/** Use desired size for better quality? (Recommended: true) */
+	/**
+	 * Desired-size mode: the engine resizes the render target to the UMG
+	 * widget's authored size every frame. Looks LOW-RES whenever the widget is
+	 * authored smaller than it appears on screen. Recommended: false — the
+	 * ResolutionScale path renders at N× resolution with compensated component
+	 * scale, keeping the same world size but sharp.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Widget")
-	bool bUseDesiredSize = true;
+	bool bUseDesiredSize = false;
 
-	/** Manual resolution scale (if not using desired size). Higher = sharper but more expensive */
+	/**
+	 * Render-target supersampling (when not using desired size): the widget is
+	 * rendered at WidgetDrawSize × this, and the component is scaled by the
+	 * inverse so its WORLD size stays WidgetDrawSize. 2 = sharp at typical
+	 * interaction distances; 3-4 only if prompts are viewed very close.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Widget", meta = (EditCondition = "!bUseDesiredSize", ClampMin = "0.5", ClampMax = "4.0"))
 	float ResolutionScale = 2.0f;
 
@@ -239,9 +250,22 @@ private:
 	UPROPERTY()
 	UWidgetComponent* WidgetComponent = nullptr;
 
-	/** Current interactor (for camera-facing calculations) */
+	/** Current interactor (for camera-facing calculations — the most recent focuser) */
 	UPROPERTY()
 	AActor* CurrentInteractor = nullptr;
+
+	/**
+	 * Every actor currently focusing this interactable (co-op safe).
+	 * Highlight/widget turn ON with the first focuser and OFF with the last —
+	 * previously a single CurrentInteractor meant player B walking away
+	 * cleared player A's highlight and prompt.
+	 * NOTE: the world-space widget itself is still visible to everyone while
+	 * any player focuses; true per-player prompts need owner-only widgets.
+	 */
+	TArray<TWeakObjectPtr<AActor>> FocusingInteractors;
+
+	/** Prune stale entries; returns the number of live focusers. */
+	int32 CompactFocusingInteractors();
 
 	/** Timer handle for camera-facing updates */
 	FTimerHandle CameraFacingTimerHandle;

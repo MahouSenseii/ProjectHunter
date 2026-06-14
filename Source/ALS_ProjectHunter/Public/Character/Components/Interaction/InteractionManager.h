@@ -273,6 +273,17 @@ protected:
 	// ═══════════════════════════════════════════════
 	// SERVER RPCs
 	// ═══════════════════════════════════════════════
+	// All gameplay-relevant interaction crosses the network HERE, on the
+	// player-owned component — never via Server RPCs on the target actor.
+	// (A client calling a Server RPC on an actor it doesn't own — chest,
+	// portal — is silently dropped by the engine. Ground pickups always did
+	// this correctly; actor interaction now follows the same pattern.)
+	//
+	// Flow: client executes the interface call locally for presentation
+	// (widget states, component BP events), and the server re-validates
+	// (distance + LOS via ValidatorManager) then executes the SAME interface
+	// call authoritatively. Target actors keep guarding their gameplay with
+	// HasAuthority, so the local client execution stays cosmetic.
 
 	UFUNCTION(Server, Reliable, Category = "Interaction|Pickup")
 	void Server_PickupToInventory(int32 ItemID, FVector ClientLocation);
@@ -280,7 +291,37 @@ protected:
 	UFUNCTION(Server, Reliable, Category = "Interaction|Pickup")
 	void Server_PickupAndEquip(int32 ItemID, FVector ClientLocation);
 
+	/** Tap/toggle interaction on an actor interactable (OnInteract). */
+	UFUNCTION(Server, Reliable, Category = "Interaction|Actor")
+	void Server_InteractWithActor(AActor* TargetActor, FVector ClientLocation);
+
+	/**
+	 * Hold completed on an actor interactable (OnHoldInteractionComplete).
+	 * The hold timing itself is client-driven (cosmetic gating); the server
+	 * validates reachability, not the elapsed time.
+	 */
+	UFUNCTION(Server, Reliable, Category = "Interaction|Actor")
+	void Server_NotifyHoldComplete(AActor* TargetActor, FVector ClientLocation);
+
+	/** Mash completed on an actor interactable (OnMashInteractionComplete). */
+	UFUNCTION(Server, Reliable, Category = "Interaction|Actor")
+	void Server_NotifyMashComplete(AActor* TargetActor, FVector ClientLocation);
+
 private:
+	// ═══════════════════════════════════════════════
+	// SERVER-SIDE INTERACTION EXECUTION (shared by the RPCs above)
+	// ═══════════════════════════════════════════════
+
+	/** Distance + LOS validation against the SERVER's view of the pawn. */
+	bool ValidateServerInteraction(AActor* TargetActor);
+
+	/**
+	 * Resolve the object that implements IInteractable on a target actor —
+	 * the UInteractableManager component when present (preferred), otherwise
+	 * the actor itself if it implements the interface directly.
+	 */
+	UObject* ResolveInteractableObjectOnActor(AActor* TargetActor) const;
+
 	// ═══════════════════════════════════════════════
 	// SYSTEM FLAGS
 	// ═══════════════════════════════════════════════

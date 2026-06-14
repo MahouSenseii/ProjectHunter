@@ -49,6 +49,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Visualization")
 	bool bDrawGroundItems = true;
 
+	/** Draw the look-at gate cone (the forward cone a target must be inside to take focus). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Visualization")
+	bool bDrawLookAtCone = true;
+
+	/** Draw aim candidates with dot values (green=winner, yellow=in cone but lost, orange=failed gate). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Visualization")
+	bool bDrawAimCandidates = true;
+
+	/** Draw the ground-item camera-ray window: aim radius and trace-depth limit. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Visualization")
+	bool bDrawGroundItemAimWindow = true;
+
 	/** Show on-screen debug text */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Visualization")
 	bool bShowDebugText = true;
@@ -92,6 +104,26 @@ public:
 	void DrawInteractionRange(FVector Center, float Radius);
 	void DrawGroundItem(FVector ItemLocation, int32 ItemID);
 	void DrawInteractableInfo(UInteractableManager* Interactable, float Distance);
+
+	/**
+	 * Visualize the look-at gate: a cone from the view origin along camera
+	 * forward with half-angle acos(MinDot). Anything outside it cannot take focus.
+	 */
+	void DrawLookAtCone(FVector Origin, FVector Forward, float MinDot, float Length);
+
+	/** Visualize the owning player's forward gate. */
+	void DrawPlayerForwardGate(FVector Origin, FVector Forward, float MinDot, float Length);
+
+	/**
+	 * Visualize one aim candidate and its dot value.
+	 * Green = winner (took focus), yellow = passed the gate but lost,
+	 * orange = failed the gate (outside the cone).
+	 */
+	void DrawAimCandidate(FVector Location, float Dot, bool bPassedGate, bool bWinner);
+
+	/** Visualize the ground-item candidate volume used before dot-product scoring. */
+	void DrawGroundItemAimWindow(
+		FVector Origin, FVector Forward, float MinDistance, float MaxDistance, float Radius, bool bLimitedByTraceHit);
 
 	// ═══════════════════════════════════════════════
 	// DEBUG TEXT

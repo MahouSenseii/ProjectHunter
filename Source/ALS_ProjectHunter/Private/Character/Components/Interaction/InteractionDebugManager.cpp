@@ -131,6 +131,154 @@ void FInteractionDebugManager::DrawInteractionRange(FVector Center, float Radius
 	);
 }
 
+void FInteractionDebugManager::DrawLookAtCone(FVector Origin, FVector Forward, float MinDot, float Length)
+{
+	if (!ShouldShowDebugTraces() || !bDrawLookAtCone || !WorldContext)
+	{
+		return;
+	}
+
+	const float HalfAngleRad = FMath::Acos(FMath::Clamp(MinDot, -1.0f, 1.0f));
+
+	DrawDebugCone(
+		WorldContext,
+		Origin,
+		Forward,
+		Length,
+		HalfAngleRad,
+		HalfAngleRad,
+		16,
+		FColor(0, 160, 255),
+		false,
+		DrawDuration,
+		0,
+		DrawThickness * 0.5f
+	);
+}
+
+void FInteractionDebugManager::DrawPlayerForwardGate(FVector Origin, FVector Forward, float MinDot, float Length)
+{
+	if (!ShouldShowDebugTraces() || !bDrawLookAtCone || !WorldContext)
+	{
+		return;
+	}
+
+	const FVector SafeForward = Forward.GetSafeNormal();
+	if (SafeForward.IsNearlyZero())
+	{
+		return;
+	}
+
+	const float HalfAngleRad = FMath::Acos(FMath::Clamp(MinDot, -1.0f, 1.0f));
+
+	DrawDebugCone(
+		WorldContext,
+		Origin,
+		SafeForward,
+		Length,
+		HalfAngleRad,
+		HalfAngleRad,
+		16,
+		FColor(0, 255, 120),
+		false,
+		DrawDuration,
+		0,
+		DrawThickness * 0.5f
+	);
+}
+
+void FInteractionDebugManager::DrawAimCandidate(FVector Location, float Dot, bool bPassedGate, bool bWinner)
+{
+	if (!ShouldShowDebugTraces() || !bDrawAimCandidates || !WorldContext)
+	{
+		return;
+	}
+
+	const FColor CandidateColor = bWinner
+		? TraceHitColor                       // green: took focus
+		: (bPassedGate ? FColor::Yellow       // in the cone, lost on dot
+		               : FColor::Orange);     // failed the gate
+
+	DrawDebugSphere(
+		WorldContext,
+		Location,
+		bWinner ? 30.0f : 18.0f,
+		8,
+		CandidateColor,
+		false,
+		DrawDuration,
+		0,
+		DrawThickness
+	);
+
+	if (DebugMode == EInteractionDebugMode::Detailed || DebugMode == EInteractionDebugMode::Full)
+	{
+		DrawDebugString(
+			WorldContext,
+			Location + FVector(0, 0, 40.0f),
+			FString::Printf(TEXT("dot %.3f%s"), Dot, bWinner ? TEXT(" ★") : TEXT("")),
+			nullptr,
+			CandidateColor,
+			DrawDuration <= 0.0f ? 0.05f : DrawDuration,
+			true
+		);
+	}
+}
+
+void FInteractionDebugManager::DrawGroundItemAimWindow(
+	FVector Origin, FVector Forward, float MinDistance, float MaxDistance, float Radius, bool bLimitedByTraceHit)
+{
+	if (!ShouldShowDebugTraces() || !bDrawGroundItemAimWindow || !WorldContext
+		|| MaxDistance <= MinDistance || Radius <= 0.0f)
+	{
+		return;
+	}
+
+	const FVector SafeForward = Forward.GetSafeNormal();
+	if (SafeForward.IsNearlyZero())
+	{
+		return;
+	}
+
+	const float WindowLength = MaxDistance - MinDistance;
+	const FVector Start = Origin + SafeForward * MinDistance;
+	const FVector End = Origin + SafeForward * MaxDistance;
+	const FColor WindowColor = bLimitedByTraceHit
+		? FColor(0, 220, 255)
+		: FColor(0, 120, 255);
+
+	DrawDebugCylinder(
+		WorldContext,
+		Start,
+		End,
+		Radius,
+		16,
+		WindowColor,
+		false,
+		DrawDuration,
+		0,
+		DrawThickness * 0.35f
+	);
+
+	if (DebugMode == EInteractionDebugMode::Detailed || DebugMode == EInteractionDebugMode::Full)
+	{
+		DrawDebugString(
+			WorldContext,
+			Start + SafeForward * (WindowLength * 0.5f) + FVector(0, 0, Radius + 25.0f),
+			FString::Printf(
+				TEXT("ground aim r %.0f depth %.0f-%.0f%s"),
+				Radius,
+				MinDistance,
+				MaxDistance,
+				bLimitedByTraceHit ? TEXT(" hit-limited") : TEXT(" full")),
+			nullptr,
+			WindowColor,
+			DrawDuration <= 0.0f ? 0.05f : DrawDuration,
+			true
+		);
+	}
+}
+
 void FInteractionDebugManager::DrawGroundItem(FVector ItemLocation, int32 ItemID)
 {
 	if (!ShouldShowDebugTraces() || !bDrawGroundItems || !WorldContext)

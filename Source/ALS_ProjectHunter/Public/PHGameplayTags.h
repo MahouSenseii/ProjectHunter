@@ -537,6 +537,14 @@ public:
 	static FGameplayTag Condition_InCombat;
 	static FGameplayTag Condition_OutOfCombat;
 
+	/**
+	 * Blocks ability input processing while present on the ASC.
+	 * UHunterAbilitySystemComponent::ProcessAbilityInput looks this up by name;
+	 * registered natively so the lookup can never silently fail (an unregistered
+	 * tag meant input blocking never engaged).
+	 */
+	static FGameplayTag Gameplay_AbilityInputBlocked;
+
 	/* [SETBYCALL] ═══════════════════════════════════════════ */
 	/* === SetByCaller Data Tags (Damage / Recovery via GE) */
 	/** Used by DamageApplicationGE SetByCaller modifiers — pass negative values to subtract. */

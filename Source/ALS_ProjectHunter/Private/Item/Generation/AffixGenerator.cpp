@@ -13,10 +13,7 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 {
 	FPHItemStats Stats;
 
-	// I-02 FIX (completed): a single seeded stream drives EVERY roll in this
-	// function — implicits, unique affixes, prefixes, and suffixes — so a stored
-	// Seed reproduces the item exactly. The unseeded RollValue() overload pulls
-	// from the global RNG and must not be used here.
+
 	FRandomStream RandStream(Seed);
 
 	Stats.Implicits = BaseItem.ImplicitMods;
@@ -436,9 +433,7 @@ FPHAttributeData FAffixGenerator::CreateRolledAffix(
 	FRandomStream& RandStream) const
 {
 	FPHAttributeData RolledAffix = TemplateAffix;
-	// Forward the seeded RandStream to RollValue so the affix roll is
-	// deterministic and reproducible from a fixed seed. The no-arg RollValue()
-	// consumes FMath::RandRange (global RNG), breaking seed-based item replay.
+
 	RolledAffix.RollValue(RandStream);
 	RolledAffix.GenerateUID();
 	return RolledAffix;

@@ -28,8 +28,12 @@ void URunSubsystem::StartRun()
 	CurrentFloor = 1;
 	bRunActive   = true;
 
-	UWorld* World = GetGameInstance()->GetWorld();
-	RunStartTimeSeconds = World ? World->GetTimeSeconds() : 0.f;
+	// Real time, not world time: this is a GameInstance subsystem, but
+	// World->GetTimeSeconds() resets to ~0 on every OpenLevel — a run that
+	// crosses map loads would report nonsense elapsed time. FPlatformTime is
+	// monotonic for the process. (Includes pause time, which is the standard
+	// roguelite run-clock behavior.)
+	RunStartTimeSeconds = FPlatformTime::Seconds();
 
 	ResetState();
 
@@ -90,13 +94,10 @@ float URunSubsystem::GetElapsedTime() const
 		return SessionData.TimeElapsed;
 	}
 
-	UWorld* World = GetGameInstance()->GetWorld();
-	if (!World)
-	{
-		return 0.f;
-	}
-
-	return World->GetTimeSeconds() - RunStartTimeSeconds;
+	// Matches the FPlatformTime base captured in StartRun — survives OpenLevel.
+	// Subtract in double, then narrow: the difference is small even when the
+	// absolute timestamps are large.
+	return static_cast<float>(FPlatformTime::Seconds() - RunStartTimeSeconds);
 }
 
 void URunSubsystem::ResetState()

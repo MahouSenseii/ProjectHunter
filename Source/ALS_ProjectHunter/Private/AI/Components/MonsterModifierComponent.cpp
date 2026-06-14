@@ -131,14 +131,28 @@ void UMonsterModifierComponent::RerollMods()
 	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(GetOwner());
 	UAbilitySystemComponent* ASC = ASCInterface ? ASCInterface->GetAbilitySystemComponent() : nullptr;
 
+	// Always revert runtime effects (GEs, abilities, tags, movespeed) — they get
+	// re-applied below from whatever ends up in AppliedMods.
 	ClearAppliedRuntimeMods(ASC);
-	AppliedMods.Empty();
 
+	const EMonsterTier ResolvedTier =
+		(ForcedTier != EMonsterTier::MT_Normal) ? ForcedTier : EMonsterTier::MT_Normal;
+
+	// Unique monsters carry FIXED mods that are populated externally before
+	// RollAndApplyMods (which rolls 0 new mods for Unique and just re-applies
+	// AppliedMods). MobPoolSubsystem::ResetMobState deliberately preserves
+	// AppliedMods for Unique on recycle — emptying it here unconditionally was
+	// wiping those fixed mods, so a recycled Unique respawned with no effects
+	// and an empty display name. Mirror the pool's preservation rule.
+	if (ResolvedTier != EMonsterTier::MT_Unique)
+	{
+		AppliedMods.Empty();
+	}
 
 	BaseStatVariation = FMonsterStatVariation();
 
 	bModsApplied = false;
-	AssignedTier = (ForcedTier != EMonsterTier::MT_Normal) ? ForcedTier : EMonsterTier::MT_Normal;
+	AssignedTier = ResolvedTier;
 
 	RollAndApplyMods();
 }

@@ -15,11 +15,7 @@ void FItemUsageHandler::ApplyAffixesToCharacter(UItemInstance& Item, UAbilitySys
 		return;
 	}
 
-	// C-FIX: this function used to loop the affixes, LOG "Applied affix", set
-	// bEffectsActive = true — and never apply anything. UStatsManager /
-	// FEquipmentStatsApplier is the single real application path (handles
-	// dedupe by item GUID, server authority, and weapon/armor base stats), so
-	// route there instead of maintaining a second GE pipeline.
+
 	AActor* OwnerActor = ASC->GetOwnerActor();
 	UStatsManager* StatsManager = OwnerActor
 		? OwnerActor->FindComponentByClass<UStatsManager>()
