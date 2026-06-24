@@ -1,4 +1,4 @@
-#include "Inventory/Helpers/InventoryAdder.h"
+ #include "Inventory/Helpers/InventoryAdder.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Item/ItemInstance.h"

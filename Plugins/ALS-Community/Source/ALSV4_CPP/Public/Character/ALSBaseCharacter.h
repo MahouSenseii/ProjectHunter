@@ -306,6 +306,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ALS|Essential Information")
 	FVector GetMovementInput() const;
 
+	/**
+	 * Surface normal used by animation foot IK.
+	 * Grounded characters return world up; traversal implementations can
+	 * override this with their current wall or ceiling normal.
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category = "ALS|Essential Information")
+	FVector GetFootIKSurfaceNormal() const;
+	virtual FVector GetFootIKSurfaceNormal_Implementation() const;
+
 	UFUNCTION(BlueprintGetter, Category = "ALS|Essential Information")
 	float GetMovementInputAmount() const { return MovementInputAmount; }
 

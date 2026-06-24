@@ -77,10 +77,6 @@ FGroundItemPickupManager::FGroundItemPickupManager()
 	, CachedInventoryManager(nullptr)
 	, CachedEquipmentManager(nullptr)
 	, CachedGroundItemSubsystem(nullptr)
-	, bIsHoldingForGroundItem(false)
-	, CurrentHoldItemID(-1)
-	, HoldElapsedTime(0.0f)
-	, HoldProgress(0.0f)
 {
 }
 
@@ -172,64 +168,6 @@ int32 FGroundItemPickupManager::PickupAllNearby(FVector Location)
 	return PickedUpCount;
 }
 
-void FGroundItemPickupManager::StartHoldInteraction(int32 ItemID)
-{
-	if (bIsHoldingForGroundItem)
-	{
-		return;
-	}
-
-	bIsHoldingForGroundItem = true;
-	CurrentHoldItemID = ItemID;
-	HoldElapsedTime = 0.0f;
-	HoldProgress = 0.0f;
-
-	UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Hold interaction started for item %d"), ItemID);
-}
-
-bool FGroundItemPickupManager::UpdateHoldProgress(float DeltaTime)
-{
-	if (!bIsHoldingForGroundItem)
-	{
-		return false;
-	}
-
-	HoldElapsedTime += DeltaTime;
-
-	HoldProgress = FMath::Clamp(HoldElapsedTime / HoldToEquipDuration, 0.0f, 1.0f);
-
-	if (HoldProgress >= 1.0f)
-	{
-		PickupAndEquip(CurrentHoldItemID);
-
-		bIsHoldingForGroundItem = false;
-		CurrentHoldItemID = -1;
-		HoldElapsedTime = 0.0f;
-		HoldProgress = 0.0f;
-
-		UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Hold completed, item equipped"));
-		return true;
-	}
-
-	return false;
-}
-
-void FGroundItemPickupManager::CancelHoldInteraction()
-{
-	if (!bIsHoldingForGroundItem)
-	{
-		return;
-	}
-
-	int32 CancelledItemID = CurrentHoldItemID;
-
-	bIsHoldingForGroundItem = false;
-	CurrentHoldItemID = -1;
-	HoldElapsedTime = 0.0f;
-	HoldProgress = 0.0f;
-
-	UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Hold interaction cancelled for item %d"), CancelledItemID);
-}
 
 void FGroundItemPickupManager::CacheComponents()
 {
@@ -262,26 +200,44 @@ void FGroundItemPickupManager::CacheComponents()
 
 bool FGroundItemPickupManager::PickupToInventoryInternal(int32 ItemID, FVector ClientLocation)
 {
-	const FVector OriginalLocation = CachedGroundItemSubsystem->GetInstanceLocations().FindRef(ItemID);
-	const bool bHadOriginalLocation = CachedGroundItemSubsystem->GetInstanceLocations().Contains(ItemID);
-
-	UItemInstance* Item = CachedGroundItemSubsystem->RemoveItemFromGround(ItemID);
+	// Peek at the item without removing it so we can check capacity first.
+	// This avoids the fragile remove-then-rollback pattern that risks item
+	// loss if AddItemToGround ever fails after a failed AddItem.
+	UItemInstance* Item = CachedGroundItemSubsystem->GetItemByID(ItemID);
 	if (!Item)
 	{
 		UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: Item %d not found"), ItemID);
 		return false;
 	}
 
-	if (CachedInventoryManager->AddItem(Item))
+	if (!CachedInventoryManager->CanAddItem(Item))
 	{
-		UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Picked up %s to inventory"), *Item->GetDisplayName().ToString());
+		UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Inventory cannot accept %s — aborting pickup"), *Item->GetDisplayName().ToString());
+		return false;
+	}
+
+	// Capacity confirmed — now remove from ground and add to inventory.
+	UItemInstance* RemovedItem = CachedGroundItemSubsystem->RemoveItemFromGround(ItemID);
+	if (!RemovedItem)
+	{
+		// Item disappeared between the peek and the remove (another player grabbed it).
+		UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: Item %d vanished before pickup"), ItemID);
+		return false;
+	}
+
+	if (CachedInventoryManager->AddItem(RemovedItem))
+	{
+		UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Picked up %s to inventory"), *RemovedItem->GetDisplayName().ToString());
 		return true;
 	}
 
-	const FVector ReturnLocation = bHadOriginalLocation ? OriginalLocation : ClientLocation;
-	CachedGroundItemSubsystem->AddItemToGround(Item, ReturnLocation);
+	// AddItem failed despite CanAddItem passing — inventory state changed between
+	// the two calls. Return the item to its original location as a safety net.
+	// Note: the item was already removed from the subsystem, so we fall back to
+	// the client location rather than looking up a now-missing entry.
+	CachedGroundItemSubsystem->AddItemToGround(RemovedItem, ClientLocation);
 
-	UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: Inventory full, item returned to ground"));
+	UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: AddItem failed after CanAddItem passed for %s — returned item to ground"), *RemovedItem->GetDisplayName().ToString());
 	return false;
 }
 

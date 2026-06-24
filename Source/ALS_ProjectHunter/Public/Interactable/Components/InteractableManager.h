@@ -1,4 +1,4 @@
-// Interactable/Component/InteractableManager.h
+// Interactable/Components/InteractableManager.h
 #pragma once
 
 #include "CoreMinimal.h"

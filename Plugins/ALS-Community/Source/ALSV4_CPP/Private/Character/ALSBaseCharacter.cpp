@@ -593,6 +593,11 @@ FVector AALSBaseCharacter::GetMovementInput() const
 	return ReplicatedCurrentAcceleration;
 }
 
+FVector AALSBaseCharacter::GetFootIKSurfaceNormal_Implementation() const
+{
+	return FVector::UpVector;
+}
+
 float AALSBaseCharacter::GetAnimCurveValue(FName CurveName) const
 {
 	if (GetMesh()->GetAnimInstance())
@@ -982,7 +987,10 @@ void AALSBaseCharacter::SetEssentialValues(float DeltaTime)
 	// velocity, so it does not take vertical movement into account. If the character is moving, update the last
 	// velocity rotation. This value is saved because it might be useful to know the last orientation of movement
 	// even after the character has stopped.
-	Speed = CurrentVel.Size2D();
+	const bool bWallTraversal =
+		MovementState == EALSMovementState::WallRunning ||
+		MovementState == EALSMovementState::WallClimbing;
+	Speed = bWallTraversal ? CurrentVel.Size() : CurrentVel.Size2D();
 	bIsMoving = Speed > 1.0f;
 	if (bIsMoving)
 	{

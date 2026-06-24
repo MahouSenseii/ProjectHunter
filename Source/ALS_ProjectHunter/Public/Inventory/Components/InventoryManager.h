@@ -1,4 +1,4 @@
-// Character/Component/InventoryManager.h
+// Inventory/Components/InventoryManager.h
 #pragma once
 
 #include "CoreMinimal.h"

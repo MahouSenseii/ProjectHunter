@@ -1,6 +1,6 @@
 ﻿#include "Character/Components/Interaction/InteractionValidatorManager.h"
 #include "Interactable/Interface/Interactable.h"
-#include "Interactable/Component/InteractableManager.h"
+#include "Interactable/Components/InteractableManager.h"
 #include "Tower/Subsystems/GroundItemSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"

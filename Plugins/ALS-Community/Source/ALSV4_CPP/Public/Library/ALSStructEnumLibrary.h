@@ -33,6 +33,12 @@ private:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Category = "ALS|Movement System")
 	bool Ragdoll_ = false;
 
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Category = "ALS|Movement System")
+	bool WallClimbing_ = false;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Category = "ALS|Movement System")
+	bool WallRunning_ = false;
+
 public:
 	FALSMovementState()
 	{
@@ -45,6 +51,8 @@ public:
 	const bool& InAir() const { return InAir_; }
 	const bool& Mantling() const { return Mantling_; }
 	const bool& Ragdoll() const { return Ragdoll_; }
+	const bool& WallClimbing() const { return WallClimbing_; }
+	const bool& WallRunning() const { return WallRunning_; }
 
 	operator EALSMovementState() const { return State; }
 
@@ -56,6 +64,8 @@ public:
 		InAir_ = State == EALSMovementState::InAir;
 		Mantling_ = State == EALSMovementState::Mantling;
 		Ragdoll_ = State == EALSMovementState::Ragdoll;
+		WallClimbing_ = State == EALSMovementState::WallClimbing;
+		WallRunning_ = State == EALSMovementState::WallRunning;
 	}
 };
 

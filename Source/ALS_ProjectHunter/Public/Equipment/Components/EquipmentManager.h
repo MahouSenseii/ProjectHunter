@@ -1,4 +1,4 @@
-// Character/Component/EquipmentManager.h
+// Equipment/Components/EquipmentManager.h
 
 
 #pragma once

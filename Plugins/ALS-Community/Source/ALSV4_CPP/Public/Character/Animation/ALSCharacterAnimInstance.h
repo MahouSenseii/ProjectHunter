@@ -121,7 +121,14 @@ private:
 	void ResetIKOffsets(float DeltaSeconds);
 
 	void SetFootOffsets(float DeltaSeconds, FName EnableFootIKCurve, FName IKFootBone, FName RootBone,
-                          FVector& CurLocationTarget, FVector& CurLocationOffset, FRotator& CurRotationOffset);
+	                    FVector& CurLocationTarget, FVector& CurLocationOffset, FRotator& CurRotationOffset);
+
+	void SetWallFootOffsets(float DeltaSeconds, FName EnableFootIKCurve, FName IKFootBone,
+	                        const FVector& SurfaceNormal, FVector& CurLocationTarget,
+	                        FVector& CurLocationOffset, FRotator& CurRotationOffset);
+
+	void SetWallPelvisIKOffset(float DeltaSeconds, const FVector& FootOffsetLTarget,
+	                           const FVector& FootOffsetRTarget);
 
 	/** Grounded */
 
@@ -287,6 +294,29 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Foot IK")
 	FName IkFootR_BoneName = FName(TEXT("ik_foot_r"));
+
+	/** Distance kept between the wall hit and the IK foot target. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Foot IK",
+		meta = (ClampMin = "0.0"))
+	float WallFootSurfaceOffset = 2.0f;
+
+	/** Prevents wall IK from overextending a leg if the animation pose is too far from the wall. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Foot IK",
+		meta = (ClampMin = "0.0"))
+	float MaxWallFootIKOffset = 55.0f;
+
+	/** Moves the pelvis partway toward the average wall-foot correction. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Foot IK",
+		meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float WallPelvisOffsetScale = 0.35f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Foot IK",
+		meta = (ClampMin = "0.0"))
+	float MaxWallPelvisIKOffset = 18.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Foot IK",
+		meta = (ClampMin = "0.0"))
+	float WallFootIKInterpSpeed = 25.0f;
 
 private:
 	FTimerHandle OnPivotTimer;

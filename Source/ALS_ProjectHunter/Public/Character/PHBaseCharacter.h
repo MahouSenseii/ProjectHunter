@@ -30,6 +30,7 @@ class UCombatStatusManager;
 class UBaseStatsData;
 class UGameplayEffect;
 class UGameplayAbility;
+class UPHCharacterMovementComponent;
 struct FOnAttributeChangeData; // Add this forward declaration
 
 /**
@@ -53,10 +54,51 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void ForwardMovementAction_Implementation(float Value) override;
+	virtual void RightMovementAction_Implementation(float Value) override;
+	virtual void JumpAction_Implementation(bool bValue) override;
 	virtual void SprintAction_Implementation(bool bValue) override;
+	virtual FVector GetFootIKSurfaceNormal_Implementation() const override;
 	virtual void OnRep_PlayerState() override;
 	virtual void OnRep_Controller() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
+	UPHCharacterMovementComponent* GetPHMovementComponent() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Movement|Wall Traversal")
+	bool TryStartWallTraversal();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement|Wall Traversal")
+	void StopWallTraversal();
+
+	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
+	bool IsWallTraversing() const;
+
+	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
+	bool IsWallRunning() const;
+
+	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
+	bool IsWallClimbing() const;
+
+	/**
+	 * Returns the weight used to select wall running, wall climbing, or rejection.
+	 * Override in Blueprint when the final equipment/encumbrance calculation is ready.
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category = "Movement|Wall Traversal|Weight")
+	float GetWallTraversalWeight() const;
+	virtual float GetWallTraversalWeight_Implementation() const;
+
+	/**
+	 * Converts weight into the requested ALS movement state.
+	 * Return None to reject wall attachment.
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category = "Movement|Wall Traversal|Weight")
+	EALSMovementState SelectWallTraversalState(float CurrentWeight) const;
+	virtual EALSMovementState SelectWallTraversalState_Implementation(float CurrentWeight) const;
+
+	/** Called by wall physics when the surface ends; existing ALS mantle remains the owner. */
+	bool TryWallTopMantle();
 	
 	/* ═══════════════════════════════════════════════════════════════════════ */
 	/* CORE COMPONENTS (Shared by Players and NPCs) */
@@ -215,6 +257,19 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Character")
 	int32 CachedLevel = 1;
 
+	/** Light characters use Naruto-style wall running. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Weight",
+		meta = (ClampMin = "0.0"))
+	float MaxWallRunningWeight = 30.0f;
+
+	/** Medium characters climb; heavier characters cannot attach. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Weight",
+		meta = (ClampMin = "0.0"))
+	float MaxWallClimbingWeight = 70.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Wall Traversal")
+	bool bWallTraversalHeld = false;
+
 	/** Is this character a player? */
 	UFUNCTION(BlueprintPure, Category = "Character")
 	virtual bool IsPlayer() const { return false; }
@@ -334,6 +389,8 @@ public:
 	virtual void InitializeAttributes();
 
 protected:
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
+
 	virtual void InitializeAbilitySystem();
 	virtual void BindAttributeDelegates();
 	virtual void OnAbilitySystemInitialized();
@@ -351,4 +408,12 @@ protected:
 
 	UPROPERTY()
 	TArray<FPHAbilitySet_GrantedHandles> GrantedAbilitySetHandles;
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetWallTraversalHeld(bool bHeld);
+
+	float WallAttachRetryAccumulator = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement|Wall Traversal", meta = (ClampMin = "0.0"))
+	float WallAttachRetryInterval = 0.05f;
 };

@@ -245,7 +245,7 @@ protected:
 	void BeginActorContinuousInteraction(const TScriptInterface<IInteractable>& Interactable);
 	void BeginOrAdvanceActorMashInteraction(const TScriptInterface<IInteractable>& Interactable);
 
-	void ResetActiveInteractionState(bool bForceCancelHoldOnPickupManager = false);
+	void ResetActiveInteractionState();
 	void StartHoldPhaseIfNeeded();
 	void PushActiveProgress(float NewProgress, bool bForce = false);
 	void CompleteActiveHoldInteraction();

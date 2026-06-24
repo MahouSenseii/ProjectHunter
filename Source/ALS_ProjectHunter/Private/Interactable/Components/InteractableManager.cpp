@@ -1,4 +1,4 @@
-#include "Interactable/Component/InteractableManager.h"
+#include "Interactable/Components/InteractableManager.h"
 
 #include "EngineUtils.h"
 #include "Interactable/Widget/InteractableWidget.h"

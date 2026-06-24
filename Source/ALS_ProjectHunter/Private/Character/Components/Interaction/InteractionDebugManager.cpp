@@ -1,5 +1,5 @@
 ﻿#include "Character/Components/Interaction/InteractionDebugManager.h"
-#include "Interactable/Component/InteractableManager.h"
+#include "Interactable/Components/InteractableManager.h"
 #include "Components/ALSDebugComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
@@ -76,17 +76,59 @@ void FInteractionDebugManager::DrawTraceLine(FVector Start, FVector End, bool bH
 	);
 }
 
-void FInteractionDebugManager::DrawHitPoint(FVector HitLocation, FVector HitNormal)
+void FInteractionDebugManager::DrawTraceResult(
+	FVector Start, FVector End, const FHitResult& HitResult, bool bHit, float TraceRadius)
+{
+	if (!ShouldShowDebugTraces() || !bDrawTraceLines || !WorldContext)
+	{
+		return;
+	}
+
+	if (!bHit)
+	{
+		DrawTraceLine(Start, End, false);
+		return;
+	}
+
+	const FVector HitLocation = !HitResult.Location.IsNearlyZero()
+		? HitResult.Location
+		: HitResult.ImpactPoint;
+	const FVector SafeHitLocation = HitLocation.IsNearlyZero() ? End : HitLocation;
+
+	DrawDebugLine(
+		WorldContext,
+		Start,
+		SafeHitLocation,
+		TraceHitColor,
+		false,
+		DrawDuration,
+		0,
+		DrawThickness);
+
+	DrawDebugLine(
+		WorldContext,
+		SafeHitLocation,
+		End,
+		FColor(70, 70, 70),
+		false,
+		DrawDuration,
+		0,
+		DrawThickness * 0.5f);
+}
+
+void FInteractionDebugManager::DrawHitPoint(FVector HitLocation, FVector HitNormal, float Radius)
 {
 	if (!ShouldShowDebugTraces() || !bDrawHitPoints || !WorldContext)
 	{
 		return;
 	}
 
+	const float DebugRadius = FMath::Clamp(Radius, 8.0f, 50.0f);
+
 	DrawDebugSphere(
 		WorldContext,
 		HitLocation,
-		50.0f,
+		DebugRadius,
 		8,
 		TraceHitColor,
 		false,

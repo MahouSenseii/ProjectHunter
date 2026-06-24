@@ -241,8 +241,7 @@ protected:
 	// ── Data ──────────────────────────────────────────────────────────────────
 
 	FTimerHandle CooldownTimer;
-
-	/** Optional input action reference (assigned in Blueprint defaults). */
-	UPROPERTY(EditAnywhere, Category = "Portal|Input")
-	TObjectPtr<UInputAction> InteractInputAction;
+	// InputAction is configured directly on the InteractableManager component's
+	// Config.InputAction (Details panel → InteractableManager → Interaction →
+	// Config → Input Action).  No separate portal-level property is needed.
 };

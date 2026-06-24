@@ -1,4 +1,4 @@
-// Character/Component/StatsManager.h
+// Stats/Components/StatsManager.h
 #pragma once
 
 #include "CoreMinimal.h"

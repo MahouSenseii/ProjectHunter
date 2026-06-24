@@ -1,6 +1,6 @@
 #include "Interactable/Actors/Portal/PortalActor.h"
 #include "Tower/Subsystems/PortalSubsystem.h"
-#include "Interactable/Component/InteractableManager.h"
+#include "Interactable/Components/InteractableManager.h"
 #include "Components/StaticMeshComponent.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
@@ -69,8 +69,16 @@ void APortalActor::BeginPlay()
 
 		InteractableManager->Config.InteractionType = EInteractionType::IT_Tap;
 		InteractableManager->Config.InteractionText  = GetInteractionText_Implementation();
-		InteractableManager->Config.InputAction      = InteractInputAction;
 		InteractableManager->Config.bCanInteract     = bActiveOnBeginPlay;
+
+		if (!InteractableManager->Config.InputAction)
+		{
+			UE_LOG(LogPortalActor, Warning,
+				TEXT("PortalActor '%s': InteractableManager.Config.InputAction is not set. "
+				     "Select the InteractableManager component in the Blueprint and set "
+				     "Config → Input Action in the Details panel."),
+				*GetName());
+		}
 	}
 
 	if (HasAuthority())
@@ -193,7 +201,7 @@ void APortalActor::OnContinuousInteractionEnd_Implementation(AActor*)     {}
 bool APortalActor::HasTooltip_Implementation() const                      { return false; }
 UObject* APortalActor::GetTooltipData_Implementation() const              { return nullptr; }
 FVector APortalActor::GetTooltipWorldLocation_Implementation() const      { return GetActorLocation(); }
-UInputAction* APortalActor::GetInputAction_Implementation() const         { return InteractInputAction; }
+UInputAction* APortalActor::GetInputAction_Implementation() const         { return InteractableManager ? InteractableManager->Config.InputAction : nullptr; }
 FVector APortalActor::GetWidgetOffset_Implementation() const              { return FVector(0.0f, 0.0f, 120.0f); }
 
 void APortalActor::OnInteractableManagerTap(AActor* Interactor)

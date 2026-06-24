@@ -1,4 +1,4 @@
-// Character/Component/CharacterSystemCoordinatorComponent.h
+// Character/Components/CharacterSystemCoordinatorComponent.h
 
 
 #pragma once

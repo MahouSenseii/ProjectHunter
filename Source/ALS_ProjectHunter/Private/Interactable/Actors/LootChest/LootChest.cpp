@@ -1,5 +1,5 @@
 #include "Interactable/Actors/LootChest/LootChest.h"
-#include "Interactable/Component/InteractableManager.h"
+#include "Interactable/Components/InteractableManager.h"
 #include "Interactable/Library/InteractionChannels.h"
 #include "Components/BoxComponent.h"
 #include "Loot/Components/LootComponent.h"

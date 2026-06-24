@@ -81,40 +81,9 @@ public:
 	 */
 	int32 PickupAllNearby(FVector Location);
 
-	// ═══════════════════════════════════════════════
-	// HOLD INTERACTION
-	// ═══════════════════════════════════════════════
-
-	/**
-	 * Start hold interaction for an item
-	 * @param ItemID - Ground item ID to track
-	 */
-	void StartHoldInteraction(int32 ItemID);
-
-	/**
-	 * Update hold progress
-	 * @param DeltaTime - Time since last update
-	 * @return True if hold completed (item was equipped)
-	 */
-	bool UpdateHoldProgress(float DeltaTime);
-
-	/**
-	 * Cancel current hold interaction
-	 */
-	void CancelHoldInteraction();
-
-	// ═══════════════════════════════════════════════
-	// GETTERS (Used by InteractionManager)
-	// ═══════════════════════════════════════════════
-
-	/** Check if currently holding for ground item pickup */
-	FORCEINLINE bool IsHoldingForGroundItem() const { return bIsHoldingForGroundItem; }
-
-	/** Get current hold progress (0.0 - 1.0) */
-	FORCEINLINE float GetHoldProgress() const { return HoldProgress; }
-
-	/** Get the item ID being held for */
-	FORCEINLINE int32 GetCurrentHoldItemID() const { return CurrentHoldItemID; }
+	// Hold progress is driven entirely by FActiveInteraction in UInteractionManager.
+	// FGroundItemPickupManager only executes the pickup action (PickupToInventory /
+	// PickupAndEquip) — it does not own any hold-timing state.
 
 private:
 	// ═══════════════════════════════════════════════
@@ -135,12 +104,4 @@ private:
 	UEquipmentManager* CachedEquipmentManager;
 	UGroundItemSubsystem* CachedGroundItemSubsystem;
 
-	// ═══════════════════════════════════════════════
-	// HOLD STATE
-	// ═══════════════════════════════════════════════
-
-	bool bIsHoldingForGroundItem;
-	int32 CurrentHoldItemID;
-	float HoldElapsedTime;
-	float HoldProgress;
 };

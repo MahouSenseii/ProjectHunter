@@ -1,4 +1,4 @@
-// Character/Component/MonsterModifierComponent.h
+// AI/Components/MonsterModifierComponent.h
 
 #pragma once
 

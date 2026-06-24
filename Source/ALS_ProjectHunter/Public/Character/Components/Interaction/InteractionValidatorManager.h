@@ -1,4 +1,4 @@
-﻿// Character/Component/InteractionValidatorManager.h
+﻿// Character/Components/Interaction/InteractionValidatorManager.h
 #pragma once
 
 #include "CoreMinimal.h"

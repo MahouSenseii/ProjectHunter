@@ -1,4 +1,4 @@
-// Character/Component/CombatStatusManager.h
+// Combat/Components/CombatStatusManager.h
 
 #pragma once
 

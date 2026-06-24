@@ -2,7 +2,7 @@
 
 #include "EngineUtils.h"
 #include "Interactable/Interface/Interactable.h"
-#include "Interactable/Component/InteractableManager.h"
+#include "Interactable/Components/InteractableManager.h"
 #include "Interactable/Widget/InteractableWidget.h"
 #include "Tower/Subsystems/GroundItemSubsystem.h"
 #include "GameFramework/Pawn.h"
@@ -87,11 +87,17 @@ void UInteractionManager::BeginPlay()
 		UE_LOG(LogInteractionManager, Warning, TEXT("InteractionManager: Owner is not a Pawn"));
 		return;
 	}
-	
+
 	if (!OwnerPawn->IsLocallyControlled())
 	{
+		// The server needs sub-managers initialized to handle RPCs
+		// (ValidatorManager distance checks, PickupManager inventory calls).
+		// Skip the timer and widget — those are client-only.
+		InitializeSubManagers();
+		ApplyQuickSettings();
 		UE_LOG(LogInteractionManager, Log,
-			TEXT("InteractionManager: Not locally controlled — skipping initialization"));
+			TEXT("InteractionManager: Server/remote init on %s (sub-managers only)"),
+			*GetOwner()->GetName());
 		return;
 	}
 
@@ -152,7 +158,7 @@ void UInteractionManager::TickComponent(
 
 void UInteractionManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	ResetActiveInteractionState(true);
+	ResetActiveInteractionState();
 	bInteractInputHeld = false;
 
 	if (UWorld* World = GetWorld())
@@ -266,7 +272,7 @@ void UInteractionManager::OnInteractReleased()
 			{
 				const bool bSuccess = PickupGroundItemToInventory(ItemID);
 				bSuccess ? WidgetPresenter.SetCompletedState() : WidgetPresenter.SetCancelledState();
-				ResetActiveInteractionState(true);
+				ResetActiveInteractionState();
 				return;
 			}
 
@@ -275,7 +281,7 @@ void UInteractionManager::OnInteractReleased()
 				WidgetPresenter.SetCancelledState();
 			}
 
-			ResetActiveInteractionState(true);
+			ResetActiveInteractionState();
 			return;
 		}
 
@@ -284,7 +290,7 @@ void UInteractionManager::OnInteractReleased()
 			if (ActiveInteraction.ElapsedTime < ActiveInteraction.TapThresholdSeconds)
 			{
 				InteractWithActor(ResolveInteractionActor(GetActiveInteractableObject()));
-				ResetActiveInteractionState(true);
+				ResetActiveInteractionState();
 				return;
 			}
 
@@ -294,7 +300,7 @@ void UInteractionManager::OnInteractReleased()
 				return;
 			}
 
-			ResetActiveInteractionState(true);
+			ResetActiveInteractionState();
 			return;
 		}
 
@@ -306,7 +312,7 @@ void UInteractionManager::OnInteractReleased()
 				return;
 			}
 
-			ResetActiveInteractionState(true);
+			ResetActiveInteractionState();
 			return;
 		}
 
@@ -332,31 +338,34 @@ void UInteractionManager::CheckForInteractables()
 	FRotator CameraRotation;
 	TraceManager.GetCameraViewPoint(CameraLocation, CameraRotation);
 
+	// Use the actual trace origin (ALS camera position) for all debug drawing so
+	// the visualisation matches where the trace really fires from.
+	const FVector TraceOrigin = TraceManager.GetTraceStart();
+
 	if (bDebugEnabled)
 	{
-		DebugManager.DrawInteractionRange(CameraLocation, TraceManager.InteractionDistance);
+		DebugManager.DrawInteractionRange(TraceOrigin, TraceManager.InteractionDistance);
 	}
 
-	// Focus requires a camera trace hit first; dot gates only validate that
-	// traced target against the camera and owning player's forward vector.
-	TScriptInterface<IInteractable> NewInteractable = TraceManager.FindBestActorInteractable();
-
+	// Focus uses one camera trace first. The hit type decides whether actor or
+	// ground-item gates can run, so debug and selection stay in the same flow.
+	TScriptInterface<IInteractable> NewInteractable;
 	int32 NewGroundItemID = INDEX_NONE;
-	if (!NewInteractable.GetInterface())
-	{
-		// Ground items are selected from camera-ray candidates, then ranked by
-		// dot product so overlapping loot picks the item the player is aiming at.
-		NewGroundItemID = TraceManager.FindGroundItemByTrace(CurrentGroundItemID);
-	}
+	TraceManager.FindBestInteractionTarget(CurrentInteractable, CurrentGroundItemID, NewInteractable, NewGroundItemID);
 
-	if (GetCurrentInteractableObject() != NewInteractable.GetObject())
+	// Don't shift focus while an interaction is in progress — the outline and
+	// ground-item widget must stay on the active target until it completes.
+	if (!HasActiveInteraction())
 	{
-		UpdateFocusState(NewInteractable);
-	}
+		if (GetCurrentInteractableObject() != NewInteractable.GetObject())
+		{
+			UpdateFocusState(NewInteractable);
+		}
 
-	if (NewGroundItemID != CurrentGroundItemID)
-	{
-		UpdateGroundItemFocus(NewGroundItemID);
+		if (NewGroundItemID != CurrentGroundItemID)
+		{
+			UpdateGroundItemFocus(NewGroundItemID);
+		}
 	}
 
 	if (ShouldUpdatePromptWidgetFromFocus())
@@ -371,7 +380,7 @@ void UInteractionManager::CheckForInteractables()
 
 		if (InteractableComp)
 		{
-			Distance = FVector::Distance(CameraLocation, InteractableComp->GetOwner()->GetActorLocation());
+			Distance = FVector::Distance(TraceOrigin, InteractableComp->GetOwner()->GetActorLocation());
 			DebugManager.DrawInteractableInfo(InteractableComp, Distance);
 		}
 
@@ -480,6 +489,10 @@ void UInteractionManager::ApplyQuickSettings()
 	DebugManager.DebugMode = bDebugEnabled
 		? EInteractionDebugMode::Full
 		: EInteractionDebugMode::None;
+
+	// Keep debug shapes alive until the next timer tick so they don't flicker
+	// at 60 fps when the check only fires at 20 Hz.
+	DebugManager.DrawDuration = bDebugEnabled ? TraceManager.CheckFrequency : 0.0f;
 }
 
 void UInteractionManager::UpdateFocusState(TScriptInterface<IInteractable> NewInteractable)
@@ -657,7 +670,7 @@ void UInteractionManager::BeginGroundTapOrHoldInteraction(int32 GroundItemID)
 		return;
 	}
 
-	ResetActiveInteractionState(true);
+	ResetActiveInteractionState();
 
 	ActiveInteraction.Mode                = EManagedInteractionMode::GroundTapOrHold;
 	ActiveInteraction.Type                = EInteractionType::IT_TapOrHold;
@@ -682,7 +695,7 @@ void UInteractionManager::BeginActorHoldInteraction(
 		return;
 	}
 
-	ResetActiveInteractionState(true);
+	ResetActiveInteractionState();
 
 	ActiveInteraction.Mode = bAllowTapOnRelease
 		? EManagedInteractionMode::ActorTapOrHold
@@ -717,7 +730,7 @@ void UInteractionManager::BeginActorContinuousInteraction(
 		return;
 	}
 
-	ResetActiveInteractionState(true);
+	ResetActiveInteractionState();
 
 	ActiveInteraction.Mode         = EManagedInteractionMode::ActorContinuous;
 	ActiveInteraction.Type         = EInteractionType::IT_Continuous;
@@ -750,7 +763,7 @@ void UInteractionManager::BeginOrAdvanceActorMashInteraction(
 
 	if (!bIsSameMashInteraction)
 	{
-		ResetActiveInteractionState(true);
+		ResetActiveInteractionState();
 
 		ActiveInteraction.Mode              = EManagedInteractionMode::ActorMash;
 		ActiveInteraction.Type              = EInteractionType::IT_Mash;
@@ -814,17 +827,12 @@ void UInteractionManager::BeginOrAdvanceActorMashInteraction(
 			IInteractable::Execute_OnMashInteractionComplete(ActiveInteractableObjectPtr, GetOwner());
 		}
 		WidgetPresenter.SetCompletedState();
-		ResetActiveInteractionState(true);
+		ResetActiveInteractionState();
 	}
 }
 
-void UInteractionManager::ResetActiveInteractionState(bool bForceCancelHoldOnPickupManager)
+void UInteractionManager::ResetActiveInteractionState()
 {
-	if (bForceCancelHoldOnPickupManager && PickupManager.IsHoldingForGroundItem())
-	{
-		PickupManager.CancelHoldInteraction();
-	}
-
 	ActiveInteraction.Reset();
 }
 
@@ -895,7 +903,7 @@ void UInteractionManager::CompleteActiveHoldInteraction()
 		PickupGroundItemAndEquip(ActiveInteraction.GroundItemID)
 			? WidgetPresenter.SetCompletedState()
 			: WidgetPresenter.SetCancelledState();
-		ResetActiveInteractionState(true);
+		ResetActiveInteractionState();
 		return;
 	}
 
@@ -916,7 +924,7 @@ void UInteractionManager::CompleteActiveHoldInteraction()
 	}
 
 	WidgetPresenter.SetCompletedState();
-	ResetActiveInteractionState(true);
+	ResetActiveInteractionState();
 }
 
 void UInteractionManager::CancelActiveHoldInteraction(bool bShowCancelledState)
@@ -934,7 +942,7 @@ void UInteractionManager::CancelActiveHoldInteraction(bool bShowCancelledState)
 		WidgetPresenter.SetCancelledState();
 	}
 
-	ResetActiveInteractionState(true);
+	ResetActiveInteractionState();
 }
 
 void UInteractionManager::EndActorContinuousInteraction()
@@ -949,7 +957,7 @@ void UInteractionManager::EndActorContinuousInteraction()
 		IInteractable::Execute_OnContinuousInteractionEnd(ActiveInteractableObjectPtr, GetOwner());
 	}
 
-	ResetActiveInteractionState(true);
+	ResetActiveInteractionState();
 }
 
 void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
@@ -967,7 +975,7 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 		{
 			if (UsesActorTarget(ActiveInteraction.Mode) && !HasValidActiveInteractable())
 			{
-				ResetActiveInteractionState(true);
+				ResetActiveInteractionState();
 				return;
 			}
 
@@ -998,7 +1006,7 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 		{
 			if (!HasValidActiveInteractable())
 			{
-				ResetActiveInteractionState(true);
+				ResetActiveInteractionState();
 				return;
 			}
 
@@ -1053,7 +1061,7 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 					IInteractable::Execute_OnMashInteractionFailed(ActiveInteractableObjectPtr, GetOwner());
 				}
 				WidgetPresenter.SetCancelledState();
-				ResetActiveInteractionState(true);
+				ResetActiveInteractionState();
 				return;
 			}
 
@@ -1064,7 +1072,7 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 					IInteractable::Execute_OnMashInteractionComplete(ActiveInteractableObjectPtr, GetOwner());
 				}
 				WidgetPresenter.SetCompletedState();
-				ResetActiveInteractionState(true);
+				ResetActiveInteractionState();
 			}
 
 			break;
@@ -1074,7 +1082,7 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 		{
 			if (!HasValidActiveInteractable())
 			{
-				ResetActiveInteractionState(true);
+				ResetActiveInteractionState();
 				return;
 			}
 

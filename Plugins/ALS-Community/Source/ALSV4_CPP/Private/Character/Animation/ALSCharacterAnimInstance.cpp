@@ -101,7 +101,12 @@ void UALSCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	UpdateLayerValues();
 	UpdateFootIK(DeltaSeconds);
 
-	if (MovementState.Grounded())
+	const bool bSurfaceLocomotion =
+		MovementState.Grounded() ||
+		MovementState.WallRunning() ||
+		MovementState.WallClimbing();
+
+	if (bSurfaceLocomotion)
 	{
 		// Check If Moving Or Not & Enable Movement Animations if IsMoving and HasMovementInput, or if the Speed is greater than 150.
 		const bool bPrevShouldMove = Grounded.bShouldMove;
@@ -319,6 +324,7 @@ void UALSCharacterAnimInstance::UpdateFootIK(float DeltaSeconds)
 {
 	FVector FootOffsetLTarget = FVector::ZeroVector;
 	FVector FootOffsetRTarget = FVector::ZeroVector;
+	const bool bWallTraversal = MovementState.WallRunning() || MovementState.WallClimbing();
 
 	// Update Foot Locking values.
 	SetFootLocking(DeltaSeconds, NAME_Enable_FootIK_L, NAME_FootLock_L,
@@ -334,6 +340,34 @@ void UALSCharacterAnimInstance::UpdateFootIK(float DeltaSeconds)
 		SetPelvisIKOffset(DeltaSeconds, FVector::ZeroVector, FVector::ZeroVector);
 		ResetIKOffsets(DeltaSeconds);
 	}
+	else if (bWallTraversal)
+	{
+		const FVector SurfaceNormal = Character->GetFootIKSurfaceNormal().GetSafeNormal();
+		if (SurfaceNormal.IsNearlyZero())
+		{
+			SetPelvisIKOffset(DeltaSeconds, FVector::ZeroVector, FVector::ZeroVector);
+			ResetIKOffsets(DeltaSeconds);
+			return;
+		}
+
+		SetWallFootOffsets(
+			DeltaSeconds,
+			NAME_Enable_FootIK_L,
+			IkFootL_BoneName,
+			SurfaceNormal,
+			FootOffsetLTarget,
+			FootIKValues.FootOffset_L_Location,
+			FootIKValues.FootOffset_L_Rotation);
+		SetWallFootOffsets(
+			DeltaSeconds,
+			NAME_Enable_FootIK_R,
+			IkFootR_BoneName,
+			SurfaceNormal,
+			FootOffsetRTarget,
+			FootIKValues.FootOffset_R_Location,
+			FootIKValues.FootOffset_R_Rotation);
+		SetWallPelvisIKOffset(DeltaSeconds, FootOffsetLTarget, FootOffsetRTarget);
+	}
 	else if (!MovementState.Ragdoll())
 	{
 		// Update all Foot Lock and Foot Offset values when not In Air
@@ -345,6 +379,133 @@ void UALSCharacterAnimInstance::UpdateFootIK(float DeltaSeconds)
 		               FootIKValues.FootOffset_R_Location, FootIKValues.FootOffset_R_Rotation);
 		SetPelvisIKOffset(DeltaSeconds, FootOffsetLTarget, FootOffsetRTarget);
 	}
+}
+
+void UALSCharacterAnimInstance::SetWallFootOffsets(
+	const float DeltaSeconds,
+	const FName EnableFootIKCurve,
+	const FName IKFootBone,
+	const FVector& SurfaceNormal,
+	FVector& CurLocationTarget,
+	FVector& CurLocationOffset,
+	FRotator& CurRotationOffset)
+{
+	const float IKAlpha = GetCurveValue(EnableFootIKCurve);
+	if (IKAlpha <= 0.0f)
+	{
+		CurLocationTarget = FVector::ZeroVector;
+		CurLocationOffset = FMath::VInterpTo(
+			CurLocationOffset,
+			FVector::ZeroVector,
+			DeltaSeconds,
+			WallFootIKInterpSpeed);
+		CurRotationOffset = FMath::RInterpTo(
+			CurRotationOffset,
+			FRotator::ZeroRotator,
+			DeltaSeconds,
+			WallFootIKInterpSpeed);
+		return;
+	}
+
+	USkeletalMeshComponent* OwnerComp = GetOwningComponent();
+	UWorld* World = GetWorld();
+	if (!OwnerComp || !World)
+	{
+		return;
+	}
+
+	const FVector Normal = SurfaceNormal.GetSafeNormal();
+	const FVector FootLocation = OwnerComp->GetSocketLocation(IKFootBone);
+	const FVector TraceStart = FootLocation + Normal * Config.IK_TraceDistanceAboveFoot;
+	const FVector TraceEnd = FootLocation - Normal * Config.IK_TraceDistanceBelowFoot;
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(ALSWallFootIK), false, Character);
+	FHitResult HitResult;
+	const bool bHit = World->LineTraceSingleByChannel(
+		HitResult,
+		TraceStart,
+		TraceEnd,
+		ECC_Visibility,
+		Params);
+
+	if (ALSDebugComponent && ALSDebugComponent->GetShowTraces())
+	{
+		UALSDebugComponent::DrawDebugLineTraceSingle(
+			World,
+			TraceStart,
+			TraceEnd,
+			EDrawDebugTrace::Type::ForOneFrame,
+			bHit,
+			HitResult,
+			FLinearColor::Blue,
+			FLinearColor::Green,
+			5.0f);
+	}
+
+	FVector TargetLocationOffset = FVector::ZeroVector;
+	FRotator TargetRotationOffset = FRotator::ZeroRotator;
+
+	const bool bHitRequestedSurface =
+		bHit &&
+		HitResult.IsValidBlockingHit() &&
+		FVector::DotProduct(HitResult.ImpactNormal.GetSafeNormal(), Normal) > 0.5f;
+
+	if (bHitRequestedSurface)
+	{
+		const FVector TargetFootLocation =
+			HitResult.ImpactPoint + HitResult.ImpactNormal.GetSafeNormal() * WallFootSurfaceOffset;
+		const FVector WorldOffset = TargetFootLocation - FootLocation;
+		TargetLocationOffset = OwnerComp->GetComponentTransform().InverseTransformVectorNoScale(WorldOffset);
+		TargetLocationOffset = TargetLocationOffset.GetClampedToMaxSize(MaxWallFootIKOffset);
+
+		const FVector LocalImpactNormal =
+			OwnerComp->GetComponentTransform()
+			         .InverseTransformVectorNoScale(HitResult.ImpactNormal)
+			         .GetSafeNormal();
+		TargetRotationOffset.Pitch =
+			-FMath::RadiansToDegrees(FMath::Atan2(LocalImpactNormal.X, LocalImpactNormal.Z));
+		TargetRotationOffset.Roll =
+			FMath::RadiansToDegrees(FMath::Atan2(LocalImpactNormal.Y, LocalImpactNormal.Z));
+	}
+
+	CurLocationTarget = TargetLocationOffset * IKAlpha;
+	CurLocationOffset = FMath::VInterpTo(
+		CurLocationOffset,
+		CurLocationTarget,
+		DeltaSeconds,
+		WallFootIKInterpSpeed);
+	CurRotationOffset = FMath::RInterpTo(
+		CurRotationOffset,
+		TargetRotationOffset * IKAlpha,
+		DeltaSeconds,
+		WallFootIKInterpSpeed);
+}
+
+void UALSCharacterAnimInstance::SetWallPelvisIKOffset(
+	const float DeltaSeconds,
+	const FVector& FootOffsetLTarget,
+	const FVector& FootOffsetRTarget)
+{
+	FootIKValues.PelvisAlpha =
+		(GetCurveValue(NAME_Enable_FootIK_L) + GetCurveValue(NAME_Enable_FootIK_R)) * 0.5f;
+
+	if (FootIKValues.PelvisAlpha <= 0.0f)
+	{
+		FootIKValues.PelvisOffset = FMath::VInterpTo(
+			FootIKValues.PelvisOffset,
+			FVector::ZeroVector,
+			DeltaSeconds,
+			WallFootIKInterpSpeed);
+		return;
+	}
+
+	FVector PelvisTarget = (FootOffsetLTarget + FootOffsetRTarget) * 0.5f * WallPelvisOffsetScale;
+	PelvisTarget = PelvisTarget.GetClampedToMaxSize(MaxWallPelvisIKOffset);
+	FootIKValues.PelvisOffset = FMath::VInterpTo(
+		FootIKValues.PelvisOffset,
+		PelvisTarget,
+		DeltaSeconds,
+		WallFootIKInterpSpeed);
 }
 
 void UALSCharacterAnimInstance::SetFootLocking(float DeltaSeconds, FName EnableFootIKCurve, FName FootLockCurve,

@@ -1,4 +1,4 @@
-﻿// Character/Component/InteractionDebugManager.h
+﻿// Character/Components/Interaction/InteractionDebugManager.h
 #pragma once
 
 #include "CoreMinimal.h"
@@ -100,7 +100,8 @@ public:
 	// ═══════════════════════════════════════════════
 
 	void DrawTraceLine(FVector Start, FVector End, bool bHit);
-	void DrawHitPoint(FVector HitLocation, FVector HitNormal);
+	void DrawTraceResult(FVector Start, FVector End, const FHitResult& HitResult, bool bHit, float TraceRadius);
+	void DrawHitPoint(FVector HitLocation, FVector HitNormal, float Radius = 12.0f);
 	void DrawInteractionRange(FVector Center, float Radius);
 	void DrawGroundItem(FVector ItemLocation, int32 ItemID);
 	void DrawInteractableInfo(UInteractableManager* Interactable, float Distance);

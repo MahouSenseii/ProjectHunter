@@ -1,6 +1,6 @@
 ﻿#include "Character/Components/Interaction/InteractionTraceManager.h"
 #include "Interactable/Interface/Interactable.h"
-#include "Interactable/Component/InteractableManager.h"
+#include "Interactable/Components/InteractableManager.h"
 #include "Tower/Subsystems/GroundItemSubsystem.h"
 #include "Item/ItemInstance.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -9,6 +9,7 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Character/ALSPlayerCameraManager.h"
 #include "Character/Components/Interaction/InteractionDebugManager.h"
+#include "Engine/OverlapResult.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Engine/World.h"
 DEFINE_LOG_CATEGORY(LogInteractionTraceManager);
@@ -18,6 +19,9 @@ FInteractionTraceManager::FInteractionTraceManager()
 	  // the camera across interactables. Still timer-driven, still cheap.
 	  , CheckFrequency(0.05f)
 	  , InteractionTraceChannel(ECC_Visibility)
+	  , OverlapRadius(75.0f)
+	  , MinPlayerForwardDot(0.0f)
+	  , CurrentFocusDotBonus(0.02f)
 	  , bUseALSCameraOrigin(true)
 	  , OffsetForward(0.0f)
 	  , OffsetRight(0.0f)
@@ -26,7 +30,8 @@ FInteractionTraceManager::FInteractionTraceManager()
 	  , WorldContext(nullptr)
 	  , CachedPlayerController(nullptr)
 	  , CachedALSCameraManager(nullptr)
-	  , CachedGroundItemSubsystem(nullptr), DebugManager(nullptr)
+	  , CachedGroundItemSubsystem(nullptr)
+	  , DebugManager(nullptr)
 {
 }
 
@@ -53,90 +58,159 @@ void FInteractionTraceManager::SetDebugManager(FInteractionDebugManager* InDebug
 
 TScriptInterface<IInteractable> FInteractionTraceManager::TraceForActorInteractable()
 {
-	return FindBestActorInteractable();
+	TScriptInterface<IInteractable> Result;
+	int32 IgnoredItemID = INDEX_NONE;
+	FindBestInteractionTarget(TScriptInterface<IInteractable>(), INDEX_NONE, Result, IgnoredItemID);
+	return Result;
 }
 
-TScriptInterface<IInteractable> FInteractionTraceManager::FindBestActorInteractable()
+void FInteractionTraceManager::FindBestInteractionTarget(
+	const TScriptInterface<IInteractable>& CurrentInteractable,
+	int32 CurrentItemID,
+	TScriptInterface<IInteractable>& OutInteractable,
+	int32& OutGroundItemID)
 {
-	TScriptInterface<IInteractable> Result;
+	OutInteractable = TScriptInterface<IInteractable>();
+	OutGroundItemID = INDEX_NONE;
+
+	if (!WorldContext) return;
 
 	FVector CameraLocation;
 	FRotator CameraRotation;
-	if (!GetCameraViewPoint(CameraLocation, CameraRotation))
-	{
-		return Result;
-	}
+	if (!GetCameraViewPoint(CameraLocation, CameraRotation)) return;
 
-	const FVector TraceStart   = GetTraceStartLocation(CameraLocation, CameraRotation);
+	const FVector TraceStart = GetTraceStartLocation(CameraLocation, CameraRotation);
 	const FVector CameraForward = CameraRotation.Vector().GetSafeNormal();
-	const FVector TraceEnd     = TraceStart + CameraForward * InteractionDistance;
+	if (CameraForward.IsNearlyZero()) return;
 
-	FHitResult HitResult;
-	const bool bHit = PerformAimTrace(TraceStart, TraceEnd, HitResult);
+	const FVector TraceEnd = TraceStart + CameraForward * InteractionDistance;
 
-	if (DebugManager)
-	{
-		DebugManager->DrawLookAtCone(TraceStart, CameraForward, MinLookAtDot, InteractionDistance);
-		DebugManager->DrawTraceLine(TraceStart, TraceEnd, bHit);
-
-		if (OwnerActor)
-		{
-			DebugManager->DrawPlayerForwardGate(
-				OwnerActor->GetActorLocation(),
-				OwnerActor->GetActorForwardVector(),
-				MinPlayerForwardDot,
-				InteractionDistance);
-		}
-
-		if (bHit)
-		{
-			DebugManager->DrawHitPoint(HitResult.Location, HitResult.Normal);
-		}
-	}
-
-	if (!bHit || !IsActorInteractable(HitResult.GetActor()))
-	{
-		return Result;
-	}
-
-	float CameraDot = 0.0f;
-	float PlayerDot = 0.0f;
-	const bool bPassedGates = PassesCameraAndPlayerGates(
-		TraceStart,
-		CameraForward,
-		HitResult.ImpactPoint,
-		MinLookAtDot,
-		CameraDot,
-		PlayerDot);
+	// ── 1. Line trace ────────────────────────────────────────────────────────
+	FHitResult LineHit;
+	const bool bHit = PerformLineTrace(TraceStart, TraceEnd, LineHit);
+	const FVector SearchCenter = bHit ? LineHit.ImpactPoint : TraceEnd;
 
 	if (DebugManager)
 	{
-		DebugManager->DrawAimCandidate(HitResult.ImpactPoint, CameraDot, bPassedGates, bPassedGates);
+		DebugManager->DrawTraceResult(TraceStart, TraceEnd, LineHit, bHit, 0.0f);
+		if (bHit) DebugManager->DrawHitPoint(LineHit.Location, LineHit.Normal, 0.0f);
+		// Overlap sphere — shows exactly what radius is active and where candidates are searched.
+		DebugManager->DrawInteractionRange(SearchCenter, OverlapRadius);
 	}
 
-	if (!bPassedGates)
+	// ── 2. Sphere overlap at hit point ───────────────────────────────────────
+	TArray<FOverlapResult> Overlaps;
+	FCollisionQueryParams OverlapParams;
+	OverlapParams.AddIgnoredActor(OwnerActor);
+
+	WorldContext->OverlapMultiByChannel(
+		Overlaps,
+		SearchCenter,
+		FQuat::Identity,
+		InteractionTraceChannel,
+		FCollisionShape::MakeSphere(OverlapRadius),
+		OverlapParams
+	);
+
+	// ── 3. Dot-product scoring — best dot wins, no rejection threshold ───────
+
+	// Resolve the actor that owns the currently focused interactable so we can
+	// apply the same hysteresis bonus that ground items already receive.
+	AActor* CurrentFocusActor = nullptr;
+	if (UObject* CurrentObj = CurrentInteractable.GetObject())
 	{
-		return Result;
+		if (const UInteractableManager* Comp = Cast<UInteractableManager>(CurrentObj))
+		{
+			CurrentFocusActor = Comp->GetOwner();
+		}
+		else
+		{
+			CurrentFocusActor = Cast<AActor>(CurrentObj);
+		}
 	}
 
-	LastTraceResult = HitResult;
-	return MakeInteractableInterface(HitResult.GetActor());
-}
+	float BestDot = -1.0f;
+	AActor* BestActor = nullptr;
+	int32 BestItemID = INDEX_NONE;
 
-bool FInteractionTraceManager::PassesLookAtGate(const FVector& ViewOrigin, const FVector& Forward,
-	const FVector& TargetLocation, float MinDot, float& OutDot) const
-{
-	const FVector ToTarget = TargetLocation - ViewOrigin;
-	const float Distance = ToTarget.Size();
-	if (Distance <= KINDA_SMALL_NUMBER)
+	// Actor interactables
+	for (const FOverlapResult& Overlap : Overlaps)
 	{
-		// On top of it — looking "at" it by definition.
-		OutDot = 1.0f;
-		return true;
+		AActor* OverlapActor = Overlap.GetActor();
+		if (!IsActorInteractable(OverlapActor)) continue;
+
+		float PlayerDot = 0.0f;
+		if (!PassesPlayerForwardGate(OverlapActor->GetActorLocation(), PlayerDot)) continue;
+
+		const FVector ToTarget = (OverlapActor->GetActorLocation() - TraceStart).GetSafeNormal();
+		float Dot = FVector::DotProduct(CameraForward, ToTarget);
+
+		// Hysteresis: current actor needs a worse dot to lose focus, matching
+		// the same behaviour already applied to ground items below.
+		if (OverlapActor == CurrentFocusActor) Dot += CurrentFocusDotBonus;
+
+		if (Dot > BestDot)
+		{
+			BestDot = Dot;
+			BestActor = OverlapActor;
+			BestItemID = INDEX_NONE;
+		}
 	}
 
-	OutDot = FVector::DotProduct(Forward, ToTarget / Distance);
-	return OutDot >= MinDot;
+	// Ground items — scan registered locations within OverlapRadius of the hit
+	if (CachedGroundItemSubsystem)
+	{
+		const float RadiusSq = FMath::Square(OverlapRadius);
+		for (const TPair<int32, FVector>& Pair : CachedGroundItemSubsystem->GetInstanceLocations())
+		{
+			if (FVector::DistSquared(Pair.Value, SearchCenter) > RadiusSq) continue;
+
+			float PlayerDot = 0.0f;
+			if (!PassesPlayerForwardGate(Pair.Value, PlayerDot)) continue;
+
+			const FVector ToItem = (Pair.Value - TraceStart).GetSafeNormal();
+			float Dot = FVector::DotProduct(CameraForward, ToItem);
+
+			// Hysteresis: current item needs a worse dot to lose focus.
+			if (Pair.Key == CurrentItemID) Dot += CurrentFocusDotBonus;
+
+			if (Dot > BestDot)
+			{
+				BestDot = Dot;
+				BestActor = nullptr;
+				BestItemID = Pair.Key;
+			}
+		}
+	}
+
+	// ── 4. Debug — single dot at winner ─────────────────────────────────────
+	if (DebugManager)
+	{
+		if (BestActor)
+		{
+			DebugManager->DrawAimCandidate(BestActor->GetActorLocation(), BestDot, true, true);
+		}
+		else if (BestItemID != INDEX_NONE && CachedGroundItemSubsystem)
+		{
+			if (const FVector* WinnerLoc =
+				CachedGroundItemSubsystem->GetInstanceLocations().Find(BestItemID))
+			{
+				DebugManager->DrawAimCandidate(*WinnerLoc, BestDot, true, true);
+			}
+		}
+	}
+
+	// ── 5. Output ────────────────────────────────────────────────────────────
+	if (BestActor)
+	{
+		LastTraceResult = LineHit;
+		OutInteractable = MakeInteractableInterface(BestActor);
+	}
+	else if (BestItemID != INDEX_NONE)
+	{
+		LastTraceResult = LineHit;
+		OutGroundItemID = BestItemID;
+	}
 }
 
 bool FInteractionTraceManager::PassesPlayerForwardGate(const FVector& TargetLocation, float& OutDot) const
@@ -166,21 +240,6 @@ bool FInteractionTraceManager::PassesPlayerForwardGate(const FVector& TargetLoca
 	return OutDot >= MinPlayerForwardDot;
 }
 
-bool FInteractionTraceManager::PassesCameraAndPlayerGates(
-	const FVector& ViewOrigin,
-	const FVector& CameraForward,
-	const FVector& TargetLocation,
-	float MinCameraDot,
-	float& OutCameraDot,
-	float& OutPlayerDot) const
-{
-	const bool bPassedCamera =
-		PassesLookAtGate(ViewOrigin, CameraForward, TargetLocation, MinCameraDot, OutCameraDot);
-	const bool bPassedPlayer = PassesPlayerForwardGate(TargetLocation, OutPlayerDot);
-
-	return bPassedCamera && bPassedPlayer;
-}
-
 TScriptInterface<IInteractable> FInteractionTraceManager::MakeInteractableInterface(AActor* Actor) const
 {
 	TScriptInterface<IInteractable> Result;
@@ -201,229 +260,6 @@ TScriptInterface<IInteractable> FInteractionTraceManager::MakeInteractableInterf
 	}
 
 	return Result;
-}
-
-int32 FInteractionTraceManager::FindGroundItemByTrace(int32 CurrentItemID)
-{
-	if (!CachedGroundItemSubsystem)
-	{
-		return INDEX_NONE;
-	}
-
-	FVector CameraLocation;
-	FRotator CameraRotation;
-	if (!GetCameraViewPoint(CameraLocation, CameraRotation))
-	{
-		return INDEX_NONE;
-	}
-
-	const FVector TraceStart = GetTraceStartLocation(CameraLocation, CameraRotation);
-	const FVector CameraForward = CameraRotation.Vector().GetSafeNormal();
-	const FVector TraceEnd = TraceStart + CameraForward * InteractionDistance;
-
-	FHitResult HitResult;
-	const bool bHit = PerformAimTrace(TraceStart, TraceEnd, HitResult);
-
-	if (DebugManager)
-	{
-		DebugManager->DrawLookAtCone(TraceStart, CameraForward, MinGroundLookAtDot, InteractionDistance);
-		DebugManager->DrawTraceLine(TraceStart, TraceEnd, bHit);
-
-		if (OwnerActor)
-		{
-			DebugManager->DrawPlayerForwardGate(
-				OwnerActor->GetActorLocation(),
-				OwnerActor->GetActorForwardVector(),
-				MinPlayerForwardDot,
-				InteractionDistance);
-		}
-
-		if (bHit)
-		{
-			DebugManager->DrawHitPoint(HitResult.Location, HitResult.Normal);
-		}
-	}
-
-	if (!bHit)
-	{
-		return INDEX_NONE;
-	}
-
-	UInstancedStaticMeshComponent* HitISM =
-		Cast<UInstancedStaticMeshComponent>(HitResult.Component.Get());
-	if (!HitISM)
-	{
-		return INDEX_NONE;
-	}
-
-	const int32 HitInstanceIndex = HitResult.Item;
-	if (HitInstanceIndex == INDEX_NONE)
-	{
-		return INDEX_NONE;
-	}
-
-	const int32 HitItemID =
-		CachedGroundItemSubsystem->FindItemByISMInstance(HitISM, HitInstanceIndex);
-	if (HitItemID == INDEX_NONE)
-	{
-		return INDEX_NONE;
-	}
-
-	const FVector* HitItemLocation =
-		CachedGroundItemSubsystem->GetInstanceLocations().Find(HitItemID);
-	const FVector TargetLocation = HitItemLocation ? *HitItemLocation : HitResult.ImpactPoint;
-	const float HitProjectionDistance = FVector::DotProduct(TargetLocation - TraceStart, CameraForward);
-	if (HitProjectionDistance <= KINDA_SMALL_NUMBER)
-	{
-		return INDEX_NONE;
-	}
-
-	float CameraDot = 0.0f;
-	float PlayerDot = 0.0f;
-	const bool bPassedGates = PassesCameraAndPlayerGates(
-		TraceStart,
-		CameraForward,
-		TargetLocation,
-		MinGroundLookAtDot,
-		CameraDot,
-		PlayerDot);
-
-	if (DebugManager)
-	{
-		DebugManager->DrawAimCandidate(TargetLocation, CameraDot, bPassedGates, bPassedGates);
-	}
-
-	if (!bPassedGates)
-	{
-		return INDEX_NONE;
-	}
-
-	LastTraceResult = HitResult;
-	return FindBestGroundItemFromTraceHit(CurrentItemID, HitProjectionDistance);
-}
-
-int32 FInteractionTraceManager::FindBestGroundItemFromTraceHit(int32 CurrentItemID, float HitProjectionDistance)
-{
-	if (!CachedGroundItemSubsystem)
-	{
-		return INDEX_NONE;
-	}
-
-	FVector CameraLocation;
-	FRotator CameraRotation;
-	if (!GetCameraViewPoint(CameraLocation, CameraRotation))
-	{
-		return INDEX_NONE;
-	}
-
-	const FVector TraceStart = GetTraceStartLocation(CameraLocation, CameraRotation);
-	const FVector CameraForward = CameraRotation.Vector().GetSafeNormal();
-	if (CameraForward.IsNearlyZero())
-	{
-		return INDEX_NONE;
-	}
-
-	const float AimRadius = FMath::Max(GroundItemAimRadius, TraceSphereRadius);
-	const float AimRadiusSq = FMath::Square(AimRadius);
-	const float InteractionDistanceSq = FMath::Square(InteractionDistance);
-	const float MinProjectionLimit = FMath::Clamp(
-		HitProjectionDistance - GroundItemTraceDepthTolerance,
-		0.0f,
-		InteractionDistance);
-	const float MaxProjectionLimit = FMath::Clamp(
-		HitProjectionDistance + GroundItemTraceDepthTolerance,
-		0.0f,
-		InteractionDistance);
-	constexpr float DotTieTolerance = 0.002f;
-
-	if (DebugManager)
-	{
-		DebugManager->DrawGroundItemAimWindow(
-			TraceStart,
-			CameraForward,
-			MinProjectionLimit,
-			MaxProjectionLimit,
-			AimRadius,
-			true);
-	}
-
-	int32 BestItemID = INDEX_NONE;
-	float BestScoreDot = -1.0f;
-	float BestProjectionDelta = TNumericLimits<float>::Max();
-	FVector BestLocation = FVector::ZeroVector;
-
-	// The initial trace already hit a ground item. Only nearby items in that
-	// local depth window can compete, then both camera and player-forward gates
-	// must pass before camera-dot scoring.
-	for (const TPair<int32, FVector>& Pair : CachedGroundItemSubsystem->GetInstanceLocations())
-	{
-		const FVector ToItem = Pair.Value - TraceStart;
-		const float DistanceSq = ToItem.SizeSquared();
-		if (DistanceSq <= KINDA_SMALL_NUMBER || DistanceSq > InteractionDistanceSq)
-		{
-			continue;
-		}
-
-		const float ProjectionDistance = FVector::DotProduct(ToItem, CameraForward);
-		if (ProjectionDistance < MinProjectionLimit || ProjectionDistance > MaxProjectionLimit)
-		{
-			continue;
-		}
-
-		const float LateralDistanceSq =
-			FMath::Max(0.0f, DistanceSq - FMath::Square(ProjectionDistance));
-		if (LateralDistanceSq > AimRadiusSq)
-		{
-			continue;
-		}
-
-		float CameraDot = 0.0f;
-		float PlayerDot = 0.0f;
-		const bool bPassedGates = PassesCameraAndPlayerGates(
-			TraceStart,
-			CameraForward,
-			Pair.Value,
-			MinGroundLookAtDot,
-			CameraDot,
-			PlayerDot);
-
-		if (DebugManager)
-		{
-			DebugManager->DrawAimCandidate(Pair.Value, CameraDot, bPassedGates, false);
-		}
-
-		if (!bPassedGates)
-		{
-			continue;
-		}
-
-		float ScoreDot = CameraDot;
-		if (Pair.Key == CurrentItemID)
-		{
-			ScoreDot += CurrentFocusDotBonus;
-		}
-
-		const float ProjectionDelta = FMath::Abs(ProjectionDistance - HitProjectionDistance);
-		const bool bBetterDot = ScoreDot > BestScoreDot + KINDA_SMALL_NUMBER;
-		const bool bTieButCloser =
-			FMath::Abs(ScoreDot - BestScoreDot) <= DotTieTolerance
-			&& ProjectionDelta < BestProjectionDelta;
-
-		if (bBetterDot || bTieButCloser)
-		{
-			BestScoreDot = ScoreDot;
-			BestProjectionDelta = ProjectionDelta;
-			BestItemID = Pair.Key;
-			BestLocation = Pair.Value;
-		}
-	}
-
-	if (DebugManager && BestItemID != INDEX_NONE)
-	{
-		DebugManager->DrawAimCandidate(BestLocation, BestScoreDot, true, true);
-	}
-
-	return BestItemID;
 }
 
 UItemInstance* FInteractionTraceManager::FindNearestGroundItem(int32& OutItemID)
@@ -498,6 +334,14 @@ bool FInteractionTraceManager::GetCameraViewPoint(FVector& OutLocation, FRotator
 	return true;
 }
 
+FVector FInteractionTraceManager::GetTraceStart()
+{
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	GetCameraViewPoint(CameraLocation, CameraRotation);
+	return GetTraceStartLocation(CameraLocation, CameraRotation);
+}
+
 void FInteractionTraceManager::GetTraceOrigin(FVector& OutCameraLocation, FVector& OutCameraDirection)
 {
 	FRotator CameraRotation;
@@ -516,11 +360,6 @@ FVector FInteractionTraceManager::GetTraceStartLocation(const FVector& CameraLoc
 	}
 
 	return CameraLocation;
-}
-
-FVector FInteractionTraceManager::GetTraceEndLocation(const FVector& CameraLocation, const FRotator& CameraRotation) const
-{
-	return CameraLocation + CameraRotation.Vector() * InteractionDistance;
 }
 
 bool FInteractionTraceManager::IsLocallyControlled() const
@@ -585,33 +424,6 @@ bool FInteractionTraceManager::PerformLineTrace(const FVector& Start, const FVec
 		Start,
 		End,
 		InteractionTraceChannel,
-		QueryParams
-	);
-}
-
-bool FInteractionTraceManager::PerformAimTrace(const FVector& Start, const FVector& End, FHitResult& OutHit)
-{
-	if (TraceSphereRadius <= 0.0f)
-	{
-		return PerformLineTrace(Start, End, OutHit);
-	}
-
-	if (!WorldContext)
-	{
-		return false;
-	}
-
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(OwnerActor);
-	QueryParams.bTraceComplex = false;
-
-	return WorldContext->SweepSingleByChannel(
-		OutHit,
-		Start,
-		End,
-		FQuat::Identity,
-		InteractionTraceChannel,
-		FCollisionShape::MakeSphere(TraceSphereRadius),
 		QueryParams
 	);
 }

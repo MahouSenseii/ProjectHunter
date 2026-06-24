@@ -14,7 +14,9 @@
 #include "GameplayEffectTypes.h"
 #include "Equipment/Components/EquipmentManager.h"
 #include "Equipment/Components/EquipmentPresentationComponent.h"
+#include "Character/Components/PHCharacterMovementComponent.h"
 #include "Character/Components/CharacterSystemCoordinatorComponent.h"
+#include "Components/ALSMantleComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -39,7 +41,9 @@ namespace PHBaseCharacterPrivate
 }
 
 
-APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UPHCharacterMovementComponent>(
+		ACharacter::CharacterMovementComponentName))
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -172,6 +176,21 @@ void APHBaseCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	const bool bCanDriveWallTraversal = IsLocallyControlled() || HasAuthority();
+	if (bCanDriveWallTraversal && bWallTraversalHeld && GetMovementState() == EALSMovementState::InAir)
+	{
+		WallAttachRetryAccumulator += DeltaSeconds;
+		if (WallAttachRetryAccumulator >= WallAttachRetryInterval)
+		{
+			WallAttachRetryAccumulator = 0.0f;
+			TryStartWallTraversal();
+		}
+	}
+	else
+	{
+		WallAttachRetryAccumulator = 0.0f;
+	}
+
 	if (!IsLocallyControlled())
 	{
 		return;
@@ -207,6 +226,21 @@ void APHBaseCharacter::SprintAction_Implementation(bool bValue)
 {
 	Super::SprintAction_Implementation(bValue);
 
+	bWallTraversalHeld = bValue;
+	if (GetLocalRole() == ROLE_AutonomousProxy)
+	{
+		ServerSetWallTraversalHeld(bValue);
+	}
+
+	if (bValue && GetMovementState() == EALSMovementState::InAir)
+	{
+		TryStartWallTraversal();
+	}
+	else if (!bValue)
+	{
+		StopWallTraversal();
+	}
+
 	if (!TagManager)
 	{
 		return;
@@ -214,6 +248,208 @@ void APHBaseCharacter::SprintAction_Implementation(bool bValue)
 
 	TagManager->SetTagState(FPHGameplayTags::Get().Condition_Sprinting, bValue);
 	TagManager->RefreshBaseConditionTags();
+}
+
+void APHBaseCharacter::ForwardMovementAction_Implementation(const float Value)
+{
+	if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+		Movement && Movement->IsWallTraversing())
+	{
+		const FRotator CameraYaw(0.0f, GetAimingRotation().Yaw, 0.0f);
+		const FVector CameraForward = CameraYaw.Vector();
+		AddMovementInput(
+			Movement->ConvertWorldDirectionToWallDirection(CameraForward),
+			Value);
+		return;
+	}
+
+	Super::ForwardMovementAction_Implementation(Value);
+}
+
+void APHBaseCharacter::RightMovementAction_Implementation(const float Value)
+{
+	if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+		Movement && Movement->IsWallTraversing())
+	{
+		const FRotator CameraYaw(0.0f, GetAimingRotation().Yaw, 0.0f);
+		const FVector CameraRight = FRotationMatrix(CameraYaw).GetUnitAxis(EAxis::Y);
+		AddMovementInput(
+			Movement->ConvertWorldDirectionToWallDirection(CameraRight),
+			Value);
+		return;
+	}
+
+	Super::RightMovementAction_Implementation(Value);
+}
+
+void APHBaseCharacter::JumpAction_Implementation(const bool bValue)
+{
+	if (bValue)
+	{
+		if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+			Movement && Movement->IsWallTraversing())
+		{
+			Movement->JumpOffWall();
+			return;
+		}
+	}
+
+	Super::JumpAction_Implementation(bValue);
+}
+
+FVector APHBaseCharacter::GetFootIKSurfaceNormal_Implementation() const
+{
+	const UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+	if (Movement && Movement->IsWallTraversing())
+	{
+		const FVector SurfaceNormal = Movement->GetWallNormal().GetSafeNormal();
+		if (!SurfaceNormal.IsNearlyZero())
+		{
+			return SurfaceNormal;
+		}
+	}
+
+	return Super::GetFootIKSurfaceNormal_Implementation();
+}
+
+UPHCharacterMovementComponent* APHBaseCharacter::GetPHMovementComponent() const
+{
+	return Cast<UPHCharacterMovementComponent>(GetCharacterMovement());
+}
+
+bool APHBaseCharacter::TryStartWallTraversal()
+{
+	UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+	if (!Movement || Movement->IsWallTraversing() ||
+		GetMovementState() != EALSMovementState::InAir)
+	{
+		return false;
+	}
+
+	const EALSMovementState RequestedState = SelectWallTraversalState(GetWallTraversalWeight());
+	if (RequestedState != EALSMovementState::WallRunning &&
+		RequestedState != EALSMovementState::WallClimbing)
+	{
+		return false;
+	}
+
+	return Movement->TryStartWallTraversal(RequestedState);
+}
+
+void APHBaseCharacter::StopWallTraversal()
+{
+	if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent())
+	{
+		Movement->StopWallTraversal();
+	}
+}
+
+bool APHBaseCharacter::IsWallTraversing() const
+{
+	const UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+	return Movement && Movement->IsWallTraversing();
+}
+
+bool APHBaseCharacter::IsWallRunning() const
+{
+	const UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+	return Movement && Movement->IsWallRunning();
+}
+
+bool APHBaseCharacter::IsWallClimbing() const
+{
+	const UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+	return Movement && Movement->IsWallClimbing();
+}
+
+float APHBaseCharacter::GetWallTraversalWeight_Implementation() const
+{
+	return AttributeSet ? FMath::Max(AttributeSet->GetWeight(), 0.0f) : 0.0f;
+}
+
+EALSMovementState APHBaseCharacter::SelectWallTraversalState_Implementation(const float CurrentWeight) const
+{
+	if (CurrentWeight <= MaxWallRunningWeight)
+	{
+		return EALSMovementState::WallRunning;
+	}
+
+	if (CurrentWeight <= MaxWallClimbingWeight)
+	{
+		return EALSMovementState::WallClimbing;
+	}
+
+	return EALSMovementState::None;
+}
+
+bool APHBaseCharacter::TryWallTopMantle()
+{
+	UALSMantleComponent* MantleComponent = FindComponentByClass<UALSMantleComponent>();
+	if (!MantleComponent)
+	{
+		return false;
+	}
+
+	MantleComponent->OnOwnerJumpInput();
+	return GetMovementState() == EALSMovementState::Mantling;
+}
+
+void APHBaseCharacter::OnMovementModeChanged(
+	const EMovementMode PrevMovementMode,
+	const uint8 PreviousCustomMode)
+{
+	if (PrevMovementMode == MOVE_Custom &&
+		(PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallRunning) ||
+			PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallClimbing)))
+	{
+		if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+			Movement && !Movement->IsWallTraversing())
+		{
+			Movement->RestoreWorldUpRotation();
+		}
+	}
+
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+
+	const UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+	if (!Movement || Movement->MovementMode != MOVE_Custom)
+	{
+		if (PrevMovementMode == MOVE_Custom)
+		{
+			SetGait(GetDesiredGait());
+		}
+		return;
+	}
+
+	switch (static_cast<EPHCustomMovementMode>(Movement->CustomMovementMode))
+	{
+	case EPHCustomMovementMode::WallRunning:
+		SetMovementState(EALSMovementState::WallRunning);
+		SetGait(EALSGait::Sprinting);
+		break;
+
+	case EPHCustomMovementMode::WallClimbing:
+		SetMovementState(EALSMovementState::WallClimbing);
+		SetGait(EALSGait::Running);
+		break;
+
+	default:
+		break;
+	}
+}
+
+void APHBaseCharacter::ServerSetWallTraversalHeld_Implementation(const bool bHeld)
+{
+	bWallTraversalHeld = bHeld;
+
+	if (bHeld && GetMovementState() == EALSMovementState::InAir)
+	{
+		TryStartWallTraversal();
+	}
+	else if (!bHeld)
+	{
+		StopWallTraversal();
+	}
 }
 
 
