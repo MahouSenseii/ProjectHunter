@@ -82,6 +82,16 @@ public:
 	bool IsWallClimbing() const;
 
 	/**
+	 * True while wall traversal is requested. ALS keeps sprint intent in
+	 * DesiredGait, so that remains valid when sprint was pressed before jump.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
+	bool WantsWallTraversal() const
+	{
+		return bWallTraversalHeld || GetDesiredGait() == EALSGait::Sprinting;
+	}
+
+	/**
 	 * Returns the weight used to select wall running, wall climbing, or rejection.
 	 * Override in Blueprint when the final equipment/encumbrance calculation is ready.
 	 */

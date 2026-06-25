@@ -97,6 +97,27 @@ void UALSCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	OverlayState = Character->GetOverlayState();
 	GroundedEntryState = Character->GetGroundedEntryState();
 
+	const bool bWallRunning = MovementState.WallRunning();
+	const bool bWallClimbing = MovementState.WallClimbing();
+	const bool bWallTraversal = bWallRunning || bWallClimbing;
+	const float WallBlendSpeed =
+		bWallTraversal ? WallTraversalBlendInSpeed : WallTraversalBlendOutSpeed;
+	WallTraversalBlendAlpha = FMath::FInterpTo(
+		WallTraversalBlendAlpha,
+		bWallTraversal ? 1.0f : 0.0f,
+		DeltaSeconds,
+		WallBlendSpeed);
+	WallRunningBlendAlpha = FMath::FInterpTo(
+		WallRunningBlendAlpha,
+		bWallRunning ? 1.0f : 0.0f,
+		DeltaSeconds,
+		WallBlendSpeed);
+	WallClimbingBlendAlpha = FMath::FInterpTo(
+		WallClimbingBlendAlpha,
+		bWallClimbing ? 1.0f : 0.0f,
+		DeltaSeconds,
+		WallBlendSpeed);
+
 	UpdateAimingValues(DeltaSeconds);
 	UpdateLayerValues();
 	UpdateFootIK(DeltaSeconds);

@@ -28,9 +28,17 @@ class ALS_PROJECTHUNTER_API UPHCharacterMovementComponent : public UALSCharacter
 
 public:
 	UPHCharacterMovementComponent(const FObjectInitializer& ObjectInitializer);
+	virtual void GetLifetimeReplicatedProps(
+		TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	/** Attempts to attach to a nearby wall using the requested ALS movement state. */
-	bool TryStartWallTraversal(EALSMovementState RequestedState);
+	/**
+	 * Attempts to attach using a known impact when available, otherwise searches
+	 * nearby surfaces. Passing the falling impact prevents sprinting characters
+	 * from bouncing off a wall before the periodic attach trace sees it.
+	 */
+	bool TryStartWallTraversal(
+		EALSMovementState RequestedState,
+		const FHitResult* PreferredWallHit = nullptr);
 
 	/** Detaches from the current wall and enters falling movement. */
 	UFUNCTION(BlueprintCallable, Category = "Movement|Wall Traversal")
@@ -74,6 +82,10 @@ public:
 	virtual float GetMaxSpeed() const override;
 	virtual float GetMaxAcceleration() const override;
 	virtual float GetMaxBrakingDeceleration() const override;
+	virtual void HandleImpact(
+		const FHitResult& Hit,
+		float TimeSlice = 0.0f,
+		const FVector& MoveDelta = FVector::ZeroVector) override;
 
 protected:
 	virtual void PhysCustom(float DeltaTime, int32 Iterations) override;
@@ -82,12 +94,19 @@ protected:
 	bool FindAttachableWall(FHitResult& OutHit) const;
 	bool TraceWall(const FVector& Direction, FHitResult& OutHit) const;
 	bool IsWallSurface(const FHitResult& Hit) const;
-	void SnapToWall(const FHitResult& WallHit);
+	void SnapToWall(const FHitResult& WallHit, bool bSnapRotation = false);
+	void TransitionFromWallToGround(const FHitResult& GroundHit);
 	void HandleWallLost();
 	FQuat GetWallTraversalRotation() const;
+	FQuat GetWorldUpRotation() const;
 	float GetDesiredWallDistance() const;
+	float GetDesiredWallDistance(const FVector& CapsuleUp) const;
+	float GetCapsuleSupportDistance(const FVector& SurfaceNormal, const FVector& CapsuleUp) const;
 	float GetWallTraversalSpeed() const;
 	void RecordWallDetachTime();
+
+	UFUNCTION()
+	void OnRep_WallNormal();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
 		meta = (ClampMin = "0.0"))
@@ -130,6 +149,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Rotation")
 	bool bAlignCapsuleToWall = true;
 
+	/**
+	 * Makes the wall become the character's floor on the attachment frame.
+	 * Rotation interpolation still handles later changes around curves/corners.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Rotation")
+	bool bSnapRotationOnAttach = true;
+
 	/** How quickly the capsule aligns with changing wall surfaces and travel direction. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Rotation",
 		meta = (ClampMin = "0.0"))
@@ -165,7 +191,24 @@ protected:
 		meta = (ClampMin = "0.0"))
 	float WallReattachCooldown = 0.25f;
 
-	FVector WallNormal = FVector::ZeroVector;
+	/**
+	 * Number of consecutive frames the wall trace may miss before detaching.
+	 * Bridges brief losses over corners, seams, and noisy sweep normals so a
+	 * single missed frame does not drop the character off the wall.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
+		meta = (ClampMin = "0"))
+	int32 MaxConsecutiveWallLostFrames = 3;
+
+	/**
+	 * Surface up-axis for wall traversal. Custom movement mode/transform are
+	 * already replicated by CharacterMovement; this supplies remote animation
+	 * and wall IK with the matching surface orientation.
+	 */
+	UPROPERTY(ReplicatedUsing = OnRep_WallNormal)
+	FVector_NetQuantizeNormal WallNormal = FVector::ZeroVector;
+
 	FVector WallImpactPoint = FVector::ZeroVector;
 	float LastWallDetachTime = -BIG_NUMBER;
+	int32 WallLostFrames = 0;
 };

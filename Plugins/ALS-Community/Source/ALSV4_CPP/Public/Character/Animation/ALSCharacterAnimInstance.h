@@ -194,6 +194,20 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Character Information")
 	FALSOverlayState OverlayState = EALSOverlayState::Default;
 
+	/**
+	 * Smoothed state weights for Blueprint pose blending. Use WallTraversalBlendAlpha
+	 * to blend normal locomotion against the wall graph, then the run/climb
+	 * alphas to select the wall pose within that graph.
+	 */
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Wall Traversal")
+	float WallTraversalBlendAlpha = 0.0f;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Wall Traversal")
+	float WallRunningBlendAlpha = 0.0f;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Wall Traversal")
+	float WallClimbingBlendAlpha = 0.0f;
+
 	/** Anim Graph - Grounded */
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Grounded", Meta = (
 		ShowOnlyInnerProperties))
@@ -317,6 +331,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Foot IK",
 		meta = (ClampMin = "0.0"))
 	float WallFootIKInterpSpeed = 25.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Traversal",
+		meta = (ClampMin = "0.0"))
+	float WallTraversalBlendInSpeed = 10.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Traversal",
+		meta = (ClampMin = "0.0"))
+	float WallTraversalBlendOutSpeed = 8.0f;
 
 private:
 	FTimerHandle OnPivotTimer;

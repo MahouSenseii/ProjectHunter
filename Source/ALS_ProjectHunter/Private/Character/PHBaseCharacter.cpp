@@ -177,7 +177,8 @@ void APHBaseCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	const bool bCanDriveWallTraversal = IsLocallyControlled() || HasAuthority();
-	if (bCanDriveWallTraversal && bWallTraversalHeld && GetMovementState() == EALSMovementState::InAir)
+	if (bCanDriveWallTraversal && WantsWallTraversal() &&
+		GetMovementState() == EALSMovementState::InAir)
 	{
 		WallAttachRetryAccumulator += DeltaSeconds;
 		if (WallAttachRetryAccumulator >= WallAttachRetryInterval)
@@ -235,10 +236,6 @@ void APHBaseCharacter::SprintAction_Implementation(bool bValue)
 	if (bValue && GetMovementState() == EALSMovementState::InAir)
 	{
 		TryStartWallTraversal();
-	}
-	else if (!bValue)
-	{
-		StopWallTraversal();
 	}
 
 	if (!TagManager)
@@ -412,6 +409,15 @@ void APHBaseCharacter::OnMovementModeChanged(
 	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
 
 	const UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+	if (Movement && Movement->MovementMode == MOVE_Falling &&
+		WantsWallTraversal() && (IsLocallyControlled() || HasAuthority()))
+	{
+		// Jump may begin while sprint was already held, so there may be no new
+		// sprint input event. Search immediately on entering falling and retain
+		// the periodic retry in Tick until a wall is found.
+		TryStartWallTraversal();
+	}
+
 	if (!Movement || Movement->MovementMode != MOVE_Custom)
 	{
 		if (PrevMovementMode == MOVE_Custom)
@@ -445,10 +451,6 @@ void APHBaseCharacter::ServerSetWallTraversalHeld_Implementation(const bool bHel
 	if (bHeld && GetMovementState() == EALSMovementState::InAir)
 	{
 		TryStartWallTraversal();
-	}
-	else if (!bHeld)
-	{
-		StopWallTraversal();
 	}
 }
 
