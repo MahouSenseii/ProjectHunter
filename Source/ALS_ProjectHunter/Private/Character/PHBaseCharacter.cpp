@@ -309,6 +309,14 @@ FVector APHBaseCharacter::GetFootIKSurfaceNormal_Implementation() const
 	return Super::GetFootIKSurfaceNormal_Implementation();
 }
 
+FALSWallTransitionData APHBaseCharacter::GetWallTransitionData_Implementation() const
+{
+	const UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+	return Movement
+		? Movement->GetWallTransitionData()
+		: Super::GetWallTransitionData_Implementation();
+}
+
 UPHCharacterMovementComponent* APHBaseCharacter::GetPHMovementComponent() const
 {
 	return Cast<UPHCharacterMovementComponent>(GetCharacterMovement());
@@ -338,6 +346,19 @@ void APHBaseCharacter::StopWallTraversal()
 	if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent())
 	{
 		Movement->StopWallTraversal();
+	}
+}
+
+void APHBaseCharacter::CompleteWallToGroundTransition()
+{
+	if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent())
+	{
+		Movement->CompleteWallToGroundTransition();
+	}
+
+	if (GetLocalRole() == ROLE_AutonomousProxy)
+	{
+		ServerCompleteWallToGroundTransition();
 	}
 }
 
@@ -397,7 +418,8 @@ void APHBaseCharacter::OnMovementModeChanged(
 {
 	if (PrevMovementMode == MOVE_Custom &&
 		(PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallRunning) ||
-			PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallClimbing)))
+			PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallClimbing) ||
+			PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallToGround)))
 	{
 		if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
 			Movement && !Movement->IsWallTraversing())
@@ -439,6 +461,19 @@ void APHBaseCharacter::OnMovementModeChanged(
 		SetGait(EALSGait::Running);
 		break;
 
+	case EPHCustomMovementMode::WallToGround:
+		if (Movement->GetWallTransitionData().bStartedFromWallClimbing)
+		{
+			SetMovementState(EALSMovementState::WallClimbing);
+			SetGait(EALSGait::Running);
+		}
+		else
+		{
+			SetMovementState(EALSMovementState::WallRunning);
+			SetGait(EALSGait::Sprinting);
+		}
+		break;
+
 	default:
 		break;
 	}
@@ -451,6 +486,14 @@ void APHBaseCharacter::ServerSetWallTraversalHeld_Implementation(const bool bHel
 	if (bHeld && GetMovementState() == EALSMovementState::InAir)
 	{
 		TryStartWallTraversal();
+	}
+}
+
+void APHBaseCharacter::ServerCompleteWallToGroundTransition_Implementation()
+{
+	if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent())
+	{
+		Movement->CompleteWallToGroundTransition();
 	}
 }
 

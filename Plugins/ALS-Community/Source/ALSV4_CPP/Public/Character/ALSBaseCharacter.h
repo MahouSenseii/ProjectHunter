@@ -315,6 +315,14 @@ public:
 	FVector GetFootIKSurfaceNormal() const;
 	virtual FVector GetFootIKSurfaceNormal_Implementation() const;
 
+	/**
+	 * Optional per-foot transition surfaces used while transferring from wall
+	 * locomotion to grounded locomotion.
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category = "ALS|Essential Information")
+	FALSWallTransitionData GetWallTransitionData() const;
+	virtual FALSWallTransitionData GetWallTransitionData_Implementation() const;
+
 	UFUNCTION(BlueprintGetter, Category = "ALS|Essential Information")
 	float GetMovementInputAmount() const { return MovementInputAmount; }
 

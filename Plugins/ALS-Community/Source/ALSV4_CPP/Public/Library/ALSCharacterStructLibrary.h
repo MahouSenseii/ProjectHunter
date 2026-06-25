@@ -21,6 +21,41 @@ class UMaterialInterface;
 class USoundBase;
 class UPrimitiveComponent;
 
+/**
+ * Shared wall-to-ground transition data. Movement owns and replicates the
+ * surfaces; animation decides how to pose each leg between them.
+ */
+USTRUCT(BlueprintType)
+struct FALSWallTransitionData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wall Transition")
+	bool bActive = false;
+
+	/** The foot that transfers to the floor first while the other remains on the wall. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wall Transition")
+	bool bGroundFootIsLeft = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wall Transition")
+	bool bStartedFromWallClimbing = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wall Transition")
+	FVector GroundSurfacePoint = FVector::ZeroVector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wall Transition")
+	FVector GroundSurfaceNormal = FVector::UpVector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wall Transition")
+	FVector WallSurfacePoint = FVector::ZeroVector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wall Transition")
+	FVector WallSurfaceNormal = FVector::ForwardVector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wall Transition")
+	float Duration = 0.4f;
+};
+
 USTRUCT(BlueprintType)
 struct FALSComponentAndTransform
 {

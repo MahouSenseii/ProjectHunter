@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
 #include "Library/ALSAnimationStructLibrary.h"
+#include "Library/ALSCharacterStructLibrary.h"
 #include "Library/ALSStructEnumLibrary.h"
 
 #include "ALSCharacterAnimInstance.generated.h"
@@ -127,6 +128,19 @@ private:
 	                        const FVector& SurfaceNormal, FVector& CurLocationTarget,
 	                        FVector& CurLocationOffset, FRotator& CurRotationOffset);
 
+	void SetTransitionFootOffset(
+		float DeltaSeconds,
+		FName EnableFootIKCurve,
+		FName IKFootBone,
+		const FVector& StartSurfacePoint,
+		const FVector& StartSurfaceNormal,
+		const FVector& TargetSurfacePoint,
+		const FVector& TargetSurfaceNormal,
+		float TransferAlpha,
+		FVector& CurLocationTarget,
+		FVector& CurLocationOffset,
+		FRotator& CurRotationOffset);
+
 	void SetWallPelvisIKOffset(float DeltaSeconds, const FVector& FootOffsetLTarget,
 	                           const FVector& FootOffsetRTarget);
 
@@ -207,6 +221,13 @@ public:
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Wall Traversal")
 	float WallClimbingBlendAlpha = 0.0f;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Wall Traversal")
+	FALSWallTransitionData WallTransitionData;
+
+	/** Progress of the leading foot from the wall plane to the ground plane. */
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Wall Traversal")
+	float WallToGroundTransitionAlpha = 0.0f;
 
 	/** Anim Graph - Grounded */
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Read Only Data|Anim Graph - Grounded", Meta = (
@@ -339,6 +360,19 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Traversal",
 		meta = (ClampMin = "0.0"))
 	float WallTraversalBlendOutSpeed = 8.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Traversal",
+		meta = (ClampMin = "0.0"))
+	float WallToGroundTransitionBlendOutSpeed = 8.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Traversal",
+		meta = (ClampMin = "0.0"))
+	float MaxWallTransitionFootIKOffset = 100.0f;
+
+	/** Keeps procedural transition IK active even if the source animation lacks foot curves. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration|Anim Graph - Wall Traversal",
+		meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float WallTransitionMinFootIKAlpha = 1.0f;
 
 private:
 	FTimerHandle OnPivotTimer;

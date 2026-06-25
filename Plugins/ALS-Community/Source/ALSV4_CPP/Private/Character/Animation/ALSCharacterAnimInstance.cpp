@@ -96,6 +96,24 @@ void UALSCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	Gait = Character->GetGait();
 	OverlayState = Character->GetOverlayState();
 	GroundedEntryState = Character->GetGroundedEntryState();
+	WallTransitionData = Character->GetWallTransitionData();
+
+	if (WallTransitionData.bActive)
+	{
+		WallToGroundTransitionAlpha = FMath::FInterpConstantTo(
+			WallToGroundTransitionAlpha,
+			1.0f,
+			DeltaSeconds,
+			1.0f / FMath::Max(WallTransitionData.Duration, 0.001f));
+	}
+	else
+	{
+		WallToGroundTransitionAlpha = FMath::FInterpTo(
+			WallToGroundTransitionAlpha,
+			0.0f,
+			DeltaSeconds,
+			WallToGroundTransitionBlendOutSpeed);
+	}
 
 	const bool bWallRunning = MovementState.WallRunning();
 	const bool bWallClimbing = MovementState.WallClimbing();
@@ -346,14 +364,23 @@ void UALSCharacterAnimInstance::UpdateFootIK(float DeltaSeconds)
 	FVector FootOffsetLTarget = FVector::ZeroVector;
 	FVector FootOffsetRTarget = FVector::ZeroVector;
 	const bool bWallTraversal = MovementState.WallRunning() || MovementState.WallClimbing();
+	const bool bWallToGroundTransition = WallTransitionData.bActive;
 
 	// Update Foot Locking values.
-	SetFootLocking(DeltaSeconds, NAME_Enable_FootIK_L, NAME_FootLock_L,
-	               IkFootL_BoneName, FootIKValues.FootLock_L_Alpha, FootIKValues.UseFootLockCurve_L,
-	               FootIKValues.FootLock_L_Location, FootIKValues.FootLock_L_Rotation);
-	SetFootLocking(DeltaSeconds, NAME_Enable_FootIK_R, NAME_FootLock_R,
-	               IkFootR_BoneName, FootIKValues.FootLock_R_Alpha, FootIKValues.UseFootLockCurve_R,
-	               FootIKValues.FootLock_R_Location, FootIKValues.FootLock_R_Rotation);
+	if (bWallToGroundTransition)
+	{
+		FootIKValues.FootLock_L_Alpha = 0.0f;
+		FootIKValues.FootLock_R_Alpha = 0.0f;
+	}
+	else
+	{
+		SetFootLocking(DeltaSeconds, NAME_Enable_FootIK_L, NAME_FootLock_L,
+		               IkFootL_BoneName, FootIKValues.FootLock_L_Alpha, FootIKValues.UseFootLockCurve_L,
+		               FootIKValues.FootLock_L_Location, FootIKValues.FootLock_L_Rotation);
+		SetFootLocking(DeltaSeconds, NAME_Enable_FootIK_R, NAME_FootLock_R,
+		               IkFootR_BoneName, FootIKValues.FootLock_R_Alpha, FootIKValues.UseFootLockCurve_R,
+		               FootIKValues.FootLock_R_Location, FootIKValues.FootLock_R_Rotation);
+	}
 
 	if (MovementState.InAir())
 	{
@@ -363,6 +390,42 @@ void UALSCharacterAnimInstance::UpdateFootIK(float DeltaSeconds)
 	}
 	else if (bWallTraversal)
 	{
+		if (bWallToGroundTransition)
+		{
+			const FVector WallPoint = WallTransitionData.WallSurfacePoint;
+			const FVector WallNormal = WallTransitionData.WallSurfaceNormal.GetSafeNormal();
+			const FVector GroundPoint = WallTransitionData.GroundSurfacePoint;
+			const FVector GroundNormal = WallTransitionData.GroundSurfaceNormal.GetSafeNormal();
+
+			const bool bLeftLeads = WallTransitionData.bGroundFootIsLeft;
+			SetTransitionFootOffset(
+				DeltaSeconds,
+				NAME_Enable_FootIK_L,
+				IkFootL_BoneName,
+				WallPoint,
+				WallNormal,
+				bLeftLeads ? GroundPoint : WallPoint,
+				bLeftLeads ? GroundNormal : WallNormal,
+				bLeftLeads ? WallToGroundTransitionAlpha : 0.0f,
+				FootOffsetLTarget,
+				FootIKValues.FootOffset_L_Location,
+				FootIKValues.FootOffset_L_Rotation);
+			SetTransitionFootOffset(
+				DeltaSeconds,
+				NAME_Enable_FootIK_R,
+				IkFootR_BoneName,
+				WallPoint,
+				WallNormal,
+				bLeftLeads ? WallPoint : GroundPoint,
+				bLeftLeads ? WallNormal : GroundNormal,
+				bLeftLeads ? 0.0f : WallToGroundTransitionAlpha,
+				FootOffsetRTarget,
+				FootIKValues.FootOffset_R_Location,
+				FootIKValues.FootOffset_R_Rotation);
+			SetWallPelvisIKOffset(DeltaSeconds, FootOffsetLTarget, FootOffsetRTarget);
+			return;
+		}
+
 		const FVector SurfaceNormal = Character->GetFootIKSurfaceNormal().GetSafeNormal();
 		if (SurfaceNormal.IsNearlyZero())
 		{
@@ -490,6 +553,81 @@ void UALSCharacterAnimInstance::SetWallFootOffsets(
 	}
 
 	CurLocationTarget = TargetLocationOffset * IKAlpha;
+	CurLocationOffset = FMath::VInterpTo(
+		CurLocationOffset,
+		CurLocationTarget,
+		DeltaSeconds,
+		WallFootIKInterpSpeed);
+	CurRotationOffset = FMath::RInterpTo(
+		CurRotationOffset,
+		TargetRotationOffset * IKAlpha,
+		DeltaSeconds,
+		WallFootIKInterpSpeed);
+}
+
+void UALSCharacterAnimInstance::SetTransitionFootOffset(
+	const float DeltaSeconds,
+	const FName EnableFootIKCurve,
+	const FName IKFootBone,
+	const FVector& StartSurfacePoint,
+	const FVector& StartSurfaceNormal,
+	const FVector& TargetSurfacePoint,
+	const FVector& TargetSurfaceNormal,
+	const float TransferAlpha,
+	FVector& CurLocationTarget,
+	FVector& CurLocationOffset,
+	FRotator& CurRotationOffset)
+{
+	USkeletalMeshComponent* OwnerComp = GetOwningComponent();
+	if (!OwnerComp)
+	{
+		return;
+	}
+
+	const float IKAlpha = FMath::Max(
+		GetCurveValue(EnableFootIKCurve),
+		WallTransitionMinFootIKAlpha);
+	const FVector StartNormal = StartSurfaceNormal.GetSafeNormal();
+	const FVector EndNormal = TargetSurfaceNormal.GetSafeNormal();
+	if (StartNormal.IsNearlyZero() || EndNormal.IsNearlyZero())
+	{
+		return;
+	}
+
+	const FVector FootLocation = OwnerComp->GetSocketLocation(IKFootBone);
+	const FVector StartTarget =
+		FootLocation -
+		StartNormal * FVector::DotProduct(FootLocation - StartSurfacePoint, StartNormal) +
+		StartNormal * WallFootSurfaceOffset;
+	const FVector EndTarget =
+		FootLocation -
+		EndNormal * FVector::DotProduct(FootLocation - TargetSurfacePoint, EndNormal) +
+		EndNormal * WallFootSurfaceOffset;
+	const float SmoothTransferAlpha = FMath::SmoothStep(
+		0.0f,
+		1.0f,
+		FMath::Clamp(TransferAlpha, 0.0f, 1.0f));
+	const FVector TargetFootLocation =
+		FMath::Lerp(StartTarget, EndTarget, SmoothTransferAlpha);
+	const FVector WorldOffset = TargetFootLocation - FootLocation;
+
+	CurLocationTarget =
+		OwnerComp->GetComponentTransform().InverseTransformVectorNoScale(WorldOffset);
+	CurLocationTarget =
+		CurLocationTarget.GetClampedToMaxSize(MaxWallTransitionFootIKOffset) * IKAlpha;
+
+	const FVector WorldTargetNormal =
+		FMath::Lerp(StartNormal, EndNormal, SmoothTransferAlpha).GetSafeNormal();
+	const FVector LocalTargetNormal =
+		OwnerComp->GetComponentTransform()
+		         .InverseTransformVectorNoScale(WorldTargetNormal)
+		         .GetSafeNormal();
+	FRotator TargetRotationOffset = FRotator::ZeroRotator;
+	TargetRotationOffset.Pitch =
+		-FMath::RadiansToDegrees(FMath::Atan2(LocalTargetNormal.X, LocalTargetNormal.Z));
+	TargetRotationOffset.Roll =
+		FMath::RadiansToDegrees(FMath::Atan2(LocalTargetNormal.Y, LocalTargetNormal.Z));
+
 	CurLocationOffset = FMath::VInterpTo(
 		CurLocationOffset,
 		CurLocationTarget,

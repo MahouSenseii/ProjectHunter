@@ -598,6 +598,11 @@ FVector AALSBaseCharacter::GetFootIKSurfaceNormal_Implementation() const
 	return FVector::UpVector;
 }
 
+FALSWallTransitionData AALSBaseCharacter::GetWallTransitionData_Implementation() const
+{
+	return FALSWallTransitionData();
+}
+
 float AALSBaseCharacter::GetAnimCurveValue(FName CurveName) const
 {
 	if (GetMesh()->GetAnimInstance())

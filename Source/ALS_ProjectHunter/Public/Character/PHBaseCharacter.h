@@ -59,6 +59,7 @@ public:
 	virtual void JumpAction_Implementation(bool bValue) override;
 	virtual void SprintAction_Implementation(bool bValue) override;
 	virtual FVector GetFootIKSurfaceNormal_Implementation() const override;
+	virtual FALSWallTransitionData GetWallTransitionData_Implementation() const override;
 	virtual void OnRep_PlayerState() override;
 	virtual void OnRep_Controller() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -71,6 +72,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement|Wall Traversal")
 	void StopWallTraversal();
+
+	/**
+	 * Optional AnimNotify hook. The movement component also completes after its
+	 * configured duration, so dedicated servers do not depend on animation ticking.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Movement|Wall Traversal")
+	void CompleteWallToGroundTransition();
 
 	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
 	bool IsWallTraversing() const;
@@ -421,6 +429,9 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void ServerSetWallTraversalHeld(bool bHeld);
+
+	UFUNCTION(Server, Reliable)
+	void ServerCompleteWallToGroundTransition();
 
 	float WallAttachRetryAccumulator = 0.0f;
 

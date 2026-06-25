@@ -3,7 +3,10 @@
 #include "CoreMinimal.h"
 #include "Character/ALSCharacterMovementComponent.h"
 #include "Library/ALSCharacterEnumLibrary.h"
+#include "Library/ALSCharacterStructLibrary.h"
 #include "PHCharacterMovementComponent.generated.h"
+
+class UPrimitiveComponent;
 
 UENUM(BlueprintType)
 enum class EPHCustomMovementMode : uint8
@@ -11,7 +14,8 @@ enum class EPHCustomMovementMode : uint8
 	None = 0 UMETA(Hidden),
 	WallRunning = 1 UMETA(DisplayName = "Wall Running"),
 	WallClimbing = 2 UMETA(DisplayName = "Wall Climbing"),
-	Gliding = 3 UMETA(DisplayName = "Gliding")
+	Gliding = 3 UMETA(DisplayName = "Gliding"),
+	WallToGround = 4 UMETA(DisplayName = "Wall To Ground")
 };
 
 /**
@@ -58,6 +62,16 @@ public:
 	bool IsWallClimbing() const;
 
 	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
+	bool IsTransitioningFromWallToGround() const;
+
+	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
+	FALSWallTransitionData GetWallTransitionData() const { return WallTransitionData; }
+
+	/** Completes the transition early, normally from an animation notify. */
+	UFUNCTION(BlueprintCallable, Category = "Movement|Wall Traversal")
+	void CompleteWallToGroundTransition();
+
+	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
 	FVector GetWallNormal() const { return WallNormal; }
 
 	/** Up axis of the current wall surface. */
@@ -91,11 +105,20 @@ protected:
 	virtual void PhysCustom(float DeltaTime, int32 Iterations) override;
 
 	void PhysWallTraversal(float DeltaTime, int32 Iterations);
-	bool FindAttachableWall(FHitResult& OutHit) const;
-	bool TraceWall(const FVector& Direction, FHitResult& OutHit) const;
-	bool IsWallSurface(const FHitResult& Hit) const;
+	void PhysWallToGroundTransition(float DeltaTime, int32 Iterations);
+	bool FindAttachableWall(FHitResult& OutHit, bool bRequireInitialWall = true) const;
+	bool FindTransitionGround(FHitResult& OutHit) const;
+	bool TraceWall(
+		const FVector& Direction,
+		FHitResult& OutHit,
+		bool bRequireInitialWall = true) const;
+	bool IsWallSurface(const FHitResult& Hit, bool bRequireInitialWall) const;
+	bool IsCurrentTraversalSurface(const FHitResult& Hit) const;
+	bool ShouldTransitionToGround(const FHitResult& Hit) const;
+	void UpdateWallSurface(const FHitResult& WallHit, bool bInitialAttach);
 	void SnapToWall(const FHitResult& WallHit, bool bSnapRotation = false);
-	void TransitionFromWallToGround(const FHitResult& GroundHit);
+	void BeginWallToGroundTransition(const FHitResult& GroundHit);
+	bool ChooseGroundTransitionFoot(const FHitResult& GroundHit) const;
 	void HandleWallLost();
 	FQuat GetWallTraversalRotation() const;
 	FQuat GetWorldUpRotation() const;
@@ -116,7 +139,11 @@ protected:
 		meta = (ClampMin = "0.0"))
 	float WallTraceRadius = 14.0f;
 
-	/** Maximum absolute wall-normal Z. Lower values require a more vertical wall. */
+	/**
+	 * Maximum upward normal Z for initial attachment. Continued traversal may
+	 * follow floors, curved tops, and ceilings; normal ground is still rejected
+	 * as an initial wall attachment.
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
 		meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float MaxWallNormalZ = 0.35f;
@@ -200,6 +227,26 @@ protected:
 		meta = (ClampMin = "0"))
 	int32 MaxConsecutiveWallLostFrames = 3;
 
+	/** How far ahead/down the wall to start the one-foot-at-a-time floor transfer. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition",
+		meta = (ClampMin = "0.0"))
+	float GroundTransitionDetectionDistance = 75.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition",
+		meta = (ClampMin = "0.05"))
+	float WallToGroundTransitionDuration = 0.4f;
+
+	/** Retains some run momentum while the capsule rotates toward world-up. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition",
+		meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float WallToGroundMovementScale = 0.35f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition")
+	FName TransitionLeftFootBone = TEXT("ik_foot_l");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition")
+	FName TransitionRightFootBone = TEXT("ik_foot_r");
+
 	/**
 	 * Surface up-axis for wall traversal. Custom movement mode/transform are
 	 * already replicated by CharacterMovement; this supplies remote animation
@@ -208,7 +255,21 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_WallNormal)
 	FVector_NetQuantizeNormal WallNormal = FVector::ZeroVector;
 
+	/** Tangent transported across changing normals so arcs never lose "forward/up". */
+	UPROPERTY(Replicated)
+	FVector_NetQuantizeNormal WallUpDirection = FVector::UpVector;
+
+	UPROPERTY(Replicated)
+	FALSWallTransitionData WallTransitionData;
+
 	FVector WallImpactPoint = FVector::ZeroVector;
+	TWeakObjectPtr<UPrimitiveComponent> WallSurfaceComponent;
 	float LastWallDetachTime = -BIG_NUMBER;
 	int32 WallLostFrames = 0;
+	float WallToGroundElapsed = 0.0f;
+	FVector WallToGroundStartLocation = FVector::ZeroVector;
+	FVector WallToGroundTargetLocation = FVector::ZeroVector;
+	FVector WallToGroundPlanarVelocity = FVector::ZeroVector;
+	FQuat WallToGroundStartRotation = FQuat::Identity;
+	FQuat WallToGroundTargetRotation = FQuat::Identity;
 };
