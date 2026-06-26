@@ -8,13 +8,13 @@
 #include "Animation/AnimNotifies/AnimNotifyState.h"
 #include "Library/ALSCharacterEnumLibrary.h"
 
-#include "ALSNotifyStateEarlyBlendOut.generated.h"
+#include "DEPRECATEDALSNotifyStateEarlyBlendOut.generated.h"
 
 /**
  * Character early blend out anim state
  */
 UCLASS()
-class ALSV4_CPP_API UALSNotifyStateEarlyBlendOut : public UAnimNotifyState
+class ALSV4_CPP_API UDEPRECATEDALSNotifyStateEarlyBlendOut : public UAnimNotifyState
 {
 	GENERATED_BODY()
 
@@ -44,4 +44,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AnimNotify)
 	bool bCheckMovementInput = false;
+	
+	
+	
+	
 };

@@ -155,7 +155,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
 		meta = (ClampMin = "0.0"))
-	float WallTraceRadius = 14.0f;
+	float WallTraceRadius = 15.0f;
 
 	/**
 	 * Maximum upward normal Z for initial attachment. Continued traversal may
@@ -164,7 +164,7 @@ protected:
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
 		meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float MaxWallNormalZ = 0.35f;
+	float MaxWallNormalZ = 0.25f;
 
 	/**
 	 * Minimum normal alignment accepted when traversal crosses from one collision

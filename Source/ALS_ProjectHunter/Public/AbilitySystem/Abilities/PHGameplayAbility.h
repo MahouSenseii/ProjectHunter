@@ -37,6 +37,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Project Hunter|Ability", meta = (ExpandBoolAsExecs = "ReturnValue"))
 	bool ChangeActivationGroup(EPHAbilityActivationGroup NewGroup);
+	
+	UFUNCTION(BlueprintCallable, Category = "Project Hunter|Base")
+	FName GetAbilityName() const { return AbilityName; }
 
 protected:
 	virtual bool CanActivateAbility(
@@ -66,4 +69,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Project Hunter|Ability Activation")
 	EPHAbilityActivationGroup ActivationGroup = EPHAbilityActivationGroup::Independent;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Project Hunter|Base")
+	FName AbilityName;
 };
