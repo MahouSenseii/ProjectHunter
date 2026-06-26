@@ -252,6 +252,17 @@ void APHBaseCharacter::ForwardMovementAction_Implementation(const float Value)
 	if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
 		Movement && Movement->IsWallTraversing())
 	{
+		if (Movement->IsWallClimbing())
+		{
+			// Climbing: the forward axis always travels along the wall's up
+			// tangent (parallel-transported across curves), independent of where
+			// the camera points. The vertical climb axis used to be sourced from
+			// how far the camera looked *into* the wall, so when the camera faced
+			// along the wall that axis collapsed and only left/right worked.
+			AddMovementInput(Movement->GetWallUp(), Value);
+			return;
+		}
+
 		const FRotator CameraYaw(0.0f, GetAimingRotation().Yaw, 0.0f);
 		const FVector CameraForward = CameraYaw.Vector();
 		AddMovementInput(
@@ -268,6 +279,15 @@ void APHBaseCharacter::RightMovementAction_Implementation(const float Value)
 	if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
 		Movement && Movement->IsWallTraversing())
 	{
+		if (Movement->IsWallClimbing())
+		{
+			// Climbing: strafe along the wall's right tangent, also camera-
+			// independent so left/right stays consistent while the vertical axis
+			// is driven by ForwardMovementAction.
+			AddMovementInput(Movement->GetWallRight(), Value);
+			return;
+		}
+
 		const FRotator CameraYaw(0.0f, GetAimingRotation().Yaw, 0.0f);
 		const FVector CameraRight = FRotationMatrix(CameraYaw).GetUnitAxis(EAxis::Y);
 		AddMovementInput(

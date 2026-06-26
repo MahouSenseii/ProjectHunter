@@ -8,8 +8,8 @@
 namespace
 {
 	constexpr float WallSurfaceNormalInterpSpeed = 24.0f;
-	constexpr float WallMantleMinimumUpSpeed = 25.0f;
 	constexpr float WallToGroundReattachDelay = 0.75f;
+	constexpr float GroundExitFlatNormalZ = 0.98f;
 }
 
 UPHCharacterMovementComponent::UPHCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
@@ -58,6 +58,13 @@ bool UPHCharacterMovementComponent::TryStartWallTraversal(
 		return false;
 	}
 
+	// Only grab the wall when the character is actually heading toward or running
+	// along it. Sprinting past, away from, or off a wall must not snap back on.
+	if (!IsApproachingWall(WallHit))
+	{
+		return false;
+	}
+
 	UpdateWallSurface(WallHit, true);
 	WallTransitionData = FALSWallTransitionData();
 
@@ -68,6 +75,7 @@ bool UPHCharacterMovementComponent::TryStartWallTraversal(
 
 	Velocity = FVector::VectorPlaneProject(Velocity, WallNormal);
 	WallLostFrames = 0;
+	WallTraversalElapsed = 0.0f;
 	SetMovementMode(MOVE_Custom, static_cast<uint8>(NewMode));
 	SnapToWall(WallHit, bAlignCapsuleToWall && bSnapRotationOnAttach);
 	CharacterOwner->ForceNetUpdate();
@@ -308,7 +316,10 @@ void UPHCharacterMovementComponent::PhysWallTraversal(const float DeltaTime, con
 	}
 
 	FHitResult WallHit;
-	bool bHasWall = TraceWall(-WallNormal, WallHit, false);
+	TArray<FHitResult> WallHits;
+	bool bHasWall =
+		TraceWallSurfaces(-WallNormal, WallHits, false) &&
+		BuildAveragedWallHit(WallHits, WallHit);
 	if (!bHasWall)
 	{
 		// The wall normal may have rotated across a corner or curve, so the
@@ -342,11 +353,30 @@ void UPHCharacterMovementComponent::PhysWallTraversal(const float DeltaTime, con
 	Velocity = FVector::VectorPlaneProject(Velocity, WallNormal);
 	Velocity = Velocity.GetClampedToMaxSize(GetMaxSpeed());
 
-	// Begin before collision when descending toward a nearby floor. This gives
-	// animation time to transfer one foot instead of snapping both at impact.
+	WallTraversalElapsed += DeltaTime;
+
 	const bool bMovingTowardGround =
 		FVector::DotProduct(Velocity, FVector::UpVector) < -KINDA_SMALL_NUMBER ||
 		FVector::DotProduct(Acceleration, FVector::UpVector) < -KINDA_SMALL_NUMBER;
+
+	// Drop to walking when a walkable floor is directly underfoot. During a vertical
+	// climb the surface below is the wall (not walkable), so this stays inactive
+	// while climbing and fires when the character crests onto a walkable top surface
+	// (the top-of-wall case) or is grazing the ground. The post-attach grace lets a
+	// ground launch clear the floor first so it doesn't immediately pull them back.
+	if (WallTraversalElapsed >= WallGroundExitGraceTime)
+	{
+		FHitResult StandingGroundHit;
+		if (IsStandingOnWalkableFloor(StandingGroundHit))
+		{
+			BeginWallToGroundTransition(StandingGroundHit);
+			return;
+		}
+	}
+
+	// Begin before collision when descending toward a floor that is still a little
+	// below. This gives animation time to transfer one foot instead of snapping
+	// both at impact.
 	FHitResult NearbyGroundHit;
 	if (bMovingTowardGround && FindTransitionGround(NearbyGroundHit))
 	{
@@ -384,7 +414,9 @@ void UPHCharacterMovementComponent::PhysWallTraversal(const float DeltaTime, con
 	}
 
 	FHitResult PostMoveWallHit;
-	if (TraceWall(-WallNormal, PostMoveWallHit, false))
+	TArray<FHitResult> PostMoveWallHits;
+	if (TraceWallSurfaces(-WallNormal, PostMoveWallHits, false) &&
+		BuildAveragedWallHit(PostMoveWallHits, PostMoveWallHit))
 	{
 		UpdateWallSurface(PostMoveWallHit, false);
 		SnapToWall(PostMoveWallHit);
@@ -459,40 +491,84 @@ bool UPHCharacterMovementComponent::FindAttachableWall(
 		return false;
 	}
 
-	TArray<FVector, TInlineAllocator<8>> CandidateDirections;
+	TArray<FVector, TInlineAllocator<20>> CandidateDirections;
+	const auto AddDirection = [&CandidateDirections](const FVector& Direction)
+	{
+		const FVector NormalizedDirection = Direction.GetSafeNormal();
+		if (NormalizedDirection.IsNearlyZero())
+		{
+			return;
+		}
+
+		for (const FVector& ExistingDirection : CandidateDirections)
+		{
+			if (FVector::DotProduct(ExistingDirection, NormalizedDirection) > 0.98f)
+			{
+				return;
+			}
+		}
+
+		CandidateDirections.Add(NormalizedDirection);
+	};
 
 	const FVector InputDirection = bRequireInitialWall
 		? CharacterOwner->GetLastMovementInputVector().GetSafeNormal2D()
 		: CharacterOwner->GetLastMovementInputVector().GetSafeNormal();
-	if (!InputDirection.IsNearlyZero())
-	{
-		CandidateDirections.Add(InputDirection);
-	}
+	AddDirection(InputDirection);
+
+	const FVector AccelerationDirection = bRequireInitialWall
+		? Acceleration.GetSafeNormal2D()
+		: Acceleration.GetSafeNormal();
+	AddDirection(AccelerationDirection);
 
 	const FVector VelocityDirection = Velocity.GetSafeNormal();
-	if (!VelocityDirection.IsNearlyZero())
-	{
-		CandidateDirections.Add(VelocityDirection);
-	}
+	AddDirection(bRequireInitialWall
+		? VelocityDirection.GetSafeNormal2D()
+		: VelocityDirection);
 
 	if (!bRequireInitialWall && !WallNormal.IsNearlyZero())
 	{
-		CandidateDirections.Add(-FVector(WallNormal));
-		CandidateDirections.Add(GetWallUp());
-		CandidateDirections.Add(-GetWallUp());
+		const FVector WallProbe = -FVector(WallNormal);
+		const FVector WallUp = GetWallUp();
+		const FVector WallRight = GetWallRight();
+		AddDirection(WallProbe);
+		AddDirection(WallUp);
+		AddDirection(-WallUp);
+		AddDirection(WallRight);
+		AddDirection(-WallRight);
+		AddDirection(WallProbe + WallUp);
+		AddDirection(WallProbe - WallUp);
+		AddDirection(WallProbe + WallRight);
+		AddDirection(WallProbe - WallRight);
 	}
 
-	CandidateDirections.Add(CharacterOwner->GetActorForwardVector());
-	CandidateDirections.Add(CharacterOwner->GetActorRightVector());
-	CandidateDirections.Add(-CharacterOwner->GetActorRightVector());
+	// The 8-direction actor-relative fan is only needed to acquire a wall from
+	// scratch. During traversal we already have the wall-basis probes above, so
+	// skipping this fan roughly halves the sweep count on the per-frame recovery
+	// path without losing coverage.
+	if (bRequireInitialWall)
+	{
+		const FVector ActorForward = CharacterOwner->GetActorForwardVector().GetSafeNormal2D();
+		const FVector ActorRight = CharacterOwner->GetActorRightVector().GetSafeNormal2D();
+		AddDirection(ActorForward);
+		AddDirection(-ActorForward);
+		AddDirection(ActorRight);
+		AddDirection(-ActorRight);
+		AddDirection(ActorForward + ActorRight);
+		AddDirection(ActorForward - ActorRight);
+		AddDirection(-ActorForward + ActorRight);
+		AddDirection(-ActorForward - ActorRight);
+	}
 
 	bool bFoundWall = false;
 	float ClosestDistanceSquared = TNumericLimits<float>::Max();
 
 	for (const FVector& Direction : CandidateDirections)
 	{
+		TArray<FHitResult> CandidateHits;
 		FHitResult CandidateHit;
-		if (!TraceWall(Direction, CandidateHit, bRequireInitialWall))
+		if (!TraceWallSurfaces(Direction, CandidateHits, bRequireInitialWall) ||
+			!BuildAveragedWallHit(CandidateHits, CandidateHit))
 		{
 			continue;
 		}
@@ -547,9 +623,59 @@ bool UPHCharacterMovementComponent::FindTransitionGround(FHitResult& OutHit) con
 	return bHit && ShouldTransitionToGround(OutHit);
 }
 
+bool UPHCharacterMovementComponent::IsStandingOnWalkableFloor(FHitResult& OutGroundHit) const
+{
+	if (!GetWorld() || !CharacterOwner || !UpdatedComponent)
+	{
+		return false;
+	}
+
+	const UCapsuleComponent* Capsule = CharacterOwner->GetCapsuleComponent();
+	if (!Capsule)
+	{
+		return false;
+	}
+
+	// Tight downward probe: only a floor within the capsule's own support distance
+	// (plus a small margin) counts as actually standing on the ground. This is
+	// independent of travel direction, so a floor beneath the player ends/blocks a
+	// wall run instead of letting it persist at ground level.
+	FCollisionQueryParams QueryParams(
+		SCENE_QUERY_STAT(PHWallGroundedCheck),
+		false,
+		CharacterOwner);
+	const FVector Start = UpdatedComponent->GetComponentLocation();
+	const float StandingSupport =
+		GetCapsuleSupportDistance(FVector::UpVector, UpdatedComponent->GetUpVector());
+	const FVector End =
+		Start - FVector::UpVector * (StandingSupport + GroundedContactMargin);
+	const float ProbeRadius = FMath::Max(Capsule->GetScaledCapsuleRadius() * 0.5f, 5.0f);
+
+	const bool bHit = GetWorld()->SweepSingleByChannel(
+		OutGroundHit,
+		Start,
+		End,
+		FQuat::Identity,
+		WallDetectionChannel,
+		FCollisionShape::MakeSphere(ProbeRadius),
+		QueryParams);
+
+	return bHit && ShouldTransitionToGround(OutGroundHit);
+}
+
 bool UPHCharacterMovementComponent::TraceWall(
 	const FVector& Direction,
 	FHitResult& OutHit,
+	const bool bRequireInitialWall) const
+{
+	TArray<FHitResult> WallHits;
+	return TraceWallSurfaces(Direction, WallHits, bRequireInitialWall) &&
+		BuildAveragedWallHit(WallHits, OutHit);
+}
+
+bool UPHCharacterMovementComponent::TraceWallSurfaces(
+	const FVector& Direction,
+	TArray<FHitResult>& OutHits,
 	const bool bRequireInitialWall) const
 {
 	if (!GetWorld() || !CharacterOwner || !UpdatedComponent || Direction.IsNearlyZero())
@@ -557,12 +683,16 @@ bool UPHCharacterMovementComponent::TraceWall(
 		return false;
 	}
 
+	OutHits.Reset();
+
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(PHWallTraversal), false, CharacterOwner);
 	const FVector Start = UpdatedComponent->GetComponentLocation();
-	const FVector End = Start + Direction.GetSafeNormal() * (GetDesiredWallDistance() + WallDetectionReach);
+	const FVector TraceDirection = Direction.GetSafeNormal();
+	const FVector End = Start + TraceDirection * (GetDesiredWallDistance() + WallDetectionReach);
 
-	const bool bHit = GetWorld()->SweepSingleByChannel(
-		OutHit,
+	TArray<FHitResult> Hits;
+	const bool bHit = GetWorld()->SweepMultiByChannel(
+		Hits,
 		Start,
 		End,
 		FQuat::Identity,
@@ -575,32 +705,174 @@ bool UPHCharacterMovementComponent::TraceWall(
 		return false;
 	}
 
-	if (!bRequireInitialWall && WallSurfaceComponent.IsValid() &&
-		OutHit.GetComponent() != WallSurfaceComponent.Get())
+	TArray<FHitResult> UsableHits;
+	float ClosestHitTime = TNumericLimits<float>::Max();
+	const FVector CurrentWallNormal = FVector(WallNormal).GetSafeNormal();
+
+	// Iterate by reference: refining initial-attach normals mutates the element
+	// in place and avoids copying a full FHitResult every loop iteration.
+	for (FHitResult& CandidateHit : Hits)
+	{
+		if (!CandidateHit.IsValidBlockingHit())
+		{
+			continue;
+		}
+
+		// Sphere sweeps return rounded/averaged normals on edges and corners,
+		// which can spike the normal's Z and make a valid wall fail
+		// IsWallSurface. Refine initial attachment only. During traversal, the
+		// sweep normal is the stable contact normal required to follow a curved
+		// surface; replacing it with triangle face normals produces visible jitter
+		// on an arc.
+		if (bRequireInitialWall)
+		{
+			FHitResult FaceHit;
+			const FVector FaceEnd =
+				CandidateHit.ImpactPoint + TraceDirection * (WallTraceRadius + 2.0f);
+			if (GetWorld()->LineTraceSingleByChannel(
+					FaceHit, Start, FaceEnd, WallDetectionChannel, QueryParams) &&
+				FaceHit.IsValidBlockingHit())
+			{
+				CandidateHit.ImpactNormal = FaceHit.ImpactNormal;
+				CandidateHit.Normal = FaceHit.Normal;
+			}
+		}
+
+		if (!IsWallSurface(CandidateHit, bRequireInitialWall))
+		{
+			continue;
+		}
+
+		FVector CandidateNormal = CandidateHit.Normal.GetSafeNormal();
+		if (CandidateNormal.IsNearlyZero())
+		{
+			CandidateNormal = CandidateHit.ImpactNormal.GetSafeNormal();
+		}
+
+		const FVector TowardCharacter =
+			(Start - CandidateHit.ImpactPoint).GetSafeNormal();
+		if (!TowardCharacter.IsNearlyZero() &&
+			FVector::DotProduct(CandidateNormal, TowardCharacter) < 0.0f)
+		{
+			CandidateNormal *= -1.0f;
+		}
+
+		const bool bSameTraversalComponent =
+			!bRequireInitialWall &&
+			WallSurfaceComponent.IsValid() &&
+			CandidateHit.GetComponent() == WallSurfaceComponent.Get();
+
+		if (!bRequireInitialWall && WallSurfaceComponent.IsValid() &&
+			!CurrentWallNormal.IsNearlyZero() && !CandidateNormal.IsNearlyZero())
+		{
+			const float NormalDot =
+				FVector::DotProduct(CandidateNormal, CurrentWallNormal);
+			if (!bSameTraversalComponent && NormalDot < MinContinuedWallNormalDot)
+			{
+				continue;
+			}
+			if (bSameTraversalComponent && NormalDot < -0.1f)
+			{
+				continue;
+			}
+		}
+
+		if (!CandidateNormal.IsNearlyZero())
+		{
+			CandidateHit.Normal = CandidateNormal;
+			CandidateHit.ImpactNormal = CandidateNormal;
+		}
+
+		ClosestHitTime = FMath::Min(ClosestHitTime, CandidateHit.Time);
+		UsableHits.Add(CandidateHit);
+	}
+
+	if (UsableHits.IsEmpty())
 	{
 		return false;
 	}
 
-	// Sphere sweeps return rounded/averaged normals on edges and corners, which
-	// can spike the normal's Z and make a valid wall fail IsWallSurface. Refine
-	// initial attachment only. During traversal, the sweep normal is the stable
-	// contact normal required to follow a curved surface; replacing it with
-	// triangle face normals produces visible jitter on an arc.
-	if (bRequireInitialWall)
+	// This mirrors the simple climbing implementation's "process all surface
+	// hits" idea, but keeps the averaged set local to the nearest contact band.
+	// That prevents a far wall behind a close corner from pulling the run normal.
+	constexpr float SurfaceHitTimeBand = 0.2f;
+	for (const FHitResult& UsableHit : UsableHits)
 	{
-		FHitResult FaceHit;
-		const FVector FaceEnd =
-			OutHit.ImpactPoint + Direction.GetSafeNormal() * (WallTraceRadius + 2.0f);
-		if (GetWorld()->LineTraceSingleByChannel(
-				FaceHit, Start, FaceEnd, WallDetectionChannel, QueryParams) &&
-			FaceHit.IsValidBlockingHit())
+		if (UsableHit.Time <= ClosestHitTime + SurfaceHitTimeBand)
 		{
-			OutHit.ImpactNormal = FaceHit.ImpactNormal;
-			OutHit.Normal = FaceHit.Normal;
+			OutHits.Add(UsableHit);
 		}
 	}
 
-	return IsWallSurface(OutHit, bRequireInitialWall);
+	if (OutHits.IsEmpty())
+	{
+		OutHits.Add(UsableHits[0]);
+	}
+
+	return true;
+}
+
+bool UPHCharacterMovementComponent::BuildAveragedWallHit(
+	const TArray<FHitResult>& WallHits,
+	FHitResult& OutHit) const
+{
+	if (WallHits.IsEmpty())
+	{
+		return false;
+	}
+
+	FVector AveragePoint = FVector::ZeroVector;
+	FVector AverageLocation = FVector::ZeroVector;
+	FVector AverageNormal = FVector::ZeroVector;
+	float BestTime = TNumericLimits<float>::Max();
+	int32 BestIndex = 0;
+
+	const FVector ComponentLocation = UpdatedComponent
+		? UpdatedComponent->GetComponentLocation()
+		: FVector::ZeroVector;
+
+	for (int32 Index = 0; Index < WallHits.Num(); ++Index)
+	{
+		const FHitResult& WallHit = WallHits[Index];
+		if (WallHit.Time < BestTime)
+		{
+			BestTime = WallHit.Time;
+			BestIndex = Index;
+		}
+
+		AveragePoint += WallHit.ImpactPoint;
+		AverageLocation += WallHit.Location;
+
+		FVector SurfaceNormal = WallHit.Normal.GetSafeNormal();
+		if (SurfaceNormal.IsNearlyZero())
+		{
+			SurfaceNormal = WallHit.ImpactNormal.GetSafeNormal();
+		}
+
+		const FVector TowardCharacter =
+			(ComponentLocation - WallHit.ImpactPoint).GetSafeNormal();
+		if (!TowardCharacter.IsNearlyZero() &&
+			FVector::DotProduct(SurfaceNormal, TowardCharacter) < 0.0f)
+		{
+			SurfaceNormal *= -1.0f;
+		}
+
+		AverageNormal += SurfaceNormal;
+	}
+
+	const float HitCount = static_cast<float>(WallHits.Num());
+	OutHit = WallHits[BestIndex];
+	OutHit.ImpactPoint = AveragePoint / HitCount;
+	OutHit.Location = AverageLocation / HitCount;
+
+	const FVector AveragedNormal = AverageNormal.GetSafeNormal();
+	if (!AveragedNormal.IsNearlyZero())
+	{
+		OutHit.Normal = AveragedNormal;
+		OutHit.ImpactNormal = AveragedNormal;
+	}
+
+	return true;
 }
 
 bool UPHCharacterMovementComponent::IsWallSurface(
@@ -622,6 +894,43 @@ bool UPHCharacterMovementComponent::IsWallSurface(
 	return !IsWalkable(Hit) && Hit.ImpactNormal.Z <= MaxWallNormalZ;
 }
 
+bool UPHCharacterMovementComponent::IsApproachingWall(const FHitResult& WallHit) const
+{
+	FVector SurfaceNormal = WallHit.ImpactNormal.GetSafeNormal();
+	if (SurfaceNormal.IsNearlyZero())
+	{
+		SurfaceNormal = WallHit.Normal.GetSafeNormal();
+	}
+	if (SurfaceNormal.IsNearlyZero())
+	{
+		// No usable normal to test against; don't block attachment on this alone.
+		return true;
+	}
+
+	// Use horizontal intent so running alongside a wall still qualifies. Prefer
+	// current velocity, then steering acceleration, then raw input when blocked
+	// against the surface with little velocity.
+	FVector MoveDir = Velocity.GetSafeNormal2D();
+	if (MoveDir.IsNearlyZero())
+	{
+		MoveDir = Acceleration.GetSafeNormal2D();
+	}
+	if (MoveDir.IsNearlyZero() && CharacterOwner)
+	{
+		MoveDir = CharacterOwner->GetLastMovementInputVector().GetSafeNormal2D();
+	}
+	if (MoveDir.IsNearlyZero())
+	{
+		// Standing still is not "running into" a wall.
+		return false;
+	}
+
+	// Positive when heading into the wall, ~0 when parallel, negative when moving
+	// away. Reject only clear outward motion.
+	const float ApproachDot = FVector::DotProduct(MoveDir, -SurfaceNormal);
+	return ApproachDot >= MinWallApproachDot;
+}
+
 bool UPHCharacterMovementComponent::IsCurrentTraversalSurface(
 	const FHitResult& Hit) const
 {
@@ -638,7 +947,24 @@ bool UPHCharacterMovementComponent::IsCurrentTraversalSurface(
 bool UPHCharacterMovementComponent::ShouldTransitionToGround(
 	const FHitResult& Hit) const
 {
-	return IsWalkable(Hit) && !IsCurrentTraversalSurface(Hit);
+	if (!IsWalkable(Hit))
+	{
+		return false;
+	}
+
+	// A (near) flat top means the wall has been crested: stand up even when the
+	// top face belongs to the same mesh that was being climbed. Without this, a
+	// solid wall whose top is one continuous collision component reads as "still
+	// the climbing surface" indefinitely, so the character keeps reporting wall
+	// traversal at the top instead of returning to walking. Genuinely curved
+	// walkable patches (an arch rolled over) stay below this threshold and remain
+	// traversal until they actually flatten out.
+	if (Hit.ImpactNormal.Z >= GroundExitFlatNormalZ)
+	{
+		return true;
+	}
+
+	return !IsCurrentTraversalSurface(Hit);
 }
 
 void UPHCharacterMovementComponent::UpdateWallSurface(

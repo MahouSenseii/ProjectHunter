@@ -108,11 +108,20 @@ protected:
 	void PhysWallToGroundTransition(float DeltaTime, int32 Iterations);
 	bool FindAttachableWall(FHitResult& OutHit, bool bRequireInitialWall = true) const;
 	bool FindTransitionGround(FHitResult& OutHit) const;
+	bool IsStandingOnWalkableFloor(FHitResult& OutGroundHit) const;
 	bool TraceWall(
 		const FVector& Direction,
 		FHitResult& OutHit,
 		bool bRequireInitialWall = true) const;
+	bool TraceWallSurfaces(
+		const FVector& Direction,
+		TArray<FHitResult>& OutHits,
+		bool bRequireInitialWall = true) const;
+	bool BuildAveragedWallHit(
+		const TArray<FHitResult>& WallHits,
+		FHitResult& OutHit) const;
 	bool IsWallSurface(const FHitResult& Hit, bool bRequireInitialWall) const;
+	bool IsApproachingWall(const FHitResult& WallHit) const;
 	bool IsCurrentTraversalSurface(const FHitResult& Hit) const;
 	bool ShouldTransitionToGround(const FHitResult& Hit) const;
 	void UpdateWallSurface(const FHitResult& WallHit, bool bInitialAttach);
@@ -148,8 +157,28 @@ protected:
 		meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float MaxWallNormalZ = 0.35f;
 
+	/**
+	 * Minimum normal alignment accepted when traversal crosses from one collision
+	 * component to another. This allows modular curved walls while rejecting
+	 * sudden back-facing hits that usually come from nearby corner clutter.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
+		meta = (ClampMin = "-1.0", ClampMax = "1.0"))
+	float MinContinuedWallNormalDot = 0.1f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection")
 	TEnumAsByte<ECollisionChannel> WallDetectionChannel = ECC_Visibility;
+
+	/**
+	 * Minimum dot product between horizontal movement direction and the inward
+	 * wall direction (-normal) required to start an attachment. 1 = only head-on,
+	 * 0 = also allows running exactly parallel to the wall, negative tolerates a
+	 * little outward drift. Attachment is rejected when the character is clearly
+	 * moving away from the wall, so sprinting past or off a wall no longer grabs it.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
+		meta = (ClampMin = "-1.0", ClampMax = "1.0"))
+	float MinWallApproachDot = -0.1f;
 
 	/** Gap between the capsule and wall after accounting for capsule radius. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Physics",
@@ -177,11 +206,14 @@ protected:
 	bool bAlignCapsuleToWall = true;
 
 	/**
-	 * Makes the wall become the character's floor on the attachment frame.
-	 * Rotation interpolation still handles later changes around curves/corners.
+	 * If true, the wall instantly becomes the character's floor on the attachment
+	 * frame. Left false the capsule eases into the wall orientation using
+	 * WallRotationInterpSpeed, which makes the ground->wall transition smooth
+	 * instead of popping a ~90 degree roll in a single frame. Position is snapped
+	 * either way so the capsule sticks to the surface immediately.
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Rotation")
-	bool bSnapRotationOnAttach = true;
+	bool bSnapRotationOnAttach = false;
 
 	/** How quickly the capsule aligns with changing wall surfaces and travel direction. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Rotation",
@@ -206,13 +238,33 @@ protected:
 		meta = (ClampMin = "0.0"))
 	float WallClimbingFallbackSpeed = 250.0f;
 
+	/**
+	 * Speed pushed straight out along the wall normal when jumping off. Lower
+	 * keeps you near the wall to chain onto another surface; higher launches
+	 * you clear of it.
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Jump",
 		meta = (ClampMin = "0.0"))
-	float WallJumpAwaySpeed = 500.0f;
+	float WallJumpAwaySpeed = 450.0f;
 
+	/**
+	 * Upward speed added when jumping off a wall. Compare against the
+	 * character's normal JumpZVelocity; kept a little higher so a wall jump
+	 * clearly gains height.
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Jump",
 		meta = (ClampMin = "0.0"))
-	float WallJumpUpSpeed = 550.0f;
+	float WallJumpUpSpeed = 600.0f;
+
+	/**
+	 * Minimum upward speed (cm/s) at the instant the wall is lost for the
+	 * automatic top-of-wall mantle to fire. Below this the character just
+	 * drops into falling. Lower = mantles even when cresting slowly; higher =
+	 * only mantles when leaving the edge with clear upward momentum.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Jump",
+		meta = (ClampMin = "0.0"))
+	float WallMantleMinimumUpSpeed = 15.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Jump",
 		meta = (ClampMin = "0.0"))
@@ -241,6 +293,24 @@ protected:
 		meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float WallToGroundMovementScale = 0.35f;
 
+	/**
+	 * Seconds after attaching before a walkable floor directly underfoot may
+	 * end traversal. Lets a ground launch clear the floor it jumped from
+	 * instead of immediately dropping back to walking.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition",
+		meta = (ClampMin = "0.0"))
+	float WallGroundExitGraceTime = 0.25f;
+
+	/**
+	 * Extra distance below the capsule's support point used by the
+	 * standing-on-floor probe. Small so only a floor genuinely underfoot ends
+	 * traversal.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition",
+		meta = (ClampMin = "0.0"))
+	float GroundedContactMargin = 5.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition")
 	FName TransitionLeftFootBone = TEXT("ik_foot_l");
 
@@ -266,6 +336,7 @@ protected:
 	TWeakObjectPtr<UPrimitiveComponent> WallSurfaceComponent;
 	float LastWallDetachTime = -BIG_NUMBER;
 	int32 WallLostFrames = 0;
+	float WallTraversalElapsed = 0.0f;
 	float WallToGroundElapsed = 0.0f;
 	FVector WallToGroundStartLocation = FVector::ZeroVector;
 	FVector WallToGroundTargetLocation = FVector::ZeroVector;
