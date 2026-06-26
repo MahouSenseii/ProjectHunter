@@ -7,7 +7,7 @@
 
 namespace
 {
-	constexpr float WallSurfaceNormalInterpSpeed = 24.0f;
+	constexpr float WallSurfaceNormalInterpSpeed = 15.0f;
 	constexpr float WallToGroundReattachDelay = 0.75f;
 	constexpr float GroundExitFlatNormalZ = 0.98f;
 }

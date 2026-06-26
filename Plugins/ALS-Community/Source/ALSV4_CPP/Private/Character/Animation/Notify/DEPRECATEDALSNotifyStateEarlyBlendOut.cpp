@@ -2,13 +2,13 @@
 // Source Code:     https://github.com/dyanikoglu/ALS-Community
 
 
-#include "Character/Animation/Notify/ALSNotifyStateEarlyBlendOut.h"
+#include "Character/Animation/Notify/DEPRECATEDALSNotifyStateEarlyBlendOut.h"
 
 #include "Animation/AnimInstance.h"
 
 #include "Character/ALSBaseCharacter.h"
 
-void UALSNotifyStateEarlyBlendOut::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
+void UDEPRECATEDALSNotifyStateEarlyBlendOut::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
                                               float FrameDeltaTime, const FAnimNotifyEventReference& EventReference)
 {
 	Super::NotifyTick(MeshComp, Animation, FrameDeltaTime, EventReference);
@@ -45,7 +45,7 @@ void UALSNotifyStateEarlyBlendOut::NotifyTick(USkeletalMeshComponent* MeshComp, 
 	}
 }
 
-FString UALSNotifyStateEarlyBlendOut::GetNotifyName_Implementation() const
+FString UDEPRECATEDALSNotifyStateEarlyBlendOut::GetNotifyName_Implementation() const
 {
 	return FString(TEXT("Early Blend Out"));
 }
