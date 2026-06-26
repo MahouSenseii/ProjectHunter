@@ -93,6 +93,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
 	FVector ConvertWorldDirectionToWallDirection(const FVector& WorldDirection) const;
 
+	/**
+	 * Converts a live camera direction into a tangent wall-running direction.
+	 * Forward input can treat looking directly into the wall as "run up"; strafe
+	 * input should only project onto the wall plane.
+	 */
+	FVector ConvertCameraDirectionToWallDirection(
+		const FVector& WorldDirection,
+		bool bTreatIntoSurfaceAsUp) const;
+
 	virtual float GetMaxSpeed() const override;
 	virtual float GetMaxAcceleration() const override;
 	virtual float GetMaxBrakingDeceleration() const override;

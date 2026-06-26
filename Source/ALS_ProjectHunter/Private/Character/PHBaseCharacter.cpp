@@ -263,10 +263,12 @@ void APHBaseCharacter::ForwardMovementAction_Implementation(const float Value)
 			return;
 		}
 
-		const FRotator CameraYaw(0.0f, GetAimingRotation().Yaw, 0.0f);
-		const FVector CameraForward = CameraYaw.Vector();
+		const FRotator CameraRotation = Controller
+			? Controller->GetControlRotation()
+			: GetAimingRotation();
+		const FVector CameraForward = CameraRotation.Vector();
 		AddMovementInput(
-			Movement->ConvertWorldDirectionToWallDirection(CameraForward),
+			Movement->ConvertCameraDirectionToWallDirection(CameraForward, true),
 			Value);
 		return;
 	}
@@ -288,10 +290,12 @@ void APHBaseCharacter::RightMovementAction_Implementation(const float Value)
 			return;
 		}
 
-		const FRotator CameraYaw(0.0f, GetAimingRotation().Yaw, 0.0f);
-		const FVector CameraRight = FRotationMatrix(CameraYaw).GetUnitAxis(EAxis::Y);
+		const FRotator CameraRotation = Controller
+			? Controller->GetControlRotation()
+			: GetAimingRotation();
+		const FVector CameraRight = FRotationMatrix(CameraRotation).GetUnitAxis(EAxis::Y);
 		AddMovementInput(
-			Movement->ConvertWorldDirectionToWallDirection(CameraRight),
+			Movement->ConvertCameraDirectionToWallDirection(CameraRight, false),
 			Value);
 		return;
 	}

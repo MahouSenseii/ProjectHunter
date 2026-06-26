@@ -198,14 +198,20 @@ void UPHCharacterMovementComponent::RestoreWorldUpRotation()
 FVector UPHCharacterMovementComponent::ConvertWorldDirectionToWallDirection(
 	const FVector& WorldDirection) const
 {
+	return ConvertCameraDirectionToWallDirection(WorldDirection, true);
+}
+
+FVector UPHCharacterMovementComponent::ConvertCameraDirectionToWallDirection(
+	const FVector& WorldDirection,
+	const bool bTreatIntoSurfaceAsUp) const
+{
 	if (!IsWallTraversing() || WorldDirection.IsNearlyZero() || WallNormal.IsNearlyZero())
 	{
 		return FVector::ZeroVector;
 	}
 
-	// ALS ground movement uses camera yaw, so ignore world Z here as well.
-	const FVector HorizontalDirection = WorldDirection.GetSafeNormal2D();
-	if (HorizontalDirection.IsNearlyZero())
+	const FVector CameraDirection = WorldDirection.GetSafeNormal();
+	if (CameraDirection.IsNearlyZero())
 	{
 		return FVector::ZeroVector;
 	}
@@ -213,23 +219,32 @@ FVector UPHCharacterMovementComponent::ConvertWorldDirectionToWallDirection(
 	const FVector WallUp = GetWallUp();
 	const FVector WallRight = GetWallRight();
 
-	// On a vertical wall, pressing toward the surface means travel along the
-	// transported wall-up tangent. On the top or underside of an arc, camera
-	// direction already lies in the surface plane and behaves like floor input.
-	const float LateralInput = FVector::DotProduct(HorizontalDirection, WallRight);
-	const float SurfaceForwardInput = FVector::DotProduct(HorizontalDirection, WallUp);
-	const float IntoSurfaceInput = FVector::DotProduct(HorizontalDirection, -WallNormal);
-	// After crossing the top of an arc, transported wall-up points downward.
-	// Camera-forward then points away from the far side of the arc, which used
-	// to negate the tangent and send the character back uphill. Preserve the
-	// forward tangent on that descending side; the input value still controls
-	// forward versus backward movement.
-	const float SurfaceFacingInput = WallUp.Z < -KINDA_SMALL_NUMBER
-		? FMath::Abs(IntoSurfaceInput)
-		: IntoSurfaceInput;
-	const float VerticalInput = SurfaceForwardInput + SurfaceFacingInput;
+	// Use the current camera vector every input frame. Projecting onto the wall
+	// plane makes "forward" follow where the camera is looking along the current
+	// wall/curve instead of staying locked to the attach-frame yaw basis.
+	const FVector SurfaceDirection =
+		FVector::VectorPlaneProject(CameraDirection, WallNormal).GetSafeNormal();
+	if (!SurfaceDirection.IsNearlyZero())
+	{
+		return SurfaceDirection;
+	}
 
-	return (WallRight * LateralInput + WallUp * VerticalInput).GetSafeNormal();
+	// If the player looks straight into the wall, projection has no tangent
+	// component. For the forward axis, keep the expected Naruto-style behavior:
+	// forward runs up the wall, backward runs down. Strafe input does not use this
+	// fallback because "right into the wall" should not become vertical movement.
+	if (bTreatIntoSurfaceAsUp)
+	{
+		const float IntoSurfaceInput = FVector::DotProduct(CameraDirection, -WallNormal);
+		if (FMath::Abs(IntoSurfaceInput) > KINDA_SMALL_NUMBER)
+		{
+			return IntoSurfaceInput >= 0.0f ? WallUp : -WallUp;
+		}
+	}
+
+	// Last-resort strafe fallback. This prevents camera-right from producing no
+	// movement when it is nearly parallel to the wall normal.
+	return bTreatIntoSurfaceAsUp ? FVector::ZeroVector : WallRight;
 }
 
 float UPHCharacterMovementComponent::GetMaxSpeed() const
