@@ -85,6 +85,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Project Hunter|Debug|ASC")
 	void Debug_ReserveHealth(float NewValue);
+	
+	UFUNCTION(BlueprintCallable, Category="Project Hunter|Debug|ASC")
+	void Debug_DisableStaminaDrain();
+	
+	UFUNCTION(BlueprintCallable, Category="Project Hunter|Debug|ASC")
+	void Debug_ReactivateStaminaDrain();
 
 protected:
 	virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
@@ -208,4 +214,8 @@ private:
 	FActiveGameplayEffectHandle ActiveSprintStaminaDrainHandle;
 	FActiveGameplayEffectHandle ActiveStaminaExhaustionHandle;
 	FTimerHandle StaminaExhaustionRecoveryTimerHandle;
+	
+#if !UE_BUILD_SHIPPING
+	bool bDebugStaminaDrainDisabled = false;
+#endif
 };

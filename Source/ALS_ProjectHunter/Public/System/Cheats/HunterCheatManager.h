@@ -24,8 +24,11 @@ public:
 	
 	// Removes Stamina Degen will set to 0 
 	UFUNCTION(exec)
-	void DiableStaminaDegen();
-	
+	void DisableStaminaDrain();
+
+	//Re-addes Stamina Degen
+	UFUNCTION(exec)
+	void ReactivateStaminaDrain();
 	
 	// Refill Health to max
 	UFUNCTION(exec)

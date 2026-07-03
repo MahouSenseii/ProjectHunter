@@ -652,6 +652,49 @@ void UHunterAbilitySystemComponent::Debug_ReserveHealth(float NewValue)
 	UE_LOG(LogHunterGAS, Warning, TEXT("Debug_ReserveHealth: reserved health set to %.2f."), ClampedValue);
 }
 
+void UHunterAbilitySystemComponent::Debug_DisableStaminaDrain()
+{
+#if UE_BUILD_SHIPPING
+	return;
+#else
+	const AActor* AvatarActorInstance = GetAvatarActor();
+	if (!AvatarActorInstance || !AvatarActorInstance->HasAuthority())
+	{
+		return;
+	}
+
+	bDebugStaminaDrainDisabled = true;
+
+	bSprintStaminaDegenRequested = false;
+	bWallRunningStaminaDegenRequested = false;
+
+	HunterAbilitySystemComponentPrivate::ForceStopSprinting(this);
+	StopSprintStaminaDegen();
+	RemoveStaminaExhaustionEffect();
+
+	UE_LOG(LogHunterGAS, Warning, TEXT("Cheat: stamina drain disabled."));
+#endif
+}
+
+void UHunterAbilitySystemComponent::Debug_ReactivateStaminaDrain()
+{
+#if UE_BUILD_SHIPPING
+	return;
+#else
+	const AActor* AvatarActorInstance = GetAvatarActor();
+	if (!AvatarActorInstance || !AvatarActorInstance->HasAuthority())
+	{
+		return;
+	}
+
+	bDebugStaminaDrainDisabled = false;
+
+	RefreshStaminaDegenEffect();
+
+	UE_LOG(LogHunterGAS, Warning, TEXT("Cheat: stamina drain reactivated."));
+#endif
+}
+
 void UHunterAbilitySystemComponent::SetWallRunningStaminaDegenActive(const bool bActive)
 {
 	bWallRunningStaminaDegenRequested = bActive;
@@ -667,9 +710,21 @@ void UHunterAbilitySystemComponent::RefreshStaminaDegenEffect()
 		return;
 	}
 
+#if !UE_BUILD_SHIPPING
+	if (bDebugStaminaDrainDisabled)
+	{
+		StopSprintStaminaDegen();
+		return;
+	}
+#endif
+
 	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
-	const bool bCanSprintDegen = bSprintStaminaDegenRequested && !IsAvatarAirborneForStamina();
-	const bool bShouldDegen = (bCanSprintDegen || bWallRunningStaminaDegenRequested)
+
+	const bool bCanSprintDegen =
+		bSprintStaminaDegenRequested && !IsAvatarAirborneForStamina();
+
+	const bool bShouldDegen =
+		(bCanSprintDegen || bWallRunningStaminaDegenRequested)
 		&& (!bShouldCheckExhaustion || !HasMatchingGameplayTag(Tags.Effect_Stamina_Exhausted));
 
 	if (bShouldDegen)

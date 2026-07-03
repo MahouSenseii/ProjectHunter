@@ -8,11 +8,19 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 
-void UHunterCheatManager::DiableStaminaDegen()
+void UHunterCheatManager::DisableStaminaDrain()
 {
 	if (UHunterCheatComponent* CheatComponent = GetHunterCheatComponent())
 	{
 		CheatComponent->DisableStaminaDrain();
+	}
+}
+
+void UHunterCheatManager::ReactivateStaminaDrain()
+{
+	if (UHunterCheatComponent* CheatComponent = GetHunterCheatComponent())
+	{
+		CheatComponent->ReactivateStaminaDrain();
 	}
 }
 

@@ -46,10 +46,6 @@ UHunterCheatComponent::UHunterCheatComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-void UHunterCheatComponent::BeginPlay()
-{
-	Super::BeginPlay();
-}
 
 void UHunterCheatComponent::DisableStaminaDrain()
 {
@@ -58,14 +54,49 @@ void UHunterCheatComponent::DisableStaminaDrain()
 #endif
 
 	UHunterAbilitySystemComponent* ASC = GetTargetASC();
-	if (!ValidateASC(ASC, TEXT("NoStaminaDegen")))
+	if (!ASC)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("DisableStaminaDrain failed: No Hunter ASC found."));
 		return;
 	}
 
-	ASC->Debug_StopStaminaDegen();
+	ASC->Debug_DisableStaminaDrain();
 
-	PrintCheatMessage(TEXT("Cheat: stamina degeneration disabled."));
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			5.0f,
+			FColor::Green,
+			TEXT("Cheat: Stamina drain disabled.")
+		);
+	}
+}
+
+void UHunterCheatComponent::ReactivateStaminaDrain()
+{
+#if UE_BUILD_SHIPPING
+	return;
+#endif
+
+	UHunterAbilitySystemComponent* ASC = GetTargetASC();
+	if (!ASC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ReactivateStaminaDrain failed: No Hunter ASC found."));
+		return;
+	}
+
+	ASC->Debug_ReactivateStaminaDrain();
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			5.0f,
+			FColor::Green,
+			TEXT("Cheat: Stamina drain reactivated.")
+		);
+	}
 }
 
 void UHunterCheatComponent::RefillHealth()
@@ -130,7 +161,8 @@ void UHunterCheatComponent::ShowCheatList()
 	const FString HelpText =
 		TEXT("\n==== Project Hunter Cheat Commands ====\n")
 		TEXT("ShowCheatList\n")
-		TEXT("DiableStaminaDegen\n")
+		TEXT("DisableStaminaDrain\n")
+		TEXT("ReactivateStaminaDrain\n")
 		TEXT("RefillHealth\n")
 		TEXT("RefillStamina\n")
 		TEXT("ReserveHealth (Amount)\n")
@@ -147,6 +179,11 @@ void UHunterCheatComponent::ShowCheatList()
 			HelpText
 		);
 	}
+}
+
+void UHunterCheatComponent::BeginPlay()
+{
+	Super::BeginPlay();
 }
 
 UHunterAbilitySystemComponent* UHunterCheatComponent::GetTargetASC() const

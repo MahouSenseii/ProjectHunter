@@ -16,6 +16,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Project Hunter|Cheats|Stats")
 	void DisableStaminaDrain();
+	
+	UFUNCTION(BlueprintCallable, Category="Project Hunter|Cheats|Stats")
+	void ReactivateStaminaDrain();
 
 	UFUNCTION(BlueprintCallable, Category="Project Hunter|Cheats|Stats")
 	void RefillHealth();
