@@ -119,6 +119,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
 	FVector GetWallRight() const;
 
+	/** Rotation the capsule is driven toward while wall running or wall climbing. */
+	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
+	FRotator GetWallTraversalRotation() const;
+
 	/** Restores the capsule to world-up before falling, mantling, or ragdolling. */
 	void RestoreWorldUpRotation();
 
@@ -172,18 +176,24 @@ protected:
 	bool IsCurrentTraversalSurface(const FHitResult& Hit) const;
 	bool ShouldTransitionToGround(const FHitResult& Hit) const;
 	bool IsUsableGroundTransitionHit(const FHitResult& Hit) const;
+	bool FindGroundBelow(FHitResult& OutGroundHit, float ExtraDistance) const;
 	void UpdateWallSurface(const FHitResult& WallHit, bool bInitialAttach);
 	void SnapToWall(const FHitResult& WallHit, bool bSnapRotation = false);
 	void SnapToCurrentWall(bool bSnapRotation = false);
+	void SnapToWallPlane(
+		const FVector& SurfacePoint,
+		const FVector& SurfaceNormal,
+		bool bSnapRotation);
 	void BeginWallToGroundTransition(const FHitResult& GroundHit);
 	bool ChooseGroundTransitionFoot(const FHitResult& GroundHit) const;
 	void HandleWallLost();
-	FQuat GetWallTraversalRotation() const;
+	FQuat ComputeWallTraversalRotation() const;
 	FQuat GetWorldUpRotation() const;
 	float GetDesiredWallDistance() const;
 	float GetDesiredWallDistance(const FVector& CapsuleUp) const;
 	float GetCapsuleSupportDistance(const FVector& SurfaceNormal, const FVector& CapsuleUp) const;
 	float GetWallTraversalSpeed() const;
+	void ClearWallTraversalState();
 	void RecordWallDetachTime();
 
 	UFUNCTION()

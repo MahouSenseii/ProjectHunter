@@ -38,8 +38,7 @@ float UHunterMMC_StaminaRegen::CalculateBaseMagnitude_Implementation(const FGame
 	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
 	if (TargetTags &&
 		(TargetTags->HasTagExact(Tags.Condition_Self_CannotRegenStamina) ||
-			TargetTags->HasTagExact(Tags.Effect_Stamina_Exhausted) ||
-			TargetTags->HasTagExact(Tags.Effect_Stamina_DegenActive)))
+			TargetTags->HasTagExact(Tags.Effect_Stamina_Exhausted)))
 	{
 		return 0.f;
 	}

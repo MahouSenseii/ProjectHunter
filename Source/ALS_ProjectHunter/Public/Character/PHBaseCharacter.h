@@ -90,6 +90,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
 	bool IsWallClimbing() const;
 
+	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
+	FRotator GetWallTraversalRotation() const;
+
 	UFUNCTION(BlueprintPure, Category = "Movement|Stamina")
 	bool IsStaminaExhausted() const;
 

@@ -152,6 +152,22 @@ bool UPHCharacterMovementComponent::TryStartWallTraversal(
 		return false;
 	}
 
+	const bool bCanAttachFromCurrentMode =
+		MovementMode == MOVE_Falling ||
+		MovementMode == MOVE_Walking ||
+		MovementMode == MOVE_NavWalking;
+	if (!bCanAttachFromCurrentMode)
+	{
+		if (bDebugWallTraversal)
+		{
+			PH_LOG(LogPHWallTraversal, Verbose,
+				"Attach rejected: movement mode cannot attach (Mode=%d Custom=%d).",
+				static_cast<int32>(MovementMode),
+				static_cast<int32>(CustomMovementMode));
+		}
+		return false;
+	}
+
 	if (const APHBaseCharacter* PHCharacter = Cast<APHBaseCharacter>(CharacterOwner);
 		PHCharacter && !PHCharacter->CanUseStaminaMovement())
 	{
@@ -231,14 +247,13 @@ bool UPHCharacterMovementComponent::TryStartWallTraversal(
 
 void UPHCharacterMovementComponent::StopWallTraversal()
 {
-	if (!IsWallTraversing())
+	if (!IsWallTraversing() || !CharacterOwner)
 	{
 		return;
 	}
 
 	RestoreWorldUpRotation();
-	WallTransitionData = FALSWallTransitionData();
-	WallSurfaceComponent.Reset();
+	ClearWallTraversalState();
 	RecordWallDetachTime();
 	SetMovementMode(MOVE_Falling);
 	CharacterOwner->ForceNetUpdate();
@@ -246,15 +261,14 @@ void UPHCharacterMovementComponent::StopWallTraversal()
 
 void UPHCharacterMovementComponent::JumpOffWall()
 {
-	if (!IsWallTraversing())
+	if (!IsWallTraversing() || !CharacterOwner)
 	{
 		return;
 	}
 
-	const FVector JumpNormal = WallNormal;
+	const FVector JumpNormal = FVector(WallNormal).GetSafeNormal();
 	RestoreWorldUpRotation();
-	WallTransitionData = FALSWallTransitionData();
-	WallSurfaceComponent.Reset();
+	ClearWallTraversalState();
 	RecordWallDetachTime();
 	SetMovementMode(MOVE_Falling);
 	Velocity = JumpNormal * WallJumpAwaySpeed + FVector::UpVector * WallJumpUpSpeed;
@@ -325,6 +339,11 @@ FVector UPHCharacterMovementComponent::GetWallRight() const
 			WallNormal).GetSafeNormal();
 	}
 	return Result;
+}
+
+FRotator UPHCharacterMovementComponent::GetWallTraversalRotation() const
+{
+	return ComputeWallTraversalRotation().Rotator();
 }
 
 void UPHCharacterMovementComponent::RestoreWorldUpRotation()
@@ -421,6 +440,7 @@ void UPHCharacterMovementComponent::HandleImpact(
 		MovementMode == MOVE_Walking ||
 		MovementMode == MOVE_NavWalking;
 	if (!bCanAttachFromCurrentMode || IsWallTraversing() || !CharacterOwner ||
+		!UpdatedComponent ||
 		CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)
 	{
 		return;
@@ -604,11 +624,12 @@ bool UPHCharacterMovementComponent::WallTraversalStep(const float DeltaTime)
 	// the post-move probe and snap below; also pushing into the surface here
 	// makes collision sliding and snapping fight each other and causes jitter.
 	const FVector MoveDelta = Velocity * DeltaTime;
+	const FVector OldLocation = UpdatedComponent->GetComponentLocation();
 
 	FQuat NewRotation = UpdatedComponent->GetComponentQuat();
 	if (bAlignCapsuleToWall)
 	{
-		const FQuat TargetRotation = GetWallTraversalRotation();
+		const FQuat TargetRotation = ComputeWallTraversalRotation();
 		const float RotationAlpha =
 			1.0f - FMath::Exp(-WallRotationInterpSpeed * DeltaTime);
 		NewRotation = FQuat::Slerp(NewRotation, TargetRotation, RotationAlpha).GetNormalized();
@@ -654,7 +675,12 @@ bool UPHCharacterMovementComponent::WallTraversalStep(const float DeltaTime)
 		// wall plane while the wall-lost grace is active.
 		SnapToCurrentWall();
 	}
+	if (!bUsingRootMotion)
+	{
+		Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / DeltaTime;
+	}
 	Velocity = FVector::VectorPlaneProject(Velocity, WallNormal);
+	Velocity = Velocity.GetClampedToMaxSize(GetMaxSpeed());
 
 	if (bDebugWallTraversal && GetWorld() && UpdatedComponent)
 	{
@@ -828,41 +854,17 @@ bool UPHCharacterMovementComponent::FindAttachableWall(
 
 bool UPHCharacterMovementComponent::FindTransitionGround(FHitResult& OutHit) const
 {
-	if (!GetWorld() || !CharacterOwner || !UpdatedComponent)
-	{
-		return false;
-	}
-
-	const UCapsuleComponent* Capsule = CharacterOwner->GetCapsuleComponent();
-	if (!Capsule)
-	{
-		return false;
-	}
-
-	FCollisionQueryParams QueryParams(
-		SCENE_QUERY_STAT(PHWallToGroundTransition),
-		false,
-		CharacterOwner);
-	const FVector Start = UpdatedComponent->GetComponentLocation();
-	const float CurrentGroundSupport =
-		GetCapsuleSupportDistance(FVector::UpVector, UpdatedComponent->GetUpVector());
-	const FVector End =
-		Start - FVector::UpVector * (CurrentGroundSupport + GroundTransitionDetectionDistance);
-	const float ProbeRadius = FMath::Max(Capsule->GetScaledCapsuleRadius() * 0.5f, 5.0f);
-
-	const bool bHit = GetWorld()->SweepSingleByChannel(
-		OutHit,
-		Start,
-		End,
-		FQuat::Identity,
-		WallDetectionChannel,
-		FCollisionShape::MakeSphere(ProbeRadius),
-		QueryParams);
-
-	return bHit && IsUsableGroundTransitionHit(OutHit);
+	return FindGroundBelow(OutHit, GroundTransitionDetectionDistance);
 }
 
 bool UPHCharacterMovementComponent::IsStandingOnWalkableFloor(FHitResult& OutGroundHit) const
+{
+	return FindGroundBelow(OutGroundHit, GroundedContactMargin);
+}
+
+bool UPHCharacterMovementComponent::FindGroundBelow(
+	FHitResult& OutGroundHit,
+	const float ExtraDistance) const
 {
 	if (!GetWorld() || !CharacterOwner || !UpdatedComponent)
 	{
@@ -875,19 +877,15 @@ bool UPHCharacterMovementComponent::IsStandingOnWalkableFloor(FHitResult& OutGro
 		return false;
 	}
 
-	// Tight downward probe: only a floor within the capsule's own support distance
-	// (plus a small margin) counts as actually standing on the ground. This is
-	// independent of travel direction, so a floor beneath the player ends/blocks a
-	// wall run instead of letting it persist at ground level.
 	FCollisionQueryParams QueryParams(
-		SCENE_QUERY_STAT(PHWallGroundedCheck),
+		SCENE_QUERY_STAT(PHWallGroundBelow),
 		false,
 		CharacterOwner);
 	const FVector Start = UpdatedComponent->GetComponentLocation();
-	const float StandingSupport =
+	const float GroundSupport =
 		GetCapsuleSupportDistance(FVector::UpVector, UpdatedComponent->GetUpVector());
 	const FVector End =
-		Start - FVector::UpVector * (StandingSupport + GroundedContactMargin);
+		Start - FVector::UpVector * (GroundSupport + ExtraDistance);
 	const float ProbeRadius = FMath::Max(Capsule->GetScaledCapsuleRadius() * 0.5f, 5.0f);
 
 	const bool bHit = GetWorld()->SweepSingleByChannel(
@@ -1326,17 +1324,9 @@ void UPHCharacterMovementComponent::SnapToWall(
 	const FHitResult& WallHit,
 	const bool bSnapRotation)
 {
-	if (!UpdatedComponent || !WallHit.IsValidBlockingHit())
+	if (!WallHit.IsValidBlockingHit())
 	{
 		return;
-	}
-
-	FQuat TargetRotation = UpdatedComponent->GetComponentQuat();
-	FVector TargetCapsuleUp = UpdatedComponent->GetUpVector();
-	if (bSnapRotation)
-	{
-		TargetRotation = GetWallTraversalRotation();
-		TargetCapsuleUp = TargetRotation.GetAxisZ();
 	}
 
 	FVector SnapNormal = FVector(WallNormal).GetSafeNormal();
@@ -1349,32 +1339,23 @@ void UPHCharacterMovementComponent::SnapToWall(
 		return;
 	}
 
-	const float CurrentDistance = FVector::DotProduct(
-		UpdatedComponent->GetComponentLocation() - WallHit.ImpactPoint,
-		SnapNormal);
-	const float DistanceError =
-		CurrentDistance - GetDesiredWallDistance(TargetCapsuleUp);
-
-	// A one-centimeter dead zone prevents tiny collision-normal changes from
-	// moving the capsule back and forth every frame.
-	if (FMath::Abs(DistanceError) <= 1.0f &&
-		TargetRotation.Equals(UpdatedComponent->GetComponentQuat()))
-	{
-		return;
-	}
-
-	const FVector Correction = -SnapNormal * DistanceError;
-	FHitResult CorrectionHit;
-	SafeMoveUpdatedComponent(
-		Correction,
-		TargetRotation,
-		true,
-		CorrectionHit);
+	SnapToWallPlane(WallHit.ImpactPoint, SnapNormal, bSnapRotation);
 }
 
 void UPHCharacterMovementComponent::SnapToCurrentWall(const bool bSnapRotation)
 {
-	if (!UpdatedComponent || WallNormal.IsNearlyZero())
+	SnapToWallPlane(
+		WallImpactPoint,
+		FVector(WallNormal).GetSafeNormal(),
+		bSnapRotation);
+}
+
+void UPHCharacterMovementComponent::SnapToWallPlane(
+	const FVector& SurfacePoint,
+	const FVector& SurfaceNormal,
+	const bool bSnapRotation)
+{
+	if (!UpdatedComponent || SurfaceNormal.IsNearlyZero())
 	{
 		return;
 	}
@@ -1383,14 +1364,13 @@ void UPHCharacterMovementComponent::SnapToCurrentWall(const bool bSnapRotation)
 	FVector TargetCapsuleUp = UpdatedComponent->GetUpVector();
 	if (bSnapRotation)
 	{
-		TargetRotation = GetWallTraversalRotation();
+		TargetRotation = ComputeWallTraversalRotation();
 		TargetCapsuleUp = TargetRotation.GetAxisZ();
 	}
 
-	const FVector SnapNormal = FVector(WallNormal).GetSafeNormal();
 	const float CurrentDistance = FVector::DotProduct(
-		UpdatedComponent->GetComponentLocation() - WallImpactPoint,
-		SnapNormal);
+		UpdatedComponent->GetComponentLocation() - SurfacePoint,
+		SurfaceNormal);
 	const float DistanceError =
 		CurrentDistance - GetDesiredWallDistance(TargetCapsuleUp);
 
@@ -1402,7 +1382,7 @@ void UPHCharacterMovementComponent::SnapToCurrentWall(const bool bSnapRotation)
 
 	FHitResult CorrectionHit;
 	SafeMoveUpdatedComponent(
-		-SnapNormal * DistanceError,
+		-SurfaceNormal * DistanceError,
 		TargetRotation,
 		true,
 		CorrectionHit);
@@ -1500,10 +1480,8 @@ void UPHCharacterMovementComponent::CompleteWallToGroundTransition()
 	Velocity = FVector::VectorPlaneProject(
 		WallToGroundPlanarVelocity,
 		GroundNormal.IsNearlyZero() ? FVector::UpVector : GroundNormal);
-	WallTransitionData = FALSWallTransitionData();
+	ClearWallTraversalState();
 	WallToGroundElapsed = 0.0f;
-	WallLostFrames = 0;
-	WallSurfaceComponent.Reset();
 	RecordWallDetachTime();
 	if (const UWorld* World = GetWorld())
 	{
@@ -1522,10 +1500,9 @@ void UPHCharacterMovementComponent::HandleWallLost()
 	const bool bLeavingUpwardEdge =
 		FVector::DotProduct(Velocity, FVector::UpVector) > WallMantleMinimumUpSpeed;
 
-	// Note: losing the wall does NOT arm the reattach cooldown. The cooldown
-	// exists to stop instantly re-grabbing a wall after an intentional detach
-	// (StopWallTraversal / JumpOffWall). Arming it here would block legitimate
-	// reattaches for WallReattachCooldown seconds and read as "won't connect".
+	// Ordinary wall loss does not arm the reattach cooldown. The top-mantle path
+	// below is the exception: it needs one short frame window where mantle wins
+	// over the held traversal input's immediate wall-reattach retry.
 	if (bDebugWallTraversal)
 	{
 		PH_LOG(LogPHWallTraversal, Log,
@@ -1533,10 +1510,14 @@ void UPHCharacterMovementComponent::HandleWallLost()
 			bLeavingUpwardEdge ? TEXT(" (attempting top mantle)") : TEXT(""));
 	}
 
-	WallLostFrames = 0;
-	WallTransitionData = FALSWallTransitionData();
-	WallSurfaceComponent.Reset();
+	ClearWallTraversalState();
 	RestoreWorldUpRotation();
+	if (bLeavingUpwardEdge)
+	{
+		// Set the normal short cooldown before entering falling so the movement
+		// mode callback cannot immediately reattach while top mantle is probing.
+		RecordWallDetachTime();
+	}
 	SetMovementMode(MOVE_Falling);
 
 	if (bLeavingUpwardEdge)
@@ -1548,7 +1529,7 @@ void UPHCharacterMovementComponent::HandleWallLost()
 	}
 }
 
-FQuat UPHCharacterMovementComponent::GetWallTraversalRotation() const
+FQuat UPHCharacterMovementComponent::ComputeWallTraversalRotation() const
 {
 	const FVector SurfaceUp = WallNormal.GetSafeNormal();
 	if (SurfaceUp.IsNearlyZero())
@@ -1654,6 +1635,14 @@ float UPHCharacterMovementComponent::GetWallTraversalSpeed() const
 	return ALSSpeed > 0.0f
 		? ALSSpeed * WallClimbingSpeedMultiplier
 		: WallClimbingFallbackSpeed;
+}
+
+void UPHCharacterMovementComponent::ClearWallTraversalState()
+{
+	WallTransitionData = FALSWallTransitionData();
+	WallSurfaceComponent.Reset();
+	WallLostFrames = 0;
+	WallTraversalElapsed = 0.0f;
 }
 
 void UPHCharacterMovementComponent::RecordWallDetachTime()

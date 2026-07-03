@@ -445,6 +445,12 @@ bool APHBaseCharacter::IsWallClimbing() const
 	return Movement && Movement->IsWallClimbing();
 }
 
+FRotator APHBaseCharacter::GetWallTraversalRotation() const
+{
+	const UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+	return Movement ? Movement->GetWallTraversalRotation() : GetActorRotation();
+}
+
 bool APHBaseCharacter::IsStaminaExhausted() const
 {
 	const UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
