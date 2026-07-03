@@ -54,6 +54,15 @@ public:
 	 */
 	UFUNCTION()
 	void Interact(const FInputActionValue& Value);
+
+	UFUNCTION()
+	void Interact_Started(const FInputActionValue& Value);
+
+	UFUNCTION()
+	void Interact_Completed(const FInputActionValue& Value);
+
+	UFUNCTION()
+	void Interact_Canceled(const FInputActionValue& Value);
 	
 	/**
 	 * Menu input handler — toggles the tabbed menu on AHunterHUD.

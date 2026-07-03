@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Combat/Library/CombatStructs.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "CombatFunctionLibrary.generated.h"
 
@@ -27,4 +28,16 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = "Combat|Utility")
 	static float GetHealthPercent(const APHBaseCharacter* Character);
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Damage")
+	static float GetResolvedDamageByType(const FCombatResolveResult& Result, EHunterDamageType DamageType);
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Damage")
+	static EHunterDamageType GetDominantDamageTypeFromResolveResult(const FCombatResolveResult& Result);
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Damage")
+	static FLinearColor GetDefaultDamageTypeColor(EHunterDamageType DamageType);
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Damage")
+	static FText FormatDamagePopupAmount(float DamageAmount);
 };

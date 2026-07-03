@@ -312,6 +312,7 @@ private:
 	// SERVER-SIDE INTERACTION EXECUTION (shared by the RPCs above)
 	// ═══════════════════════════════════════════════
 
+	void Server_PickupAndEquip_Implementation(int32 ItemID, FVector ClientLocation);
 	/** Distance + LOS validation against the SERVER's view of the pawn. */
 	bool ValidateServerInteraction(AActor* TargetActor);
 

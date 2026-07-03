@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Item/ItemInstance.h"
 #include "Item/Library/ItemEnums.h"
+#include "Item/Library/ItemTooltipStructs.h"
 #include "ItemTooltipWidget.generated.h"
 
 UCLASS()
@@ -16,6 +17,12 @@ public:
     UFUNCTION(BlueprintCallable)
     void UpdateTooltip(UItemInstance* Item);
 
+    UFUNCTION(BlueprintCallable, Category = "Tooltip")
+    void ClearTooltip();
+
+    UFUNCTION(BlueprintPure, Category = "Tooltip")
+    FItemTooltipData GetTooltipData() const { return TooltipData; }
+
 protected:
     /**
      * Fired after the C++ population pass so a Blueprint child can extend the
@@ -23,6 +30,19 @@ protected:
      */
     UFUNCTION(BlueprintImplementableEvent, Category = "Tooltip")
     void OnTooltipUpdated(UItemInstance* Item);
+
+    /**
+     * New modular data event. Blueprint children can loop Sections/Lines and
+     * create only the rows that exist instead of keeping blank stat widgets.
+     */
+    UFUNCTION(BlueprintImplementableEvent, Category = "Tooltip")
+    void OnTooltipDataUpdated(const FItemTooltipData& InTooltipData);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Tooltip")
+    void OnTooltipCleared();
+
+    UPROPERTY(BlueprintReadOnly, Category = "Tooltip")
+    FItemTooltipData TooltipData;
 
     // ═══════════════════════════════════════════════
     // HEADER SECTION (Name + Icon)
@@ -75,31 +95,34 @@ protected:
     // ═══════════════════════════════════════════════
     
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-    FLinearColor Color_GradeF;
+    FLinearColor Color_GradeF = FLinearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-    FLinearColor Color_GradeE;
+    FLinearColor Color_GradeE = FLinearColor::White;
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-    FLinearColor Color_GradeD;
+    FLinearColor Color_GradeD = FLinearColor(0.3f, 0.9f, 0.3f, 1.0f);
     
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-    FLinearColor Color_GradeC;
+    FLinearColor Color_GradeC = FLinearColor(0.4f, 0.6f, 1.0f, 1.0f);
     
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-    FLinearColor Color_GradeB;
+    FLinearColor Color_GradeB = FLinearColor(0.7f, 0.3f, 0.9f, 1.0f);
     
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-    FLinearColor Color_GradeA;
+    FLinearColor Color_GradeA = FLinearColor(1.0f, 0.7f, 0.0f, 1.0f);
     
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-    FLinearColor Color_GradeS;
+    FLinearColor Color_GradeS = FLinearColor(1.0f, 0.3f, 0.0f, 1.0f);
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
+    FLinearColor Color_GradeSS = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f);
     
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-    FLinearColor Color_GradeUnkown;
+    FLinearColor Color_GradeUnkown = FLinearColor(0.2f, 0.2f, 0.2f, 1.0f);
     
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-    FLinearColor Color_GradeCorrupted;
+    FLinearColor Color_GradeCorrupted = FLinearColor(0.5f, 0.0f, 0.3f, 1.0f);
     
     // ═══════════════════════════════════════════════
     // OTHER COLORS

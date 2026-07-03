@@ -695,6 +695,21 @@ void UInteractionManager::BeginActorHoldInteraction(
 		return;
 	}
 
+	UObject* InteractableObject = Interactable.GetObject();
+	if (!InteractableObject)
+	{
+		return;
+	}
+
+	const bool bIsSameHoldInteraction =
+		UsesActorTarget(ActiveInteraction.Mode)
+		&& UsesHoldLifecycle(ActiveInteraction.Mode)
+		&& GetActiveInteractableObject() == InteractableObject;
+	if (bIsSameHoldInteraction)
+	{
+		return;
+	}
+
 	ResetActiveInteractionState();
 
 	ActiveInteraction.Mode = bAllowTapOnRelease
@@ -706,12 +721,12 @@ void UInteractionManager::BeginActorHoldInteraction(
 	ActiveInteraction.State               = EInteractionState::IS_Started;
 	ActiveInteraction.Interactor          = GetOwner();
 	ActiveInteraction.Target              = Interactable;
-	ActiveInteraction.TargetObject        = Interactable.GetObject();
+	ActiveInteraction.TargetObject        = InteractableObject;
 	ActiveInteraction.TapThresholdSeconds = bAllowTapOnRelease
-		? FMath::Max(0.0f, IInteractable::Execute_GetTapHoldThreshold(Interactable.GetObject()))
+		? FMath::Max(0.0f, IInteractable::Execute_GetTapHoldThreshold(InteractableObject))
 		: 0.0f;
 	ActiveInteraction.HoldDurationSeconds =
-		FMath::Max(0.01f, IInteractable::Execute_GetHoldDuration(Interactable.GetObject()));
+		FMath::Max(0.01f, IInteractable::Execute_GetHoldDuration(InteractableObject));
 
 	WidgetPresenter.UpdateForActorInteractable(Interactable);
 

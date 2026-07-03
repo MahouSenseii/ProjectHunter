@@ -420,6 +420,42 @@ struct ALS_PROJECTHUNTER_API FCombatResolveResult
 	bool bShouldStagger = false;
 };
 
+USTRUCT(BlueprintType)
+struct ALS_PROJECTHUNTER_API FCombatDamagePopupData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Damage Popup")
+	TObjectPtr<AActor> SourceActor = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Damage Popup")
+	TObjectPtr<AActor> TargetActor = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Damage Popup")
+	FCombatResolveResult ResolveResult;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Damage Popup")
+	float TotalDamage = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Damage Popup")
+	EHunterDamageType DominantDamageType = EHunterDamageType::Physical;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Damage Popup")
+	FLinearColor DisplayColor = FLinearColor::White;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Damage Popup")
+	FVector WorldLocation = FVector::ZeroVector;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Damage Popup")
+	bool bWasCrit = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Damage Popup")
+	bool bWasBlocked = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Damage Popup")
+	bool bKilledTarget = false;
+};
+
 // Legacy/internal skill-data bridge used by CombatManager's attribute-scaling helpers.
 // New Blueprint-authored hit flows should build FCombatHitPacket and call ApplyHit.
 USTRUCT(BlueprintType)

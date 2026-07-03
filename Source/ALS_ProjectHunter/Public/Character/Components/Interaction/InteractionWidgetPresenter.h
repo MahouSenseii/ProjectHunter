@@ -4,6 +4,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InputCoreTypes.h"
 #include "Interactable/Library/InteractionEnumLibrary.h"
 #include "InteractionWidgetPresenter.generated.h"
 
@@ -59,9 +60,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
 	int32 WidgetZOrder = 10;
 
+	/** If false, focused ground items keep their pickup prompt but skip the item tooltip. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
+	bool bShowGroundItemTooltip = true;
+
+	/** Screen offset from the projected ground-item prompt position to the item tooltip. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
+	FVector2D ItemTooltipScreenOffset = FVector2D(220.0f, -120.0f);
+
 	/** Input action shown on the ground item pickup prompt. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
 	TObjectPtr<UInputAction> GroundItemActionInput;
+
+	/** Fallback key shown when GroundItemActionInput has not been assigned. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
+	FKey GroundItemFallbackKey = EKeys::E;
 
 	/** Fallback display text when no item name is available. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
@@ -84,6 +97,21 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
 	FVector2D GroundItemWidgetDrawSize = FVector2D(300.0f, 80.0f);
+
+	/**
+	 * Desired-size mode for the ground-item widget. Matches InteractableManager's
+	 * widget behavior: false keeps a stable world size with supersampled rendering.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
+	bool bUseGroundItemDesiredSize = false;
+
+	/**
+	 * Render-target supersampling for ground item prompts when desired size is off.
+	 * The component scale is compensated so the world size stays GroundItemWidgetDrawSize.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget",
+		meta = (EditCondition = "!bUseGroundItemDesiredSize", ClampMin = "0.5", ClampMax = "4.0"))
+	float GroundItemResolutionScale = 2.0f;
 
 	// ═══════════════════════════════════════════════
 	// HIGHLIGHT / OUTLINE CONFIGURATION
@@ -147,6 +175,9 @@ public:
 
 	/** Hide the world-space floating widget (called when ground item focus ends). */
 	void HideGroundItemWorldWidget();
+
+	/** Hide the item tooltip. */
+	void HideItemTooltip();
 
 	/**
 	 * Update the world-space widget's location and camera-facing rotation.
@@ -243,4 +274,10 @@ private:
 
 	/** Resolve a UItemInstance from the GroundItemSubsystem for display-name formatting. */
 	UItemInstance* GetGroundItemInstance(int32 GroundItemID) const;
+
+	/** Apply the ground-item key/action plus description to a prompt widget. */
+	void ApplyGroundItemPromptData(UInteractableWidget& Widget, const FText& Description) const;
+
+	/** Build and show the tooltip for a focused ground item. */
+	void ShowItemTooltipForGroundItem(int32 GroundItemID);
 };

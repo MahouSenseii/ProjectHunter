@@ -9,6 +9,7 @@
 #include "PHGameplayTags.h"
 #include "Character/PHBaseCharacter.h"
 #include "Combat/Components/CombatStatusManager.h"
+#include "Combat/Library/CombatFunctionLibrary.h"
 #include "Stats/StatsModifierMath.h"
 
 DEFINE_LOG_CATEGORY(LogCombatManager);
@@ -330,6 +331,19 @@ namespace CombatManagerComponentPrivate
 		const float MitigationRatio = FMath::Clamp(PostMitigationDamage / PreMitigationDamage, 0.f, 1.f);
 		return FMath::Clamp(BaseChance * MitigationRatio, 0.f, 100.f);
 	}
+
+	FVector ResolveDamagePopupWorldLocation(const AActor* TargetActor)
+	{
+		if (!IsValid(TargetActor))
+		{
+			return FVector::ZeroVector;
+		}
+
+		FVector Origin = TargetActor->GetActorLocation();
+		FVector BoxExtent = FVector::ZeroVector;
+		TargetActor->GetActorBounds(false, Origin, BoxExtent);
+		return Origin + FVector(0.f, 0.f, FMath::Max(BoxExtent.Z, 50.f));
+	}
 }
 
 UCombatManager::UCombatManager()
@@ -454,6 +468,7 @@ bool UCombatManager::ApplyHit(AActor* AttackerActor, AActor* DefenderActor,
 	ApplyOnHitEffects(AttackerActor, DefenderActor, OutResult, AttackerASC, AttackerAttributes);
 
 	OutResult.HealthAfterHit = DefenderAttributes->GetHealth();
+	BroadcastDamagePopup(AttackerActor, DefenderActor, OutResult);
 	
 	UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHit completed. Attacker=%s Defender=%s %s"),
 		*GetNameSafe(AttackerActor),
@@ -564,6 +579,28 @@ void UCombatManager::ApplyResolvedDamage(AActor* SourceActor, AActor* TargetActo
 			CurrentArcaneShield, NewArcaneShield,
 			CurrentHealth, NewHealth);
 	}
+}
+
+void UCombatManager::BroadcastDamagePopup(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result)
+{
+	if (Result.TotalDamageTaken <= KINDA_SMALL_NUMBER || !OnDamagePopupRequested.IsBound())
+	{
+		return;
+	}
+
+	FCombatDamagePopupData PopupData;
+	PopupData.SourceActor = SourceActor;
+	PopupData.TargetActor = TargetActor;
+	PopupData.ResolveResult = Result;
+	PopupData.TotalDamage = Result.TotalDamageTaken;
+	PopupData.DominantDamageType = UCombatFunctionLibrary::GetDominantDamageTypeFromResolveResult(Result);
+	PopupData.DisplayColor = UCombatFunctionLibrary::GetDefaultDamageTypeColor(PopupData.DominantDamageType);
+	PopupData.WorldLocation = CombatManagerComponentPrivate::ResolveDamagePopupWorldLocation(TargetActor);
+	PopupData.bWasCrit = Result.bWasCrit;
+	PopupData.bWasBlocked = Result.bWasBlocked;
+	PopupData.bKilledTarget = Result.bKilledTarget;
+
+	OnDamagePopupRequested.Broadcast(PopupData);
 }
 
 UAbilitySystemComponent* UCombatManager::GetAbilitySystemComponentFromActor(const AActor* Actor)

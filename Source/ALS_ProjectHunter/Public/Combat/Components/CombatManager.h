@@ -36,6 +36,7 @@ public:
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEditIncomingHitPacket, UCombatIncomingHitEditContext*, Context);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatDamagePopupRequested, const FCombatDamagePopupData&, PopupData);
 
 UCLASS(ClassGroup=(Custom), Blueprintable, meta=(BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UCombatManager : public UActorComponent
@@ -112,6 +113,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Combat|Packet")
 	FOnEditIncomingHitPacket OnEditIncomingHitPacket;
 
+	UPROPERTY(BlueprintAssignable, Category = "Combat|Damage Popup")
+	FOnCombatDamagePopupRequested OnDamagePopupRequested;
+
 	// One Blueprint packet node. Fill Offense, Defense, Cost, HitResponse, and
 	// ailment flags here, then feed the result into ApplyHit.
 	UFUNCTION(BlueprintPure, Category = "Combat|Packet", meta = (NativeMakeFunc))
@@ -164,6 +168,7 @@ protected:
 		const FCombatHitPacket* HitPacket = nullptr) const;
 
 	void ApplyResolvedDamage(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result) const;
+	void BroadcastDamagePopup(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result);
 
 	static float RollDamageRange(float MinDamage, float MaxDamage);
 

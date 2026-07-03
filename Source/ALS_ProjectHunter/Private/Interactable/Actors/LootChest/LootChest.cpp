@@ -267,15 +267,8 @@ void ALootChest::SetupInteraction()
 	// chest broadcast OnTapInteracted into nothing and could never open).
 	// Only one of these fires per configured type, so double-binding is safe;
 	// OnInteracted itself is idempotent via the CS_Closed state guard.
-	if (!InteractableManager->OnTapInteracted.IsAlreadyBound(this, &ALootChest::OnInteracted))
-	{
-		InteractableManager->OnTapInteracted.AddDynamic(this, &ALootChest::OnInteracted);
-	}
-
-	if (!InteractableManager->OnHoldCompleted.IsAlreadyBound(this, &ALootChest::OnInteracted))
-	{
-		InteractableManager->OnHoldCompleted.AddDynamic(this, &ALootChest::OnInteracted);
-	}
+	InteractableManager->OnTapInteracted.AddUniqueDynamic(this, &ALootChest::OnInteracted);
+	InteractableManager->OnHoldCompleted.AddUniqueDynamic(this, &ALootChest::OnInteracted);
 
 	UE_LOG(LogLootChest, Log, TEXT("%s: Interaction setup complete"), *GetName());
 }

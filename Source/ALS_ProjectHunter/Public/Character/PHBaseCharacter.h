@@ -23,6 +23,7 @@ class UCombatManager;
 class UCombatSystemManagerComponent;
 class UEquipmentManager;
 class UEquipmentPresentationComponent;
+class UHunterDamagePopupPresentationComponent;
 class UCharacterSystemCoordinatorComponent;
 class UStatsManager;
 class UTagManager;
@@ -189,6 +190,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UEquipmentPresentationComponent> EquipmentPresentation;
 
+	/** Local UI listener for resolved combat damage. Assign the popup widget Blueprint in character defaults. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|Presentation", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHunterDamagePopupPresentationComponent> DamagePopupPresentation;
+
 	/**
 	 * Character System Coordinator — single point of cross-system listener wiring.
 	 * PH-0.4: APHBaseCharacter is a composition root only; orchestration lives here.
@@ -272,6 +277,12 @@ public:
 	UCombatStatusManager* GetCombatStatusManager() const
 	{
 		return CombatStatusManager;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Presentation")
+	UHunterDamagePopupPresentationComponent* GetDamagePopupPresentation() const
+	{
+		return DamagePopupPresentation;
 	}
 
 	UFUNCTION(BlueprintPure, Category = "Combat|Status", meta = (DeprecatedFunction, DeprecationMessage = "Use GetCombatStatusManager."))

@@ -209,6 +209,7 @@ void UInteractableWidget::SetInteractionData(UInputAction* InputAction, const FT
 		{
 			InteractionDescription->SetText(Description);
 		}
+		UpdateKeyIcon();
 		return;
 	}
 

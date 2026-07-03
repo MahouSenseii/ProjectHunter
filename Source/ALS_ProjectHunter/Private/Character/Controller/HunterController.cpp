@@ -32,10 +32,36 @@ void AHunterController::Interact(const FInputActionValue& Value)
 	{
 		InteractionManager->OnInteractPressed();
 	}
-	else
+}
+
+void AHunterController::Interact_Started(const FInputActionValue& Value)
+{
+	if (!InteractionManager || !Value.Get<bool>())
 	{
-		InteractionManager->OnInteractReleased();
+		return;
 	}
+
+	InteractionManager->OnInteractPressed();
+}
+
+void AHunterController::Interact_Completed(const FInputActionValue& Value)
+{
+	if (!InteractionManager || Value.Get<bool>())
+	{
+		return;
+	}
+
+	InteractionManager->OnInteractReleased();
+}
+
+void AHunterController::Interact_Canceled(const FInputActionValue& Value)
+{
+	if (!InteractionManager || Value.Get<bool>())
+	{
+		return;
+	}
+
+	InteractionManager->OnInteractReleased();
 }
 
 void AHunterController::Menu(const FInputActionValue& Value)

@@ -2,6 +2,7 @@
 
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
+#include "Character/HUD/HunterHUD.h"
 #include "Components/ActorComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Engine/PostProcessVolume.h"
@@ -92,8 +93,20 @@ void FInteractionWidgetPresenter::Initialize(UActorComponent* InOwnerComponent, 
 			GroundItemWorldWidget->SetWindowFocusable(false);
 
 			GroundItemWorldWidget->SetPivot(FVector2D(0.5f, 0.5f));
-			GroundItemWorldWidget->SetDrawSize(GroundItemWidgetDrawSize);
-			GroundItemWorldWidget->SetDrawAtDesiredSize(true);
+
+			if (bUseGroundItemDesiredSize)
+			{
+				GroundItemWorldWidget->SetDrawSize(GroundItemWidgetDrawSize);
+				GroundItemWorldWidget->SetDrawAtDesiredSize(true);
+			}
+			else
+			{
+				const float Scale = FMath::Clamp(GroundItemResolutionScale, 0.5f, 4.0f);
+				GroundItemWorldWidget->SetDrawSize(GroundItemWidgetDrawSize * Scale);
+				GroundItemWorldWidget->SetDrawAtDesiredSize(false);
+				GroundItemWorldWidget->SetRelativeScale3D(FVector(1.0f / Scale));
+			}
+
 			GroundItemWorldWidget->SetWidgetClass(GroundWidgetClass);
 
 			GroundItemWorldWidget->AttachToComponent(
@@ -133,11 +146,13 @@ void FInteractionWidgetPresenter::UpdateForGroundItem(int32 GroundItemID)
 {
 	if (GroundItemID == INDEX_NONE)
 	{
+		HideItemTooltip();
 		return;
 	}
 
 	FText Description = GroundItemDefaultText;
-	if (UItemInstance* Item = GetGroundItemInstance(GroundItemID))
+	UItemInstance* Item = GetGroundItemInstance(GroundItemID);
+	if (Item)
 	{
 		const FText ItemName = Item->GetDisplayName();
 		if (!ItemName.IsEmpty())
@@ -147,6 +162,7 @@ void FInteractionWidgetPresenter::UpdateForGroundItem(int32 GroundItemID)
 	}
 
 	ShowGroundItemWorldWidget(GroundItemID);
+	ShowItemTooltipForGroundItem(GroundItemID);
 
 	if (!InteractionWidget)
 	{
@@ -154,7 +170,7 @@ void FInteractionWidgetPresenter::UpdateForGroundItem(int32 GroundItemID)
 	}
 
 	PositionWidgetAtGroundItem(GroundItemID);
-	InteractionWidget->SetInteractionData(GroundItemActionInput, Description);
+	ApplyGroundItemPromptData(*InteractionWidget, Description);
 	InteractionWidget->SetWidgetState(EInteractionWidgetState::IWS_Idle);
 	InteractionWidget->Show();
 }
@@ -238,7 +254,7 @@ void FInteractionWidgetPresenter::ShowGroundItemWorldWidget(int32 GroundItemID)
 			}
 		}
 
-		W->SetInteractionData(GroundItemActionInput, Description);
+		ApplyGroundItemPromptData(*W, Description);
 		W->SetWidgetState(EInteractionWidgetState::IWS_Idle);
 	}
 
@@ -250,6 +266,19 @@ void FInteractionWidgetPresenter::HideGroundItemWorldWidget()
 	if (GroundItemWorldWidget)
 	{
 		GroundItemWorldWidget->SetVisibility(false);
+	}
+
+	HideItemTooltip();
+}
+
+void FInteractionWidgetPresenter::HideItemTooltip()
+{
+	if (APlayerController* PC = GetOwnerPlayerController())
+	{
+		if (AHunterHUD* HunterHUD = Cast<AHunterHUD>(PC->GetHUD()))
+		{
+			HunterHUD->HideItemTooltip();
+		}
 	}
 }
 
@@ -299,6 +328,7 @@ void FInteractionWidgetPresenter::HideAll()
 	}
 
 	HideGroundItemWorldWidget();
+	HideItemTooltip();
 }
 
 void FInteractionWidgetPresenter::SetWidgetVisible(bool bVisible)
@@ -483,6 +513,7 @@ void FInteractionWidgetPresenter::Shutdown()
 		GroundItemWorldWidget->DestroyComponent();
 		GroundItemWorldWidget = nullptr;
 	}
+
 }
 
 APlayerController* FInteractionWidgetPresenter::GetOwnerPlayerController() const
@@ -510,4 +541,77 @@ UItemInstance* FInteractionWidgetPresenter::GetGroundItemInstance(int32 GroundIt
 
 	UGroundItemSubsystem* Subsystem = WorldContext->GetSubsystem<UGroundItemSubsystem>();
 	return Subsystem ? Subsystem->GetItemByID(GroundItemID) : nullptr;
+}
+
+void FInteractionWidgetPresenter::ApplyGroundItemPromptData(
+	UInteractableWidget& Widget, const FText& Description) const
+{
+	if (GroundItemActionInput)
+	{
+		Widget.SetInteractionData(GroundItemActionInput, Description);
+		return;
+	}
+
+	Widget.SetInteractionDataWithKey(GroundItemFallbackKey, Description);
+}
+
+void FInteractionWidgetPresenter::ShowItemTooltipForGroundItem(int32 GroundItemID)
+{
+	if (!bShowGroundItemTooltip)
+	{
+		HideItemTooltip();
+		return;
+	}
+
+	APlayerController* PC = GetOwnerPlayerController();
+	if (!PC)
+	{
+		return;
+	}
+
+	UItemInstance* Item = GetGroundItemInstance(GroundItemID);
+	if (!Item)
+	{
+		HideItemTooltip();
+		return;
+	}
+
+	AHunterHUD* HunterHUD = Cast<AHunterHUD>(PC->GetHUD());
+	if (!HunterHUD || !WorldContext)
+	{
+		return;
+	}
+
+	UGroundItemSubsystem* GroundSub = WorldContext->GetSubsystem<UGroundItemSubsystem>();
+	if (!GroundSub)
+	{
+		HideItemTooltip();
+		return;
+	}
+
+	const TMap<int32, FVector>& Locations = GroundSub->GetInstanceLocations();
+	const FVector* WorldLocPtr = Locations.Find(GroundItemID);
+	if (!WorldLocPtr)
+	{
+		HideItemTooltip();
+		return;
+	}
+
+	FVector WorldPos = *WorldLocPtr;
+	WorldPos.Z += GroundItemWidgetHeightOffset;
+
+	FVector2D ScreenPos;
+	if (!PC->ProjectWorldLocationToScreen(WorldPos, ScreenPos, /*bPlayerViewportRelative=*/false))
+	{
+		HideItemTooltip();
+		return;
+	}
+
+	const float DPIScale = UWidgetLayoutLibrary::GetViewportScale(OwnerComponent);
+	if (DPIScale > KINDA_SMALL_NUMBER)
+	{
+		ScreenPos /= DPIScale;
+	}
+
+	HunterHUD->ShowItemTooltip(Item, ScreenPos + ItemTooltipScreenOffset);
 }

@@ -43,6 +43,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tags")
 	void SetTagState(const FGameplayTag& Tag, bool bEnabled);
 
+	UFUNCTION(BlueprintCallable, Category = "Tags|Conditions")
+	void SetDeadState(bool bDead);
+
 	UFUNCTION(BlueprintPure, Category = "Tags")
 	bool HasTag(const FGameplayTag& Tag) const;
 

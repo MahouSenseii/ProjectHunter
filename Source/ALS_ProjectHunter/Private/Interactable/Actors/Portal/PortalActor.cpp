@@ -65,7 +65,7 @@ void APortalActor::BeginPlay()
 	// route back to this actor's server logic.
 	if (InteractableManager)
 	{
-		InteractableManager->OnTapInteracted.AddDynamic(this, &APortalActor::OnInteractableManagerTap);
+		InteractableManager->OnTapInteracted.AddUniqueDynamic(this, &APortalActor::OnInteractableManagerTap);
 
 		InteractableManager->Config.InteractionType = EInteractionType::IT_Tap;
 		InteractableManager->Config.InteractionText  = GetInteractionText_Implementation();

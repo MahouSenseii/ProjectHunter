@@ -42,7 +42,7 @@ void AHunterHUD::BeginPlay()
 		if (ItemTooltipWidget)
 		{
 			ItemTooltipWidget->AddToViewport(100);
-			ItemTooltipWidget->SetVisibility(ESlateVisibility::Hidden);
+			ItemTooltipWidget->SetVisibility(ESlateVisibility::Collapsed);
 		}
 	}
 
@@ -241,7 +241,7 @@ void AHunterHUD::ShowItemTooltip(UItemInstance* Item, FVector2D ScreenPosition)
 	{
 		ItemTooltipWidget->UpdateTooltip(Item);
 		ItemTooltipWidget->SetPositionInViewport(ScreenPosition);
-		ItemTooltipWidget->SetVisibility(ESlateVisibility::Visible);
+		ItemTooltipWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
 	}
 }
 
@@ -249,7 +249,7 @@ void AHunterHUD::HideItemTooltip()
 {
 	if (ItemTooltipWidget)
 	{
-		ItemTooltipWidget->SetVisibility(ESlateVisibility::Hidden);
+		ItemTooltipWidget->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
 

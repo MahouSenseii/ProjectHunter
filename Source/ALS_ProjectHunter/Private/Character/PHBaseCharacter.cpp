@@ -10,6 +10,7 @@
 #include "Combat/Components/CombatStatusManager.h"
 #include "Combat/Components/CombatSystemManagerComponent.h"
 #include "Combat/Components/CombatManager.h"
+#include "Combat/Components/HunterDamagePopupPresentationComponent.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "Equipment/Components/EquipmentManager.h"
@@ -72,6 +73,8 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer)
 	// Does not replicate; each machine rebuilds presentation from replicated slot state.
 	EquipmentPresentation = CreateDefaultSubobject<UEquipmentPresentationComponent>(TEXT("EquipmentPresentation"));
 
+	DamagePopupPresentation = CreateDefaultSubobject<UHunterDamagePopupPresentationComponent>(TEXT("DamagePopupPresentation"));
+
 	// Single wiring layer for cross-manager listeners. Orchestration logic must NOT live inline here.
 	SystemCoordinator = CreateDefaultSubobject<UCharacterSystemCoordinatorComponent>(TEXT("SystemCoordinator"));
 }
@@ -121,6 +124,7 @@ void APHBaseCharacter::PostInitializeComponents()
 	PH_RECOVER_COMPONENT(CombatStatusManager,    UCombatStatusManager)
 	PH_RECOVER_COMPONENT(CombatSystemManager,    UCombatSystemManagerComponent)
 	PH_RECOVER_COMPONENT(EquipmentPresentation,  UEquipmentPresentationComponent)
+	PH_RECOVER_COMPONENT(DamagePopupPresentation, UHunterDamagePopupPresentationComponent)
 	PH_RECOVER_COMPONENT(SystemCoordinator,      UCharacterSystemCoordinatorComponent)
 
 #undef PH_RECOVER_COMPONENT

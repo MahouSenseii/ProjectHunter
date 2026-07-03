@@ -8,6 +8,7 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
+#include "Item/Library/ItemTooltipFunctionLibrary.h"
 #include "Item/Library/ItemStructs.h"
 
 namespace ItemTooltipWidgetPrivate
@@ -67,43 +68,117 @@ namespace ItemTooltipWidgetPrivate
 		OutRows.Add(FString::Printf(TEXT("%s: %s-%s"),
 			Label, *FormatStatValue(Min), *FormatStatValue(Max)));
 	}
+
+	bool IsAffixSection(const EItemTooltipSectionType SectionType)
+	{
+		switch (SectionType)
+		{
+		case EItemTooltipSectionType::Implicits:
+		case EItemTooltipSectionType::Prefixes:
+		case EItemTooltipSectionType::Suffixes:
+		case EItemTooltipSectionType::Crafted:
+		case EItemTooltipSectionType::Enchants:
+		case EItemTooltipSectionType::Unique:
+		case EItemTooltipSectionType::Corruption:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	bool IsDescriptionSection(const EItemTooltipSectionType SectionType)
+	{
+		return SectionType == EItemTooltipSectionType::Description;
+	}
+
+	FString MakeTooltipLineString(const FItemTooltipLine& Line)
+	{
+		if (Line.bUseValueColumn && !Line.Value.IsEmpty())
+		{
+			return FString::Printf(TEXT("%s: %s"), *Line.Label.ToString(), *Line.Value.ToString());
+		}
+
+		return Line.Label.ToString();
+	}
 }
 
 void UItemTooltipWidget::UpdateTooltip(UItemInstance* Item)
 {
 	if (!Item)
 	{
+		ClearTooltip();
 		return;
 	}
 
-	FItemBase* Base = Item->GetBaseData();
-	if (!Base)
+	if (!UItemTooltipFunctionLibrary::BuildItemTooltipData(Item, TooltipData))
 	{
+		ClearTooltip();
 		return;
 	}
 
 	if (ItemNameText)
 	{
-		ItemNameText->SetText(Item->GetDisplayName());
+		ItemNameText->SetText(TooltipData.DisplayName);
 	}
 
 	if (ItemTypeText)
 	{
-		ItemTypeText->SetText(UEnum::GetDisplayValueAsText(Item->GetItemType()));
+		ItemTypeText->SetText(FText::Format(
+			FText::FromString(TEXT("{0} - {1}")),
+			TooltipData.RarityName,
+			TooltipData.ItemSubTypeName.IsEmpty() ? TooltipData.ItemTypeName : TooltipData.ItemSubTypeName));
 	}
 
-	if (ItemIconImage && Base->ItemImage)
+	if (ItemIconImage && TooltipData.IconMaterial)
 	{
-		ItemIconImage->SetBrushFromMaterial(Base->ItemImage);
+		ItemIconImage->SetBrushFromMaterial(TooltipData.IconMaterial);
 	}
 
-	SetGradeVisuals(Item->Rarity);
+	SetGradeVisuals(TooltipData.Rarity);
 	PopulateBaseStats(Item);
 	PopulateAffixes(Item);
 	PopulateLore(Item);
+	OnTooltipDataUpdated(TooltipData);
 
 	// Blueprint extension point — runs after the base population pass.
 	OnTooltipUpdated(Item);
+}
+
+void UItemTooltipWidget::ClearTooltip()
+{
+	TooltipData = FItemTooltipData();
+
+	if (BaseStatsContainer)
+	{
+		BaseStatsContainer->ClearChildren();
+	}
+
+	if (AffixesContainer)
+	{
+		AffixesContainer->ClearChildren();
+	}
+
+	if (LoreText)
+	{
+		LoreText->SetText(FText::GetEmpty());
+	}
+
+	if (BaseStatsBox)
+	{
+		BaseStatsBox->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	if (AffixesBox)
+	{
+		AffixesBox->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	if (LoreBox)
+	{
+		LoreBox->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	OnTooltipCleared();
 }
 
 void UItemTooltipWidget::SetGradeVisuals(EItemRarity Grade)
@@ -132,14 +207,14 @@ FLinearColor UItemTooltipWidget::GetGradeColor(EItemRarity Grade) const
 	case EItemRarity::IR_GradeB:    return Color_GradeB;
 	case EItemRarity::IR_GradeA:    return Color_GradeA;
 	case EItemRarity::IR_GradeS:    return Color_GradeS;
-	case EItemRarity::IR_GradeSS:   return Color_GradeS;
+	case EItemRarity::IR_GradeSS:   return Color_GradeSS;
 	case EItemRarity::IR_Unknown:   return Color_GradeUnkown;
 	case EItemRarity::IR_Corrupted: return Color_GradeCorrupted;
 	default:                        return FLinearColor::White;
 	}
 }
 
-void UItemTooltipWidget::PopulateBaseStats(UItemInstance* Item)
+void UItemTooltipWidget::PopulateBaseStats(UItemInstance*)
 {
 	using namespace ItemTooltipWidgetPrivate;
 
@@ -150,66 +225,49 @@ void UItemTooltipWidget::PopulateBaseStats(UItemInstance* Item)
 
 	BaseStatsContainer->ClearChildren();
 
-	FItemBase* Base = Item ? Item->GetBaseData() : nullptr;
-	if (!Base)
-	{
-		if (BaseStatsBox) { BaseStatsBox->SetVisibility(ESlateVisibility::Collapsed); }
-		return;
-	}
+	int32 RowCount = 0;
 
-	TArray<FString> Rows;
-
-	if (Base->IsWeapon())
+	for (const FItemTooltipSection& Section : TooltipData.Sections)
 	{
-		const FBaseWeaponStats& W = Base->WeaponStats;
-		AppendDamageRange(Rows, TEXT("Physical Damage"),   W.MinPhysicalDamage,   W.MaxPhysicalDamage);
-		AppendDamageRange(Rows, TEXT("Fire Damage"),       W.MinFireDamage,       W.MaxFireDamage);
-		AppendDamageRange(Rows, TEXT("Ice Damage"),        W.MinIceDamage,        W.MaxIceDamage);
-		AppendDamageRange(Rows, TEXT("Lightning Damage"),  W.MinLightningDamage,  W.MaxLightningDamage);
-		AppendDamageRange(Rows, TEXT("Light Damage"),      W.MinLightDamage,      W.MaxLightDamage);
-		AppendDamageRange(Rows, TEXT("Corruption Damage"), W.MinCorruptionDamage, W.MaxCorruptionDamage);
-
-		Rows.Add(FString::Printf(TEXT("Attack Speed: %s"),      *FormatStatValue(W.AttackSpeed)));
-		Rows.Add(FString::Printf(TEXT("Critical Chance: %s%%"), *FormatStatValue(W.CriticalStrikeChance)));
-	}
-	else if (Base->IsArmor())
-	{
-		const FBaseArmorStats& A = Base->ArmorStats;
-		if (!FMath::IsNearlyZero(A.Armor))
+		if (IsAffixSection(Section.SectionType) || IsDescriptionSection(Section.SectionType))
 		{
-			Rows.Add(FString::Printf(TEXT("Armor: %s"), *FormatStatValue(A.Armor)));
+			continue;
 		}
-		if (!FMath::IsNearlyZero(A.FireResistance))       { Rows.Add(FString::Printf(TEXT("+%s Fire Resistance"),       *FormatStatValue(A.FireResistance))); }
-		if (!FMath::IsNearlyZero(A.IceResistance))        { Rows.Add(FString::Printf(TEXT("+%s Ice Resistance"),        *FormatStatValue(A.IceResistance))); }
-		if (!FMath::IsNearlyZero(A.LightningResistance))  { Rows.Add(FString::Printf(TEXT("+%s Lightning Resistance"),  *FormatStatValue(A.LightningResistance))); }
-		if (!FMath::IsNearlyZero(A.LightResistance))      { Rows.Add(FString::Printf(TEXT("+%s Light Resistance"),      *FormatStatValue(A.LightResistance))); }
-		if (!FMath::IsNearlyZero(A.CorruptionResistance)) { Rows.Add(FString::Printf(TEXT("+%s Corruption Resistance"), *FormatStatValue(A.CorruptionResistance))); }
-	}
 
-	if (Base->IsEquippable())
-	{
-		Rows.Add(FString::Printf(TEXT("Durability: %s/%s"),
-			*FormatStatValue(Item->Durability.CurrentDurability),
-			*FormatStatValue(Item->Durability.MaxDurability)));
-	}
-
-	for (const FString& Row : Rows)
-	{
-		if (UTextBlock* TextBlock = CreateStatTextBlock(Row, BaseStatColor))
+		if (Section.bShowHeading && !Section.Heading.IsEmpty())
 		{
-			BaseStatsContainer->AddChildToVerticalBox(TextBlock);
+			if (UTextBlock* HeadingBlock = CreateStatTextBlock(Section.Heading.ToString(), TooltipData.HeaderColor))
+			{
+				BaseStatsContainer->AddChildToVerticalBox(HeadingBlock);
+				++RowCount;
+			}
+		}
+
+		for (const FItemTooltipLine& Line : Section.Lines)
+		{
+			const FString Row = MakeTooltipLineString(Line);
+			if (Row.IsEmpty())
+			{
+				continue;
+			}
+
+			if (UTextBlock* TextBlock = CreateStatTextBlock(Row, Line.TextColor))
+			{
+				BaseStatsContainer->AddChildToVerticalBox(TextBlock);
+				++RowCount;
+			}
 		}
 	}
 
 	if (BaseStatsBox)
 	{
-		BaseStatsBox->SetVisibility(Rows.Num() > 0
+		BaseStatsBox->SetVisibility(RowCount > 0
 			? ESlateVisibility::Visible
 			: ESlateVisibility::Collapsed);
 	}
 }
 
-void UItemTooltipWidget::PopulateAffixes(UItemInstance* Item)
+void UItemTooltipWidget::PopulateAffixes(UItemInstance*)
 {
 	using namespace ItemTooltipWidgetPrivate;
 
@@ -222,31 +280,31 @@ void UItemTooltipWidget::PopulateAffixes(UItemInstance* Item)
 
 	int32 RowCount = 0;
 
-	if (Item)
+	for (const FItemTooltipSection& Section : TooltipData.Sections)
 	{
-		Item->Stats.ForEachStat([this, &RowCount](const FPHAttributeData& Stat)
+		if (!IsAffixSection(Section.SectionType))
 		{
-			if (!Stat.bIsIdentified)
-			{
-				return;
-			}
+			continue;
+		}
 
-			const FLinearColor RowColor = Stat.IsCorruptedAffix()
-				? Color_GradeCorrupted
-				: AffixColor;
-
-			if (UTextBlock* TextBlock = CreateStatTextBlock(FormatAffixLine(Stat), RowColor))
+		if (Section.bShowHeading && !Section.Heading.IsEmpty())
+		{
+			if (UTextBlock* HeadingBlock = CreateStatTextBlock(Section.Heading.ToString(), TooltipData.HeaderColor))
 			{
-				AffixesContainer->AddChildToVerticalBox(TextBlock);
+				AffixesContainer->AddChildToVerticalBox(HeadingBlock);
 				++RowCount;
 			}
-		});
+		}
 
-		// One hint row for anything still hidden on the item.
-		if (Item->Stats.HasUnidentifiedStats() || !Item->IsIdentified())
+		for (const FItemTooltipLine& Line : Section.Lines)
 		{
-			if (UTextBlock* TextBlock = CreateStatTextBlock(
-				TEXT("??? (Unidentified)"), Color_GradeUnkown))
+			const FString Row = MakeTooltipLineString(Line);
+			if (Row.IsEmpty())
+			{
+				continue;
+			}
+
+			if (UTextBlock* TextBlock = CreateStatTextBlock(Row, Line.TextColor))
 			{
 				AffixesContainer->AddChildToVerticalBox(TextBlock);
 				++RowCount;
@@ -262,14 +320,26 @@ void UItemTooltipWidget::PopulateAffixes(UItemInstance* Item)
 	}
 }
 
-void UItemTooltipWidget::PopulateLore(UItemInstance* Item)
+void UItemTooltipWidget::PopulateLore(UItemInstance*)
 {
-	FItemBase* Base = Item ? Item->GetBaseData() : nullptr;
-	const bool bHasLore = Base && !Base->ItemDescription.IsEmpty();
+	FText DescriptionValue = FText::GetEmpty();
+
+	for (const FItemTooltipSection& Section : TooltipData.Sections)
+	{
+		if (Section.SectionType != EItemTooltipSectionType::Description || Section.Lines.Num() == 0)
+		{
+			continue;
+		}
+
+		DescriptionValue = Section.Lines[0].Label;
+		break;
+	}
+
+	const bool bHasLore = !DescriptionValue.IsEmpty();
 
 	if (LoreText)
 	{
-		LoreText->SetText(bHasLore ? Base->ItemDescription : FText::GetEmpty());
+		LoreText->SetText(bHasLore ? DescriptionValue : FText::GetEmpty());
 		LoreText->SetColorAndOpacity(FSlateColor(LoreColor));
 	}
 

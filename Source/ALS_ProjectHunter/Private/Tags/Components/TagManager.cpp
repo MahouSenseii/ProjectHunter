@@ -240,6 +240,13 @@ void UTagManager::SetTagState(const FGameplayTag& Tag, const bool bEnabled)
 	}
 }
 
+void UTagManager::SetDeadState(const bool bDead)
+{
+	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+	SetTagState(Tags.Condition_Alive, !bDead);
+	SetTagState(Tags.Condition_Dead, bDead);
+}
+
 bool UTagManager::HasTag(const FGameplayTag& Tag) const
 {
 	if (!Tag.IsValid())
@@ -317,9 +324,8 @@ void UTagManager::RefreshBaseConditionTags()
 		const float ArcaneShield = FMath::Max(Attributes->GetArcaneShield(), 0.f);
 		const float MaxArcaneShield = TagManagerPrivate::GetEffectiveMaxValue(Attributes->GetMaxEffectiveArcaneShield(), Attributes->GetMaxArcaneShield());
 
-		const bool bAlive = Health > 0.f;
-		SetTagState(Tags.Condition_Alive, bAlive);
-		SetTagState(Tags.Condition_Dead, !bAlive);
+		const bool bDead = HasTag(Tags.Condition_Dead);
+		SetTagState(Tags.Condition_Alive, Health > 0.f && !bDead);
 
 		SetTagState(Tags.Condition_OnFullHealth, ComputeFullResourceState(Health, MaxHealth));
 		SetTagState(Tags.Condition_OnLowHealth, ComputeLowResourceState(Health, MaxHealth));
