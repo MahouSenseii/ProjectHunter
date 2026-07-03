@@ -576,6 +576,82 @@ void UHunterAbilitySystemComponent::NotifyStaminaMovementInputChanged()
 	RefreshStaminaDegenEffect();
 }
 
+void UHunterAbilitySystemComponent::Debug_StopStaminaDegen()
+{
+#if UE_BUILD_SHIPPING
+	return;
+#endif
+
+	const AActor* AvatarActorInstance = GetAvatarActor();
+	if (!AvatarActorInstance || !AvatarActorInstance->HasAuthority())
+	{
+		return;
+	}
+
+	bSprintStaminaDegenRequested = false;
+	bWallRunningStaminaDegenRequested = false;
+
+	HunterAbilitySystemComponentPrivate::ForceStopSprinting(this);
+
+	StopSprintStaminaDegen();
+	RemoveStaminaExhaustionEffect();
+	RefreshStaminaDegenEffect();
+
+	UE_LOG(LogHunterGAS, Warning, TEXT("Debug_StopStaminaDegen: stamina drain stopped."));
+}
+
+void UHunterAbilitySystemComponent::Debug_RefillHealth()
+{
+#if UE_BUILD_SHIPPING
+	return;
+#endif
+
+	const float MaxHealth = GetNumericAttribute(UHunterAttributeSet::GetMaxHealthAttribute());
+
+	SetNumericAttributeBase(
+		UHunterAttributeSet::GetHealthAttribute(),
+		MaxHealth
+	);
+
+	UE_LOG(LogHunterGAS, Warning, TEXT("Debug_RefillHealth: health set to %.2f."), MaxHealth);
+}
+
+void UHunterAbilitySystemComponent::Debug_RefillStamina()
+{
+#if UE_BUILD_SHIPPING
+	return;
+#endif
+
+	const float MaxStamina = GetNumericAttribute(UHunterAttributeSet::GetMaxStaminaAttribute());
+
+	SetNumericAttributeBase(
+		UHunterAttributeSet::GetStaminaAttribute(),
+		MaxStamina
+	);
+
+	RemoveStaminaExhaustionEffect();
+	RefreshStaminaDegenEffect();
+
+	UE_LOG(LogHunterGAS, Warning, TEXT("Debug_RefillStamina: stamina set to %.2f."), MaxStamina);
+}
+
+void UHunterAbilitySystemComponent::Debug_ReserveHealth(float NewValue)
+{
+#if UE_BUILD_SHIPPING
+	return;
+#endif
+
+	const float ClampedValue = FMath::Max(0.0f, NewValue);
+
+	// Rename this if your AttributeSet uses a different accessor.
+	SetNumericAttributeBase(
+		UHunterAttributeSet::GetReservedHealthAttribute(),
+		ClampedValue
+	);
+
+	UE_LOG(LogHunterGAS, Warning, TEXT("Debug_ReserveHealth: reserved health set to %.2f."), ClampedValue);
+}
+
 void UHunterAbilitySystemComponent::SetWallRunningStaminaDegenActive(const bool bActive)
 {
 	bWallRunningStaminaDegenRequested = bActive;

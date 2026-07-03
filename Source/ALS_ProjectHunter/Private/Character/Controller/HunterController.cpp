@@ -1,5 +1,6 @@
 #include "Character/Controller/HunterController.h"
-
+#include "System/Cheats/HunterCheatManager.h"
+#include "System/Cheats/HunterCheatComponent.h"
 #include "EnhancedActionKeyMapping.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
@@ -12,6 +13,10 @@ DEFINE_LOG_CATEGORY_STATIC(LogHunterController, Log, All);
 AHunterController::AHunterController(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+#if !UE_BUILD_SHIPPING
+	CheatClass = UHunterCheatManager::StaticClass();
+	CheatComponent = CreateDefaultSubobject<UHunterCheatComponent>(TEXT("CheatComponent"));
+#endif
 }
 
 void AHunterController::OnPossess(APawn* NewPawn)

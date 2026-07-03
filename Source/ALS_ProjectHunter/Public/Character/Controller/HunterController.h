@@ -13,6 +13,7 @@
 // Forward declarations
 class UInteractionManager;
 class UInputMappingContext;
+class UHunterCheatComponent;
 
 /**
  * DoOnce State - Helper for DoOnce pattern
@@ -82,6 +83,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool DoOnce(FDoOnceState& State, bool bReset, bool bStartClosed);
 
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Project Hunter|Cheats", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UHunterCheatComponent> CheatComponent;
+	
 protected:
 	// ═══════════════════════════════════════════════
 	// CACHED REFERENCES

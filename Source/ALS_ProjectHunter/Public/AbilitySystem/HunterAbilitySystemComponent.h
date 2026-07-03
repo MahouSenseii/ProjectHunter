@@ -72,6 +72,19 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Exhaustion")
 	bool ShouldCheckExhaustion() const { return bShouldCheckExhaustion; }
+	
+	// Debug / Cheat helpers
+	UFUNCTION(BlueprintCallable, Category="Project Hunter|Debug|ASC")
+	void Debug_StopStaminaDegen();
+
+	UFUNCTION(BlueprintCallable, Category="Project Hunter|Debug|ASC")
+	void Debug_RefillHealth();
+
+	UFUNCTION(BlueprintCallable, Category="Project Hunter|Debug|ASC")
+	void Debug_RefillStamina();
+
+	UFUNCTION(BlueprintCallable, Category="Project Hunter|Debug|ASC")
+	void Debug_ReserveHealth(float NewValue);
 
 protected:
 	virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
