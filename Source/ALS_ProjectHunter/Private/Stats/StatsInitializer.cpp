@@ -28,6 +28,57 @@ namespace StatsInitializerPrivate
 		return true;
 	}
 
+	FName GetGameplayModifierAttributeName(const FGameplayModifierInfo& Modifier)
+	{
+		if (!Modifier.Attribute.IsValid())
+		{
+			return NAME_None;
+		}
+
+		if (const FProperty* AttributeProperty = Modifier.Attribute.GetUProperty())
+		{
+			return AttributeProperty->GetFName();
+		}
+
+		const FString AttributeName = Modifier.Attribute.GetName();
+		return AttributeName.IsEmpty() ? NAME_None : FName(*AttributeName);
+	}
+
+	bool FindAuthoredStatConflicts(const UGameplayEffect* EffectCDO, const TMap<FName, float>& AuthoredStats, TArray<FName>& OutConflictingStats)
+	{
+		OutConflictingStats.Reset();
+
+		if (!EffectCDO)
+		{
+			return false;
+		}
+
+		for (const FGameplayModifierInfo& Modifier : EffectCDO->Modifiers)
+		{
+			const FName AttributeName = GetGameplayModifierAttributeName(Modifier);
+			if (AttributeName != NAME_None && AuthoredStats.Contains(AttributeName))
+			{
+				OutConflictingStats.AddUnique(AttributeName);
+			}
+		}
+
+		return OutConflictingStats.Num() > 0;
+	}
+
+	FString JoinStatNames(const TArray<FName>& StatNames)
+	{
+		TArray<FString> NameStrings;
+		NameStrings.Reserve(StatNames.Num());
+
+		for (const FName StatName : StatNames)
+		{
+			NameStrings.Add(StatName.ToString());
+		}
+
+		NameStrings.Sort();
+		return FString::Join(NameStrings, TEXT(", "));
+	}
+
 	bool IsHandledByOrderedInitialization(FName StatName)
 	{
 		return StatName == TEXT("MaxHealth") ||
@@ -36,10 +87,22 @@ namespace StatsInitializerPrivate
 			StatName == TEXT("MaxArcaneShield") ||
 			StatName == TEXT("HealthRegenRate") ||
 			StatName == TEXT("HealthRegenAmount") ||
+			StatName == TEXT("MaxHealthRegenRate") ||
+			StatName == TEXT("MaxHealthRegenAmount") ||
 			StatName == TEXT("ManaRegenRate") ||
 			StatName == TEXT("ManaRegenAmount") ||
+			StatName == TEXT("MaxManaRegenRate") ||
+			StatName == TEXT("MaxManaRegenAmount") ||
 			StatName == TEXT("StaminaRegenRate") ||
 			StatName == TEXT("StaminaRegenAmount") ||
+			StatName == TEXT("MaxStaminaRegenRate") ||
+			StatName == TEXT("MaxStaminaRegenAmount") ||
+			StatName == TEXT("StaminaDegenRate") ||
+			StatName == TEXT("StaminaDegenAmount") ||
+			StatName == TEXT("ArcaneShieldRegenRate") ||
+			StatName == TEXT("ArcaneShieldRegenAmount") ||
+			StatName == TEXT("MaxArcaneShieldRegenRate") ||
+			StatName == TEXT("MaxArcaneShieldRegenAmount") ||
 			StatName == TEXT("Health") ||
 			StatName == TEXT("Mana") ||
 			StatName == TEXT("Stamina") ||
@@ -193,10 +256,22 @@ void FStatsInitializer::InitializeFromDataAsset(UStatsManager& Manager, UBaseSta
 
 	ApplyIfPresent(TEXT("HealthRegenRate"), false);
 	ApplyIfPresent(TEXT("HealthRegenAmount"), false);
+	ApplyIfPresent(TEXT("MaxHealthRegenRate"), false);
+	ApplyIfPresent(TEXT("MaxHealthRegenAmount"), false);
 	ApplyIfPresent(TEXT("ManaRegenRate"), false);
 	ApplyIfPresent(TEXT("ManaRegenAmount"), false);
+	ApplyIfPresent(TEXT("MaxManaRegenRate"), false);
+	ApplyIfPresent(TEXT("MaxManaRegenAmount"), false);
 	ApplyIfPresent(TEXT("StaminaRegenRate"), false);
 	ApplyIfPresent(TEXT("StaminaRegenAmount"), false);
+	ApplyIfPresent(TEXT("MaxStaminaRegenRate"), false);
+	ApplyIfPresent(TEXT("MaxStaminaRegenAmount"), false);
+	ApplyIfPresent(TEXT("StaminaDegenRate"), false);
+	ApplyIfPresent(TEXT("StaminaDegenAmount"), false);
+	ApplyIfPresent(TEXT("ArcaneShieldRegenRate"), false);
+	ApplyIfPresent(TEXT("ArcaneShieldRegenAmount"), false);
+	ApplyIfPresent(TEXT("MaxArcaneShieldRegenRate"), false);
+	ApplyIfPresent(TEXT("MaxArcaneShieldRegenAmount"), false);
 
 	for (const TPair<FName, float>& Pair : StatsMap)
 	{
@@ -226,10 +301,28 @@ void FStatsInitializer::InitializeFromDataAsset(UStatsManager& Manager, UBaseSta
 	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
 	EffectContext.AddSourceObject(Owner);
 
+	int32 AppliedInitializationEffectCount = 0;
+	int32 SkippedInitializationEffectCount = 0;
+
 	for (TSubclassOf<UGameplayEffect> EffectClass : InStatsData->InitializationEffects)
 	{
 		if (!EffectClass)
 		{
+			++SkippedInitializationEffectCount;
+			continue;
+		}
+
+		const UGameplayEffect* EffectCDO = EffectClass->GetDefaultObject<UGameplayEffect>();
+		TArray<FName> ConflictingAuthoredStats;
+		if (InStatsData->bSkipInitializationEffectsThatModifyAuthoredStats &&
+			StatsInitializerPrivate::FindAuthoredStatConflicts(EffectCDO, StatsMap, ConflictingAuthoredStats))
+		{
+			++SkippedInitializationEffectCount;
+			UE_LOG(LogStatsManager, Warning,
+				TEXT("InitializeFromDataAsset: Skipping InitializationEffect=%s for StatsData=%s because it modifies authored stat override(s): %s. Disable bSkipInitializationEffectsThatModifyAuthoredStats on the data asset if this effect should drive those live values."),
+				*GetNameSafe(EffectClass),
+				*GetNameSafe(InStatsData),
+				*StatsInitializerPrivate::JoinStatNames(ConflictingAuthoredStats));
 			continue;
 		}
 
@@ -237,24 +330,31 @@ void FStatsInitializer::InitializeFromDataAsset(UStatsManager& Manager, UBaseSta
 		if (SpecHandle.IsValid())
 		{
 			ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+			++AppliedInitializationEffectCount;
+		}
+		else
+		{
+			++SkippedInitializationEffectCount;
 		}
 	}
 
 	AttributeSet->RecalculateAllDerivedVitals();
 
 	UE_LOG(LogStatsManager, Log,
-		TEXT("Stats initialized from %s using AttributeSet %s. Reflected=%d Authored=%d Applied=%d Skipped=%d"),
+		TEXT("Stats initialized from %s using AttributeSet %s. Reflected=%d Authored=%d Applied=%d Skipped=%d InitEffectsApplied=%d InitEffectsSkipped=%d"),
 		*InStatsData->GetName(),
 		*GetNameSafe(SourceClass),
 		ReflectedDefinitions.Num(),
 		StatsMap.Num(),
 		AppliedCount,
-		SkippedCount);
+		SkippedCount,
+		AppliedInitializationEffectCount,
+		SkippedInitializationEffectCount);
 
 	Manager.bHasInitializedConfiguredStats = true;
 }
 
-void FStatsInitializer::InitializeFromMap(const UStatsManager& Manager, const TMap<FName, float>& StatsMap)
+void FStatsInitializer::InitializeFromMap(UStatsManager& Manager, const TMap<FName, float>& StatsMap)
 {
 	if (!Manager.GetOwner() || !Manager.GetOwner()->HasAuthority())
 	{
@@ -280,12 +380,12 @@ void FStatsInitializer::InitializeFromMap(const UStatsManager& Manager, const TM
 	UE_LOG(LogStatsManager, Log, TEXT("Stats initialized from map. Applied=%d Skipped=%d"), AppliedCount, SkippedCount);
 }
 
-void FStatsInitializer::SetStatValue(const UStatsManager& Manager, FName AttributeName, float Value)
+void FStatsInitializer::SetStatValue(UStatsManager& Manager, FName AttributeName, float Value)
 {
 	SetNumericAttributeByName(Manager, AttributeName, Value, true);
 }
 
-bool FStatsInitializer::SetNumericAttributeByName(const UStatsManager& Manager, FName AttributeName, float Value, bool bAutoInitializeCurrentFromMax)
+bool FStatsInitializer::SetNumericAttributeByName(UStatsManager& Manager, FName AttributeName, float Value, bool bAutoInitializeCurrentFromMax)
 {
 	UAbilitySystemComponent* ASC = FStatsAttributeResolver::GetAbilitySystemComponent(Manager);
 	if (!ASC)
@@ -373,7 +473,7 @@ bool FStatsInitializer::TryGetStatValueForInitialization(const UStatsManager& Ma
 	return StatsInitializerPrivate::TryGetFloatPropertyValue(InStatsData, StatName, OutValue);
 }
 
-bool FStatsInitializer::ApplyStatIfPresent(const UStatsManager& Manager, const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, bool bAutoInitializeCurrentFromMax)
+bool FStatsInitializer::ApplyStatIfPresent(UStatsManager& Manager, const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, bool bAutoInitializeCurrentFromMax)
 {
 	float Value = 0.0f;
 	if (!TryGetStatValueForInitialization(Manager, InStatsData, StatsMap, StatName, Value))
@@ -384,7 +484,7 @@ bool FStatsInitializer::ApplyStatIfPresent(const UStatsManager& Manager, const U
 	return SetNumericAttributeByName(Manager, StatName, Value, bAutoInitializeCurrentFromMax);
 }
 
-bool FStatsInitializer::ApplyCurrentVitalWithClamp(const UStatsManager& Manager, const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName CurrentStatName, FName MaxStatName, FName StarterPropertyName)
+bool FStatsInitializer::ApplyCurrentVitalWithClamp(UStatsManager& Manager, const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName CurrentStatName, FName MaxStatName, FName StarterPropertyName)
 {
 	float CurrentValue = 0.0f;
 	bool bHasCurrentValue = TryGetStatValueForInitialization(Manager, InStatsData, StatsMap, CurrentStatName, CurrentValue);

@@ -23,6 +23,19 @@ namespace TagDebugPrivate
     const FColor InactiveColor(55, 55, 55);
 
     const FColor TitleColor(180, 180, 190);
+
+    uint64 BuildScreenMessageKeyBase(const UTagManager* TagManager, const int32 BaseMessageKey)
+    {
+        const UObject* KeyObject = nullptr;
+        if (TagManager)
+        {
+            KeyObject = TagManager->GetOwner() ? static_cast<const UObject*>(TagManager->GetOwner()) : TagManager;
+        }
+
+        const uint64 SafeBaseMessageKey = static_cast<uint64>(FMath::Max(0, BaseMessageKey));
+        const uint64 OwnerOffset = KeyObject ? static_cast<uint64>(KeyObject->GetUniqueID()) * 1000ull : 0ull;
+        return SafeBaseMessageKey + OwnerOffset;
+    }
 }
 
 FTagDebugManager::FTagDebugManager()
@@ -41,6 +54,7 @@ FTagDebugManager::FTagDebugManager()
     , bShowOther(true)
     , bCacheInitialized(false)
     , LastDrawnLineCount(0)
+    , LastScreenMessageKeyBase(0)
 {
 }
 
@@ -92,13 +106,18 @@ void FTagDebugManager::ClearDrawnMessages()
 {
     if (GEngine && LastDrawnLineCount > 0)
     {
+        const uint64 ScreenMessageKeyBase = LastScreenMessageKeyBase != 0
+            ? LastScreenMessageKeyBase
+            : TagDebugPrivate::BuildScreenMessageKeyBase(nullptr, BaseMessageKey);
+
         for (int32 i = 0; i < LastDrawnLineCount; ++i)
         {
-            GEngine->RemoveOnScreenDebugMessage(static_cast<uint64>(BaseMessageKey + i));
+            GEngine->RemoveOnScreenDebugMessage(ScreenMessageKeyBase + static_cast<uint64>(i));
         }
     }
 
     LastDrawnLineCount = 0;
+    LastScreenMessageKeyBase = 0;
     CachedDisplayLines.Reset();
     CachedLineColors.Reset();
 
@@ -332,14 +351,28 @@ void FTagDebugManager::DrawDebug(UTagManager* TagManager, UObject* WorldContext)
             Swap(OldLines, CachedDisplayLines);
 
             BuildDisplayLines(TagManager, CachedActiveTags, CachedDisplayLines, CachedLineColors);
+            const uint64 ScreenMessageKeyBase = TagDebugPrivate::BuildScreenMessageKeyBase(TagManager, BaseMessageKey);
+            const bool bScreenKeyChanged = LastDrawnLineCount > 0 && LastScreenMessageKeyBase != ScreenMessageKeyBase;
+            if (bScreenKeyChanged)
+            {
+                for (int32 i = 0; i < LastDrawnLineCount; ++i)
+                {
+                    GEngine->RemoveOnScreenDebugMessage(LastScreenMessageKeyBase + static_cast<uint64>(i));
+                }
+
+                LastDrawnLineCount = 0;
+            }
+
+            LastScreenMessageKeyBase = ScreenMessageKeyBase;
 
             for (int32 i = 0; i < CachedDisplayLines.Num(); ++i)
             {
-                const bool bLineChanged = !OldLines.IsValidIndex(i)
+                const bool bLineChanged = bScreenKeyChanged
+                                       || !OldLines.IsValidIndex(i)
                                        || OldLines[i] != CachedDisplayLines[i];
                 if (!bLineChanged) { continue; }
 
-                const uint64 Key      = static_cast<uint64>(BaseMessageKey + i);
+                const uint64 Key       = ScreenMessageKeyBase + static_cast<uint64>(i);
                 const FColor LineColor = CachedLineColors.IsValidIndex(i)
                                       ? CachedLineColors[i]
                                       : FColor::White;
@@ -351,7 +384,7 @@ void FTagDebugManager::DrawDebug(UTagManager* TagManager, UObject* WorldContext)
 
             for (int32 i = CachedDisplayLines.Num(); i < LastDrawnLineCount; ++i)
             {
-                GEngine->RemoveOnScreenDebugMessage(static_cast<uint64>(BaseMessageKey + i));
+                GEngine->RemoveOnScreenDebugMessage(ScreenMessageKeyBase + static_cast<uint64>(i));
             }
 
             LastDrawnLineCount = CachedDisplayLines.Num();

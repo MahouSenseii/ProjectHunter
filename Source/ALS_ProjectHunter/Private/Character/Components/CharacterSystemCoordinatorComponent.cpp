@@ -1,6 +1,9 @@
 #include "Character/Components/CharacterSystemCoordinatorComponent.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
+#include "Character/HUD/HunterHUDBaseWidget.h"
+#include "Character/PHBaseCharacter.h"
+#include "Components/WidgetComponent.h"
 #include "Equipment/Components/EquipmentManager.h"
 #include "Equipment/Components/EquipmentPresentationComponent.h"
 #include "Character/Components/Interaction/InteractionManager.h"
@@ -32,6 +35,7 @@ void UCharacterSystemCoordinatorComponent::BeginPlay()
 
 	CacheManagerReferences();
 	BindCrossSystemListeners();
+	InitializeAttachedHUDWidgets();
 	bWired = true;
 
 	UE_LOG(LogCharacterSystemCoordinator, Verbose,
@@ -68,6 +72,43 @@ void UCharacterSystemCoordinatorComponent::CacheManagerReferences()
 	CombatSystemManager   = Owner->FindComponentByClass<UCombatSystemManagerComponent>();
 	CombatStatusManager   = Owner->FindComponentByClass<UCombatStatusManager>();
 	EquipmentPresentation = Owner->FindComponentByClass<UEquipmentPresentationComponent>();
+}
+
+void UCharacterSystemCoordinatorComponent::InitializeAttachedHUDWidgets()
+{
+	APHBaseCharacter* Character = Cast<APHBaseCharacter>(GetOwner());
+	if (!Character)
+	{
+		return;
+	}
+
+	TArray<UWidgetComponent*> WidgetComponents;
+	Character->GetComponents<UWidgetComponent>(WidgetComponents);
+
+	for (UWidgetComponent* WidgetComponent : WidgetComponents)
+	{
+		if (!WidgetComponent)
+		{
+			continue;
+		}
+
+		WidgetComponent->InitWidget();
+
+		UHunterHUDBaseWidget* HUDWidget = Cast<UHunterHUDBaseWidget>(WidgetComponent->GetUserWidgetObject());
+		if (!HUDWidget)
+		{
+			continue;
+		}
+
+		HUDWidget->InitializeForCharacter(Character);
+		WidgetComponent->RequestRedraw();
+
+		UE_LOG(LogCharacterSystemCoordinator, Verbose,
+			TEXT("Initialized attached HUD widget '%s' on '%s' from WidgetComponent '%s'."),
+			*GetNameSafe(HUDWidget),
+			*GetNameSafe(Character),
+			*GetNameSafe(WidgetComponent));
+	}
 }
 
 void UCharacterSystemCoordinatorComponent::BindCrossSystemListeners()

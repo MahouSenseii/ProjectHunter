@@ -1,16 +1,16 @@
 // Copyright © 2025 MahouSensei
 // Author: Quentin Davis
 
-#include "Menu/Widgets/MenuRootWidget.h"
+#include "Menu/Widgets/PHMenuRootWidget.h"
 
 #include "Components/WidgetSwitcher.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
-#include "Menu/Widgets/MenuBaseWidget.h"
-#include "Menu/Widgets/MenuTabBarWidget.h"
+#include "Menu/Widgets/PHMenuPageWidgetBase.h"
+#include "Menu/Widgets/PHMenuTabBarWidget.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogMenuRootWidget, Log, All);
+DEFINE_LOG_CATEGORY_STATIC(LogPHMenuRootWidget, Log, All);
 
-void UMenuRootWidget::NativeConstruct()
+void UPHMenuRootWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
@@ -18,7 +18,7 @@ void UMenuRootWidget::NativeConstruct()
 	{
 		// Bind BEFORE InitializeTabs — the bar auto-selects the first tab during
 		// initialization and we need to hear that selection to show its page.
-		TabBar->OnMenuTabSelected.AddUniqueDynamic(this, &UMenuRootWidget::HandleTabSelected);
+		TabBar->OnMenuTabSelected.AddUniqueDynamic(this, &UPHMenuRootWidget::HandleTabSelected);
 		TabBar->InitializeTabs(MenuEntries);
 	}
 	else if (MenuEntries.Num() > 0)
@@ -29,13 +29,13 @@ void UMenuRootWidget::NativeConstruct()
 
 	if (MenuEntries.Num() == 0)
 	{
-		PH_LOG_WARNING(LogMenuRootWidget,
+		PH_LOG_WARNING(LogPHMenuRootWidget,
 			"NativeConstruct: %s has no MenuEntries configured. Fill 'Menu Entries' in the Blueprint class defaults.",
 			*GetName());
 	}
 }
 
-void UMenuRootWidget::OpenMenu(EMenuType MenuType)
+void UPHMenuRootWidget::OpenMenu(EMenuType MenuType)
 {
 	if (MenuType == EMenuType::MT_None)
 	{
@@ -70,18 +70,18 @@ void UMenuRootWidget::OpenMenu(EMenuType MenuType)
 	}
 }
 
-UMenuBaseWidget* UMenuRootWidget::GetActivePage() const
+UPHMenuPageWidgetBase* UPHMenuRootWidget::GetActivePage() const
 {
 	return GetPageForMenu(ActiveMenuType);
 }
 
-UMenuBaseWidget* UMenuRootWidget::GetPageForMenu(EMenuType MenuType) const
+UPHMenuPageWidgetBase* UPHMenuRootWidget::GetPageForMenu(EMenuType MenuType) const
 {
 	const FMenuEntry* Entry = FindEntry(MenuType);
 	return Entry ? Entry->CachedInstance.Get() : nullptr;
 }
 
-void UMenuRootWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
+void UPHMenuRootWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
 {
 	Super::NativeInitializeForCharacter(Character);
 
@@ -96,7 +96,7 @@ void UMenuRootWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
 	}
 }
 
-void UMenuRootWidget::NativeReleaseCharacter()
+void UPHMenuRootWidget::NativeReleaseCharacter()
 {
 	for (FMenuEntry& Entry : MenuEntries)
 	{
@@ -109,23 +109,23 @@ void UMenuRootWidget::NativeReleaseCharacter()
 	Super::NativeReleaseCharacter();
 }
 
-void UMenuRootWidget::HandleTabSelected(EMenuType NewMenu, EMenuType OldMenu)
+void UPHMenuRootWidget::HandleTabSelected(EMenuType NewMenu, EMenuType OldMenu)
 {
 	ShowPage(NewMenu, OldMenu);
 }
 
-void UMenuRootWidget::ShowPage(const EMenuType MenuType, const EMenuType OldMenu)
+void UPHMenuRootWidget::ShowPage(const EMenuType MenuType, const EMenuType OldMenu)
 {
 	FMenuEntry* Entry = FindEntry(MenuType);
 	if (!Entry)
 	{
-		PH_LOG_WARNING(LogMenuRootWidget,
+		PH_LOG_WARNING(LogPHMenuRootWidget,
 			"ShowPage: no MenuEntry configured for type %d on %s.",
 			static_cast<int32>(MenuType), *GetName());
 		return;
 	}
 
-	UMenuBaseWidget* Page = GetOrCreatePage(*Entry);
+	UPHMenuPageWidgetBase* Page = GetOrCreatePage(*Entry);
 	if (!Page)
 	{
 		return;
@@ -142,7 +142,7 @@ void UMenuRootWidget::ShowPage(const EMenuType MenuType, const EMenuType OldMenu
 	OnMenuPageChanged.Broadcast(MenuType, OldMenu);
 }
 
-UMenuBaseWidget* UMenuRootWidget::GetOrCreatePage(FMenuEntry& Entry)
+UPHMenuPageWidgetBase* UPHMenuRootWidget::GetOrCreatePage(FMenuEntry& Entry)
 {
 	if (Entry.CachedInstance)
 	{
@@ -151,16 +151,16 @@ UMenuBaseWidget* UMenuRootWidget::GetOrCreatePage(FMenuEntry& Entry)
 
 	if (!Entry.WidgetClass)
 	{
-		PH_LOG_WARNING(LogMenuRootWidget,
+		PH_LOG_WARNING(LogPHMenuRootWidget,
 			"GetOrCreatePage: MenuEntry '%s' (type %d) has no WidgetClass set.",
 			*Entry.DisplayName.ToString(), static_cast<int32>(Entry.MenuType));
 		return nullptr;
 	}
 
-	UMenuBaseWidget* Page = CreateWidget<UMenuBaseWidget>(this, Entry.WidgetClass);
+	UPHMenuPageWidgetBase* Page = CreateWidget<UPHMenuPageWidgetBase>(this, Entry.WidgetClass);
 	if (!Page)
 	{
-		PH_LOG_WARNING(LogMenuRootWidget,
+		PH_LOG_WARNING(LogPHMenuRootWidget,
 			"GetOrCreatePage: CreateWidget failed for MenuEntry '%s'.",
 			*Entry.DisplayName.ToString());
 		return nullptr;
@@ -178,14 +178,14 @@ UMenuBaseWidget* UMenuRootWidget::GetOrCreatePage(FMenuEntry& Entry)
 		Page->InitializeForCharacter(Character);
 	}
 
-	UE_LOG(LogMenuRootWidget, Log,
+	UE_LOG(LogPHMenuRootWidget, Log,
 		TEXT("GetOrCreatePage: created page '%s' for menu type %d."),
 		*GetNameSafe(Page), static_cast<int32>(Entry.MenuType));
 
 	return Page;
 }
 
-FMenuEntry* UMenuRootWidget::FindEntry(const EMenuType MenuType)
+FMenuEntry* UPHMenuRootWidget::FindEntry(const EMenuType MenuType)
 {
 	for (FMenuEntry& Entry : MenuEntries)
 	{
@@ -197,7 +197,7 @@ FMenuEntry* UMenuRootWidget::FindEntry(const EMenuType MenuType)
 	return nullptr;
 }
 
-const FMenuEntry* UMenuRootWidget::FindEntry(const EMenuType MenuType) const
+const FMenuEntry* UPHMenuRootWidget::FindEntry(const EMenuType MenuType) const
 {
 	for (const FMenuEntry& Entry : MenuEntries)
 	{
@@ -209,7 +209,7 @@ const FMenuEntry* UMenuRootWidget::FindEntry(const EMenuType MenuType) const
 	return nullptr;
 }
 
-EMenuType UMenuRootWidget::GetFirstValidMenuType() const
+EMenuType UPHMenuRootWidget::GetFirstValidMenuType() const
 {
 	for (const FMenuEntry& Entry : MenuEntries)
 	{

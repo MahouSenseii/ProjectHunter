@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "GameplayEffectExtension.h"
+#include "PHGameplayTags.h"
 
 namespace HunterMMCManaRegenPrivate
 {
@@ -34,6 +35,13 @@ float UHunterMMC_ManaRegen::CalculateBaseMagnitude_Implementation(const FGamepla
 {
 	const FGameplayTagContainer* SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
 	const FGameplayTagContainer* TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
+	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+	if (TargetTags &&
+		(TargetTags->HasTagExact(Tags.Condition_Self_CannotRegenMana) ||
+			TargetTags->HasTagExact(Tags.Effect_Mana_Exhausted)))
+	{
+		return 0.f;
+	}
 
 	FAggregatorEvaluateParameters EvaluationParameters;
 	EvaluationParameters.SourceTags = SourceTags;
@@ -47,7 +55,6 @@ float UHunterMMC_ManaRegen::CalculateBaseMagnitude_Implementation(const FGamepla
 	GetCapturedAttributeMagnitude(Defs.ManaRegenRateDef,   Spec, EvaluationParameters, Rate);
 	GetCapturedAttributeMagnitude(Defs.ManaRegenAmountDef, Spec, EvaluationParameters, Amount);
 
-	// Magnitude = Rate * Amount per GE Period.
-	// With Period = 1.0 s this equals Mana restored per second.
+	// Per-second value. The GE coefficient scales this by its tick period.
 	return FMath::Max(Rate, 0.f) * FMath::Max(Amount, 0.f);
 }

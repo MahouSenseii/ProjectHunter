@@ -1,12 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Menu/Widgets/MenuBaseWidget.h"
+#include "Menu/Widgets/PHMenuPageWidgetBase.h"
 
 #include "Character/PHBaseCharacter.h"
 #include "Inventory/Components/InventoryManager.h"
 
-void UMenuBaseWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
+void UPHMenuPageWidgetBase::NativeInitializeForCharacter(APHBaseCharacter* Character)
 {
 	Super::NativeInitializeForCharacter(Character);
 
@@ -19,7 +19,7 @@ void UMenuBaseWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
 	InventoryManager = Character->FindComponentByClass<UInventoryManager>();
 }
 
-void UMenuBaseWidget::NativeReleaseCharacter()
+void UPHMenuPageWidgetBase::NativeReleaseCharacter()
 {
 	Super::NativeReleaseCharacter();
 

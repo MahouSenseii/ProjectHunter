@@ -2,21 +2,14 @@
 
 #include "CoreMinimal.h"
 #include "Character/ALSCharacterMovementComponent.h"
+#include "Character/Library/Enums/PHMovementEnums.h"
 #include "Library/ALSCharacterEnumLibrary.h"
 #include "Library/ALSCharacterStructLibrary.h"
 #include "PHCharacterMovementComponent.generated.h"
 
 class UPrimitiveComponent;
 
-UENUM(BlueprintType)
-enum class EPHCustomMovementMode : uint8
-{
-	None = 0 UMETA(Hidden),
-	WallRunning = 1 UMETA(DisplayName = "Wall Running"),
-	WallClimbing = 2 UMETA(DisplayName = "Wall Climbing"),
-	Gliding = 3 UMETA(DisplayName = "Gliding"),
-	WallToGround = 4 UMETA(DisplayName = "Wall To Ground")
-};
+DECLARE_LOG_CATEGORY_EXTERN(LogPHWallTraversal, Log, All);
 
 /**
  * ProjectHunter movement physics.
@@ -34,6 +27,50 @@ public:
 	UPHCharacterMovementComponent(const FObjectInitializer& ObjectInitializer);
 	virtual void GetLifetimeReplicatedProps(
 		TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	//~ Begin client prediction (extends ALS's saved-move chain so wall entry is predicted)
+	virtual void UpdateFromCompressedFlags(uint8 Flags) override;
+	virtual class FNetworkPredictionData_Client* GetPredictionData_Client() const override;
+
+	/**
+	 * Forwarded every frame from the locally controlled character. Saved into the
+	 * predicted move and transported to the server via a compressed movement flag,
+	 * so the wall-attach decision in HandleImpact stays in sync under latency.
+	 */
+	void SetWantsWallTraversalInput(bool bWants);
+
+	/** Predicted saved move carrying wall-traversal intent. */
+	class FSavedMove_PH : public UALSCharacterMovementComponent::FSavedMove_My
+	{
+	public:
+		typedef UALSCharacterMovementComponent::FSavedMove_My Super;
+
+		virtual void Clear() override;
+		virtual uint8 GetCompressedFlags() const override;
+		virtual bool CanCombineWith(
+			const FSavedMovePtr& NewMove,
+			ACharacter* InCharacter,
+			float MaxDelta) const override;
+		virtual void SetMoveFor(
+			ACharacter* Character,
+			float InDeltaTime,
+			FVector const& NewAccel,
+			class FNetworkPredictionData_Client_Character& ClientData) override;
+
+		uint8 bSavedWantsWallTraversal : 1;
+	};
+
+	class FNetworkPredictionData_Client_PH
+		: public UALSCharacterMovementComponent::FNetworkPredictionData_Client_My
+	{
+	public:
+		typedef UALSCharacterMovementComponent::FNetworkPredictionData_Client_My Super;
+
+		explicit FNetworkPredictionData_Client_PH(const UCharacterMovementComponent& ClientMovement);
+
+		virtual FSavedMovePtr AllocateNewMove() override;
+	};
+	//~ End client prediction
 
 	/**
 	 * Attempts to attach using a known impact when available, otherwise searches
@@ -86,17 +123,16 @@ public:
 	void RestoreWorldUpRotation();
 
 	/**
-	 * Converts an ALS camera-relative world direction into wall movement:
-	 * along the wall stays lateral, toward the wall becomes up, and away
-	 * from the wall becomes down.
+	 * Converts an ALS camera-relative world direction into movement along the
+	 * current wall plane.
 	 */
 	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
 	FVector ConvertWorldDirectionToWallDirection(const FVector& WorldDirection) const;
 
 	/**
 	 * Converts a live camera direction into a tangent wall-running direction.
-	 * Forward input can treat looking directly into the wall as "run up"; strafe
-	 * input should only project onto the wall plane.
+	 * Forward input falls back to wall-up only when the projected camera direction
+	 * has no usable tangent on the current wall.
 	 */
 	FVector ConvertCameraDirectionToWallDirection(
 		const FVector& WorldDirection,
@@ -114,6 +150,8 @@ protected:
 	virtual void PhysCustom(float DeltaTime, int32 Iterations) override;
 
 	void PhysWallTraversal(float DeltaTime, int32 Iterations);
+	/** One capped traversal sub-step. Returns false when it ends the frame (transition or detach). */
+	bool WallTraversalStep(float DeltaTime);
 	void PhysWallToGroundTransition(float DeltaTime, int32 Iterations);
 	bool FindAttachableWall(FHitResult& OutHit, bool bRequireInitialWall = true) const;
 	bool FindTransitionGround(FHitResult& OutHit) const;
@@ -133,8 +171,10 @@ protected:
 	bool IsApproachingWall(const FHitResult& WallHit) const;
 	bool IsCurrentTraversalSurface(const FHitResult& Hit) const;
 	bool ShouldTransitionToGround(const FHitResult& Hit) const;
+	bool IsUsableGroundTransitionHit(const FHitResult& Hit) const;
 	void UpdateWallSurface(const FHitResult& WallHit, bool bInitialAttach);
 	void SnapToWall(const FHitResult& WallHit, bool bSnapRotation = false);
+	void SnapToCurrentWall(bool bSnapRotation = false);
 	void BeginWallToGroundTransition(const FHitResult& GroundHit);
 	bool ChooseGroundTransitionFoot(const FHitResult& GroundHit) const;
 	void HandleWallLost();
@@ -149,11 +189,11 @@ protected:
 	UFUNCTION()
 	void OnRep_WallNormal();
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Detection",
 		meta = (ClampMin = "0.0"))
 	float WallDetectionReach = 55.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Detection",
 		meta = (ClampMin = "0.0"))
 	float WallTraceRadius = 15.0f;
 
@@ -162,7 +202,7 @@ protected:
 	 * follow floors, curved tops, and ceilings; normal ground is still rejected
 	 * as an initial wall attachment.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Detection",
 		meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float MaxWallNormalZ = 0.25f;
 
@@ -171,11 +211,11 @@ protected:
 	 * component to another. This allows modular curved walls while rejecting
 	 * sudden back-facing hits that usually come from nearby corner clutter.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Detection",
 		meta = (ClampMin = "-1.0", ClampMax = "1.0"))
 	float MinContinuedWallNormalDot = 0.1f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Detection")
 	TEnumAsByte<ECollisionChannel> WallDetectionChannel = ECC_Visibility;
 
 	/**
@@ -185,33 +225,33 @@ protected:
 	 * little outward drift. Attachment is rejected when the character is clearly
 	 * moving away from the wall, so sprinting past or off a wall no longer grabs it.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Detection",
 		meta = (ClampMin = "-1.0", ClampMax = "1.0"))
 	float MinWallApproachDot = -0.1f;
 
 	/** Gap between the capsule and wall after accounting for capsule radius. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Physics",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Physics",
 		meta = (ClampMin = "0.0"))
 	float WallSurfaceGap = 2.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Physics",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Physics",
 		meta = (ClampMin = "0.0"))
 	float WallAdhesionSpeed = 120.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Physics",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Physics",
 		meta = (ClampMin = "0.0"))
 	float WallMovementFriction = 6.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Physics",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Physics",
 		meta = (ClampMin = "0.0"))
 	float WallAcceleration = 2048.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Physics",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Physics",
 		meta = (ClampMin = "0.0"))
 	float WallBrakingDeceleration = 2048.0f;
 
 	/** Rotates the capsule so its feet/end cap are planted against the wall. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Rotation")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Rotation")
 	bool bAlignCapsuleToWall = true;
 
 	/**
@@ -221,29 +261,29 @@ protected:
 	 * instead of popping a ~90 degree roll in a single frame. Position is snapped
 	 * either way so the capsule sticks to the surface immediately.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Rotation")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Rotation")
 	bool bSnapRotationOnAttach = false;
 
 	/** How quickly the capsule aligns with changing wall surfaces and travel direction. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Rotation",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Rotation",
 		meta = (ClampMin = "0.0"))
 	float WallRotationInterpSpeed = 12.0f;
 
 	/** Multiplies the current ALS sprint speed while wall running. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Speed",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Speed",
 		meta = (ClampMin = "0.0"))
 	float WallRunningSpeedMultiplier = 1.0f;
 
 	/** Multiplies the current ALS run speed while wall climbing. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Speed",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Speed",
 		meta = (ClampMin = "0.0"))
 	float WallClimbingSpeedMultiplier = 0.45f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Speed",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Speed",
 		meta = (ClampMin = "0.0"))
 	float WallRunningFallbackSpeed = 650.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Speed",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Speed",
 		meta = (ClampMin = "0.0"))
 	float WallClimbingFallbackSpeed = 250.0f;
 
@@ -252,7 +292,7 @@ protected:
 	 * keeps you near the wall to chain onto another surface; higher launches
 	 * you clear of it.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Jump",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Jump",
 		meta = (ClampMin = "0.0"))
 	float WallJumpAwaySpeed = 450.0f;
 
@@ -261,7 +301,7 @@ protected:
 	 * character's normal JumpZVelocity; kept a little higher so a wall jump
 	 * clearly gains height.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Jump",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Jump",
 		meta = (ClampMin = "0.0"))
 	float WallJumpUpSpeed = 600.0f;
 
@@ -271,11 +311,11 @@ protected:
 	 * drops into falling. Lower = mantles even when cresting slowly; higher =
 	 * only mantles when leaving the edge with clear upward momentum.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Jump",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Jump",
 		meta = (ClampMin = "0.0"))
 	float WallMantleMinimumUpSpeed = 15.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Jump",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Jump",
 		meta = (ClampMin = "0.0"))
 	float WallReattachCooldown = 0.25f;
 
@@ -284,21 +324,21 @@ protected:
 	 * Bridges brief losses over corners, seams, and noisy sweep normals so a
 	 * single missed frame does not drop the character off the wall.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Detection",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Detection",
 		meta = (ClampMin = "0"))
 	int32 MaxConsecutiveWallLostFrames = 3;
 
 	/** How far ahead/down the wall to start the one-foot-at-a-time floor transfer. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Transition",
 		meta = (ClampMin = "0.0"))
 	float GroundTransitionDetectionDistance = 75.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Transition",
 		meta = (ClampMin = "0.05"))
 	float WallToGroundTransitionDuration = 0.4f;
 
 	/** Retains some run momentum while the capsule rotates toward world-up. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Transition",
 		meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float WallToGroundMovementScale = 0.35f;
 
@@ -307,7 +347,7 @@ protected:
 	 * end traversal. Lets a ground launch clear the floor it jumped from
 	 * instead of immediately dropping back to walking.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Transition",
 		meta = (ClampMin = "0.0"))
 	float WallGroundExitGraceTime = 0.25f;
 
@@ -316,15 +356,30 @@ protected:
 	 * standing-on-floor probe. Small so only a floor genuinely underfoot ends
 	 * traversal.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Transition",
 		meta = (ClampMin = "0.0"))
 	float GroundedContactMargin = 5.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition")
+	/**
+	 * Ground transition hits must be this far below the capsule center. This
+	 * keeps side ledges/corners beside a wall from being treated like a floor.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Transition",
+		meta = (ClampMin = "0.0"))
+	float MinGroundTransitionBelowCenter = 12.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Transition")
 	FName TransitionLeftFootBone = TEXT("ik_foot_l");
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement|Wall Traversal|Transition")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Transition")
 	FName TransitionRightFootBone = TEXT("ik_foot_r");
+
+	/**
+	 * Logs accept/reject reasons and draws traversal probes, hits, and the active
+	 * wall basis in-world. Debug visuals are tied to the same traces gameplay uses.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Traversal|Debug")
+	bool bDebugWallTraversal = false;
 
 	/**
 	 * Surface up-axis for wall traversal. Custom movement mode/transform are
@@ -338,8 +393,16 @@ protected:
 	UPROPERTY(Replicated)
 	FVector_NetQuantizeNormal WallUpDirection = FVector::UpVector;
 
+	// FALSWallTransitionData intentionally lives in the ALS plugin, not a
+	// ProjectHunter Library/Structs. It is the presentation contract consumed by
+	// the ALS anim instance (foot-IK transition) and ALSBaseCharacter. ALS is the
+	// lower module and cannot depend on ProjectHunter, so the shared type must sit
+	// in ALS to keep the dependency direction Character -> ALS, not the reverse.
 	UPROPERTY(Replicated)
 	FALSWallTransitionData WallTransitionData;
+
+	/** Locally driven wall intent, replicated to the server through compressed move flags. */
+	uint8 bWantsWallTraversalInput : 1;
 
 	FVector WallImpactPoint = FVector::ZeroVector;
 	TWeakObjectPtr<UPrimitiveComponent> WallSurfaceComponent;

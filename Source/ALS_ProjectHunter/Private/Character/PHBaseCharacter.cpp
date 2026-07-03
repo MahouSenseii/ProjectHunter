@@ -176,7 +176,22 @@ void APHBaseCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// Forward wall-traversal intent into the movement component so it is captured
+	// by the predicted saved move and replayed identically on the server.
+	if (IsLocallyControlled())
+	{
+		if (UPHCharacterMovementComponent* PHMovement = GetPHMovementComponent())
+		{
+			PHMovement->SetWantsWallTraversalInput(WantsWallTraversal());
+		}
+	}
+
 	const bool bCanDriveWallTraversal = IsLocallyControlled() || HasAuthority();
+	if (HasAuthority() && bStaminaMovementInputHeld && !bWallTraversalHeld && CanUseStaminaMovement())
+	{
+		RefreshStaminaMovementInput();
+	}
+
 	if (bCanDriveWallTraversal && WantsWallTraversal() &&
 		GetMovementState() == EALSMovementState::InAir)
 	{
@@ -225,26 +240,47 @@ void APHBaseCharacter::PossessedBy(AController* NewController)
 
 void APHBaseCharacter::SprintAction_Implementation(bool bValue)
 {
-	Super::SprintAction_Implementation(bValue);
+	bStaminaMovementInputHeld = bValue;
+	ApplyStaminaMovementInput(bValue, true);
+}
 
-	bWallTraversalHeld = bValue;
-	if (GetLocalRole() == ROLE_AutonomousProxy)
+void APHBaseCharacter::ApplyStaminaMovementInput(const bool bHeld, const bool bSendServerRpc)
+{
+	const bool bAccepted = bHeld && CanUseStaminaMovement();
+	Super::SprintAction_Implementation(bAccepted);
+
+	bWallTraversalHeld = bAccepted;
+	if (bSendServerRpc && GetLocalRole() == ROLE_AutonomousProxy)
 	{
-		ServerSetWallTraversalHeld(bValue);
+		ServerSetWallTraversalHeld(bHeld);
 	}
 
-	if (bValue && GetMovementState() == EALSMovementState::InAir)
+	if (bAccepted && GetMovementState() == EALSMovementState::InAir)
 	{
 		TryStartWallTraversal();
 	}
 
 	if (!TagManager)
 	{
+		if (UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(AbilitySystemComponent))
+		{
+			HunterASC->NotifyStaminaMovementInputChanged();
+		}
 		return;
 	}
 
-	TagManager->SetTagState(FPHGameplayTags::Get().Condition_Sprinting, bValue);
+	TagManager->SetTagState(FPHGameplayTags::Get().Condition_Sprinting, bAccepted);
 	TagManager->RefreshBaseConditionTags();
+
+	if (UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(AbilitySystemComponent))
+	{
+		HunterASC->NotifyStaminaMovementInputChanged();
+	}
+}
+
+void APHBaseCharacter::RefreshStaminaMovementInput()
+{
+	ApplyStaminaMovementInput(bStaminaMovementInputHeld, false);
 }
 
 void APHBaseCharacter::ForwardMovementAction_Implementation(const float Value)
@@ -350,7 +386,8 @@ bool APHBaseCharacter::TryStartWallTraversal()
 {
 	UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
 	if (!Movement || Movement->IsWallTraversing() ||
-		GetMovementState() != EALSMovementState::InAir)
+		GetMovementState() != EALSMovementState::InAir ||
+		!CanUseStaminaMovement())
 	{
 		return false;
 	}
@@ -404,6 +441,28 @@ bool APHBaseCharacter::IsWallClimbing() const
 	return Movement && Movement->IsWallClimbing();
 }
 
+bool APHBaseCharacter::IsStaminaExhausted() const
+{
+	const UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	return ASC && ASC->HasMatchingGameplayTag(FPHGameplayTags::Get().Effect_Stamina_Exhausted);
+}
+
+bool APHBaseCharacter::CanUseStaminaMovement() const
+{
+	const UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(GetAbilitySystemComponent());
+	if (HunterASC && !HunterASC->ShouldCheckExhaustion())
+	{
+		return true;
+	}
+
+	if (IsStaminaExhausted())
+	{
+		return false;
+	}
+
+	return !AttributeSet || AttributeSet->GetStamina() > KINDA_SMALL_NUMBER;
+}
+
 float APHBaseCharacter::GetWallTraversalWeight_Implementation() const
 {
 	return AttributeSet ? FMath::Max(AttributeSet->GetWeight(), 0.0f) : 0.0f;
@@ -455,6 +514,11 @@ void APHBaseCharacter::OnMovementModeChanged(
 	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
 
 	const UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
+	if (UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(AbilitySystemComponent))
+	{
+		HunterASC->SetWallRunningStaminaDegenActive(Movement && Movement->IsWallRunning());
+	}
+
 	if (Movement && Movement->MovementMode == MOVE_Falling &&
 		WantsWallTraversal() && (IsLocallyControlled() || HasAuthority()))
 	{
@@ -505,12 +569,8 @@ void APHBaseCharacter::OnMovementModeChanged(
 
 void APHBaseCharacter::ServerSetWallTraversalHeld_Implementation(const bool bHeld)
 {
-	bWallTraversalHeld = bHeld;
-
-	if (bHeld && GetMovementState() == EALSMovementState::InAir)
-	{
-		TryStartWallTraversal();
-	}
+	bStaminaMovementInputHeld = bHeld;
+	ApplyStaminaMovementInput(bHeld, false);
 }
 
 void APHBaseCharacter::ServerCompleteWallToGroundTransition_Implementation()

@@ -17,6 +17,7 @@ class UCombatSystemManagerComponent;
 class UCombatStatusManager;
 class UEquipmentPresentationComponent;
 class UItemInstance;
+class UWidgetComponent;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCharacterSystemCoordinator, Log, All);
 
@@ -77,6 +78,13 @@ public:
 
 	/** Returns true once cross-system wiring has completed exactly once. */
 	bool IsWired() const { return bWired; }
+
+	/**
+	 * Binds any actor-attached WidgetComponent whose widget derives from
+	 * UHunterHUDBaseWidget to this character. Useful for NPC overhead bars.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ProjectHunter|Coordinator|HUD")
+	void InitializeAttachedHUDWidgets();
 
 protected:
 	// ─────────────────────────────────────────────────────────────

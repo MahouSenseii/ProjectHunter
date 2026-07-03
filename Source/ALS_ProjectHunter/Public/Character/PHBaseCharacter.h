@@ -89,6 +89,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
 	bool IsWallClimbing() const;
 
+	UFUNCTION(BlueprintPure, Category = "Movement|Stamina")
+	bool IsStaminaExhausted() const;
+
+	UFUNCTION(BlueprintPure, Category = "Movement|Stamina")
+	bool CanUseStaminaMovement() const;
+
+	UFUNCTION(BlueprintPure, Category = "Movement|Stamina")
+	bool IsStaminaMovementInputHeld() const { return bStaminaMovementInputHeld; }
+
+	void RefreshStaminaMovementInput();
+
 	/**
 	 * True while wall traversal is requested. ALS keeps sprint intent in
 	 * DesiredGait, so that remains valid when sprint was pressed before jump.
@@ -122,12 +133,14 @@ public:
 	/* CORE COMPONENTS (Shared by Players and NPCs) */
 	/* ═══════════════════════════════════════════════════════════════════════ */
 
-	/** Ability System Component - Handles all GAS functionality */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
-	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+	/** Ability System Component - Handles all GAS functionality. Typed as the
+	 *  concrete UHunterAbilitySystemComponent so its resource/regen/exhaustion
+	 *  slots are exposed when the component is selected in a Blueprint. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Abilities", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHunterAbilitySystemComponent> AbilitySystemComponent;
 
 	/** Main attribute set - All combat stats (Health, Damage, Resistances, etc.) */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHunterAttributeSet> AttributeSet;
 
 	/** Progression Manager - XP, Level, Stat Points */
@@ -288,6 +301,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Wall Traversal")
 	bool bWallTraversalHeld = false;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Stamina")
+	bool bStaminaMovementInputHeld = false;
+
 	/** Is this character a player? */
 	UFUNCTION(BlueprintPure, Category = "Character")
 	virtual bool IsPlayer() const { return false; }
@@ -413,6 +429,7 @@ protected:
 	virtual void BindAttributeDelegates();
 	virtual void OnAbilitySystemInitialized();
 	bool EnsureAttributeSetRegisteredWithAbilitySystem();
+	void ApplyStaminaMovementInput(bool bHeld, bool bSendServerRpc);
 
 	UPROPERTY()
 	bool bAbilitySystemInitialized = false;

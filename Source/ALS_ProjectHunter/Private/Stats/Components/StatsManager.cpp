@@ -93,10 +93,8 @@ void UStatsManager::LogWarningOnce(const FString& Key, const FString& Message) c
 
 void UStatsManager::LogAbilitySystemState(const TCHAR* Context, UAbilitySystemComponent* ASC, const UAttributeSet* LiveAttributeSet) const
 {
-	UE_LOG(
-		LogStatsManager,
-		Log,
-		TEXT("StatsManager[%s]: Owner=%s ASC=%s SourceAttributeSetClass=%s LiveAttributeSet=%s LiveAttributeSetClass=%s"),
+	PH_LOG(LogStatsManager, Log,
+		"StatsManager[%s]: Owner=%s ASC=%s SourceAttributeSetClass=%s LiveAttributeSet=%s LiveAttributeSetClass=%s",
 		Context,
 		*GetNameSafe(GetOwner()),
 		*GetNameSafe(ASC),
@@ -276,7 +274,7 @@ UAbilitySystemComponent* UStatsManager::GetAbilitySystemComponent() const
 	return FStatsAttributeResolver::GetAbilitySystemComponent(*this);
 }
 
-bool UStatsManager::SetNumericAttributeByName(FName AttributeName, float Value, bool bAutoInitializeCurrentFromMax) const
+bool UStatsManager::SetNumericAttributeByName(FName AttributeName, float Value, bool bAutoInitializeCurrentFromMax)
 {
 	return FStatsInitializer::SetNumericAttributeByName(*this, AttributeName, Value, bAutoInitializeCurrentFromMax);
 }
@@ -296,12 +294,12 @@ bool UStatsManager::TryGetStatValueForInitialization(const UBaseStatsData* InSta
 	return FStatsInitializer::TryGetStatValueForInitialization(*this, InStatsData, StatsMap, StatName, OutValue);
 }
 
-bool UStatsManager::ApplyStatIfPresent(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, bool bAutoInitializeCurrentFromMax) const
+bool UStatsManager::ApplyStatIfPresent(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, bool bAutoInitializeCurrentFromMax)
 {
 	return FStatsInitializer::ApplyStatIfPresent(*this, InStatsData, StatsMap, StatName, bAutoInitializeCurrentFromMax);
 }
 
-bool UStatsManager::ApplyCurrentVitalWithClamp(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName CurrentStatName, FName MaxStatName, FName StarterPropertyName) const
+bool UStatsManager::ApplyCurrentVitalWithClamp(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName CurrentStatName, FName MaxStatName, FName StarterPropertyName)
 {
 	return FStatsInitializer::ApplyCurrentVitalWithClamp(*this, InStatsData, StatsMap, CurrentStatName, MaxStatName, StarterPropertyName);
 }
@@ -451,8 +449,8 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	const UHunterAttributeSet* Attrs = GetAttributeSet();
 	if (!Attrs)
 	{
-		UE_LOG(LogStatsManager, Warning,
-			TEXT("GetAttributeByType: HunterAttributeSet not available on %s."),
+		PH_LOG_WARNING(LogStatsManager,
+			"GetAttributeByType: HunterAttributeSet not available on %s.",
 			*GetNameSafe(GetOwner()));
 		return 0.f;
 	}
@@ -684,8 +682,8 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::AuraRadius:              return Attrs->GetAuraRadius();
 
 	default:
-		UE_LOG(LogStatsManager, Warning,
-			TEXT("GetAttributeByType: Unhandled EHunterAttribute value (%d) on %s."),
+		PH_LOG_WARNING(LogStatsManager,
+			"GetAttributeByType: Unhandled EHunterAttribute value (%d) on %s.",
 			static_cast<int32>(AttributeType), *GetNameSafe(GetOwner()));
 		return 0.f;
 	}
@@ -754,12 +752,12 @@ void UStatsManager::InitializeFromDataAsset(UBaseStatsData* InStatsData)
 {
 	FStatsInitializer::InitializeFromDataAsset(*this, InStatsData);
 }
-void UStatsManager::InitializeFromMap(const TMap<FName, float>& StatsMap) const
+void UStatsManager::InitializeFromMap(const TMap<FName, float>& StatsMap)
 {
 	FStatsInitializer::InitializeFromMap(*this, StatsMap);
 }
 
-void UStatsManager::SetStatValue(FName AttributeName, float Value) const
+void UStatsManager::SetStatValue(FName AttributeName, float Value)
 {
 	FStatsInitializer::SetStatValue(*this, AttributeName, Value);
 }

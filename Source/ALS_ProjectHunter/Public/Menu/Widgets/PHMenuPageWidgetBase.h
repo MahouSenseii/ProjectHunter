@@ -5,17 +5,28 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Character/HUD/HunterHUDBaseWidget.h"
-#include "MenuBaseWidget.generated.h"
+#include "PHMenuPageWidgetBase.generated.h"
 
 class UStatsManager;
 class UInventoryManager;
 class UEquipmentManager;
 class APHBaseCharacter;
 /**
- * 
+ * @class UPHMenuPageWidgetBase
+ * @brief Serves as the base class for menu page widgets within the application.
+ *
+ * This class provides the foundational functionalities and structure for menu page widgets.
+ * It is intended to be extended by specific menu page implementations to include additional
+ * behaviors and interactions as required.
+ *
+ * The UPHMenuPageWidgetBase class is designed for use in UI frameworks that manage
+ * widget-based menu systems. It provides common methods and properties that child
+ * classes can leverage or override to customize functionality and appearance.
+ *
+ * @note This class is typically inherited from and not used directly.
  */
 UCLASS()
-class ALS_PROJECTHUNTER_API UMenuBaseWidget : public UHunterHUDBaseWidget
+class ALS_PROJECTHUNTER_API UPHMenuPageWidgetBase : public UHunterHUDBaseWidget
 {
 	GENERATED_BODY()
 	

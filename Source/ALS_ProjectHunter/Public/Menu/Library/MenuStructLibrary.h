@@ -4,7 +4,7 @@
 #include "Menu/Library/MenuEnumLibrary.h"
 #include "MenuStructLibrary.generated.h"
 
-class UMenuBaseWidget;
+class UPHMenuPageWidgetBase;
 class UTexture2D;
 
 USTRUCT(BlueprintType)
@@ -26,11 +26,11 @@ struct FMenuEntry
 
 	/** Widget class to spawn when this menu is first opened. */
 	UPROPERTY(EditDefaultsOnly, Category = "Menu")
-	TSubclassOf<UMenuBaseWidget> WidgetClass;
+	TSubclassOf<UPHMenuPageWidgetBase> WidgetClass;
 
 	/** Cached live instance — null until first open, then reused. */
 	UPROPERTY(Transient)
-	TObjectPtr<UMenuBaseWidget> CachedInstance = nullptr;
+	TObjectPtr<UPHMenuPageWidgetBase> CachedInstance = nullptr;
 };
 
 

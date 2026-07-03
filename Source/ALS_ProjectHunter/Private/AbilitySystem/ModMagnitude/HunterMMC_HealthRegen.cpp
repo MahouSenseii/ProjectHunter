@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "GameplayEffectExtension.h"
+#include "PHGameplayTags.h"
 
 namespace HunterMMCHealthRegenPrivate
 {
@@ -34,6 +35,11 @@ float UHunterMMC_HealthRegen::CalculateBaseMagnitude_Implementation(const FGamep
 {
 	const FGameplayTagContainer* SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
 	const FGameplayTagContainer* TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
+	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+	if (TargetTags && TargetTags->HasTagExact(Tags.Condition_Self_CannotRegenHP))
+	{
+		return 0.f;
+	}
 
 	FAggregatorEvaluateParameters EvaluationParameters;
 	EvaluationParameters.SourceTags = SourceTags;
@@ -47,7 +53,6 @@ float UHunterMMC_HealthRegen::CalculateBaseMagnitude_Implementation(const FGamep
 	GetCapturedAttributeMagnitude(Defs.HealthRegenRateDef,   Spec, EvaluationParameters, Rate);
 	GetCapturedAttributeMagnitude(Defs.HealthRegenAmountDef, Spec, EvaluationParameters, Amount);
 
-	// Magnitude = Rate * Amount per GE Period.
-	// With Period = 1.0 s this equals Health restored per second.
+	// Per-second value. The GE coefficient scales this by its tick period.
 	return FMath::Max(Rate, 0.f) * FMath::Max(Amount, 0.f);
 }

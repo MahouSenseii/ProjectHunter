@@ -9,6 +9,7 @@
 
 class UAbilitySystemComponent;
 class UHunterAttributeSet;
+class ACharacter;
 
 struct FTagAttributeDelegateBinding
 {
@@ -88,6 +89,7 @@ public:
 private:
 	void ApplyPendingStates();
 	bool HasPendingEnabledTag(const FGameplayTag& Tag) const;
+	bool ComputeMovementConditionState(const ACharacter* CharacterOwner);
 	bool ComputeLowResourceState(float CurrentValue, float MaxValue) const;
 	bool ComputeFullResourceState(float CurrentValue, float MaxValue) const;
 	const UHunterAttributeSet* GetHunterAttributeSet() const;
@@ -106,5 +108,7 @@ private:
 	TMap<FGameplayTag, bool> PendingTagStates;
 	bool bPendingBaseRefresh = false;
 	bool bBaseConditionsDirty = false;
+	bool bHasMovementConditionState = false;
+	bool bLastMovementConditionMoving = false;
 	float ConditionRefreshAccumulator = 0.f;
 };

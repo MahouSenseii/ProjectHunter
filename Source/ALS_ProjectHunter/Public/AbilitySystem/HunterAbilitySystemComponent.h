@@ -58,6 +58,21 @@ public:
 	void RemoveAbilityFromActivationGroup(EPHAbilityActivationGroup Group, UPHGameplayAbility* PHAbility);
 	void CancelActivationGroupAbilities(EPHAbilityActivationGroup Group, UPHGameplayAbility* IgnorePHAbility, bool bReplicateCancelAbility);
 
+	/** Server-only. Stops sprinting and applies the stamina exhaustion GE so stamina regen pauses for the recovery window. Called by the AttributeSet when Stamina reaches 0. */
+	void HandleStaminaDepleted();
+
+	/** Server-only. Applies the mana exhaustion GE so mana regen pauses for the recovery window. Called by the AttributeSet when Mana reaches 0. */
+	void HandleManaDepleted();
+
+	/** Movement bridge: wall running requests the same stamina degen effect as sprinting. Also refreshes airborne stamina gates on movement mode changes. */
+	void SetWallRunningStaminaDegenActive(bool bActive);
+
+	/** Called when raw sprint/wall-traversal input changes, even if exhaustion blocks movement. */
+	void NotifyStaminaMovementInputChanged();
+
+	UFUNCTION(BlueprintPure, Category = "Exhaustion")
+	bool ShouldCheckExhaustion() const { return bShouldCheckExhaustion; }
+
 protected:
 	virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
 	virtual void AbilitySpecInputReleased(FGameplayAbilitySpec& Spec) override;
@@ -67,20 +82,23 @@ protected:
 	void EffectApplied(UAbilitySystemComponent* AbilitySystemComponent,
 		const FGameplayEffectSpec& EffectSpec,
 		FActiveGameplayEffectHandle ActiveEffectHandle);
+
 	void HandleSprintingTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+	void HandleStaminaExhaustedTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+	void RefreshStaminaDegenEffect();
 	void StartSprintStaminaDegen();
 	void StopSprintStaminaDegen();
-	void TickSprintStaminaDegen();
+	void RefreshStaminaExhaustionRecovery();
+	void CompleteStaminaExhaustionRecovery();
+	void ClearStaminaExhaustionRecoveryTimer();
+	void RemoveStaminaExhaustionEffect();
+	bool IsStaminaMovementInputHeldForRecovery() const;
+	bool IsAvatarAirborneForStamina() const;
 
-	/** Builds regen GE specs and starts the passive-regen accumulator timer. Idempotent. */
+	/** Applies the four regen GEs once on the server and grants the RegenActive tags. Idempotent. */
 	void StartPassiveRegen();
-	/** Clears the passive-regen timer and releases cached specs. */
+	/** Removes the applied regen/degen GEs and the RegenActive tags. */
 	void StopPassiveRegen();
-	/**
-	 * Fixed 0.1 s base tick. Per-stat accumulators track elapsed time.
-	 * A stat heals when its accumulator reaches its RegenRate (seconds between ticks).
-	 */
-	void TickPassiveRegen();
 
 	const UHunterAttributeSet* GetHunterAttributeSet() const;
 
@@ -96,24 +114,19 @@ public:
 	FEffectAssetTags EffectAssetTags;
 
 	/**
-	 * C-1 FIX: GameplayEffect used to drain stamina during sprinting.
-	 * Must be an Instant GE with a SetByCaller modifier on
-	 * Data.Damage.Stamina (negative magnitude = drain).
-	 * Configure this in the Blueprint derived class.
-	 * If left null the system falls back to SetNumericAttributeBase (legacy path).
+	 * GameplayEffect used to drain stamina during sprinting. The native default
+	 * is UHunterGE_StaminaDegen; Blueprint overrides must inherit from that class
+	 * so copied regen assets cannot accidentally run as sprint drain.
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sprinting")
 	TSubclassOf<UGameplayEffect> SprintStaminaDrainGE;
 
-	/* ─────────────────────────────────────────────────────────────────────
-	 * Passive Regen GEs  (optional — falls back to SetNumericAttributeBase if null)
-	 * Each must be an Instant GE with a single SetByCaller Add modifier:
-	 *   HealthRegenGE  → HunterAttributeSet.Health,  Data.Recovery.Health  (positive)
-	 *   ManaRegenGE    → HunterAttributeSet.Mana,    Data.Recovery.Mana    (positive)
-	 *   StaminaRegenGE → HunterAttributeSet.Stamina, Data.Recovery.Stamina (positive)
-	 * Rate (seconds between heals) and Amount (heal per tick) are read live
-	 * from the AttributeSet each tick so equipment changes take effect immediately.
-	 * ───────────────────────────────────────────────────────────────────── */
+	/*
+	 * Passive Regen GEs. Blueprint overrides should inherit from the matching native class.
+	 * Native defaults are infinite periodic GEs with MMC magnitudes.
+	 * They read <Resource>RegenRate and <Resource>RegenAmount live.
+	 * Native class fallback prevents stale SetByCaller assets from blocking regen.
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Passive Regen")
 	TSubclassOf<UGameplayEffect> HealthRegenGE;
 
@@ -126,14 +139,41 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Passive Regen")
 	TSubclassOf<UGameplayEffect> ArcaneShieldRegenGE;
 
+	/**
+	 * Exhaustion GEs applied when a pool hits 0. Each grants its
+	 * Effect.<Resource>.Exhausted tag, which inhibits that resource's regen GE.
+	 * Stamina recovery is timed by this ASC after sprint/wall-run input is released
+	 * and the avatar is no longer airborne.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Exhaustion")
+	TSubclassOf<UGameplayEffect> StaminaExhaustionGE;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Exhaustion")
+	TSubclassOf<UGameplayEffect> ManaExhaustionGE;
+
+	/** Debug/design switch. When false, stamina exhaustion does not stop sprinting or wall running. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaustion")
+	bool bShouldCheckExhaustion = true;
+
+	/** After sprint/wall-run input is released and the avatar is not airborne, stamina exhausted is removed after this delay so regen can resume. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaustion", meta = (ClampMin = "0.0", Units = "s"))
+	float StaminaExhaustionRecoveryDelay = 1.0f;
+
 
 private:
 	// AbilityActorInfoSet can be called more than once as possession/controller state changes.
 	// Keep the effect delegate bound exactly once so runtime refreshes do not stack callbacks.
-	bool bEffectAppliedDelegateBound  = false;
-	bool bSprintingTagDelegateBound   = false;
-	bool bSprintDegenEffectTagApplied = false;
-	bool bPassiveRegenStarted         = false;
+	bool bEffectAppliedDelegateBound = false;
+	bool bSprintingTagDelegateBound  = false;
+	bool bStaminaExhaustedTagDelegateBound = false;
+	bool bPassiveRegenStarted        = false;
+	bool bWarnedNonNativeSprintDrainGE = false;
+	bool bWarnedNonNativeHealthRegenGE = false;
+	bool bWarnedNonNativeManaRegenGE = false;
+	bool bWarnedNonNativeStaminaRegenGE = false;
+	bool bWarnedNonNativeArcaneShieldRegenGE = false;
+	bool bSprintStaminaDegenRequested = false;
+	bool bWallRunningStaminaDegenRequested = false;
 
 	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
 	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
@@ -141,33 +181,18 @@ private:
 
 	int32 ActivationGroupCounts[static_cast<uint8>(EPHAbilityActivationGroup::MAX)];
 
-	// ── Sprint stamina degen ──────────────────────────────────────────────
-	FTimerHandle SprintStaminaDegenTimerHandle;
-
-	// N-13 FIX: Cache degen parameters computed in StartSprintStaminaDegen so
-	// TickSprintStaminaDegen does not re-query the AttributeSet every 0.1 s.
-	// Updated whenever sprint starts (which is when attributes are first validated).
-	float CachedDegenRate   = 0.f;
-	float CachedDegenAmount = 0.f;
-
-	// OPT-SPRINT: Cache the GE spec handle so TickSprintStaminaDegen reuses it
-	// instead of allocating a new context + spec every 0.1 s while sprinting.
-	FGameplayEffectSpecHandle CachedSprintDrainSpec;
-
-	// ── Passive regen ─────────────────────────────────────────────────────
-	FTimerHandle PassiveRegenTimerHandle;
-
-	// GE specs built once in StartPassiveRegen; only SetByCaller magnitude changes per tick.
-	// Each handle is invalid until StartPassiveRegen() runs (or if the GE class is null).
+	// GE specs built once in StartPassiveRegen and applied immediately as infinite
+	// periodic effects. Each handle is invalid until StartPassiveRegen() runs (or if
+	// the GE class is null).
 	FGameplayEffectSpecHandle CachedHealthRegenSpec;
 	FGameplayEffectSpecHandle CachedManaRegenSpec;
 	FGameplayEffectSpecHandle CachedStaminaRegenSpec;
 	FGameplayEffectSpecHandle CachedArcaneShieldRegenSpec;
 
-	// Per-stat accumulators — track elapsed time since the last heal.
-	// A stat heals when its accumulator >= its RegenRate attribute (seconds between ticks).
-	float HealthRegenAccumulator       = 0.f;
-	float ManaRegenAccumulator         = 0.f;
-	float StaminaRegenAccumulator      = 0.f;
-	float ArcaneShieldRegenAccumulator = 0.f;
+	// Handles for the infinite periodic resource GEs applied once in StartPassiveRegen.
+	TArray<FActiveGameplayEffectHandle> ActivePassiveEffectHandles;
+
+	FActiveGameplayEffectHandle ActiveSprintStaminaDrainHandle;
+	FActiveGameplayEffectHandle ActiveStaminaExhaustionHandle;
+	FTimerHandle StaminaExhaustionRecoveryTimerHandle;
 };

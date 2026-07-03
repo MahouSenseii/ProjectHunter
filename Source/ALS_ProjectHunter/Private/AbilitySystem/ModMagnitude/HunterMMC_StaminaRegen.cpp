@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "GameplayEffectExtension.h"
+#include "PHGameplayTags.h"
 
 namespace HunterMMCStaminaRegenPrivate
 {
@@ -34,6 +35,14 @@ float UHunterMMC_StaminaRegen::CalculateBaseMagnitude_Implementation(const FGame
 {
 	const FGameplayTagContainer* SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
 	const FGameplayTagContainer* TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
+	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+	if (TargetTags &&
+		(TargetTags->HasTagExact(Tags.Condition_Self_CannotRegenStamina) ||
+			TargetTags->HasTagExact(Tags.Effect_Stamina_Exhausted) ||
+			TargetTags->HasTagExact(Tags.Effect_Stamina_DegenActive)))
+	{
+		return 0.f;
+	}
 
 	FAggregatorEvaluateParameters EvaluationParameters;
 	EvaluationParameters.SourceTags = SourceTags;
@@ -47,7 +56,6 @@ float UHunterMMC_StaminaRegen::CalculateBaseMagnitude_Implementation(const FGame
 	GetCapturedAttributeMagnitude(Defs.StaminaRegenRateDef,   Spec, EvaluationParameters, Rate);
 	GetCapturedAttributeMagnitude(Defs.StaminaRegenAmountDef, Spec, EvaluationParameters, Amount);
 
-	// Magnitude = Rate * Amount per GE Period.
-	// With Period = 1.0 s this equals Stamina restored per second.
+	// Per-second value. The GE coefficient scales this by its tick period.
 	return FMath::Max(Rate, 0.f) * FMath::Max(Amount, 0.f);
 }

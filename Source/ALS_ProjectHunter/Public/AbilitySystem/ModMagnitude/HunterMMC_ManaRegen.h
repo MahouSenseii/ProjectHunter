@@ -5,9 +5,8 @@
 #include "HunterMMC_ManaRegen.generated.h"
 
 /**
- * Computes the mana regeneration magnitude per GE period.
- * Returns ManaRegenRate * ManaRegenAmount.
- * Set the GE Period to 1.0 s so the result equals Mana restored per second.
+ * Computes mana regeneration per second from ManaRegenRate * ManaRegenAmount.
+ * The native GE scales this value by its period for smooth updates.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UHunterMMC_ManaRegen : public UGameplayModMagnitudeCalculation

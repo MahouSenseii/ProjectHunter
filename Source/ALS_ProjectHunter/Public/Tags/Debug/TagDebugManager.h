@@ -18,7 +18,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogTagDebugManager, Log, All);
  * owned tag container actually changes are the messages refreshed, so the
  * cost at steady-state is a single FGameplayTagContainer comparison.
  *
- * Message key range: [BaseMessageKey, BaseMessageKey + MaxLines).
+ * Message key range starts at BaseMessageKey plus an owner-specific offset.
  * Default BaseMessageKey = 52000 — safely above StatsDebugManager (50000).
  */
 USTRUCT(BlueprintType)
@@ -121,4 +121,5 @@ private:
     TArray<FString>       CachedDisplayLines;
     TArray<FColor>        CachedLineColors;
     int32                 LastDrawnLineCount;
+    uint64                LastScreenMessageKeyBase;
 };

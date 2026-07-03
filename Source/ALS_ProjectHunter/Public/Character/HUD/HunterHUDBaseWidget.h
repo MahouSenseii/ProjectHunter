@@ -77,6 +77,9 @@ protected:
 	// State
 	// ─────────────────────────────────────────────────────────────────────────
 
+	void InitializeChildHUDWidgets(APHBaseCharacter* Character);
+	void ReleaseChildHUDWidgets();
+
 	/** Weak reference so we don't extend the character's lifetime. */
 	UPROPERTY(BlueprintReadOnly, Category = "HUD")
 	TWeakObjectPtr<APHBaseCharacter> BoundCharacter;

@@ -576,6 +576,10 @@ public:
 	/* === Active Regen/Degen Effect State Tags ===          */
 	static FGameplayTag Effect_Stamina_RegenActive;
 	static FGameplayTag Effect_Stamina_DegenActive;
+	// Granted for a fixed duration by the exhaustion GE when the resource hits 0.
+	// The matching regen GE ignores this tag, pausing regen until it expires.
+	static FGameplayTag Effect_Stamina_Exhausted;
+	static FGameplayTag Effect_Mana_Exhausted;
 	static FGameplayTag Effect_ArcaneShield_RegenActive;
 	static FGameplayTag Effect_Health_RegenActive;
 	static FGameplayTag Effect_Mana_RegenActive;

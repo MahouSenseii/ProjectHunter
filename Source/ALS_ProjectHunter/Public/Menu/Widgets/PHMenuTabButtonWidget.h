@@ -7,94 +7,113 @@
 #include "Blueprint/UserWidget.h"
 #include "Menu/Library/MenuEnumLibrary.h"
 #include "Menu/Library/MenuStructLibrary.h"
-#include "MenuTabBarWidget.generated.h"
+#include "PHMenuTabButtonWidget.generated.h"
 
-class UMenuTabWidget;
-class UPanelWidget;
+class UButton;
+class UImage;
+class UTextBlock;
+class UTexture2D;
 
-/** Fired when the active tab changes. Bind this in the parent menu widget. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMenuTabSelected, EMenuType, NewMenu, EMenuType, OldMenu);
+/** Fired when the user clicks this tab. Carries its MenuType so the bar knows who was clicked. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTabClicked, EMenuType, MenuType);
 
 /**
- * UMenuTabBarWidget — the horizontal tab header bar.
- *
- * Create a Blueprint child and add a panel (HorizontalBox or WrapBox)
- * named "TabContainer". Call InitializeTabs() with your FMenuEntry array
- * and bind OnMenuTabSelected to know when the player switches tabs.
+ * UPHMenuTabButtonWidget — one tab button inside the tab bar.
  */
 UCLASS(Abstract, BlueprintType, Blueprintable)
-class ALS_PROJECTHUNTER_API UMenuTabBarWidget : public UUserWidget
+class ALS_PROJECTHUNTER_API UPHMenuTabButtonWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// Public API
+	// Public API — called by UPHMenuTabBarWidget
 	// ─────────────────────────────────────────────────────────────────────────
 
-	/**
-	 * Spawn one tab per entry and add them to TabContainer.
-	 * Call this once after the bar is added to the viewport.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "TabBar")
-	void InitializeTabs(const TArray<FMenuEntry>& Entries);
+	/** Initialize this tab from an entry. Call once after CreateWidget. */
+	UFUNCTION(BlueprintCallable, Category = "Tab")
+	void SetTabData(const FMenuEntry& Entry);
 
-	/**
-	 * Programmatically select a tab by type.
-	 * Fires OnMenuTabSelected if the type actually changes.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "TabBar")
-	void SelectTab(EMenuType MenuType);
+	/** Drive selected visual state from the bar — does not fire OnTabClicked. */
+	UFUNCTION(BlueprintCallable, Category = "Tab")
+	void SetSelected(bool bInSelected);
 
-	UFUNCTION(BlueprintPure, Category = "TabBar")
-	EMenuType GetActiveMenuType() const { return ActiveMenuType; }
+	UFUNCTION(BlueprintPure, Category = "Tab")
+	EMenuType GetMenuType() const { return MenuType; }
+
+	UFUNCTION(BlueprintPure, Category = "Tab")
+	bool IsSelected() const { return bIsSelected; }
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// Delegate — bind in the parent menu widget
+	// Delegate — bar binds to this on spawn
 	// ─────────────────────────────────────────────────────────────────────────
 
-	UPROPERTY(BlueprintAssignable, Category = "TabBar|Events")
-	FOnMenuTabSelected OnMenuTabSelected;
+	UPROPERTY(BlueprintAssignable, Category = "Tab|Events")
+	FOnTabClicked OnTabClicked;
 
 protected:
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// Blueprint visual hook
+	// UUserWidget overrides
 	// ─────────────────────────────────────────────────────────────────────────
 
-	/** Called after SelectTab completes. Drive any bar-level animations here. */
-	UFUNCTION(BlueprintImplementableEvent, Category = "TabBar|Events")
-	void OnActiveTabChanged(EMenuType NewMenu, EMenuType OldMenu);
+	virtual void NativeConstruct() override;
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// Configuration — set in BP defaults
+	// Blueprint visual hooks — implement the look in BP
 	// ─────────────────────────────────────────────────────────────────────────
 
-	/** BP child class used to spawn each tab. Must be set in BP defaults. */
-	UPROPERTY(EditDefaultsOnly, Category = "TabBar|Config")
-	TSubclassOf<UMenuTabWidget> TabWidgetClass;
+	/** Called when the mouse enters the tab. Drive hover visuals here. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Tab|Events")
+	void OnTabHovered();
+
+	/** Called when the mouse leaves the tab. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Tab|Events")
+	void OnTabUnhovered();
+
+	/** Called when this tab becomes the active selection. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Tab|Events")
+	void OnTabSelected();
+
+	/** Called when another tab is selected and this one is deactivated. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Tab|Events")
+	void OnTabDeselected();
 
 	// ─────────────────────────────────────────────────────────────────────────
 	// Bound widgets — name these exactly in the BP designer
 	// ─────────────────────────────────────────────────────────────────────────
 
-	/** Panel that holds the spawned tab widgets (HorizontalBox or WrapBox). */
+	/** Root button — wrap your icon + label inside this. */
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
-	TObjectPtr<UPanelWidget> TabContainer;
+	TObjectPtr<UButton> TabButton;
+
+	/** Icon image inside the button. */
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+	TObjectPtr<UImage> TabIcon;
+
+	/** Label text inside the button. */
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> TabLabel;
 
 	// ─────────────────────────────────────────────────────────────────────────
 	// State
 	// ─────────────────────────────────────────────────────────────────────────
 
-	UPROPERTY(BlueprintReadOnly, Category = "TabBar")
-	EMenuType ActiveMenuType = EMenuType::MT_None;
+	UPROPERTY(BlueprintReadOnly, Category = "Tab")
+	EMenuType MenuType = EMenuType::MT_None;
 
-	UPROPERTY()
-	TArray<TObjectPtr<UMenuTabWidget>> SpawnedTabs;
+	UPROPERTY(BlueprintReadOnly, Category = "Tab")
+	bool bIsSelected = false;
 
 private:
 
 	UFUNCTION()
-	void HandleTabClicked(EMenuType ClickedType);
+	void HandleButtonClicked();
+
+	UFUNCTION()
+	void HandleButtonHovered();
+
+	UFUNCTION()
+	void HandleButtonUnhovered();
 };

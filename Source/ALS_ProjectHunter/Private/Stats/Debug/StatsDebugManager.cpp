@@ -1,10 +1,15 @@
 #include "Stats/Debug/StatsDebugManager.h"
 
+#include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
 #include "Stats/Components/StatsManager.h"
 #include "Data/BaseStatsData.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "GameFramework/Actor.h"
 #include "HAL/PlatformTime.h"
+#include "Stats/StatsEnumLibrary.h"
 
 #include <cfloat>
 
@@ -87,21 +92,22 @@ namespace StatsDebugPrivate
 	{
 		if (!StatsData)
 		{
-			return TEXT("Authored N/A (no asset)");
+			return TEXT("Authored | N/A (no asset)");
 		}
 
 		if (!AuthoredEntry)
 		{
-			return TEXT("Authored Missing");
+			return TEXT("Authored | Missing");
 		}
 
 		if (!AuthoredEntry->bOverrideValue)
 		{
-			return TEXT("Override Off");
+			return TEXT("Override | Off");
 		}
 
-		return FString::Printf(TEXT("Authored %.2f"), AuthoredEntry->BaseValue);
+		return FString::Printf(TEXT("Authored | %.2f"), AuthoredEntry->BaseValue);
 	}
+
 	FString BuildMainCategoryHeader(FName MainCategory)
 	{
 		return FString::Printf(TEXT("== %s =="), *MainCategory.ToString());
@@ -118,6 +124,94 @@ namespace StatsDebugPrivate
 		return DisplayName.IsEmpty()
 			? FName::NameToDisplayString(Entry.StatName.ToString(), false)
 			: DisplayName.ToString();
+	}
+
+	const UAbilitySystemComponent* ResolveDebugAbilitySystemComponent(const UStatsManager* StatsManager)
+	{
+		const AActor* Owner = StatsManager ? StatsManager->GetOwner() : nullptr;
+		if (!Owner)
+		{
+			return nullptr;
+		}
+
+		if (const IAbilitySystemInterface* AbilitySystemInterface = Cast<IAbilitySystemInterface>(Owner))
+		{
+			if (const UAbilitySystemComponent* ASC = AbilitySystemInterface->GetAbilitySystemComponent())
+			{
+				return ASC;
+			}
+		}
+
+		return Owner->FindComponentByClass<UAbilitySystemComponent>();
+	}
+
+	FString BuildOwnerLine(const UStatsManager* StatsManager)
+	{
+		const AActor* Owner = StatsManager ? StatsManager->GetOwner() : nullptr;
+		const UAbilitySystemComponent* ASC = ResolveDebugAbilitySystemComponent(StatsManager);
+		return FString::Printf(TEXT("StatsDebug Owner: %s | ASC: %s"), *GetNameSafe(Owner), *GetNameSafe(ASC));
+	}
+
+	uint64 BuildScreenMessageKeyBase(const UStatsManager* StatsManager, const int32 BaseMessageKey)
+	{
+		const UObject* KeyObject = nullptr;
+		if (StatsManager)
+		{
+			KeyObject = StatsManager->GetOwner() ? static_cast<const UObject*>(StatsManager->GetOwner()) : StatsManager;
+		}
+
+		const uint64 SafeBaseMessageKey = static_cast<uint64>(FMath::Max(0, BaseMessageKey));
+		const uint64 OwnerOffset = KeyObject ? static_cast<uint64>(KeyObject->GetUniqueID()) * 1000ull : 0ull;
+		return SafeBaseMessageKey + OwnerOffset;
+	}
+
+	FGameplayAttribute ResolveCoreAttribute(const EHunterAttribute AttributeType)
+	{
+		switch (AttributeType)
+		{
+		case EHunterAttribute::Health:
+			return UHunterAttributeSet::GetHealthAttribute();
+		case EHunterAttribute::MaxEffectiveHealth:
+			return UHunterAttributeSet::GetMaxEffectiveHealthAttribute();
+		case EHunterAttribute::Stamina:
+			return UHunterAttributeSet::GetStaminaAttribute();
+		case EHunterAttribute::MaxEffectiveStamina:
+			return UHunterAttributeSet::GetMaxEffectiveStaminaAttribute();
+		case EHunterAttribute::Mana:
+			return UHunterAttributeSet::GetManaAttribute();
+		case EHunterAttribute::MaxEffectiveMana:
+			return UHunterAttributeSet::GetMaxEffectiveManaAttribute();
+		case EHunterAttribute::ArcaneShield:
+			return UHunterAttributeSet::GetArcaneShieldAttribute();
+		case EHunterAttribute::MaxEffectiveArcaneShield:
+			return UHunterAttributeSet::GetMaxEffectiveArcaneShieldAttribute();
+		case EHunterAttribute::ReservedHealth:
+			return UHunterAttributeSet::GetReservedHealthAttribute();
+		case EHunterAttribute::ReservedStamina:
+			return UHunterAttributeSet::GetReservedStaminaAttribute();
+		case EHunterAttribute::ReservedMana:
+			return UHunterAttributeSet::GetReservedManaAttribute();
+		case EHunterAttribute::ReservedArcaneShield:
+			return UHunterAttributeSet::GetReservedArcaneShieldAttribute();
+		default:
+			return FGameplayAttribute();
+		}
+	}
+
+	float GetCoreLiveAttributeValue(UStatsManager* StatsManager, const EHunterAttribute AttributeType)
+	{
+		if (!StatsManager)
+		{
+			return 0.f;
+		}
+
+		const FGameplayAttribute Attribute = ResolveCoreAttribute(AttributeType);
+		if (Attribute.IsValid() && StatsManager->HasLiveAttribute(Attribute))
+		{
+			return StatsManager->GetAttributeValue(Attribute);
+		}
+
+		return StatsManager->GetAttributeByType(AttributeType);
 	}
 
 	void WriteLinesToLog(const UStatsManager* StatsManager, const TArray<FString>& Lines)
@@ -197,6 +291,21 @@ namespace StatsDebugPrivate
 			return EStatDebugBucket::Movement;
 		}
 
+		if (ContainsToken(MainCategory, TEXT("Experience")))
+		{
+			return EStatDebugBucket::Secondary;
+		}
+
+		if (ContainsToken(MainCategory, TEXT("Progression")))
+		{
+			return EStatDebugBucket::Primary;
+		}
+
+		if (ContainsToken(MainCategory, TEXT("Resource")))
+		{
+			return EStatDebugBucket::Resources;
+		}
+
 		if (ContainsToken(MainCategory, TEXT("Utility")))
 		{
 			return EStatDebugBucket::Utility;
@@ -233,6 +342,7 @@ FStatsDebugManager::FStatsDebugManager()
 	, bLogToOutput(false)
 	, DebugRefreshRate(0.25f)
 	, BaseMessageKey(50000)
+	, bShowFullDetails(false)
 	, bShowVitals(true)
 	, bShowResources(true)
 	, bShowRegeneration(true)
@@ -249,6 +359,7 @@ FStatsDebugManager::FStatsDebugManager()
 	, bEntriesSynchronized(false)
 	, LastLogUpdateTimeSeconds(-DBL_MAX)
 	, LastDrawnLineCount(0)
+	, LastScreenMessageKeyBase(0)
 {
 }
 
@@ -259,6 +370,7 @@ void FStatsDebugManager::InitializeDefaults()
 	bLogToOutput = false;
 	DebugRefreshRate = 0.25f;
 	BaseMessageKey = 50000;
+	bShowFullDetails = false;
 	FilterString.Reset();
 	bShowVitals = true;
 	bShowResources = true;
@@ -277,6 +389,7 @@ void FStatsDebugManager::InitializeDefaults()
 	bEntriesSynchronized = false;
 	LastLogUpdateTimeSeconds = -DBL_MAX;
 	LastDrawnLineCount = 0;
+	LastScreenMessageKeyBase = 0;
 	CachedDisplayLines.Reset();
 	CachedLineColors.Reset();
 	CachedLiveValues.Reset();
@@ -477,6 +590,107 @@ void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<F
 
 	FName ActiveMainCategory = NAME_None;
 	FName ActiveSubCategory = NAME_None;
+	const FString ActiveFilter = FilterString.TrimStartAndEnd();
+
+	auto MatchesFilter = [&ActiveFilter](const FString& SearchText)
+	{
+		return ActiveFilter.IsEmpty() || SearchText.Contains(ActiveFilter, ESearchCase::IgnoreCase);
+	};
+
+	auto AddNoMatchLine = [&]()
+	{
+		const FString LActiveFilter = FilterString.TrimStartAndEnd();
+		if (LActiveFilter.IsEmpty())
+		{
+			OutLines.Add(TEXT("No reflected stats matched the active debug categories."));
+		}
+		else
+		{
+			OutLines.Add(FString::Printf(TEXT("No reflected stats matched filter '%s'."), *LActiveFilter));
+		}
+
+		OutColors.Add(FColor(180, 180, 180));
+	};
+
+	auto AddCoreResourceLine = [&](
+		const TCHAR* Label,
+		EHunterAttribute CurrentAttribute,
+		EHunterAttribute MaxAttribute,
+		EHunterAttribute ReservedAttribute,
+		const FColor& RowColor)
+	{
+		const FString LabelString(Label);
+		if (!MatchesFilter(FString::Printf(TEXT("%s ASC Live Resource Vitals"), *LabelString)))
+		{
+			return;
+		}
+
+		const FName CoreCategory(TEXT("ASC Live Resources"));
+		if (ActiveMainCategory != CoreCategory)
+		{
+			OutLines.Add(StatsDebugPrivate::BuildMainCategoryHeader(CoreCategory));
+			OutColors.Add(StatsDebugPrivate::CategoryHeaderColor);
+			ActiveMainCategory = CoreCategory;
+			ActiveSubCategory = NAME_None;
+		}
+
+		const float CurrentValue = StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, CurrentAttribute);
+		const float MaxValue = StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, MaxAttribute);
+		const float ReservedValue = StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, ReservedAttribute);
+		const float Percent = MaxValue > KINDA_SMALL_NUMBER
+			? FMath::Clamp(CurrentValue / MaxValue, 0.0f, 1.0f) * 100.0f
+			: 0.0f;
+
+		if (ReservedValue > KINDA_SMALL_NUMBER)
+		{
+			const float TotalMaxValue = FMath::Max(MaxValue + ReservedValue, ReservedValue);
+			const float ReservedPercent = TotalMaxValue > KINDA_SMALL_NUMBER
+				? FMath::Clamp(ReservedValue / TotalMaxValue, 0.0f, 1.0f) * 100.0f
+				: 0.0f;
+			OutLines.Add(FString::Printf(
+				TEXT("%s | ASC Live | %.2f / %.2f | Reserved %.2f (%0.0f%%) | %0.0f%%"),
+				*LabelString,
+				CurrentValue,
+				MaxValue,
+				ReservedValue,
+				ReservedPercent,
+				Percent));
+		}
+		else
+		{
+			OutLines.Add(FString::Printf(
+				TEXT("%s | ASC Live | %.2f / %.2f | %0.0f%%"),
+				*LabelString,
+				CurrentValue,
+				MaxValue,
+				Percent));
+		}
+		OutColors.Add(RowColor);
+	};
+
+	const FString OwnerLine = StatsDebugPrivate::BuildOwnerLine(StatsManager);
+	if (MatchesFilter(OwnerLine))
+	{
+		OutLines.Add(OwnerLine);
+		OutColors.Add(StatsDebugPrivate::CategoryHeaderColor);
+	}
+
+	if (bShowVitals || bShowResources)
+	{
+		AddCoreResourceLine(TEXT("Health"), EHunterAttribute::Health, EHunterAttribute::MaxEffectiveHealth, EHunterAttribute::ReservedHealth, FColor(90, 220, 110));
+		AddCoreResourceLine(TEXT("Stamina"), EHunterAttribute::Stamina, EHunterAttribute::MaxEffectiveStamina, EHunterAttribute::ReservedStamina, FColor(255, 210, 90));
+		AddCoreResourceLine(TEXT("Mana"), EHunterAttribute::Mana, EHunterAttribute::MaxEffectiveMana, EHunterAttribute::ReservedMana, FColor(100, 170, 255));
+		AddCoreResourceLine(TEXT("Arcane Shield"), EHunterAttribute::ArcaneShield, EHunterAttribute::MaxEffectiveArcaneShield, EHunterAttribute::ReservedArcaneShield, FColor(170, 130, 255));
+	}
+
+	if (!bShowFullDetails)
+	{
+		if (OutLines.Num() == 0)
+		{
+			AddNoMatchLine();
+		}
+		return;
+	}
 
 	for (const FStatDebugEntry& Entry : StatEntries)
 	{
@@ -536,21 +750,21 @@ void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<F
 
 		if (!bResolvedAttribute)
 		{
-			LiveText = FString::Printf(TEXT("UNRESOLVED in %s"), *GetNameSafe(StatsManager->GetSourceAttributeSetClass()));
+			LiveText = FString::Printf(TEXT("Live | UNRESOLVED in %s"), *GetNameSafe(StatsManager->GetSourceAttributeSetClass()));
 			RowColor = StatsDebugPrivate::UnresolvedColor;
 		}
 		else if (!bHasLiveAttribute)
 		{
-			LiveText = TEXT("Resolved, no live AttributeSet instance");
+			LiveText = TEXT("Live | Resolved, no live AttributeSet instance");
 			RowColor = StatsDebugPrivate::MissingLiveAttributeColor;
 		}
 		else
 		{
-			LiveText = FString::Printf(TEXT("Live %.2f"), LiveValue);
+			LiveText = FString::Printf(TEXT("Live | %.2f"), LiveValue);
 
 			if (AuthoredEntry && AuthoredEntry->bOverrideValue)
 			{
-				DeltaText = FString::Printf(TEXT(" | Delta %+0.2f"), LiveValue - AuthoredEntry->BaseValue);
+				DeltaText = FString::Printf(TEXT(" | Delta | %+0.2f"), LiveValue - AuthoredEntry->BaseValue);
 				if (!FMath::IsNearlyEqual(LiveValue, AuthoredEntry->BaseValue, 0.01f))
 				{
 					RowColor = StatsDebugPrivate::DivergentValueColor;
@@ -577,17 +791,7 @@ void FStatsDebugManager::BuildDisplayLines(UStatsManager* StatsManager, TArray<F
 
 	if (OutLines.Num() == 0)
 	{
-		const FString ActiveFilter = FilterString.TrimStartAndEnd();
-		if (ActiveFilter.IsEmpty())
-		{
-			OutLines.Add(TEXT("No reflected stats matched the active debug categories."));
-		}
-		else
-		{
-			OutLines.Add(FString::Printf(TEXT("No reflected stats matched filter '%s'."), *ActiveFilter));
-		}
-
-		OutColors.Add(FColor(180, 180, 180));
+		AddNoMatchLine();
 	}
 }
 
@@ -602,28 +806,41 @@ void FStatsDebugManager::DrawDebug(UStatsManager* StatsManager, UObject* WorldCo
 	}
 
 	const bool bValuesChanged = CheckForValueChanges(StatsManager);
+	const bool bNeedsScreenRedraw = bDrawToScreen && LastDrawnLineCount == 0;
+	const bool bShouldBuildDisplayLines = (bDrawToScreen || bLogToOutput)
+	                                   && (bValuesChanged || CachedDisplayLines.IsEmpty() || bNeedsScreenRedraw);
+
+	TArray<FString> OldLines;
+	if (bShouldBuildDisplayLines)
+	{
+		Swap(OldLines, CachedDisplayLines);
+		BuildDisplayLines(StatsManager, CachedDisplayLines, CachedLineColors);
+	}
 
 	if (bDrawToScreen && GEngine)
 	{
-		if (bValuesChanged || CachedDisplayLines.IsEmpty())
+		if (bShouldBuildDisplayLines)
 		{
-			TArray<FString> OldLines;
-			Swap(OldLines, CachedDisplayLines);
-
-			BuildDisplayLines(StatsManager, CachedDisplayLines, CachedLineColors);
-
 			constexpr float PersistentDuration = 3600.f;
+			const uint64 ScreenMessageKeyBase = StatsDebugPrivate::BuildScreenMessageKeyBase(StatsManager, BaseMessageKey);
+			if (LastDrawnLineCount > 0 && LastScreenMessageKeyBase != ScreenMessageKeyBase)
+			{
+				ClearScreenMessages();
+			}
+
+			LastScreenMessageKeyBase = ScreenMessageKeyBase;
 
 			for (int32 LineIndex = 0; LineIndex < CachedDisplayLines.Num(); ++LineIndex)
 			{
-				const bool bLineChanged = !OldLines.IsValidIndex(LineIndex)
+				const bool bLineChanged = LineIndex >= LastDrawnLineCount
+				                       || !OldLines.IsValidIndex(LineIndex)
 				                       || OldLines[LineIndex] != CachedDisplayLines[LineIndex];
 				if (!bLineChanged)
 				{
 					continue;
 				}
 
-				const uint64 MessageKey = static_cast<uint64>(BaseMessageKey + LineIndex);
+				const uint64 MessageKey = ScreenMessageKeyBase + static_cast<uint64>(LineIndex);
 				const FColor LineColor  = CachedLineColors.IsValidIndex(LineIndex)
 				                        ? CachedLineColors[LineIndex]
 				                        : FColor::White;
@@ -632,18 +849,18 @@ void FStatsDebugManager::DrawDebug(UStatsManager* StatsManager, UObject* WorldCo
 
 			for (int32 LineIndex = CachedDisplayLines.Num(); LineIndex < LastDrawnLineCount; ++LineIndex)
 			{
-				GEngine->RemoveOnScreenDebugMessage(static_cast<uint64>(BaseMessageKey + LineIndex));
+				GEngine->RemoveOnScreenDebugMessage(ScreenMessageKeyBase + static_cast<uint64>(LineIndex));
 			}
 
 			LastDrawnLineCount = CachedDisplayLines.Num();
 		}
 	}
-	else if (!bDrawToScreen)
+	else
 	{
-		ClearDrawnMessages();
+		ClearScreenMessages();
 	}
 
-	if (bLogToOutput && bValuesChanged)
+	if (bLogToOutput && bShouldBuildDisplayLines)
 	{
 		const UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
 		const double CurrentTimeSeconds = World ? static_cast<double>(World->GetTimeSeconds()) : FPlatformTime::Seconds();
@@ -684,7 +901,43 @@ bool FStatsDebugManager::CheckForValueChanges(UStatsManager* StatsManager)
 		return false;
 	}
 
+	RegisterStats(StatsManager);
+
 	bool bAnyChanged = false;
+
+	auto TrackLiveValue = [this, &bAnyChanged](FName CacheKey, float CurrentValue)
+	{
+		float* PreviousValue = CachedLiveValues.Find(CacheKey);
+		if (!PreviousValue)
+		{
+			CachedLiveValues.Add(CacheKey, CurrentValue);
+			bAnyChanged = true;
+		}
+		else if (!FMath::IsNearlyEqual(CurrentValue, *PreviousValue, KINDA_SMALL_NUMBER))
+		{
+			*PreviousValue = CurrentValue;
+			bAnyChanged = true;
+		}
+	};
+
+	TrackLiveValue(TEXT("ASC.Health"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::Health));
+	TrackLiveValue(TEXT("ASC.MaxEffectiveHealth"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::MaxEffectiveHealth));
+	TrackLiveValue(TEXT("ASC.ReservedHealth"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::ReservedHealth));
+	TrackLiveValue(TEXT("ASC.Stamina"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::Stamina));
+	TrackLiveValue(TEXT("ASC.MaxEffectiveStamina"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::MaxEffectiveStamina));
+	TrackLiveValue(TEXT("ASC.ReservedStamina"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::ReservedStamina));
+	TrackLiveValue(TEXT("ASC.Mana"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::Mana));
+	TrackLiveValue(TEXT("ASC.MaxEffectiveMana"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::MaxEffectiveMana));
+	TrackLiveValue(TEXT("ASC.ReservedMana"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::ReservedMana));
+	TrackLiveValue(TEXT("ASC.ArcaneShield"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::ArcaneShield));
+	TrackLiveValue(TEXT("ASC.MaxEffectiveArcaneShield"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::MaxEffectiveArcaneShield));
+	TrackLiveValue(TEXT("ASC.ReservedArcaneShield"), StatsDebugPrivate::GetCoreLiveAttributeValue(StatsManager, EHunterAttribute::ReservedArcaneShield));
+	TrackLiveValue(TEXT("Debug.ShowFullDetails"), bShowFullDetails ? 1.0f : 0.0f);
+
+	if (!bShowFullDetails)
+	{
+		return bAnyChanged;
+	}
 
 	for (const FStatDebugEntry& Entry : StatEntries)
 	{
@@ -732,17 +985,27 @@ bool FStatsDebugManager::ShouldRefresh(double CurrentTimeSeconds, double& LastEx
 	return true;
 }
 
-void FStatsDebugManager::ClearDrawnMessages()
+void FStatsDebugManager::ClearScreenMessages()
 {
 	if (GEngine && LastDrawnLineCount > 0)
 	{
+		const uint64 ScreenMessageKeyBase = LastScreenMessageKeyBase != 0
+			? LastScreenMessageKeyBase
+			: StatsDebugPrivate::BuildScreenMessageKeyBase(nullptr, BaseMessageKey);
+
 		for (int32 LineIndex = 0; LineIndex < LastDrawnLineCount; ++LineIndex)
 		{
-			GEngine->RemoveOnScreenDebugMessage(static_cast<uint64>(BaseMessageKey + LineIndex));
+			GEngine->RemoveOnScreenDebugMessage(ScreenMessageKeyBase + static_cast<uint64>(LineIndex));
 		}
 	}
 
 	LastDrawnLineCount = 0;
+	LastScreenMessageKeyBase = 0;
+}
+
+void FStatsDebugManager::ClearDrawnMessages()
+{
+	ClearScreenMessages();
 	CachedDisplayLines.Reset();
 	CachedLineColors.Reset();
 	CachedLiveValues.Reset();

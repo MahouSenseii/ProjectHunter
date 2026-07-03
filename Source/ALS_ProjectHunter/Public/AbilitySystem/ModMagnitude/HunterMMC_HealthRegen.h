@@ -5,9 +5,8 @@
 #include "HunterMMC_HealthRegen.generated.h"
 
 /**
- * Computes the health regeneration magnitude per GE period.
- * Returns HealthRegenRate * HealthRegenAmount.
- * Set the GE Period to 1.0 s so the result equals HP restored per second.
+ * Computes health regeneration per second from HealthRegenRate * HealthRegenAmount.
+ * The native GE scales this value by its period for smooth updates.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UHunterMMC_HealthRegen : public UGameplayModMagnitudeCalculation

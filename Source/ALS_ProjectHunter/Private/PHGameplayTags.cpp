@@ -351,6 +351,8 @@ DEFINE_GAMEPLAY_TAG(Condition_HitWithProjectile)
 DEFINE_GAMEPLAY_TAG(Condition_HitWithAoE)
 DEFINE_GAMEPLAY_TAG(Effect_Stamina_RegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Stamina_DegenActive)
+DEFINE_GAMEPLAY_TAG(Effect_Stamina_Exhausted)
+DEFINE_GAMEPLAY_TAG(Effect_Mana_Exhausted)
 DEFINE_GAMEPLAY_TAG(Effect_Health_RegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_ArcaneShield_RegenActive)
 DEFINE_GAMEPLAY_TAG(Effect_Mana_RegenActive)
@@ -533,6 +535,8 @@ void FPHGameplayTags::RegisterSecondaryVitals()
 
 	Effect_Stamina_RegenActive = T.AddNativeGameplayTag("Effect.Stamina.RegenActive", TEXT("Stamina is regenerating."));
 	Effect_Stamina_DegenActive = T.AddNativeGameplayTag("Effect.Stamina.DegenActive", TEXT("Stamina is degenerating."));
+	Effect_Stamina_Exhausted   = T.AddNativeGameplayTag("Effect.Stamina.Exhausted",   TEXT("Stamina hit zero; regen is paused during the exhaustion recovery window."));
+	Effect_Mana_Exhausted      = T.AddNativeGameplayTag("Effect.Mana.Exhausted",      TEXT("Mana hit zero; regen is paused during the exhaustion recovery window."));
 	Effect_Health_RegenActive  = T.AddNativeGameplayTag("Effect.Health.RegenActive",  TEXT("Health is regenerating."));
 	Effect_Mana_RegenActive    = T.AddNativeGameplayTag("Effect.Mana.RegenActive",    TEXT("Mana is regenerating."));
 	Effect_Health_DegenActive  = T.AddNativeGameplayTag("Effect.Health.DegenActive",  TEXT("Health is degenerating."));

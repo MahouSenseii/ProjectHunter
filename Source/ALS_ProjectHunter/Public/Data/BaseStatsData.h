@@ -63,6 +63,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Advanced")
 	TArray<TSubclassOf<UGameplayEffect>> InitializationEffects;
 
+	/**
+	 * When true, initialization effects that modify an explicitly overridden stat row are skipped.
+	 * Leave enabled when this data asset should be the authored source of truth for regen, degen, and max values.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Advanced")
+	bool bSkipInitializationEffectsThatModifyAuthoredStats;
+
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	TMap<FName, float> GetAllStatsAsMap() const;
 

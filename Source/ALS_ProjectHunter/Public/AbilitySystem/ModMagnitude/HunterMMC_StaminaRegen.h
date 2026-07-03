@@ -5,9 +5,8 @@
 #include "HunterMMC_StaminaRegen.generated.h"
 
 /**
- * Computes the stamina regeneration magnitude per GE period.
- * Returns StaminaRegenRate * StaminaRegenAmount.
- * Set the GE Period to 1.0 s so the result equals HP restored per second.
+ * Computes stamina regeneration per second from StaminaRegenRate * StaminaRegenAmount.
+ * The native GE scales this value by its period for smooth updates.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UHunterMMC_StaminaRegen : public UGameplayModMagnitudeCalculation

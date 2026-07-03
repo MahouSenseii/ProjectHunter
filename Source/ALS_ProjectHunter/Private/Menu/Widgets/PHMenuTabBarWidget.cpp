@@ -1,21 +1,21 @@
 // Copyright © 2025 MahouSensei
 // Author: Quentin Davis
 
-#include "Menu/Widgets/MenuTabBarWidget.h"
-#include "Menu/Widgets/MenuTabWidget.h"
+#include "Menu/Widgets/PHMenuTabBarWidget.h"
+#include "Menu/Widgets/PHMenuTabButtonWidget.h"
 #include "Components/PanelWidget.h"
 
-void UMenuTabBarWidget::InitializeTabs(const TArray<FMenuEntry>& Entries)
+void UPHMenuTabBarWidget::InitializeTabs(const TArray<FMenuEntry>& Entries)
 {
 	if (!TabWidgetClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UMenuTabBarWidget::InitializeTabs — TabWidgetClass is not set on %s."), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("UPHMenuTabBarWidget::InitializeTabs — TabWidgetClass is not set on %s."), *GetName());
 		return;
 	}
 
 	if (!TabContainer)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UMenuTabBarWidget::InitializeTabs — TabContainer widget is missing on %s. Name it 'TabContainer' in the BP designer."), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("UPHMenuTabBarWidget::InitializeTabs — TabContainer widget is missing on %s. Name it 'TabContainer' in the BP designer."), *GetName());
 		return;
 	}
 
@@ -25,14 +25,14 @@ void UMenuTabBarWidget::InitializeTabs(const TArray<FMenuEntry>& Entries)
 
 	for (const FMenuEntry& Entry : Entries)
 	{
-		UMenuTabWidget* Tab = CreateWidget<UMenuTabWidget>(this, TabWidgetClass);
+		UPHMenuTabButtonWidget* Tab = CreateWidget<UPHMenuTabButtonWidget>(this, TabWidgetClass);
 		if (!Tab)
 		{
 			continue;
 		}
 
 		Tab->SetTabData(Entry);
-		Tab->OnTabClicked.AddDynamic(this, &UMenuTabBarWidget::HandleTabClicked);
+		Tab->OnTabClicked.AddDynamic(this, &UPHMenuTabBarWidget::HandleTabClicked);
 
 		TabContainer->AddChild(Tab);
 		SpawnedTabs.Add(Tab);
@@ -45,7 +45,7 @@ void UMenuTabBarWidget::InitializeTabs(const TArray<FMenuEntry>& Entries)
 	}
 }
 
-void UMenuTabBarWidget::SelectTab(EMenuType MenuType)
+void UPHMenuTabBarWidget::SelectTab(EMenuType MenuType)
 {
 	if (ActiveMenuType == MenuType)
 	{
@@ -55,7 +55,7 @@ void UMenuTabBarWidget::SelectTab(EMenuType MenuType)
 	const EMenuType OldMenu = ActiveMenuType;
 	ActiveMenuType = MenuType;
 
-	for (UMenuTabWidget* Tab : SpawnedTabs)
+	for (UPHMenuTabButtonWidget* Tab : SpawnedTabs)
 	{
 		if (!Tab)
 		{
@@ -69,7 +69,7 @@ void UMenuTabBarWidget::SelectTab(EMenuType MenuType)
 	OnMenuTabSelected.Broadcast(ActiveMenuType, OldMenu);
 }
 
-void UMenuTabBarWidget::HandleTabClicked(EMenuType ClickedType)
+void UPHMenuTabBarWidget::HandleTabClicked(EMenuType ClickedType)
 {
 	SelectTab(ClickedType);
 }

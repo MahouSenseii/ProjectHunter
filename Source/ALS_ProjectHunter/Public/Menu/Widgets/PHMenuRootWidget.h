@@ -7,25 +7,25 @@
 #include "Character/HUD/HunterHUDBaseWidget.h"
 #include "Menu/Library/MenuEnumLibrary.h"
 #include "Menu/Library/MenuStructLibrary.h"
-#include "MenuRootWidget.generated.h"
+#include "PHMenuRootWidget.generated.h"
 
-class UMenuBaseWidget;
-class UMenuTabBarWidget;
+class UPHMenuPageWidgetBase;
+class UPHMenuTabBarWidget;
 class UWidgetSwitcher;
 
 /** Fired after the visible page changes. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMenuPageChanged, EMenuType, NewMenu, EMenuType, OldMenu);
 
 /**
- * UMenuRootWidget — the full-screen menu container.
+ * UPHMenuRootWidget — the full-screen menu container.
  *
- * Owns the tab bar and the page area; lazily spawns one UMenuBaseWidget page
+ * Owns the tab bar and the page area; lazily spawns one UPHMenuPageWidgetBase page
  * per FMenuEntry (cached in Entry.CachedInstance and reused), and keeps every
  * page bound to the current character so Equipment/Stats pages can read their
  * managers.
  *
  * BP setup (create a Blueprint child):
- *   1. Add your UMenuTabBarWidget child named exactly  "TabBar".
+ *   1. Add your UPHMenuTabBarWidget child named exactly  "TabBar".
  *   2. Add a WidgetSwitcher named exactly              "ContentSwitcher".
  *   3. Fill "Menu Entries" in class defaults (type, label, icon, page class).
  *   4. Assign this BP as MenuRootWidgetClass on your AHunterHUD Blueprint.
@@ -33,7 +33,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMenuPageChanged, EMenuType, NewM
  * AHunterHUD owns open/close/visibility — this widget only manages pages.
  */
 UCLASS(Abstract, BlueprintType, Blueprintable)
-class ALS_PROJECTHUNTER_API UMenuRootWidget : public UHunterHUDBaseWidget
+class ALS_PROJECTHUNTER_API UPHMenuRootWidget : public UHunterHUDBaseWidget
 {
 	GENERATED_BODY()
 
@@ -55,11 +55,11 @@ public:
 
 	/** Live page widget for the active menu (null if none shown yet). */
 	UFUNCTION(BlueprintPure, Category = "Menu")
-	UMenuBaseWidget* GetActivePage() const;
+	UPHMenuPageWidgetBase* GetActivePage() const;
 
 	/** Live page widget for a specific menu (null until first opened). */
 	UFUNCTION(BlueprintPure, Category = "Menu")
-	UMenuBaseWidget* GetPageForMenu(EMenuType MenuType) const;
+	UPHMenuPageWidgetBase* GetPageForMenu(EMenuType MenuType) const;
 
 	// ─────────────────────────────────────────────────────────────────────────
 	// Events
@@ -100,7 +100,7 @@ protected:
 
 	/** Tab header bar. Optional — pages still work without one. */
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
-	TObjectPtr<UMenuTabBarWidget> TabBar;
+	TObjectPtr<UPHMenuTabBarWidget> TabBar;
 
 	/** Switcher that holds the spawned page widgets. */
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
@@ -122,7 +122,7 @@ private:
 	void ShowPage(EMenuType MenuType, EMenuType OldMenu);
 
 	/** Lazily create (and cache) the page widget for an entry. */
-	UMenuBaseWidget* GetOrCreatePage(FMenuEntry& Entry);
+	UPHMenuPageWidgetBase* GetOrCreatePage(FMenuEntry& Entry);
 
 	FMenuEntry* FindEntry(EMenuType MenuType);
 	const FMenuEntry* FindEntry(EMenuType MenuType) const;

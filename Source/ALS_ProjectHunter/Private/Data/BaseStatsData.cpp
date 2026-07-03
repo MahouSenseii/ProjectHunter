@@ -500,6 +500,7 @@ namespace BaseStatsDataPrivate
 }
 
 UBaseStatsData::UBaseStatsData()
+	: bSkipInitializationEffectsThatModifyAuthoredStats(true)
 {
 }
 

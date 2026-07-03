@@ -1,4 +1,5 @@
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystem/HunterAbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
@@ -528,6 +529,27 @@ void UHunterAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 	}
 
 	UpdateDerivedVitalAttributes(Data.EvaluatedData.Attribute);
+
+	// Server-authoritative (PostGameplayEffectExecute only runs with authority):
+	// when a pool bottoms out, trigger the exhaustion GE so its regen pauses for
+	// the recovery window. The ASC guards against re-applying while already exhausted.
+	const FGameplayAttribute& ExecutedAttribute = Data.EvaluatedData.Attribute;
+	if (ExecutedAttribute == GetStaminaAttribute() && GetStamina() <= 0.f)
+	{
+		if (UHunterAbilitySystemComponent* HunterASC =
+			Cast<UHunterAbilitySystemComponent>(GetOwningAbilitySystemComponent()))
+		{
+			HunterASC->HandleStaminaDepleted();
+		}
+	}
+	else if (ExecutedAttribute == GetManaAttribute() && GetMana() <= 0.f)
+	{
+		if (UHunterAbilitySystemComponent* HunterASC =
+			Cast<UHunterAbilitySystemComponent>(GetOwningAbilitySystemComponent()))
+		{
+			HunterASC->HandleManaDepleted();
+		}
+	}
 }
 
 bool UHunterAttributeSet::ShouldSkipDerivedVitalUpdate(const TCHAR* Context, const FGameplayAttribute& Attribute) const

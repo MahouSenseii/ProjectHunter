@@ -1,25 +1,25 @@
 // Copyright © 2025 MahouSensei
 // Author: Quentin Davis
 
-#include "Menu/Widgets/MenuTabWidget.h"
+#include "Menu/Widgets/PHMenuTabButtonWidget.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Engine/Texture2D.h"
 
-void UMenuTabWidget::NativeConstruct()
+void UPHMenuTabButtonWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
 	if (TabButton)
 	{
-		TabButton->OnClicked.AddDynamic(this, &UMenuTabWidget::HandleButtonClicked);
-		TabButton->OnHovered.AddDynamic(this, &UMenuTabWidget::HandleButtonHovered);
-		TabButton->OnUnhovered.AddDynamic(this, &UMenuTabWidget::HandleButtonUnhovered);
+		TabButton->OnClicked.AddDynamic(this, &UPHMenuTabButtonWidget::HandleButtonClicked);
+		TabButton->OnHovered.AddDynamic(this, &UPHMenuTabButtonWidget::HandleButtonHovered);
+		TabButton->OnUnhovered.AddDynamic(this, &UPHMenuTabButtonWidget::HandleButtonUnhovered);
 	}
 }
 
-void UMenuTabWidget::SetTabData(const FMenuEntry& Entry)
+void UPHMenuTabButtonWidget::SetTabData(const FMenuEntry& Entry)
 {
 	MenuType = Entry.MenuType;
 
@@ -34,7 +34,7 @@ void UMenuTabWidget::SetTabData(const FMenuEntry& Entry)
 	}
 }
 
-void UMenuTabWidget::SetSelected(bool bInSelected)
+void UPHMenuTabButtonWidget::SetSelected(bool bInSelected)
 {
 	if (bIsSelected == bInSelected)
 	{
@@ -53,17 +53,17 @@ void UMenuTabWidget::SetSelected(bool bInSelected)
 	}
 }
 
-void UMenuTabWidget::HandleButtonClicked()
+void UPHMenuTabButtonWidget::HandleButtonClicked()
 {
 	OnTabClicked.Broadcast(MenuType);
 }
 
-void UMenuTabWidget::HandleButtonHovered()
+void UPHMenuTabButtonWidget::HandleButtonHovered()
 {
 	OnTabHovered();
 }
 
-void UMenuTabWidget::HandleButtonUnhovered()
+void UPHMenuTabButtonWidget::HandleButtonUnhovered()
 {
 	OnTabUnhovered();
 }

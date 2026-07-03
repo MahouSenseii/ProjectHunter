@@ -4,7 +4,7 @@
 #include "Character/PHBaseCharacter.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "GameFramework/PlayerController.h"
-#include "Menu/Widgets/MenuRootWidget.h"
+#include "Menu/Widgets/PHMenuRootWidget.h"
 #include "TimerManager.h"
 #include "Interactable/Widget/ItemTooltipWidget.h"
 
@@ -174,12 +174,12 @@ bool AHunterHUD::EnsureMenuRootWidget()
 	{
 		PH_LOG_WARNING(LogHunterHUD,
 			"EnsureMenuRootWidget: MenuRootWidgetClass is not set on %s. "
-			"Assign your WBP_MenuRoot in the HUD Blueprint defaults.",
+			"Assign your WBP_MenuContainer in the HUD Blueprint defaults.",
 			*GetNameSafe(this));
 		return false;
 	}
 
-	MenuRootWidget = CreateWidget<UMenuRootWidget>(PC, MenuRootWidgetClass);
+	MenuRootWidget = CreateWidget<UPHMenuRootWidget>(PC, MenuRootWidgetClass);
 	if (!MenuRootWidget)
 	{
 		PH_LOG_WARNING(LogHunterHUD, "EnsureMenuRootWidget: CreateWidget failed for %s.",

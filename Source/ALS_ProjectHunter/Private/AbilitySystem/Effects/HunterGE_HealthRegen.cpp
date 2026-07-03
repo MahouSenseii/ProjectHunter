@@ -1,20 +1,27 @@
 #include "AbilitySystem/Effects/HunterGE_HealthRegen.h"
 
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystem/ModMagnitude/HunterMMC_HealthRegen.h"
+
+namespace HunterGEHealthRegenPrivate
+{
+	constexpr float RegenPeriodSeconds = 0.1f;
+}
 
 UHunterGE_HealthRegen::UHunterGE_HealthRegen()
 {
-	DurationPolicy = EGameplayEffectDurationType::Instant;
+	DurationPolicy = EGameplayEffectDurationType::Infinite;
+	Period = FScalableFloat(HunterGEHealthRegenPrivate::RegenPeriodSeconds);
+	bExecutePeriodicEffectOnApplication = false;
 
 	FGameplayModifierInfo ModifierInfo;
 	ModifierInfo.Attribute  = UHunterAttributeSet::GetHealthAttribute();
 	ModifierInfo.ModifierOp = EGameplayModOp::Additive;
 
-	// Use DataName (not DataTag) so the lookup is deferred past CDO construction,
-	// avoiding the "InterfaceProperty" crash from unregistered tags at startup.
-	FSetByCallerFloat SetByCaller;
-	SetByCaller.DataName = FName("Data.Recovery.Health");
-	ModifierInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(SetByCaller);
+	FCustomCalculationBasedFloat CustomMagnitude;
+	CustomMagnitude.CalculationClassMagnitude = UHunterMMC_HealthRegen::StaticClass();
+	CustomMagnitude.Coefficient = FScalableFloat(HunterGEHealthRegenPrivate::RegenPeriodSeconds);
+	ModifierInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(CustomMagnitude);
 
 	Modifiers.Add(ModifierInfo);
 }

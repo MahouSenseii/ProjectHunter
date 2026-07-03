@@ -65,6 +65,9 @@ struct ALS_PROJECTHUNTER_API FStatsDebugManager
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Debug|Display", meta = (ClampMin = "0"))
 	int32 BaseMessageKey;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Debug|Display")
+	bool bShowFullDetails;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Debug|Filters")
 	FString FilterString;
 
@@ -128,11 +131,13 @@ private:
 	bool CheckForValueChanges(UStatsManager* StatsManager);
 
 	bool ShouldRefresh(double CurrentTimeSeconds, double& LastExecutionTimeSeconds);
+	void ClearScreenMessages();
 	void ClearDrawnMessages();
 
 	bool bEntriesSynchronized;
 	double LastLogUpdateTimeSeconds;
 	int32 LastDrawnLineCount;
+	uint64 LastScreenMessageKeyBase;
 	TArray<FString> CachedDisplayLines;
 	TArray<FColor> CachedLineColors;
 	TSet<FName> WarnedCustomBucketStats;

@@ -12,7 +12,7 @@ class APawn;
 class UHunterMainHUDWidget;
 class UItemInstance;
 class UItemTooltipWidget;
-class UMenuRootWidget;
+class UPHMenuRootWidget;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogHunterHUD, Log, All);
 
@@ -77,7 +77,7 @@ public:
 
 	/** Live menu root (null until first opened). */
 	UFUNCTION(BlueprintPure, Category = "HUD|Menu")
-	UMenuRootWidget* GetMenuRootWidget() const { return MenuRootWidget; }
+	UPHMenuRootWidget* GetMenuRootWidget() const { return MenuRootWidget; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -86,9 +86,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HUD|Widget Classes")
 	TSubclassOf<UHunterMainHUDWidget> MainHUDWidgetClass;
 
-	/** Blueprint child of UMenuRootWidget (tab bar + content switcher layout). */
+	/** Blueprint child of UPHMenuRootWidget (tab bar + content switcher layout). */
 	UPROPERTY(EditDefaultsOnly, Category = "HUD|Widget Classes")
-	TSubclassOf<UMenuRootWidget> MenuRootWidgetClass;
+	TSubclassOf<UPHMenuRootWidget> MenuRootWidgetClass;
 
 	/** Viewport Z-order for the menu overlay (main HUD is added at 10). */
 	UPROPERTY(EditDefaultsOnly, Category = "HUD|Menu")
@@ -113,7 +113,7 @@ private:
 	TObjectPtr<UHunterMainHUDWidget> MainHUDWidget;
 
 	UPROPERTY()
-	TObjectPtr<UMenuRootWidget> MenuRootWidget;
+	TObjectPtr<UPHMenuRootWidget> MenuRootWidget;
 
 	void CreateMainHUDWidget();
 	void BindWidgetsToCharacter(APHBaseCharacter* Character) const;

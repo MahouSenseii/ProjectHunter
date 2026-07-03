@@ -13,7 +13,8 @@ DEFINE_LOG_CATEGORY(LogTagManager);
 namespace TagManagerPrivate
 {
 	constexpr float LowResourceThreshold = 0.35f;
-	constexpr float MovementSpeedThresholdSq = 25.f;
+	constexpr float MovementStartSpeedThresholdSq = 400.f;
+	constexpr float MovementStopSpeedThresholdSq = 25.f;
 
 	constexpr float ConditionRefreshInterval = 0.1f;
 
@@ -22,11 +23,11 @@ namespace TagManagerPrivate
 		return EffectiveMaxValue > 0.f ? EffectiveMaxValue : FMath::Max(RawMaxValue, 0.f);
 	}
 
-	bool IsActivelySprinting(const APHBaseCharacter* HunterCharacter)
+	bool IsActivelySprinting(const APHBaseCharacter* HunterCharacter, const bool bMoving)
 	{
 		return HunterCharacter
-			&& HunterCharacter->GetDesiredGait() == EALSGait::Sprinting
-			&& HunterCharacter->GetGait() == EALSGait::Sprinting;
+			&& bMoving
+			&& HunterCharacter->GetDesiredGait() == EALSGait::Sprinting;
 	}
 }
 
@@ -330,12 +331,12 @@ void UTagManager::RefreshBaseConditionTags()
 		SetTagState(Tags.Condition_OnLowArcaneShield, ComputeLowResourceState(ArcaneShield, MaxArcaneShield));
 	}
 
-	const bool bMoving = CharacterOwner && CharacterOwner->GetVelocity().SizeSquared2D() > TagManagerPrivate::MovementSpeedThresholdSq;
+	const bool bMoving = ComputeMovementConditionState(CharacterOwner);
 	SetTagState(Tags.Condition_WhileMoving, bMoving);
 	SetTagState(Tags.Condition_WhileStationary, !bMoving);
 
 	const bool bActivelySprinting = HunterCharacter
-		? TagManagerPrivate::IsActivelySprinting(HunterCharacter)
+		? TagManagerPrivate::IsActivelySprinting(HunterCharacter, bMoving)
 		: HasTag(Tags.Condition_Sprinting);
 	SetTagState(Tags.Condition_Sprinting, bActivelySprinting);
 
@@ -394,6 +395,27 @@ bool UTagManager::HasPendingEnabledTag(const FGameplayTag& Tag) const
 	return false;
 }
 
+bool UTagManager::ComputeMovementConditionState(const ACharacter* CharacterOwner)
+{
+	if (!CharacterOwner)
+	{
+		bHasMovementConditionState = true;
+		bLastMovementConditionMoving = false;
+		return false;
+	}
+
+	const float SpeedSq = CharacterOwner->GetVelocity().SizeSquared2D();
+	const bool bMoving = !bHasMovementConditionState
+		? SpeedSq > TagManagerPrivate::MovementStartSpeedThresholdSq
+		: (bLastMovementConditionMoving
+			? SpeedSq > TagManagerPrivate::MovementStopSpeedThresholdSq
+			: SpeedSq > TagManagerPrivate::MovementStartSpeedThresholdSq);
+
+	bHasMovementConditionState = true;
+	bLastMovementConditionMoving = bMoving;
+	return bMoving;
+}
+
 bool UTagManager::ComputeLowResourceState(const float CurrentValue, const float MaxValue) const
 {
 	return MaxValue > 0.f && (CurrentValue / MaxValue) <= TagManagerPrivate::LowResourceThreshold;
@@ -449,12 +471,12 @@ void UTagManager::RefreshMovementConditionTags()
 	const APHBaseCharacter* HunterCharacter = Cast<APHBaseCharacter>(GetOwner());
 	const ACharacter* CharacterOwner = Cast<ACharacter>(GetOwner());
 
-	const bool bMoving = CharacterOwner && CharacterOwner->GetVelocity().SizeSquared2D() > TagManagerPrivate::MovementSpeedThresholdSq;
+	const bool bMoving = ComputeMovementConditionState(CharacterOwner);
 	SetTagState(Tags.Condition_WhileMoving, bMoving);
 	SetTagState(Tags.Condition_WhileStationary, !bMoving);
 
 	const bool bActivelySprinting = HunterCharacter
-		? TagManagerPrivate::IsActivelySprinting(HunterCharacter)
+		? TagManagerPrivate::IsActivelySprinting(HunterCharacter, bMoving)
 		: HasTag(Tags.Condition_Sprinting);
 	SetTagState(Tags.Condition_Sprinting, bActivelySprinting);
 

@@ -98,15 +98,17 @@ public:
 	bool HasEquipmentStatsApplied(UItemInstance* Item) const;
 
 	/**
-	 * Apply a gameplay effect class to this component's owner.
-	 * Intended as a simple Blueprint testing hook.
+	 * Apply a gameplay effect class to this component's owner. Server-only:
+	 * returns false on a non-authoritative caller, an invalid EffectClass, or a
+	 * missing AbilitySystemComponent.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Effects")
 	bool ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> EffectClass, float Level = 1.0f);
 
 	/**
 	 * Apply a gameplay effect class to another actor that exposes an ASC.
-	 * Intended as a simple Blueprint testing hook.
+	 * Server-only: returns false on a non-authoritative caller, an invalid target
+	 * or EffectClass, or a target without an AbilitySystemComponent.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Effects")
 	bool ApplyGameplayEffectToTarget(AActor* TargetActor, TSubclassOf<UGameplayEffect> EffectClass, float Level = 1.0f);
@@ -141,10 +143,7 @@ public:
 	/* SECONDARY/DERIVED ATTRIBUTES                                            */
 	/* ═══════════════════════════════════════════════════════════════════════ */
 
-	/**
-	 * Get Magic Find stat (affects loot quality and quantity)
-	 * FIX: Added for LootChest integration
-	 */
+	/** Get Magic Find stat (affects loot quality and quantity). */
 	UFUNCTION(BlueprintPure, Category = "Stats|Secondary")
 	float GetMagicFind() const;
 
@@ -273,11 +272,11 @@ public:
 	/** Initialize stats from data asset */
 	void InitializeFromDataAsset(UBaseStatsData* InStatsData);
 
-	/** Initialize stats from map */
-	void InitializeFromMap(const TMap<FName, float>& StatsMap) const;
+	/** Initialize stats from map. Server-authoritative: mutates GAS attributes. */
+	void InitializeFromMap(const TMap<FName, float>& StatsMap);
 
-	/** Set single stat value */
-	void SetStatValue(FName AttributeName, float Value) const;
+	/** Set single stat value. Server-authoritative: mutates a GAS attribute. */
+	void SetStatValue(FName AttributeName, float Value);
 
 protected:
 	/* ═══════════════════════════════════════════════════════════════════════ */
@@ -297,20 +296,20 @@ protected:
 	void LogWarningOnce(const FString& Key, const FString& Message) const;
 
 	/** Resolve and apply a numeric attribute by name using the project's existing GAS path. */
-	bool SetNumericAttributeByName(FName AttributeName, float Value, bool bAutoInitializeCurrentFromMax = true) const;
+	bool SetNumericAttributeByName(FName AttributeName, float Value, bool bAutoInitializeCurrentFromMax = true);
 
 	/** Read a stat for initialization, preferring exported stat-map values and falling back to asset float properties. */
 	bool TryGetStatValueForInitialization(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, float& OutValue) const;
 
 	/** Apply a stat only when it is present in the initialization sources. */
-	bool ApplyStatIfPresent(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, bool bAutoInitializeCurrentFromMax = true) const;
+	bool ApplyStatIfPresent(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, bool bAutoInitializeCurrentFromMax = true);
 
 	/** Apply current vitals after max pools have been initialized, clamping them to the live max values. */
-	bool ApplyCurrentVitalWithClamp(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName CurrentStatName, FName MaxStatName, FName StarterPropertyName) const;
+	bool ApplyCurrentVitalWithClamp(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName CurrentStatName, FName MaxStatName, FName StarterPropertyName);
 
 	/**
-	 * Create a gameplay effect for equipment stats
-	 * FIX: Uses unique naming based on item GUID to prevent collisions
+	 * Create a gameplay effect for equipment stats. Uses item-GUID-based naming
+	 * so simultaneously-equipped items never collide on the same effect handle.
 	 * @param Item - Item to create effect for
 	 * @param Stats - Array of FPHAttributeData from item
 	 * @return Gameplay effect spec handle
@@ -330,11 +329,11 @@ protected:
 	UPROPERTY()
 	mutable TObjectPtr<UHunterAttributeSet> CachedAttributeSet;
 
-	// N-08 FIX: Was EditAnywhere — allows changing the asset on instanced components
-	// in the level, bypassing the Blueprint default and causing divergent state.
-	// EditDefaultsOnly restricts edits to Blueprint/CDO, which is the correct scope.
+	// EditDefaultsOnly (not EditAnywhere) so the asset can only be set on the
+	// Blueprint/CDO. Editing it on a level-placed instance would bypass the
+	// Blueprint default and cause divergent per-instance state.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats|Config")
-	UBaseStatsData* StatsData;
+	TObjectPtr<UBaseStatsData> StatsData;
 
 	UPROPERTY()
 	mutable TObjectPtr<UAbilitySystemComponent> CachedASC;

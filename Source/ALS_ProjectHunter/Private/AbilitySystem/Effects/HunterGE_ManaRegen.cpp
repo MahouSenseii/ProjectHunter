@@ -1,20 +1,27 @@
 #include "AbilitySystem/Effects/HunterGE_ManaRegen.h"
 
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystem/ModMagnitude/HunterMMC_ManaRegen.h"
+
+namespace HunterGEManaRegenPrivate
+{
+	constexpr float RegenPeriodSeconds = 0.1f;
+}
 
 UHunterGE_ManaRegen::UHunterGE_ManaRegen()
 {
-	DurationPolicy = EGameplayEffectDurationType::Instant;
+	DurationPolicy = EGameplayEffectDurationType::Infinite;
+	Period = FScalableFloat(HunterGEManaRegenPrivate::RegenPeriodSeconds);
+	bExecutePeriodicEffectOnApplication = false;
 
 	FGameplayModifierInfo ModifierInfo;
 	ModifierInfo.Attribute  = UHunterAttributeSet::GetManaAttribute();
 	ModifierInfo.ModifierOp = EGameplayModOp::Additive;
 
-	// Use DataName (not DataTag) so the lookup is deferred past CDO construction,
-	// avoiding the "InterfaceProperty" crash from unregistered tags at startup.
-	FSetByCallerFloat SetByCaller;
-	SetByCaller.DataName = FName("Data.Recovery.Mana");
-	ModifierInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(SetByCaller);
+	FCustomCalculationBasedFloat CustomMagnitude;
+	CustomMagnitude.CalculationClassMagnitude = UHunterMMC_ManaRegen::StaticClass();
+	CustomMagnitude.Coefficient = FScalableFloat(HunterGEManaRegenPrivate::RegenPeriodSeconds);
+	ModifierInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(CustomMagnitude);
 
 	Modifiers.Add(ModifierInfo);
 }
