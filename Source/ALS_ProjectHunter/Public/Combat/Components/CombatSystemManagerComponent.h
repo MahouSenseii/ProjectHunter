@@ -32,7 +32,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	bool ApplyHit(AActor* AttackerActor, AActor* DefenderActor,
-		const FCombatHitPacket& HitPacket, FCombatResolveResult& OutResult);
+		const FAnimationDamageInfo& DamageInfo, FCombatResolveResult& OutResult,
+		EHitResponse HitResponse = EHitResponse::Normal, bool bCanApplyAilments = true);
 
 	UFUNCTION(BlueprintCallable, Category = "Combat|Status")
 	void CleanseAll(AActor* Target);

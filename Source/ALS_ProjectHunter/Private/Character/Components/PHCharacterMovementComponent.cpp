@@ -1,5 +1,6 @@
 #include "Character/Components/PHCharacterMovementComponent.h"
 
+#include "Animation/AnimInstance.h"
 #include "Character/PHBaseCharacter.h"
 #include "Character/Library/FunctionLibraries/PHWallTraversalFunctionLibrary.h"
 #include "Components/CapsuleComponent.h"
@@ -231,6 +232,7 @@ bool UPHCharacterMovementComponent::TryStartWallTraversal(
 	WallLostFrames = 0;
 	WallTraversalElapsed = 0.0f;
 	SetMovementMode(MOVE_Custom, static_cast<uint8>(NewMode));
+	ApplyWallTraversalRootMotionMode();
 	SnapToWall(WallHit, bAlignCapsuleToWall && bSnapRotationOnAttach);
 	CharacterOwner->ForceNetUpdate();
 
@@ -273,6 +275,82 @@ void UPHCharacterMovementComponent::JumpOffWall()
 	SetMovementMode(MOVE_Falling);
 	Velocity = JumpNormal * WallJumpAwaySpeed + FVector::UpVector * WallJumpUpSpeed;
 	CharacterOwner->ForceNetUpdate();
+}
+
+void UPHCharacterMovementComponent::AddWallTraversalPlaneImpulse(
+	FVector WorldDirection,
+	const float Speed,
+	const bool bReplaceCurrentWallVelocity)
+{
+	if ((!IsWallRunning() && !IsWallClimbing()) || IsWallTraversalCombatMovementLocked() ||
+		Speed <= 0.0f || WallNormal.IsNearlyZero())
+	{
+		return;
+	}
+
+	FVector DirectionOnWall =
+		FVector::VectorPlaneProject(WorldDirection, WallNormal).GetSafeNormal();
+	if (DirectionOnWall.IsNearlyZero())
+	{
+		DirectionOnWall = GetWallUp();
+	}
+	if (DirectionOnWall.IsNearlyZero())
+	{
+		return;
+	}
+
+	const FVector CurrentWallVelocity =
+		FVector::VectorPlaneProject(Velocity, WallNormal);
+	Velocity = bReplaceCurrentWallVelocity
+		? DirectionOnWall * Speed
+		: CurrentWallVelocity + DirectionOnWall * Speed;
+	Velocity = FVector::VectorPlaneProject(Velocity, WallNormal);
+}
+
+void UPHCharacterMovementComponent::SetWallTraversalCombatMovementScale(
+	const float NewMovementScale,
+	const float Duration)
+{
+	WallTraversalCombatMovementScale = FMath::Clamp(NewMovementScale, 0.0f, 1.0f);
+
+	if (IsWallTraversalCombatMovementLocked() && (IsWallRunning() || IsWallClimbing()))
+	{
+		Acceleration = FVector::ZeroVector;
+		Velocity = FVector::ZeroVector;
+	}
+
+	const UWorld* World = GetWorld();
+	WallTraversalCombatMovementScaleEndTime =
+		World && Duration > 0.0f ? World->GetTimeSeconds() + Duration : -1.0f;
+}
+
+void UPHCharacterMovementComponent::ClearWallTraversalCombatMovementScale()
+{
+	WallTraversalCombatMovementScale = 1.0f;
+	WallTraversalCombatMovementScaleEndTime = -1.0f;
+}
+
+float UPHCharacterMovementComponent::GetWallTraversalCombatMovementScale() const
+{
+	return WallTraversalCombatMovementScale;
+}
+
+void UPHCharacterMovementComponent::SetWallTraversalCombatMovementLocked(
+	const bool bLocked,
+	const float Duration)
+{
+	if (bLocked)
+	{
+		SetWallTraversalCombatMovementScale(0.0f, Duration);
+		return;
+	}
+
+	ClearWallTraversalCombatMovementScale();
+}
+
+bool UPHCharacterMovementComponent::IsWallTraversalCombatMovementLocked() const
+{
+	return WallTraversalCombatMovementScale <= KINDA_SMALL_NUMBER;
 }
 
 bool UPHCharacterMovementComponent::IsWallTraversing() const
@@ -563,12 +641,18 @@ bool UPHCharacterMovementComponent::WallTraversalStep(const float DeltaTime)
 		}
 	}
 
+	ApplyWallTraversalRootMotionMode();
+	UpdateWallTraversalCombatMovementScale();
+
+	const float CombatMovementScale = GetWallTraversalCombatMovementScale();
+	const float MaxWallSpeed = GetWallTraversalSpeed() * CombatMovementScale;
+
 	RestorePreAdditiveRootMotionVelocity();
 	const bool bUsingRootMotion =
 		HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity();
 
 	Acceleration = FVector::VectorPlaneProject(Acceleration, WallNormal);
-	Acceleration = Acceleration.GetClampedToMaxSize(GetMaxAcceleration());
+	Acceleration = Acceleration.GetClampedToMaxSize(GetMaxAcceleration()) * CombatMovementScale;
 	if (!bUsingRootMotion)
 	{
 		CalcVelocity(DeltaTime, WallMovementFriction, false, GetMaxBrakingDeceleration());
@@ -579,7 +663,7 @@ bool UPHCharacterMovementComponent::WallTraversalStep(const float DeltaTime)
 	// wall, but never away from it. Removing the wall-normal component keeps an
 	// attack from peeling traversal off the surface.
 	Velocity = FVector::VectorPlaneProject(Velocity, WallNormal);
-	Velocity = Velocity.GetClampedToMaxSize(GetMaxSpeed());
+	Velocity = Velocity.GetClampedToMaxSize(MaxWallSpeed);
 
 	WallTraversalElapsed += DeltaTime;
 
@@ -680,7 +764,7 @@ bool UPHCharacterMovementComponent::WallTraversalStep(const float DeltaTime)
 		Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / DeltaTime;
 	}
 	Velocity = FVector::VectorPlaneProject(Velocity, WallNormal);
-	Velocity = Velocity.GetClampedToMaxSize(GetMaxSpeed());
+	Velocity = Velocity.GetClampedToMaxSize(MaxWallSpeed);
 
 	if (bDebugWallTraversal && GetWorld() && UpdatedComponent)
 	{
@@ -1637,12 +1721,75 @@ float UPHCharacterMovementComponent::GetWallTraversalSpeed() const
 		: WallClimbingFallbackSpeed;
 }
 
+void UPHCharacterMovementComponent::UpdateWallTraversalCombatMovementScale()
+{
+	if (WallTraversalCombatMovementScaleEndTime < 0.0f)
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!World || World->GetTimeSeconds() < WallTraversalCombatMovementScaleEndTime)
+	{
+		return;
+	}
+
+	ClearWallTraversalCombatMovementScale();
+}
+
+void UPHCharacterMovementComponent::ApplyWallTraversalRootMotionMode()
+{
+	if (!bIgnoreRootMotionWhileWallTraversing || !CharacterOwner)
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* Mesh = CharacterOwner->GetMesh();
+	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
+	if (!AnimInstance)
+	{
+		return;
+	}
+
+	if (!bHasSavedWallTraversalRootMotionMode)
+	{
+		SavedWallTraversalRootMotionMode = AnimInstance->RootMotionMode;
+		bHasSavedWallTraversalRootMotionMode = true;
+	}
+
+	if (AnimInstance->RootMotionMode != ERootMotionMode::IgnoreRootMotion)
+	{
+		AnimInstance->SetRootMotionMode(ERootMotionMode::IgnoreRootMotion);
+	}
+}
+
+void UPHCharacterMovementComponent::RestoreWallTraversalRootMotionMode()
+{
+	if (!bHasSavedWallTraversalRootMotionMode)
+	{
+		return;
+	}
+
+	const TEnumAsByte<ERootMotionMode::Type> ModeToRestore =
+		SavedWallTraversalRootMotionMode;
+	bHasSavedWallTraversalRootMotionMode = false;
+
+	USkeletalMeshComponent* Mesh = CharacterOwner ? CharacterOwner->GetMesh() : nullptr;
+	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
+	if (AnimInstance && AnimInstance->RootMotionMode != ModeToRestore)
+	{
+		AnimInstance->SetRootMotionMode(ModeToRestore);
+	}
+}
+
 void UPHCharacterMovementComponent::ClearWallTraversalState()
 {
+	RestoreWallTraversalRootMotionMode();
 	WallTransitionData = FALSWallTransitionData();
 	WallSurfaceComponent.Reset();
 	WallLostFrames = 0;
 	WallTraversalElapsed = 0.0f;
+	ClearWallTraversalCombatMovementScale();
 }
 
 void UPHCharacterMovementComponent::RecordWallDetachTime()

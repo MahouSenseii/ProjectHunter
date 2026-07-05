@@ -1,43 +1,78 @@
-// ProjectHunter combat state owner for hit resolution and damage application.
+// ProjectHunter combat owner: resolves animation-authored hits against
+// attacker/defender attributes using a Path of Exile 2 style damage pipeline.
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Combat/Library/CombatStructs.h"
-#include "GameplayEffect.h"
 #include "CombatManager.generated.h"
 
 class AActor;
 class UAbilitySystemComponent;
+class UCombatStatusManager;
+class UGameplayEffect;
 class UHunterAttributeSet;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCombatManager, Log, All);
 
+/**
+ * Server-side Blueprint edit point handed out by OnEditIncomingHit before the
+ * pipeline runs. Blueprint may adjust the animation info, override the hit
+ * response, or reject the hit entirely.
+ */
 UCLASS(BlueprintType)
 class ALS_PROJECTHUNTER_API UCombatIncomingHitEditContext : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(BlueprintReadOnly, Category = "Combat|Packet")
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Hit")
 	TObjectPtr<AActor> AttackerActor = nullptr;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Combat|Packet")
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Hit")
 	TObjectPtr<AActor> DefenderActor = nullptr;
 
-	UPROPERTY(BlueprintReadWrite, Category = "Combat|Packet")
-	FCombatHitPacket HitPacket;
+	UPROPERTY(BlueprintReadWrite, Category = "Combat|Hit")
+	FAnimationDamageInfo DamageInfo;
 
-	UPROPERTY(BlueprintReadWrite, Category = "Combat|Packet")
+	UPROPERTY(BlueprintReadWrite, Category = "Combat|Hit")
+	EHitResponse HitResponse = EHitResponse::Normal;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Combat|Hit")
+	bool bCanApplyAilments = true;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Combat|Hit")
 	bool bApplyHit = true;
 
-	UFUNCTION(BlueprintCallable, Category = "Combat|Packet")
+	UFUNCTION(BlueprintCallable, Category = "Combat|Hit")
 	void RejectHit();
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEditIncomingHitPacket, UCombatIncomingHitEditContext*, Context);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEditIncomingHit, UCombatIncomingHitEditContext*, Context);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatDamagePopupRequested, const FCombatDamagePopupData&, PopupData);
 
+/**
+ * Owner of hit resolution and damage application.
+ *
+ * Outgoing pipeline (attacker attributes + FAnimationDamageInfo):
+ *   1. Base:       roll weapon Min/Max per type + flat added damage.
+ *   2. Convert:    attribute conversion matrix, one pass, no chaining —
+ *                  converted damage scales only as its final type (PoE2 rule).
+ *   3. Increased:  one additive pool per type — global + type% + elemental +
+ *                  tag-conditional buckets + animation BaseMulti + HP-state bonuses.
+ *   4. More:       multiplicative — global x elemental x type.
+ *   5. Crit:       one roll per hit; spells use spell crit attributes;
+ *                  damage-over-time hits never crit.
+ *
+ * Incoming pipeline (defender attributes):
+ *   6. Physical mitigates through armour (piercing-reduced), others through
+ *      resistances (piercing-reduced, clamped to the per-type max cap).
+ *   7. Block (angle, strength, flat, chip damage, stamina cost, guard break).
+ *   8. Damage-taken multipliers, then ArcaneShield-before-Health routing.
+ *
+ * Application is server-authoritative and flows through the configured
+ * GameplayEffects so PreAttributeChange clamping always fires.
+ */
 UCLASS(ClassGroup=(Custom), Blueprintable, meta=(BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UCombatManager : public UActorComponent
 {
@@ -47,191 +82,171 @@ public:
 	UCombatManager();
 
 	/**
-	 * B-1 FIX: Blueprint-configurable Instant Gameplay Effect used to apply resolved damage
-	 * through the GAS pipeline so PreAttributeChange clamping fires correctly.
-	 *
-	 * Configure this GE in the Blueprint default with three Additive modifiers:
-	 *   Attribute: Health       | Magnitude: SetByCaller (Data.Damage.Health)
-	 *   Attribute: ArcaneShield | Magnitude: SetByCaller (Data.Damage.ArcaneShield)
-	 *   Attribute: Stamina      | Magnitude: SetByCaller (Data.Damage.Stamina)
-	 *
-	 * CombatManager will set each magnitude to the negative of the resolved damage amount
-	 * (e.g. -50.0 to subtract 50 health). Duration must be Instant.
-	 *
-	 * If left unset the component falls back to SetNumericAttributeBase with a warning.
+	 * Instant GE used to apply resolved damage through GAS.
+	 * Configure with three Additive SetByCaller modifiers:
+	 *   Health -> Data.Damage.Health, ArcaneShield -> Data.Damage.ArcaneShield,
+	 *   Stamina -> Data.Damage.Stamina. Magnitudes arrive negative.
+	 * If unset the component falls back to SetNumericAttributeBase with a warning.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",
 		meta = (DisplayName = "Damage Application GE"))
 	TSubclassOf<UGameplayEffect> DamageApplicationGE;
 
 	/**
-	 * I-01 FIX: Blueprint-configurable Instant GE for on-hit resource recovery
-	 * (LifeOnHit, ManaOnHit, StaminaOnHit). Routes recovery through GAS so
-	 * PreAttributeChange clamping fires instead of using SetNumericAttributeBase directly.
-	 *
-	 * Configure this GE with three Additive modifiers:
-	 *   Attribute: Health  | Magnitude: SetByCaller (Data.Recovery.Health)
-	 *   Attribute: Mana    | Magnitude: SetByCaller (Data.Recovery.Mana)
-	 *   Attribute: Stamina | Magnitude: SetByCaller (Data.Recovery.Stamina)
-	 *
-	 * Duration must be Instant. If left unset, on-hit recovery is skipped with a warning.
+	 * Instant GE for on-hit recovery and leech (Health/Mana/Stamina).
+	 * Configure with Additive SetByCaller modifiers on Data.Recovery.Health,
+	 * Data.Recovery.Mana, Data.Recovery.Stamina. Magnitudes arrive positive.
+	 * If unset, on-hit recovery is skipped with a warning.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",
 		meta = (DisplayName = "Recovery Application GE"))
 	TSubclassOf<UGameplayEffect> RecoveryApplicationGE;
 
 	/**
-	 * Instant GE used to pay skill activation costs.
-	 *
-	 * Configure this GE with three Additive modifiers:
-	 *   Attribute: Health  | Magnitude: SetByCaller (Data.Cost.Health)
-	 *   Attribute: Mana    | Magnitude: SetByCaller (Data.Cost.Mana)
-	 *   Attribute: Stamina | Magnitude: SetByCaller (Data.Cost.Stamina)
-	 *
-	 * Duration must be Instant. If left unset, costs fall back to direct attribute
-	 * mutation so Mana costs still hit Mana rather than ArcaneShield.
+	 * Instant GE used to apply reflected damage back to the attacker.
+	 * Must be non-recursive — it must NOT trigger ailments or reflect again.
+	 * Configure with one Additive SetByCaller modifier:
+	 *   Health -> Data.Damage.Health (magnitude arrives negative).
+	 * If unset, reflect damage is logged but not applied.
 	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat",
-		meta = (DisplayName = "Cost Application GE"))
-	TSubclassOf<UGameplayEffect> CostApplicationGE;
-
-	/**
-	 * Instant GE used to apply reflected damage back to the original attacker.
-	 * Must be non-recursive — this GE should NOT trigger ApplyAilments or ApplyReflect.
-	 *
-	 * Configure with one Additive modifier:
-	 *   Attribute: Health | Magnitude: SetByCaller (Data.Damage.Health)
-	 *
-	 * Duration must be Instant. If left unset, reflect damage is logged but not applied.
-	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat",
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",
 		meta = (DisplayName = "Reflect Application GE"))
 	TSubclassOf<UGameplayEffect> ReflectApplicationGE;
 
-	// Server-side Blueprint edit point. Bind in BP to modify Context.HitPacket before
-	// CombatManager calculates conversion, scaling, mitigation, costs, and application.
-	UPROPERTY(BlueprintAssignable, Category = "Combat|Packet")
-	FOnEditIncomingHitPacket OnEditIncomingHitPacket;
+	// Server-side Blueprint edit point. Bind to adjust DamageInfo / HitResponse
+	// or reject the hit before any damage math runs.
+	UPROPERTY(BlueprintAssignable, Category = "Combat|Hit")
+	FOnEditIncomingHit OnEditIncomingHit;
 
 	UPROPERTY(BlueprintAssignable, Category = "Combat|Damage Popup")
 	FOnCombatDamagePopupRequested OnDamagePopupRequested;
 
-	// One Blueprint packet node. Fill Offense, Defense, Cost, HitResponse, and
-	// ailment flags here, then feed the result into ApplyHit.
-	UFUNCTION(BlueprintPure, Category = "Combat|Packet", meta = (NativeMakeFunc))
-	static FCombatHitPacket MakeCombatHitPacket(
-		const FCombatOffensePacket& Offense,
-		const FCombatDefensePacket& Defense,
-		const FCombatCostPacket& Cost,
+	/**
+	 * Main hit entry point. AnimationDamageInfo is the only Blueprint-authored
+	 * input; weapon damage, added damage, conversion, scaling, mitigation, and
+	 * every defensive layer come from attacker/defender attributes.
+	 *
+	 * Runs the full calculation everywhere, but only mutates state (damage,
+	 * recovery, ailments, reflect) on the authority. Non-authority calls return
+	 * a preview result. Returns false when the hit was invalid or rejected.
+	 *
+	 * @param HitResponse       Defender-resolved outcome (parry window, i-frames,
+	 *                          resource absorb) decided before calling ApplyHit.
+	 * @param bCanApplyAilments Master ailment gate for this hit (e.g. false for
+	 *                          hazard ticks that should never bleed/ignite).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Combat|Hit")
+	bool ApplyHit(
+		AActor* AttackerActor,
+		AActor* DefenderActor,
+		const FAnimationDamageInfo& DamageInfo,
+		FCombatResolveResult& OutResult,
 		EHitResponse HitResponse = EHitResponse::Normal,
 		bool bCanApplyAilments = true);
-
-	// Main hit entry point. Combines the BP-authored packet with attacker stats,
-	// defender stats, and the configured GameplayEffects, then applies the result.
-	UFUNCTION(BlueprintCallable, Category = "Combat|Packet")
-	bool ApplyHit(AActor* AttackerActor, AActor* DefenderActor,
-		const FCombatHitPacket& HitPacket, FCombatResolveResult& OutResult);
 
 protected:
 	static UAbilitySystemComponent* GetAbilitySystemComponentFromActor(const AActor* Actor);
 	static const UHunterAttributeSet* GetHunterAttributeSetFromActor(const AActor* Actor);
-
-	// SkillPacket = nullptr → attribute-only path (no skill layering)
-	FCombatDamagePacket BuildOutgoingDamagePacketFromAttributes(
-		const UHunterAttributeSet* SourceAttributes,
-		AActor* SourceActor,
-		AActor* TargetActor,
-		const FSkillDamagePacket* SkillPacket = nullptr) const;
-
-	// Expects an unscaled base packet. Conversion runs before type-specific increased,
-	// more, and crit so converted damage scales only as its final damage type.
-	FCombatDamagePacket ApplyDamageConversionFromAttributes(const FCombatDamagePacket& InPacket, const UHunterAttributeSet* SourceAttributes, AActor* SourceActor) const;
-	FCombatDamageTransformRules BuildDamageConversionRulesFromAttributes(const UHunterAttributeSet* SourceAttributes) const;
-	FCombatDamageTransformRules CombineDamageTransformRules(
-		const FCombatDamageTransformRules& A,
-		const FCombatDamageTransformRules& B) const;
-	FCombatDamagePacket ApplyDamageTransformRules(
-		const FCombatDamagePacket& InPacket,
-		const FCombatDamageTransformRules& ConversionRules,
-		const FCombatDamageTransformRules& GainAsExtraRules) const;
-	FCombatDamagePacket BuildOutgoingDamagePacketFromHitPacket(
-		const FCombatHitPacket& HitPacket,
-		const UHunterAttributeSet* AttackerAttributes,
-		AActor* AttackerActor) const;
-
-	FCombatResolveResult MitigateDamagePacketAgainstAttributes(
-		const FCombatDamagePacket& InPacket,
-		AActor* SourceActor,
-		AActor* TargetActor,
-		const UHunterAttributeSet* SourceAttributes,
-		const UHunterAttributeSet* TargetAttributes,
-		const FCombatHitPacket* HitPacket = nullptr) const;
-
-	void ApplyResolvedDamage(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result) const;
-	void BroadcastDamagePopup(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result);
-
 	static float RollDamageRange(float MinDamage, float MaxDamage);
 
-	// SkillPacket = nullptr → use full weapon range from attributes (no skill base damage).
+	//~ Outgoing stages ────────────────────────────────────────────────────────
+
+	FCombatDamagePacket BuildOutgoingDamagePacket(
+		const UHunterAttributeSet* AttackerAttributes,
+		const FAnimationDamageInfo& DamageInfo) const;
+
+	// Weapon roll + flat added damage for one type, before any scaling.
 	float CalculateBaseDamageForType(
 		EHunterDamageType DamageType,
-		const UHunterAttributeSet* SourceAttributes,
-		const FSkillDamagePacket* SkillPacket = nullptr) const;
+		const UHunterAttributeSet* AttackerAttributes) const;
 
-	float CalculateScaledDamageForType(
+	// One-pass attribute conversion. Runs on unscaled base damage so converted
+	// damage scales only with modifiers of its final type.
+	FCombatDamagePacket ApplyDamageConversion(
+		const FCombatDamagePacket& InPacket,
+		const UHunterAttributeSet* AttackerAttributes) const;
+
+	// Additive increased pool for one type: global + type + elemental +
+	// tag-conditional attribute buckets + animation BaseMulti + HP-state bonuses.
+	float GetIncreasedDamagePercent(
 		EHunterDamageType DamageType,
-		float BaseDamage,
-		const UHunterAttributeSet* SourceAttributes,
-		const FSkillDamagePacket* SkillPacket = nullptr) const;
-
-	float CalculateScaledDamageForHitPacketType(
-		EHunterDamageType DamageType,
-		float BaseDamage,
-		const UHunterAttributeSet* SourceAttributes,
-		const FCombatHitPacket& HitPacket) const;
-
-	static float GetResistanceValue(EHunterDamageType DamageType, const UHunterAttributeSet* TargetAttributes);
-	float GetResistanceCap(EHunterDamageType DamageType, const UHunterAttributeSet* TargetAttributes) const;
-	static float GetPierceValue(EHunterDamageType DamageType, const UHunterAttributeSet* SourceAttributes);
-	bool IsActorBlocking(AActor* Actor) const;
-	bool CanBlockHit(AActor* SourceActor, AActor* TargetActor, const UHunterAttributeSet* TargetAttributes) const;
-	float GetBlockTypeMultiplier(EHunterDamageType DamageType, const UHunterAttributeSet* TargetAttributes) const;
-	float GetMoreDamageMultiplier(EHunterDamageType DamageType, const UHunterAttributeSet* SourceAttributes) const;
-	float GetDamageTakenMultiplier(EHunterDamageType DamageType, const UHunterAttributeSet* TargetAttributes) const;
-	void ApplyBlockingToMitigatedResult(AActor* SourceActor, AActor* TargetActor, const UHunterAttributeSet* TargetAttributes, FCombatResolveResult& InOutResult) const;
-	void ApplyStaminaBlockCost(const UHunterAttributeSet* TargetAttributes, FCombatResolveResult& InOutResult) const;
-
-	// bCanCrit = false skips the crit roll entirely (e.g. skill sets bCanCrit = false)
-	void ResolveCriticalStrike(FCombatDamagePacket& Packet, const UHunterAttributeSet* SourceAttributes,
-		bool bCanCrit = true, const FSkillDamagePacket* SkillPacket = nullptr) const;
-
-	void ResolveHitPacketCriticalStrike(FCombatDamagePacket& Packet,
 		const UHunterAttributeSet* AttackerAttributes,
-		const FCombatHitPacket& HitPacket) const;
+		const FAnimationDamageInfo& DamageInfo) const;
 
-	// Evaluates stagger eligibility after mitigation. Sets OutResult.bShouldStagger when stamina will be depleted
-	// and the target does not have the State_Self_ExecutingSkill gameplay tag.
-	void EvaluateStagger(AActor* TargetActor, const UHunterAttributeSet* TargetAttributes,
+	// Multiplicative more multipliers: global x elemental x type.
+	float GetMoreDamageMultiplier(
+		EHunterDamageType DamageType,
+		const UHunterAttributeSet* AttackerAttributes) const;
+
+	// One crit roll for the whole hit. Damage-over-time hits never crit.
+	void ResolveCriticalStrike(
+		FCombatDamagePacket& Packet,
+		const UHunterAttributeSet* AttackerAttributes,
+		const FAnimationDamageInfo& DamageInfo) const;
+
+	//~ Incoming stages ────────────────────────────────────────────────────────
+
+	FCombatResolveResult MitigateDamagePacket(
+		const FCombatDamagePacket& InPacket,
+		AActor* AttackerActor,
+		AActor* DefenderActor,
+		const UHunterAttributeSet* AttackerAttributes,
+		const UHunterAttributeSet* DefenderAttributes,
+		const FAnimationDamageInfo& DamageInfo) const;
+
+	static float GetResistanceValue(EHunterDamageType DamageType, const UHunterAttributeSet* DefenderAttributes);
+	float GetResistanceCap(EHunterDamageType DamageType, const UHunterAttributeSet* DefenderAttributes) const;
+
+	// Attacker attribute piercing + animation piercing, clamped 0-100.
+	float GetResistancePierceValue(
+		EHunterDamageType DamageType,
+		const UHunterAttributeSet* AttackerAttributes,
+		const FAnimationDamageInfo& DamageInfo) const;
+
+	float GetDamageTakenMultiplier(EHunterDamageType DamageType, const UHunterAttributeSet* DefenderAttributes) const;
+
+	bool IsActorBlocking(AActor* Actor) const;
+	bool CanBlockHit(AActor* AttackerActor, AActor* DefenderActor, const UHunterAttributeSet* DefenderAttributes) const;
+	float GetBlockTypeMultiplier(EHunterDamageType DamageType, const UHunterAttributeSet* DefenderAttributes) const;
+	void ApplyBlockingToMitigatedResult(
+		AActor* AttackerActor,
+		AActor* DefenderActor,
+		const UHunterAttributeSet* DefenderAttributes,
+		FCombatResolveResult& InOutResult) const;
+	void ApplyStaminaBlockCost(const UHunterAttributeSet* DefenderAttributes, FCombatResolveResult& InOutResult) const;
+
+	// Sets bShouldStagger when the hit depletes stamina and the defender is not
+	// protected by the State_Self_ExecutingSkill gameplay tag.
+	void EvaluateStagger(
+		AActor* DefenderActor,
+		const UHunterAttributeSet* DefenderAttributes,
 		FCombatResolveResult& InOutResult) const;
 
-	void ApplyHitResponse(const FCombatHitPacket& HitPacket, FCombatResolveResult& InOutResult) const;
+	// Parry zeroes routed damage but keeps per-type taken values so ailments
+	// still roll with real magnitudes. Invincible zeroes everything.
+	void ApplyHitResponse(EHitResponse HitResponse, bool bCanApplyAilments, FCombatResolveResult& InOutResult) const;
 
-	// Deducts StaminaCost / ManaCost / HealthCost from the source actor's ASC once
-	// at activation time after applying the matching CostChanges attributes.
-	void ApplySkillCostToSource(AActor* SourceActor, const FSkillDamagePacket& SkillPacket) const;
+	//~ Application ────────────────────────────────────────────────────────────
 
-	// Accepts pre-fetched pointers from ApplyHit to avoid redundant ASC lookups.
-	void ApplyOnHitEffects(
-		AActor* SourceActor,
-		AActor* TargetActor,
+	void ApplyResolvedDamage(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result) const;
+
+	// LifeOnHit/ManaOnHit/StaminaOnHit plus leech percentages of damage dealt,
+	// routed through RecoveryApplicationGE on the attacker.
+	void ApplyOnHitRecovery(
+		AActor* AttackerActor,
 		const FCombatResolveResult& Result,
-		UAbilitySystemComponent* CachedSourceASC = nullptr,
-		const UHunterAttributeSet* CachedSourceAttributes = nullptr) const;
+		UAbilitySystemComponent* AttackerASC,
+		const UHunterAttributeSet* AttackerAttributes) const;
 
-	// Respects Result.bShouldApplyAilments and Result.HitResponse.
-	// Parry path: ailments roll by flat chance only (Elden Ring style — no buildup roll).
-	// Invincible path: fully skipped (bShouldApplyAilments == false).
-	void ApplyAilments(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result) const;
+	// Rolls attacker ailment chances against per-type mitigated damage and
+	// routes successful rolls through UCombatStatusManager.
+	void ApplyAilments(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result) const;
 
-	void ApplyReflect(AActor* SourceActor, AActor* TargetActor, const FCombatResolveResult& Result) const;
+	// Defender reflect chance/percent attributes returned to the attacker
+	// through ReflectApplicationGE.
+	void ApplyReflect(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result) const;
+
+	void BroadcastDamagePopup(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result);
+
+	UCombatStatusManager* ResolveStatusManager(AActor* PreferredActor) const;
 };

@@ -20,8 +20,10 @@ void UCombatSystemManagerComponent::BeginPlay()
 bool UCombatSystemManagerComponent::ApplyHit(
 	AActor* AttackerActor,
 	AActor* DefenderActor,
-	const FCombatHitPacket& HitPacket,
-	FCombatResolveResult& OutResult)
+	const FAnimationDamageInfo& DamageInfo,
+	FCombatResolveResult& OutResult,
+	const EHitResponse HitResponse,
+	const bool bCanApplyAilments)
 {
 	if (!CombatManager)
 	{
@@ -37,7 +39,8 @@ bool UCombatSystemManagerComponent::ApplyHit(
 		return false;
 	}
 
-	return CombatManager->ApplyHit(AttackerActor, DefenderActor, HitPacket, OutResult);
+	return CombatManager->ApplyHit(
+		AttackerActor, DefenderActor, DamageInfo, OutResult, HitResponse, bCanApplyAilments);
 }
 
 void UCombatSystemManagerComponent::CleanseAll(AActor* Target)

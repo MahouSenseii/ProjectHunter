@@ -1905,9 +1905,6 @@ private:
 	bool IsManaVitalAttribute(const FGameplayAttribute& Attribute) const;
 	bool IsStaminaVitalAttribute(const FGameplayAttribute& Attribute) const;
 	bool IsArcaneShieldVitalAttribute(const FGameplayAttribute& Attribute) const;
-    
-	// Helper for min/max damage validation
-	void ValidateMinMaxDamage(const FGameplayAttribute& Attribute, float& NewValue) const;
 
 	bool bIsInitializingStats = false;
 	bool bIsUpdatingDerivedVitalAttributes = false;

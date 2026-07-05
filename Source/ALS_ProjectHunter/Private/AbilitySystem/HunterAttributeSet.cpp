@@ -2144,8 +2144,13 @@ void UHunterAttributeSet::ClampDamageAttributes(const FGameplayAttribute& Attrib
         Attribute == GetMinLightningDamageAttribute() || Attribute == GetMaxLightningDamageAttribute() ||
         Attribute == GetMinCorruptionDamageAttribute() || Attribute == GetMaxCorruptionDamageAttribute())
     {
+        // Only clamp to >= 0 here. Do NOT cross-clamp Min against Max: attribute
+        // modifiers apply one at a time, so during equipment GE application Min
+        // can arrive while Max is still 0 (BeginPlay equips) and a write-time
+        // clamp permanently zeroes the weapon's minimum. Consumers that roll a
+        // damage range (UCombatManager::RollDamageRange) already normalize an
+        // inverted Min/Max pair at read time.
         NewValue = FMath::Max(NewValue, 0.0f);
-        ValidateMinMaxDamage(Attribute, NewValue);
     }
     else if (Attribute == GetPhysicalFlatDamageAttribute() || Attribute == GetFireFlatDamageAttribute() ||
              Attribute == GetIceFlatDamageAttribute() || Attribute == GetLightFlatDamageAttribute() ||
@@ -2170,34 +2175,6 @@ void UHunterAttributeSet::ClampDamageAttributes(const FGameplayAttribute& Attrib
     {
         NewValue = FMath::Clamp(NewValue, 0.0f, 10.0f);
     }
-}
-
-void UHunterAttributeSet::ValidateMinMaxDamage(const FGameplayAttribute& Attribute, float& NewValue) const
-{
-    if (Attribute == GetMinPhysicalDamageAttribute())
-        NewValue = FMath::Min(NewValue, GetMaxPhysicalDamage());
-    else if (Attribute == GetMaxPhysicalDamageAttribute())
-        NewValue = FMath::Max(NewValue, GetMinPhysicalDamage());
-    else if (Attribute == GetMinFireDamageAttribute())
-        NewValue = FMath::Min(NewValue, GetMaxFireDamage());
-    else if (Attribute == GetMaxFireDamageAttribute())
-        NewValue = FMath::Max(NewValue, GetMinFireDamage());
-    else if (Attribute == GetMinIceDamageAttribute())
-        NewValue = FMath::Min(NewValue, GetMaxIceDamage());
-    else if (Attribute == GetMaxIceDamageAttribute())
-        NewValue = FMath::Max(NewValue, GetMinIceDamage());
-    else if (Attribute == GetMinLightDamageAttribute())
-        NewValue = FMath::Min(NewValue, GetMaxLightDamage());
-    else if (Attribute == GetMaxLightDamageAttribute())
-        NewValue = FMath::Max(NewValue, GetMinLightDamage());
-    else if (Attribute == GetMinLightningDamageAttribute())
-        NewValue = FMath::Min(NewValue, GetMaxLightningDamage());
-    else if (Attribute == GetMaxLightningDamageAttribute())
-        NewValue = FMath::Max(NewValue, GetMinLightningDamage());
-    else if (Attribute == GetMinCorruptionDamageAttribute())
-        NewValue = FMath::Min(NewValue, GetMaxCorruptionDamage());
-    else if (Attribute == GetMaxCorruptionDamageAttribute())
-        NewValue = FMath::Max(NewValue, GetMinCorruptionDamage());
 }
 
 void UHunterAttributeSet::ClampResistanceAttributes(const FGameplayAttribute& Attribute, float& NewValue) const

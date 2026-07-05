@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Animation/AnimEnums.h"
 #include "Character/ALSCharacterMovementComponent.h"
 #include "Character/Library/Enums/PHMovementEnums.h"
 #include "Library/ALSCharacterEnumLibrary.h"
@@ -88,6 +89,33 @@ public:
 	/** Pushes the character away from the current wall and enters falling movement. */
 	UFUNCTION(BlueprintCallable, Category = "Movement|Wall Traversal")
 	void JumpOffWall();
+
+	/**
+	 * Adds controlled movement along the current wall plane. Use from wall-combat
+	 * notifies or abilities when ground-authored root motion is disabled.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Movement|Wall Traversal|Combat")
+	void AddWallTraversalPlaneImpulse(
+		FVector WorldDirection,
+		float Speed,
+		bool bReplaceCurrentWallVelocity = false);
+
+	/** Temporarily scales player-driven wall movement during wall combat. */
+	UFUNCTION(BlueprintCallable, Category = "Movement|Wall Traversal|Combat")
+	void SetWallTraversalCombatMovementScale(float NewMovementScale, float Duration = 0.0f);
+
+	UFUNCTION(BlueprintCallable, Category = "Movement|Wall Traversal|Combat")
+	void ClearWallTraversalCombatMovementScale();
+
+	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal|Combat")
+	float GetWallTraversalCombatMovementScale() const;
+
+	/** Locks or unlocks player-driven wall movement during wall attacks. */
+	UFUNCTION(BlueprintCallable, Category = "Movement|Wall Traversal|Combat")
+	void SetWallTraversalCombatMovementLocked(bool bLocked, float Duration = 0.0f);
+
+	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal|Combat")
+	bool IsWallTraversalCombatMovementLocked() const;
 
 	UFUNCTION(BlueprintPure, Category = "Movement|Wall Traversal")
 	bool IsWallTraversing() const;
@@ -193,6 +221,9 @@ protected:
 	float GetDesiredWallDistance(const FVector& CapsuleUp) const;
 	float GetCapsuleSupportDistance(const FVector& SurfaceNormal, const FVector& CapsuleUp) const;
 	float GetWallTraversalSpeed() const;
+	void UpdateWallTraversalCombatMovementScale();
+	void ApplyWallTraversalRootMotionMode();
+	void RestoreWallTraversalRootMotionMode();
 	void ClearWallTraversalState();
 	void RecordWallDetachTime();
 
@@ -296,6 +327,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Speed",
 		meta = (ClampMin = "0.0"))
 	float WallClimbingFallbackSpeed = 250.0f;
+
+	/**
+	 * Ground attack montages are not wall-authored. While attached, extract their
+	 * root motion but keep movement authority in this component.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Combat")
+	bool bIgnoreRootMotionWhileWallTraversing = true;
 
 	/**
 	 * Speed pushed straight out along the wall normal when jumping off. Lower
@@ -420,6 +458,11 @@ protected:
 	int32 WallLostFrames = 0;
 	float WallTraversalElapsed = 0.0f;
 	float WallToGroundElapsed = 0.0f;
+	TEnumAsByte<ERootMotionMode::Type> SavedWallTraversalRootMotionMode =
+		ERootMotionMode::RootMotionFromMontagesOnly;
+	bool bHasSavedWallTraversalRootMotionMode = false;
+	float WallTraversalCombatMovementScale = 1.0f;
+	float WallTraversalCombatMovementScaleEndTime = -1.0f;
 	FVector WallToGroundStartLocation = FVector::ZeroVector;
 	FVector WallToGroundTargetLocation = FVector::ZeroVector;
 	FVector WallToGroundPlanarVelocity = FVector::ZeroVector;

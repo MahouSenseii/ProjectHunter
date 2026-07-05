@@ -388,6 +388,18 @@ FGameplayEffectSpecHandle FEquipmentStatsApplier::CreateEquipmentEffect(UStatsMa
 	if (bIsWeapon)
 	{
 		SeedWeaponBase(BaseData->WeaponStats, WeaponAccum);
+
+		// Deliberately Log-level: fires once per equip and is the ground truth
+		// for "what did this weapon actually contribute to the attribute sheet".
+		UE_LOG(LogStatsManager, Log,
+			TEXT("CreateEquipmentEffect: %s weapon base Phys %.1f-%.1f Fire %.1f-%.1f Ice %.1f-%.1f Lightning %.1f-%.1f Light %.1f-%.1f Corruption %.1f-%.1f"),
+			*Item->GetName(),
+			BaseData->WeaponStats.MinPhysicalDamage, BaseData->WeaponStats.MaxPhysicalDamage,
+			BaseData->WeaponStats.MinFireDamage, BaseData->WeaponStats.MaxFireDamage,
+			BaseData->WeaponStats.MinIceDamage, BaseData->WeaponStats.MaxIceDamage,
+			BaseData->WeaponStats.MinLightningDamage, BaseData->WeaponStats.MaxLightningDamage,
+			BaseData->WeaponStats.MinLightDamage, BaseData->WeaponStats.MaxLightDamage,
+			BaseData->WeaponStats.MinCorruptionDamage, BaseData->WeaponStats.MaxCorruptionDamage);
 	}
 
 	int32 ModifiersAdded = 0;
@@ -451,14 +463,16 @@ FGameplayEffectSpecHandle FEquipmentStatsApplier::CreateEquipmentEffect(UStatsMa
 			FGameplayAttribute MaxAttr;
 			GetWeaponMinMaxAttributes(TypeIndex, MinAttr, MaxAttr);
 
-			if (WeaponAccum.Min[TypeIndex].HasContribution())
-			{
-				AddFlatModifier(Effect, MinAttr, WeaponAccum.Min[TypeIndex].Resolve());
-				++ModifiersAdded;
-			}
+			// Max is emitted before Min so any consumer that still compares the
+			// pair mid-application sees the upper bound land first.
 			if (WeaponAccum.Max[TypeIndex].HasContribution())
 			{
 				AddFlatModifier(Effect, MaxAttr, WeaponAccum.Max[TypeIndex].Resolve());
+				++ModifiersAdded;
+			}
+			if (WeaponAccum.Min[TypeIndex].HasContribution())
+			{
+				AddFlatModifier(Effect, MinAttr, WeaponAccum.Min[TypeIndex].Resolve());
 				++ModifiersAdded;
 			}
 		}
