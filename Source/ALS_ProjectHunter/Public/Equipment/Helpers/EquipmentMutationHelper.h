@@ -15,5 +15,4 @@ public:
 	static void UnequipAll(UEquipmentManager& Manager, bool bMoveToBag);
 	static AEquippedItemRuntimeActor* GetActiveRuntimeItemActor(const UEquipmentManager& Manager, EEquipmentSlot Slot);
 	static UItemInstance* EquipItemInternal(UEquipmentManager& Manager, UItemInstance* Item, EEquipmentSlot Slot, bool bSwapToBag, bool bUseGroundPickupRules = false);
-	static bool HandleTwoHandedWeapon(UEquipmentManager& Manager, UItemInstance* Item, bool bSwapToBag, UItemInstance*& OutOldMainHand, UItemInstance*& OutOldOffHand, UItemInstance*& OutOldTwoHand);
 };

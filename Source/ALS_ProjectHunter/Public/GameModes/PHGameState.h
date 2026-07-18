@@ -1,10 +1,9 @@
-// PHGameState.h
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameState.h"
-#include "GameModes/Library/GameModeEnumLibrary.h"
+#include "GameModes/Library/Enums/GameModeEnumLibrary.h"
 #include "PHGameState.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPHGameState, Log, All);
@@ -21,9 +20,7 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	// ═══════════════════════════════════════════════
 	// MATCH STATE
-	// ═══════════════════════════════════════════════
 
 	UPROPERTY(ReplicatedUsing = OnRep_MatchPhase, BlueprintReadOnly, Category = "Match")
 	EPHMatchPhase MatchPhase = EPHMatchPhase::WaitingToStart;
@@ -34,9 +31,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Match")
 	FOnMatchPhaseChanged OnMatchPhaseChanged;
 
-	// ═══════════════════════════════════════════════
 	// TIMING
-	// ═══════════════════════════════════════════════
 
 	/** Server time (seconds) when InProgress phase began. Clients use this to derive elapsed time. */
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Match")
@@ -46,9 +41,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Match")
 	float GetMatchElapsedTime() const;
 
-	// ═══════════════════════════════════════════════
 	// GLOBAL STATS (replicated)
-	// ═══════════════════════════════════════════════
 
 	/** Total monsters killed in this session (all players combined) */
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Stats")
@@ -58,9 +51,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Stats")
 	void IncrementMobKills(int32 Count = 1);
 
-	// ═══════════════════════════════════════════════
 	// DIFFICULTY / WORLD MODIFIERS
-	// ═══════════════════════════════════════════════
 
 	/** World tier / difficulty level. Affects mob scaling, loot quality, etc. */
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Difficulty")

@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Combat/Library/CombatStructs.h"
+#include "Combat/Library/Structs/CombatStructs.h"
 #include "HunterDamagePopupWidget.generated.h"
 
 class UWidgetComponent;

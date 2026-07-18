@@ -1,6 +1,3 @@
-// Copyright © 2025 MahouSensei
-// Author: Quentin Davis
-
 #include "Menu/Widgets/PHMenuRootWidget.h"
 
 #include "Components/WidgetSwitcher.h"
@@ -16,14 +13,11 @@ void UPHMenuRootWidget::NativeConstruct()
 
 	if (TabBar)
 	{
-		// Bind BEFORE InitializeTabs — the bar auto-selects the first tab during
-		// initialization and we need to hear that selection to show its page.
 		TabBar->OnMenuTabSelected.AddUniqueDynamic(this, &UPHMenuRootWidget::HandleTabSelected);
 		TabBar->InitializeTabs(MenuEntries);
 	}
 	else if (MenuEntries.Num() > 0)
 	{
-		// No tab bar in this layout — just show the first configured page.
 		ShowPage(GetFirstValidMenuType(), EMenuType::MT_None);
 	}
 
@@ -39,9 +33,9 @@ void UPHMenuRootWidget::OpenMenu(EMenuType MenuType)
 {
 	if (MenuType == EMenuType::MT_None)
 	{
-		MenuType = (ActiveMenuType != EMenuType::MT_None)
-			? ActiveMenuType            // restore whatever was open last
-			: GetFirstValidMenuType();  // first open ever
+		MenuType = ActiveMenuType != EMenuType::MT_None
+			? ActiveMenuType
+			: GetFirstValidMenuType();
 	}
 
 	if (MenuType == EMenuType::MT_None)
@@ -51,12 +45,8 @@ void UPHMenuRootWidget::OpenMenu(EMenuType MenuType)
 
 	if (TabBar)
 	{
-		// SelectTab dedupes, updates tab visuals, and fires OnMenuTabSelected,
-		// which lands in HandleTabSelected → ShowPage.
 		TabBar->SelectTab(MenuType);
 
-		// SelectTab early-outs when the type is unchanged; make sure the page
-		// exists even on the very first OpenMenu after a same-type no-op.
 		if (ActiveMenuType != MenuType || GetActivePage() == nullptr)
 		{
 			ShowPage(MenuType, ActiveMenuType);
@@ -85,8 +75,6 @@ void UPHMenuRootWidget::NativeInitializeForCharacter(APHBaseCharacter* Character
 {
 	Super::NativeInitializeForCharacter(Character);
 
-	// Rebind every page that already exists; pages created later pick the
-	// character up inside GetOrCreatePage.
 	for (FMenuEntry& Entry : MenuEntries)
 	{
 		if (Entry.CachedInstance)
@@ -194,6 +182,7 @@ FMenuEntry* UPHMenuRootWidget::FindEntry(const EMenuType MenuType)
 			return &Entry;
 		}
 	}
+
 	return nullptr;
 }
 
@@ -206,6 +195,7 @@ const FMenuEntry* UPHMenuRootWidget::FindEntry(const EMenuType MenuType) const
 			return &Entry;
 		}
 	}
+
 	return nullptr;
 }
 
@@ -218,5 +208,6 @@ EMenuType UPHMenuRootWidget::GetFirstValidMenuType() const
 			return Entry.MenuType;
 		}
 	}
+
 	return EMenuType::MT_None;
 }

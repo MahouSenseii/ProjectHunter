@@ -1,4 +1,3 @@
-// Character/HUD/StatusEffect/StatusEffectHUDWidget.h
 
 #pragma once
 
@@ -15,15 +14,13 @@ class UTexture2D;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogStatusEffectHUD, Log, All);
 
-// ─────────────────────────────────────────────────────────────────────────────
 UCLASS(Abstract, BlueprintType, Blueprintable)
 class ALS_PROJECTHUNTER_API UStatusEffectHUDWidget : public UHunterHUDBaseWidget
 {
 	GENERATED_BODY()
 
 public:
-	// ── Configuration ─────────────────────────────────────────────────────────
-
+	// Configuration
 	/**
 	 * The widget class to instantiate for each active status effect.
 	 * Must be a Blueprint child of UStatusEffectIconWidget.
@@ -53,9 +50,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "StatusEffect|Layout")
 	FName IconContainerSlotName = TEXT("IconContainer");
 
-	// ── Public API ────────────────────────────────────────────────────────────
-
-	/** Force a full refresh — removes all icons and re-adds from current GEs. */
+	// Public API
+	/** Force a full refresh - removes all icons and re-adds from current GEs. */
 	UFUNCTION(BlueprintCallable, Category = "StatusEffect")
 	void RefreshAllIcons();
 
@@ -64,13 +60,11 @@ public:
 	int32 GetActiveIconCount() const { return ActiveIcons.Num(); }
 
 protected:
-	// ── UHunterHUDBaseWidget overrides ────────────────────────────────────────
-
+	// UHunterHUDBaseWidget overrides
 	virtual void NativeInitializeForCharacter(APHBaseCharacter* Character) override;
 	virtual void NativeReleaseCharacter() override;
 
-	// ── Blueprint hooks ───────────────────────────────────────────────────────
-
+	// Blueprint hooks
 	/**
 	 * Implement in Blueprint to map a Gameplay Tag to an icon texture.
 	 * Return nullptr to use the default icon (or hide the effect).
@@ -100,16 +94,14 @@ protected:
 	void BP_OnIconRemoved(FActiveGameplayEffectHandle Handle);
 
 private:
-	// ── GE event handlers ─────────────────────────────────────────────────────
-
+	// GE event handlers
 	void OnGameplayEffectAdded(UAbilitySystemComponent* ASC,
 		const FGameplayEffectSpec& Spec,
 		FActiveGameplayEffectHandle Handle);
 
 	void OnGameplayEffectRemoved(const FActiveGameplayEffect& Effect);
 
-	// ── Icon helpers ──────────────────────────────────────────────────────────
-
+	// Icon helpers
 	void AddIconForEffect(UAbilitySystemComponent* ASC,
 		FActiveGameplayEffectHandle Handle,
 		const FGameplayEffectSpec& Spec);
@@ -120,9 +112,8 @@ private:
 
 	UHorizontalBox* GetIconContainer() const;
 
-	// ── State ─────────────────────────────────────────────────────────────────
-
-	/** Handle → icon widget mapping for fast removal lookup */
+	// State
+	/** Handle -> icon widget mapping for fast removal lookup */
 	UPROPERTY()
 	TMap<FActiveGameplayEffectHandle, TObjectPtr<UStatusEffectIconWidget>> ActiveIcons;
 

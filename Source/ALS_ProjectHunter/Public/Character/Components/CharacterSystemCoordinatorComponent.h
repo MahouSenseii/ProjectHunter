@@ -1,11 +1,10 @@
-// Character/Components/CharacterSystemCoordinatorComponent.h
 
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Item/Library/ItemEnums.h"
+#include "Item/Library/Enums/ItemEnums.h"
 #include "CharacterSystemCoordinatorComponent.generated.h"
 
 class UStatsManager;
@@ -13,8 +12,7 @@ class UEquipmentManager;
 class UInventoryManager;
 class UInteractionManager;
 class UCombatManager;
-class UCombatSystemManagerComponent;
-class UCombatStatusManager;
+class UCombatStatusEffectApplier;
 class UEquipmentPresentationComponent;
 class UItemInstance;
 class UWidgetComponent;
@@ -28,11 +26,11 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCharacterSystemCoordinator, Log, All);
  * wiring for character managers. APHBaseCharacter creates this component and
  * lets it own the wiring; APHBaseCharacter itself is a composition root only.
  *
- * Bootstrap order (idempotent — see PH-0.5):
- *   1. CacheManagerReferences — single FindComponentByClass pass on BeginPlay.
+ * Bootstrap order (idempotent - see PH-0.5):
+ *   1. CacheManagerReferences - single FindComponentByClass pass on BeginPlay.
  *   2. BindCrossSystemListeners - wire Equipment to Stats and Presentation.
  *      Future systems can subscribe here when they become active scope.
- *   3. bWired = true — prevents double-wiring on possession change or late join.
+ *   3. bWired = true - prevents double-wiring on possession change or late join.
  */
 UCLASS(ClassGroup = (ProjectHunter), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UCharacterSystemCoordinatorComponent : public UActorComponent
@@ -47,10 +45,8 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	//~ End UActorComponent
 
-	// ─────────────────────────────────────────────────────────────
 	// CACHED MANAGER ACCESSORS
 	// Safe to call after BeginPlay; all return nullptr before wiring completes.
-	// ─────────────────────────────────────────────────────────────
 
 	UFUNCTION(BlueprintPure, Category = "ProjectHunter|Coordinator")
 	UStatsManager* GetStatsManager() const { return StatsManager; }
@@ -67,11 +63,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "ProjectHunter|Coordinator")
 	UCombatManager* GetCombatManager() const { return CombatManager; }
 
+	/** CombatManager owns CombatStatus directly; forwards rather than caching a second pointer to it. */
 	UFUNCTION(BlueprintPure, Category = "ProjectHunter|Coordinator")
-	UCombatSystemManagerComponent* GetCombatSystemManager() const { return CombatSystemManager; }
-
-	UFUNCTION(BlueprintPure, Category = "ProjectHunter|Coordinator")
-	UCombatStatusManager* GetCombatStatusManager() const { return CombatStatusManager; }
+	UCombatStatusEffectApplier* GetCombatStatusManager() const;
 
 	UFUNCTION(BlueprintPure, Category = "ProjectHunter|Coordinator")
 	UEquipmentPresentationComponent* GetEquipmentPresentation() const { return EquipmentPresentation; }
@@ -87,11 +81,9 @@ public:
 	void InitializeAttachedHUDWidgets();
 
 protected:
-	// ─────────────────────────────────────────────────────────────
 	// BOOTSTRAP (PH-0.2 / PH-0.3)
-	// ─────────────────────────────────────────────────────────────
 
-	/** Single discovery pass — replaces hot-path FindComponentByClass calls in managers. */
+	/** Single discovery pass - replaces hot-path FindComponentByClass calls in managers. */
 	void CacheManagerReferences();
 
 	/** Bind Equipment to Stats and Presentation listeners. */
@@ -100,9 +92,7 @@ protected:
 	/** Tear down listeners on EndPlay so we never leak across level travel. */
 	void UnbindCrossSystemListeners();
 
-	// ─────────────────────────────────────────────────────────────
 	// CROSS-SYSTEM HANDLERS
-	// ─────────────────────────────────────────────────────────────
 
 	/**
 	 * Fires on UEquipmentManager::OnEquipmentChanged.
@@ -120,17 +110,13 @@ protected:
 	void HandleEquipmentPresentationUpdated(EEquipmentSlot Slot, UItemInstance* NewItem);
 
 private:
-	// ─────────────────────────────────────────────────────────────
-	// CACHED MANAGER REFERENCES  (Transient — not replicated)
-	// ─────────────────────────────────────────────────────────────
+	// CACHED MANAGER REFERENCES  (Transient - not replicated)
 
 	UPROPERTY(Transient) TObjectPtr<UStatsManager>                 StatsManager          = nullptr;
 	UPROPERTY(Transient) TObjectPtr<UEquipmentManager>             EquipmentManager      = nullptr;
 	UPROPERTY(Transient) TObjectPtr<UInventoryManager>             InventoryManager      = nullptr;
 	UPROPERTY(Transient) TObjectPtr<UInteractionManager>           InteractionManager    = nullptr;
 	UPROPERTY(Transient) TObjectPtr<UCombatManager>                CombatManager         = nullptr;
-	UPROPERTY(Transient) TObjectPtr<UCombatSystemManagerComponent> CombatSystemManager   = nullptr;
-	UPROPERTY(Transient) TObjectPtr<UCombatStatusManager>          CombatStatusManager   = nullptr;
 	UPROPERTY(Transient) TObjectPtr<UEquipmentPresentationComponent> EquipmentPresentation = nullptr;
 
 	/** Guard: true once wiring completed. Prevents double-wiring on possession churn. */

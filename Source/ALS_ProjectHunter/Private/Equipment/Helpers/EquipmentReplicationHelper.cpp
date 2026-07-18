@@ -4,6 +4,7 @@
 #include "Character/Components/CharacterSystemCoordinatorComponent.h"
 #include "Equipment/Components/EquipmentManager.h"
 #include "Equipment/Components/EquipmentPresentationComponent.h"
+#include "Equipment/Library/EquipmentLog.h"
 #include "Inventory/Components/InventoryManager.h"
 #include "Item/ItemInstance.h"
 

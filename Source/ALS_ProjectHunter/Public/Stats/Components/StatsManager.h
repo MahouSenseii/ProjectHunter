@@ -1,34 +1,29 @@
-// Stats/Components/StatsManager.h
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Stats/Debug/StatsDebugManager.h"
-#include "Stats/StatsEnumLibrary.h"
 #include "GameplayEffectTypes.h"
+#include "Stats/Debug/StatsDebugManager.h"
+#include "Stats/Library/Enums/StatsEnumLibrary.h"
 #include "StatsManager.generated.h"
 
-// Forward declarations
-class UAbilitySystemComponent;
-class UHunterAttributeSet;
-class UItemInstance;
-class UGameplayEffect;
-class UBaseStatsData;
-class UAttributeSet;
 class FEquipmentStatsApplier;
 class FStatsAttributeResolver;
 class FStatsInitializer;
+class UAbilitySystemComponent;
+class UAttributeSet;
+class UBaseStatsData;
+class UGameplayEffect;
+class UHunterAttributeSet;
+class UItemInstance;
 enum class EEquipmentSlot : uint8;
-struct FPHAttributeData;
 struct FGameplayAttribute;
+struct FPHAttributeData;
 struct FStatInitializationEntry;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogStatsManager, Log, All);
-/**
- * Stats Manager Component
- * Handles all stat queries, attribute access, and stat-related calculations
- */
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UStatsManager : public UActorComponent
 {
 	GENERATED_BODY()
@@ -42,81 +37,36 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 	void NotifyAbilitySystemReady();
 
-	/**
-	 * Clear the one-time initialization guard so that the next call to
-	 * NotifyAbilitySystemReady() fully re-runs InitializeFromDataAsset.
-	 *
-	 * Call this on a pool-recycled mob BEFORE NotifyAbilitySystemReady().
-	 * Without it, TryInitializeConfiguredStats() short-circuits on the
-	 * bHasInitializedConfiguredStats flag and Health/Mana/Stamina are
-	 * never restored from their death-state (0) values.
-	 */
+	// Required for recycled actors that need their authored base stats applied again.
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void ResetStatsInitialization();
 
-	/** Returns true once InitializeFromDataAsset has run successfully. */
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	bool HasInitializedStats() const { return bHasInitializedConfiguredStats; }
 
-	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* EQUIPMENT INTEGRATION (Required by EquipmentManager)                    */
-	/* ═══════════════════════════════════════════════════════════════════════ */
-
-	/**
-	 * Apply stats from an equipped item via GAS
-	 * Called by EquipmentManager when item is equipped
-	 * Works with FPHAttributeData arrays (Prefixes/Suffixes/Implicits/Crafted)
-	 * @param Item - Item that was equipped
-	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Equipment")
 	void ApplyEquipmentStats(UItemInstance* Item);
 
-	/**
-	 * Remove stats from an unequipped item via GAS
-	 * Called by EquipmentManager when item is unequipped
-	 * @param Item - Item that was unequipped
-	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Equipment")
 	void RemoveEquipmentStats(UItemInstance* Item);
 
-	/**
-	 * Remove all active equipment effects and immediately re-apply them from the stored item instances.
-	 * Useful after a stat recalculation that requires all modifiers to be rebuilt.
-	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Equipment")
 	void RefreshEquipmentStats();
 
 	UFUNCTION()
 	void HandleEquipmentChanged(EEquipmentSlot Slot, UItemInstance* NewItem, UItemInstance* OldItem);
 
-	/**
-	 * Check if item's stats are currently applied
-	 */
 	UFUNCTION(BlueprintPure, Category = "Stats|Equipment")
 	bool HasEquipmentStatsApplied(UItemInstance* Item) const;
 
-	/**
-	 * Apply a gameplay effect class to this component's owner. Server-only:
-	 * returns false on a non-authoritative caller, an invalid EffectClass, or a
-	 * missing AbilitySystemComponent.
-	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Effects")
 	bool ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> EffectClass, float Level = 1.0f);
 
-	/**
-	 * Apply a gameplay effect class to another actor that exposes an ASC.
-	 * Server-only: returns false on a non-authoritative caller, an invalid target
-	 * or EffectClass, or a target without an AbilitySystemComponent.
-	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats|Effects")
 	bool ApplyGameplayEffectToTarget(AActor* TargetActor, TSubclassOf<UGameplayEffect> EffectClass, float Level = 1.0f);
-	
-
-	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* PRIMARY ATTRIBUTES (7)                                                  */
-	/* ═══════════════════════════════════════════════════════════════════════ */
 
 	UFUNCTION(BlueprintPure, Category = "Stats|Primary")
 	float GetStrength() const;
@@ -139,35 +89,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Stats|Primary")
 	float GetCovenant() const;
 
-	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* SECONDARY/DERIVED ATTRIBUTES                                            */
-	/* ═══════════════════════════════════════════════════════════════════════ */
-
-	/** Get Magic Find stat (affects loot quality and quantity). */
 	UFUNCTION(BlueprintPure, Category = "Stats|Secondary")
 	float GetMagicFind() const;
 
-	/**
-	 * Get Item Find stat (affects drop rates)
-	 */
 	UFUNCTION(BlueprintPure, Category = "Stats|Secondary")
 	float GetItemFind() const;
 
-	/**
-	 * Get Gold Find stat (affects currency drops)
-	 */
 	UFUNCTION(BlueprintPure, Category = "Stats|Secondary")
 	float GetGoldFind() const;
 
-	/**
-	 * Get Experience Bonus stat
-	 */
 	UFUNCTION(BlueprintPure, Category = "Stats|Secondary")
 	float GetExperienceBonus() const;
-
-	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* VITAL ATTRIBUTES                                                        */
-	/* ═══════════════════════════════════════════════════════════════════════ */
 
 	UFUNCTION(BlueprintPure, Category = "Stats|Vitals")
 	float GetHealth() const;
@@ -196,33 +128,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Stats|Vitals")
 	float GetStaminaPercent() const;
 
-	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* GENERIC ATTRIBUTE ACCESS                                                */
-	/* ═══════════════════════════════════════════════════════════════════════ */
-
-	/**
-	 * Get any attribute by enum — type-safe, Blueprint-friendly, no string typos.
-	 * Prefer this over GetAttributeByName for all new Blueprint/C++ code.
-	 *
-	 * @param AttributeType - Enum value identifying the attribute to read.
-	 * @return Current attribute value, or 0.f if the AttributeSet is unavailable.
-	 */
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	float GetAttributeByType(EHunterAttribute AttributeType) const;
 
-	/**
-	 * Get any attribute by name (legacy — prefer GetAttributeByType for new code).
-	 * @param AttributeName - Name of the attribute (e.g., "Strength", "Health")
-	 * @return Attribute value, or 0 if not found / AttributeSet unavailable.
-	 */
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	float GetAttributeByName(FName AttributeName) const;
 
-	/**
-	 * Check if character meets stat requirements
-	 * @param Requirements - Map of AttributeName → RequiredValue
-	 * @return True if all requirements are met
-	 */
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	bool MeetsStatRequirements(const TMap<FName, float>& Requirements) const;
 
@@ -235,10 +146,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	TSubclassOf<UAttributeSet> GetSourceAttributeSetClass() const;
 
-	const UBaseStatsData* GetStatsDataAsset() const
-	{
-		return StatsData;
-	}
+	const UBaseStatsData* GetStatsDataAsset() const { return StatsData; }
 
 	UFUNCTION(BlueprintCallable, Category = "Stats|Debug")
 	void SetStatsDebugEnabled(bool bEnable);
@@ -246,47 +154,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Debug")
 	FStatsDebugManager DebugManager;
 
-	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* POWER CALCULATIONS                                                      */
-	/* ═══════════════════════════════════════════════════════════════════════ */
-
-	/**
-	 * Calculate overall power level (for matchmaking, scaling, etc.)
-	 * @return Calculated power level
-	 */
 	UFUNCTION(BlueprintPure, Category = "Stats|Power")
 	float GetPowerLevel() const;
 
-	/**
-	 * Compare power ratio with another actor
-	 * @param OtherActor - Actor to compare against
-	 * @return Ratio (>1 = stronger, <1 = weaker)
-	 */
 	UFUNCTION(BlueprintPure, Category = "Stats|Power")
 	float GetPowerRatioAgainst(AActor* OtherActor) const;
 
-	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* INITIALIZATION                                                          */
-	/* ═══════════════════════════════════════════════════════════════════════ */
-
-	/** Initialize stats from data asset */
 	void InitializeFromDataAsset(UBaseStatsData* InStatsData);
-
-	/** Initialize stats from map. Server-authoritative: mutates GAS attributes. */
 	void InitializeFromMap(const TMap<FName, float>& StatsMap);
-
-	/** Set single stat value. Server-authoritative: mutates a GAS attribute. */
 	void SetStatValue(FName AttributeName, float Value);
 
 protected:
-	/* ═══════════════════════════════════════════════════════════════════════ */
-	/* INTERNAL HELPERS                                                        */
-	/* ═══════════════════════════════════════════════════════════════════════ */
-
-	/** Get AttributeSet from owner */
 	UHunterAttributeSet* GetAttributeSet() const;
-
-	/** Get AbilitySystemComponent from owner */
 	UAbilitySystemComponent* GetAbilitySystemComponent() const;
 	const UAttributeSet* GetLiveSourceAttributeSet(UAbilitySystemComponent* ASC, const UClass* DesiredClass, bool bLogIfMissing, FName AttributeName = NAME_None) const;
 	bool HasExpectedLiveAttributeSet(bool bLogIfMissing, FName AttributeName = NAME_None) const;
@@ -295,43 +174,16 @@ protected:
 	void LogAbilitySystemState(const TCHAR* Context, UAbilitySystemComponent* ASC, const UAttributeSet* LiveAttributeSet) const;
 	void LogWarningOnce(const FString& Key, const FString& Message) const;
 
-	/** Resolve and apply a numeric attribute by name using the project's existing GAS path. */
 	bool SetNumericAttributeByName(FName AttributeName, float Value, bool bAutoInitializeCurrentFromMax = true);
-
-	/** Read a stat for initialization, preferring exported stat-map values and falling back to asset float properties. */
 	bool TryGetStatValueForInitialization(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, float& OutValue) const;
-
-	/** Apply a stat only when it is present in the initialization sources. */
 	bool ApplyStatIfPresent(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName StatName, bool bAutoInitializeCurrentFromMax = true);
-
-	/** Apply current vitals after max pools have been initialized, clamping them to the live max values. */
 	bool ApplyCurrentVitalWithClamp(const UBaseStatsData* InStatsData, const TMap<FName, float>& StatsMap, FName CurrentStatName, FName MaxStatName, FName StarterPropertyName);
-
-	/**
-	 * Create a gameplay effect for equipment stats. Uses item-GUID-based naming
-	 * so simultaneously-equipped items never collide on the same effect handle.
-	 * @param Item - Item to create effect for
-	 * @param Stats - Array of FPHAttributeData from item
-	 * @return Gameplay effect spec handle
-	 */
 	FGameplayEffectSpecHandle CreateEquipmentEffect(UItemInstance* Item, const TArray<FPHAttributeData>& Stats);
-
-	/**
-	 * Apply a single stat modifier to effect
-	 * @param Effect - UGameplayEffect to modify
-	 * @param Stat - FPHAttributeData with modifier info
-	 * @param Attribute - Target gameplay attribute
-	 * @return True if modifier was added successfully
-	 */
 	bool ApplyStatModifier(UGameplayEffect* Effect, const FPHAttributeData& Stat, const FGameplayAttribute& Attribute);
 
-	/** Cached references */
 	UPROPERTY()
 	mutable TObjectPtr<UHunterAttributeSet> CachedAttributeSet;
 
-	// EditDefaultsOnly (not EditAnywhere) so the asset can only be set on the
-	// Blueprint/CDO. Editing it on a level-placed instance would bypass the
-	// Blueprint default and cause divergent per-instance state.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats|Config")
 	TObjectPtr<UBaseStatsData> StatsData;
 
@@ -341,11 +193,9 @@ protected:
 	bool bHasInitializedConfiguredStats = false;
 	mutable TSet<FString> EmittedWarningKeys;
 
-	/** Maps item GUID → active GE handle. Used to remove effects on unequip. */
 	UPROPERTY()
 	TMap<FGuid, FActiveGameplayEffectHandle> ActiveEquipmentEffects;
 
-	/** Maps item GUID → item instance. Used to re-apply effects on refresh. */
 	UPROPERTY()
 	TMap<FGuid, TObjectPtr<UItemInstance>> ActiveEquipmentItems;
 };

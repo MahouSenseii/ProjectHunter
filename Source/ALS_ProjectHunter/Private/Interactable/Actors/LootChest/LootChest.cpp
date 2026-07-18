@@ -40,7 +40,7 @@ ALootChest::ALootChest()
 
 	LootComponent = CreateDefaultSubobject<ULootComponent>(TEXT("LootComponent"));
 
-	// Optional spawn area box — resize in the editor viewport per chest.
+	// Optional spawn area box - resize in the editor viewport per chest.
 	// Collision is disabled; it's purely a visual/data volume.
 	SpawnAreaBox = CreateDefaultSubobject<UBoxComponent>(TEXT("SpawnAreaBox"));
 	SpawnAreaBox->SetupAttachment(RootComponent);
@@ -223,7 +223,7 @@ void ALootChest::ApplyCollisionSettings()
 
 	ActiveMesh->SetCollisionResponseToChannel(ECC_Destructible, ECR_Block);
 
-	// Dedicated Interactable trace channel — defined once in
+	// Dedicated Interactable trace channel - defined once in
 	// PHInteractionChannels so every system stays in sync.
 	ActiveMesh->SetCollisionResponseToChannel(PHInteractionChannels::Interaction,
 		CollisionConfig.bBlockInteractable ? ECR_Block : ECR_Overlap);
@@ -263,7 +263,7 @@ void ALootChest::SetupInteraction()
 
 	// Bind BOTH completion paths so the chest opens regardless of which
 	// InteractionType the Blueprint configures (FInteractionConfig defaults to
-	// IT_Tap — previously only OnHoldCompleted was bound, so a default-config
+	// IT_Tap - previously only OnHoldCompleted was bound, so a default-config
 	// chest broadcast OnTapInteracted into nothing and could never open).
 	// Only one of these fires per configured type, so double-binding is safe;
 	// OnInteracted itself is idempotent via the CS_Closed state guard.
@@ -333,7 +333,7 @@ void ALootChest::OpenChest(AActor* Opener)
 
 	SetChestState(EChestState::CS_Opening);
 
-	// Sound and VFX are client-only presentation — skip on dedicated server
+	// Sound and VFX are client-only presentation - skip on dedicated server
 	// to avoid wasted cycles and potential audio-system null-dereferences.
 	if (!IsNetMode(NM_DedicatedServer))
 	{
@@ -625,8 +625,8 @@ void ALootChest::FinalizeOpenSequence()
 	bOpenSequenceFinalizedForCurrentOpen = true;
 
 	// Single transition: loot scatters immediately on open, so the chest is
-	// Looted as soon as the animation finishes. The old Open→Looted double-set
-	// in one call made CS_Open a phantom state — replication only ships the
+	// Looted as soon as the animation finishes. The old Open->Looted double-set
+	// in one call made CS_Open a phantom state - replication only ships the
 	// final value, so no client (or IsOpen() caller) ever observed it.
 	// If a lingering "open but not yet emptied" design is added later, set
 	// CS_Open here and move the CS_Looted transition to the loot-collected event.
@@ -852,7 +852,7 @@ void ALootChest::StartRespawnTimer()
 
 	// Stay in CS_Looted while the timer runs. Setting CS_Respawning here made
 	// the chest visually snap closed (closed mesh / reverse animation via
-	// UpdateMeshForState) the instant it finished opening — and then play the
+	// UpdateMeshForState) the instant it finished opening - and then play the
 	// close animation a second time when the timer fired. CS_Respawning now
 	// begins inside HandleRespawn, when the chest actually closes.
 	GetWorldTimerManager().SetTimer(
@@ -875,7 +875,7 @@ void ALootChest::HandleRespawn()
 		AnimationConfig.bPlayOpenAnimation)
 	{
 		// CS_Respawning drives the reverse animation on the server AND on
-		// clients (via OnRep_ChestState → UpdateMeshForState).
+		// clients (via OnRep_ChestState -> UpdateMeshForState).
 		SetChestState(EChestState::CS_Respawning);
 		PlayCloseSound();
 		StartCloseAnimation();

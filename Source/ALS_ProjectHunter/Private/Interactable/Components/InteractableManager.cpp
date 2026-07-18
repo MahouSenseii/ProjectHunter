@@ -1,17 +1,15 @@
 #include "Interactable/Components/InteractableManager.h"
 
-#include "EngineUtils.h"
 #include "Interactable/Widget/InteractableWidget.h"
+#include "Interactable/Helpers/InteractableWidgetPresentationHelper.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/Actor.h"
-#include "GameFramework/PlayerController.h"
-#include "Camera/CameraComponent.h"
-#include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
-#include "Interactable/Library/InteractionStructLibrary.h"
+#include "Interactable/Library/FunctionLibraries/InteractionFunctionLibrary.h"
+#include "Interactable/Library/Structs/InteractionStructs.h"
 DEFINE_LOG_CATEGORY(LogInteractable);
 
 UInteractableManager::UInteractableManager()
@@ -32,14 +30,14 @@ void UInteractableManager::BeginPlay()
 	{
 		CreateWidgetComponent();
 	}
-	
+
 
 }
 
 void UInteractableManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	StopCameraFacingUpdates();
-	
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -60,7 +58,7 @@ void UInteractableManager::CreateWidgetComponent()
 	}
 
 	WidgetComponent->RegisterComponent();
-	
+
 	WidgetComponent->SetWidgetSpace(EWidgetSpace::World);
 	WidgetComponent->SetGeometryMode(EWidgetGeometryMode::Plane);
 	WidgetComponent->SetBlendMode(EWidgetBlendMode::Transparent);
@@ -68,19 +66,19 @@ void UInteractableManager::CreateWidgetComponent()
 	// Tick mode stays Enabled, but we drive the component tick EXPLICITLY with
 	// focus visibility (see OnBeginFocus/OnEndFocus). Do NOT use
 	// ETickMode::Automatic here: a widget component that starts hidden
-	// self-disables its tick, and SetVisibility(true) never re-enables it —
+	// self-disables its tick, and SetVisibility(true) never re-enables it -
 	// widget components only draw during tick, so the prompt never renders.
 	// Explicit enable/disable gets the same perf win (hidden prompts cost
 	// nothing) without the engine quirk.
 	WidgetComponent->SetTickMode(ETickMode::Enabled);
 	WidgetComponent->SetWindowFocusable(false);
 	WidgetComponent->SetPivot(FVector2D(0.5f, 1.0f));
-	
+
 	// The render target's PIXEL resolution equals DrawSize, and the quad's
-	// WORLD size is DrawSize (cm) × component scale. Sharpness therefore comes
-	// from rendering at DrawSize × ResolutionScale pixels and compensating the
+	// WORLD size is DrawSize (cm) x component scale. Sharpness therefore comes
+	// from rendering at DrawSize x ResolutionScale pixels and compensating the
 	// component scale by 1/ResolutionScale so the world size stays identical.
-	// (The old "high res" path skipped the compensation — it just made a
+	// (The old "high res" path skipped the compensation - it just made a
 	// physically larger widget. And desired-size mode lets the engine shrink
 	// the render target to the authored widget size every frame, which is the
 	// classic source of blurry prompts.)
@@ -103,7 +101,7 @@ void UInteractableManager::CreateWidgetComponent()
 		Owner->GetRootComponent(),
 		FAttachmentTransformRules::KeepRelativeTransform
 	);
-	
+
 	WidgetComponent->InitWidget();
 	WidgetComponent->RequestRedraw();
 	WidgetComponent->SetBackgroundColor(FLinearColor::Transparent);
@@ -112,7 +110,7 @@ void UInteractableManager::CreateWidgetComponent()
 	WidgetComponent->SetVisibility(false);
 	WidgetComponent->SetComponentTickEnabled(false);
 
-	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Created high-quality widget for %s (Type: %s, CameraFacing: %s)"), 
+	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Created high-quality widget for %s (Type: %s, CameraFacing: %s)"),
 		*Owner->GetName(),
 		*UEnum::GetValueAsString(Config.InteractionType),
 		bAlwaysFaceCamera ? TEXT("Enabled") : TEXT("Disabled"));
@@ -146,7 +144,7 @@ void UInteractableManager::AutoFindMeshes()
 		}
 	}
 
-	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Auto-found %d meshes on %s"), 
+	UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Auto-found %d meshes on %s"),
 		MeshesToHighlight.Num(), *Owner->GetName());
 }
 
@@ -158,7 +156,7 @@ void UInteractableManager::OnInteract_Implementation(AActor* Interactor)
 		OnTapInteracted.Broadcast(Interactor);
 		UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Tap interact on %s"), *GetOwner()->GetName());
 		break;
-		
+
 	case EInteractionType::IT_Toggle:
 		OnTapInteracted.Broadcast(Interactor);
 		UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Toggle interact on %s"), *GetOwner()->GetName());
@@ -168,7 +166,7 @@ void UInteractableManager::OnInteract_Implementation(AActor* Interactor)
 		OnTapInteracted.Broadcast(Interactor);
 		UE_LOG(LogInteractable, Log, TEXT("InteractableManager: Tap path used on tap-or-hold interactable %s"), *GetOwner()->GetName());
 		break;
-		
+
 	default:
 		UE_LOG(LogInteractable, Warning, TEXT("InteractableManager: OnInteract called on non-tap interaction type"));
 		break;
@@ -200,7 +198,7 @@ void UInteractableManager::OnBeginFocus_Implementation(AActor* Interactor)
 
 	if (WidgetComponent)
 	{
-		// Wake the component: tick must come back on with visibility — widget
+		// Wake the component: tick must come back on with visibility - widget
 		// components only draw during tick (see CreateWidgetComponent note).
 		WidgetComponent->SetComponentTickEnabled(true);
 		WidgetComponent->SetVisibility(true);
@@ -208,8 +206,7 @@ void UInteractableManager::OnBeginFocus_Implementation(AActor* Interactor)
 		if (UInteractableWidget* Widget = Cast<UInteractableWidget>(WidgetComponent->GetWidget()))
 		{
 			UpdateWidgetText();
-			Widget->SetWidgetState(EInteractionWidgetState::IWS_Idle);
-			Widget->SetProgressBarVisible(false);
+			FInteractableWidgetPresentationHelper::SetIdle(*Widget, false);
 			WidgetComponent->RequestRedraw();
 		}
 
@@ -241,7 +238,7 @@ void UInteractableManager::OnEndFocus_Implementation(AActor* Interactor)
 
 	if (LiveFocusers > 0)
 	{
-		// Someone is still looking — retarget camera facing to a remaining focuser.
+		// Someone is still looking - retarget camera facing to a remaining focuser.
 		if (CurrentInteractor == Interactor)
 		{
 			CurrentInteractor = FocusingInteractors.Last().Get();
@@ -264,9 +261,7 @@ void UInteractableManager::OnEndFocus_Implementation(AActor* Interactor)
 	{
 		if (UInteractableWidget* Widget = Cast<UInteractableWidget>(WidgetComponent->GetWidget()))
 		{
-			Widget->SetWidgetState(EInteractionWidgetState::IWS_Idle);
-			Widget->SetProgressBarVisible(false);
-			Widget->SetProgress(0.0f);
+			FInteractableWidgetPresentationHelper::SetIdle(*Widget, true);
 		}
 
 		// Back to dormant: hidden prompts shouldn't tick (perf with many
@@ -301,7 +296,7 @@ UInputAction* UInteractableManager::GetInputAction_Implementation() const
 
 FText UInteractableManager::GetInteractionText_Implementation() const
 {
-	return GetDisplayTextForCurrentType();
+	return UInteractionFunctionLibrary::GetDisplayTextForConfig(Config);
 }
 
 FVector UInteractableManager::GetWidgetOffset_Implementation() const
@@ -311,13 +306,12 @@ FVector UInteractableManager::GetWidgetOffset_Implementation() const
 
 FInteractableHighlightStyle UInteractableManager::GetHighlightStyle_Implementation() const
 {
-	FInteractableHighlightStyle Style;
-	Style.bEnableHighlight = bEnableHighlight;
-	Style.StencilValue = HighlightStencilValue;
-	Style.Color = HighlightColor;
-	Style.OutlineWidth = HighlightWidth;
-	Style.Threshold = HighlightThreshold;
-	return Style;
+	return UInteractionFunctionLibrary::MakeHighlightStyle(
+		bEnableHighlight,
+		HighlightStencilValue,
+		HighlightColor,
+		HighlightWidth,
+		HighlightThreshold);
 }
 
 float UInteractableManager::GetTapHoldThreshold_Implementation() const
@@ -334,8 +328,7 @@ void UInteractableManager::OnHoldInteractionStart_Implementation(AActor* Interac
 {
 	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
 	{
-		Widget->SetWidgetState(EInteractionWidgetState::IWS_Holding);
-		Widget->SetProgress(0.0f);
+		FInteractableWidgetPresentationHelper::StartProgress(*Widget, EInteractionWidgetState::IWS_Holding);
 	}
 
 	SetProgressBarVisible(true);
@@ -362,9 +355,7 @@ void UInteractableManager::OnHoldInteractionComplete_Implementation(AActor* Inte
 {
 	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
 	{
-		Widget->SetWidgetState(EInteractionWidgetState::IWS_Completed);
-		Widget->SetProgressBarVisible(true);
-		Widget->SetProgress(1.0f);
+		FInteractableWidgetPresentationHelper::SetCompleted(*Widget);
 	}
 
 	OnHoldCompleted.Broadcast(Interactor);
@@ -375,9 +366,7 @@ void UInteractableManager::OnHoldInteractionCancelled_Implementation(AActor* Int
 {
 	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
 	{
-		Widget->SetWidgetState(EInteractionWidgetState::IWS_Cancelled);
-		Widget->SetProgressBarVisible(true);
-		Widget->SetProgress(0.0f);
+		FInteractableWidgetPresentationHelper::SetCancelled(*Widget, true);
 	}
 
 	OnHoldCancelled.Broadcast(Interactor);
@@ -403,8 +392,7 @@ void UInteractableManager::OnMashInteractionStart_Implementation(AActor* Interac
 {
 	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
 	{
-		Widget->SetWidgetState(EInteractionWidgetState::IWS_Mashing);
-		Widget->SetProgress(0.0f);
+		FInteractableWidgetPresentationHelper::StartProgress(*Widget, EInteractionWidgetState::IWS_Mashing);
 	}
 
 	SetProgressBarVisible(true);
@@ -427,8 +415,8 @@ void UInteractableManager::OnMashInteractionUpdate_Implementation(AActor* Intera
 	{
 		UpdateWidgetRotationToFaceCamera(Interactor, 0.0f);
 	}
-	
-	UE_LOG(LogInteractable, Verbose, TEXT("InteractableManager: Mash progress %d/%d (%.1f%%)"), 
+
+	UE_LOG(LogInteractable, Verbose, TEXT("InteractableManager: Mash progress %d/%d (%.1f%%)"),
 		CurrentCount, RequiredCount, Progress * 100.0f);
 }
 
@@ -436,9 +424,7 @@ void UInteractableManager::OnMashInteractionComplete_Implementation(AActor* Inte
 {
 	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
 	{
-		Widget->SetWidgetState(EInteractionWidgetState::IWS_Completed);
-		Widget->SetProgressBarVisible(true);
-		Widget->SetProgress(1.0f);
+		FInteractableWidgetPresentationHelper::SetCompleted(*Widget);
 	}
 
 	OnMashCompleted.Broadcast(Interactor);
@@ -449,8 +435,7 @@ void UInteractableManager::OnMashInteractionFailed_Implementation(AActor* Intera
 {
 	if (UInteractableWidget* Widget = WidgetComponent ? Cast<UInteractableWidget>(WidgetComponent->GetWidget()) : nullptr)
 	{
-		Widget->SetWidgetState(EInteractionWidgetState::IWS_Cancelled);
-		Widget->SetProgressBarVisible(true);
+		FInteractableWidgetPresentationHelper::SetCancelled(*Widget, false);
 	}
 
 	OnMashFailed.Broadcast(Interactor);
@@ -515,24 +500,15 @@ void UInteractableManager::UpdateProgress(float Progress, bool bIsDepleting)
 
 	if (UInteractableWidget* Widget = Cast<UInteractableWidget>(WidgetComponent->GetWidget()))
 	{
-		if (!SupportsProgressBar())
+		if (!UInteractionFunctionLibrary::SupportsProgressBar(Config.InteractionType))
 		{
 			Widget->SetProgressBarVisible(false);
 			return;
 		}
 
-		const float ClampedProgress = FMath::Clamp(Progress, 0.0f, 1.0f);
 		const EInteractionWidgetState DesiredState =
-			Config.InteractionType == EInteractionType::IT_Mash
-				? EInteractionWidgetState::IWS_Mashing
-				: EInteractionWidgetState::IWS_Holding;
-
-		if (Widget->GetWidgetState() != DesiredState)
-		{
-			Widget->SetWidgetState(DesiredState);
-		}
-
-		Widget->SetProgress(ClampedProgress);
+			UInteractionFunctionLibrary::GetProgressWidgetState(Config.InteractionType);
+		FInteractableWidgetPresentationHelper::UpdateProgress(*Widget, DesiredState, Progress);
 	}
 }
 
@@ -545,13 +521,11 @@ void UInteractableManager::SetProgressBarVisible(bool bVisible)
 
 	if (UInteractableWidget* Widget = Cast<UInteractableWidget>(WidgetComponent->GetWidget()))
 	{
-		const bool bShouldShow = bVisible && SupportsProgressBar();
+		const bool bShouldShow = bVisible && UInteractionFunctionLibrary::SupportsProgressBar(Config.InteractionType);
 
 		if (!bShouldShow)
 		{
-			Widget->SetWidgetState(EInteractionWidgetState::IWS_Idle);
-			Widget->SetProgressBarVisible(false);
-			Widget->SetProgress(0.0f);
+			FInteractableWidgetPresentationHelper::SetIdle(*Widget, true);
 			return;
 		}
 
@@ -587,63 +561,19 @@ void UInteractableManager::UpdateWidgetRotationToFaceCamera(AActor* Interactor, 
 
 	FVector CameraLocation;
 	FRotator CameraRotation;
-	if (!GetInteractorCamera(Interactor, CameraLocation, CameraRotation))
+	if (!UInteractionFunctionLibrary::GetInteractorView(Interactor, CameraLocation, CameraRotation))
 	{
 		return;
 	}
 
-	const FVector WidgetLocation = WidgetComponent->GetComponentLocation();
-	const FVector DirectionToCamera = (CameraLocation - WidgetLocation).GetSafeNormal();
-
-	FRotator TargetRotation = DirectionToCamera.Rotation();
-	FRotator CurrentRotation = WidgetComponent->GetComponentRotation();
-
-	FRotator NewRotation;
-
-	if (RotationSmoothSpeed > 0.0f && DeltaTime > 0.0f)
-	{
-		NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, RotationSmoothSpeed);
-	}
-	else
-	{
-		NewRotation = TargetRotation;
-	}
+	const FRotator NewRotation = UInteractionFunctionLibrary::CalculateCameraFacingRotation(
+		WidgetComponent->GetComponentLocation(),
+		CameraLocation,
+		WidgetComponent->GetComponentRotation(),
+		DeltaTime,
+		RotationSmoothSpeed);
 
 	WidgetComponent->SetWorldRotation(NewRotation);
-}
-
-bool UInteractableManager::GetInteractorCamera(AActor* Interactor, FVector& OutCameraLocation, FRotator& OutCameraRotation) const
-{
-	if (!Interactor)
-	{
-		return false;
-	}
-
-	if (APlayerController* PC = Cast<APlayerController>(Interactor))
-	{
-		PC->GetPlayerViewPoint(OutCameraLocation, OutCameraRotation);
-		return true;
-	}
-
-	if (APawn* Pawn = Cast<APawn>(Interactor))
-	{
-		if (APlayerController* PC = Cast<APlayerController>(Pawn->GetController()))
-		{
-			PC->GetPlayerViewPoint(OutCameraLocation, OutCameraRotation);
-			return true;
-		}
-	}
-
-	if (UCameraComponent* CameraComp = Interactor->FindComponentByClass<UCameraComponent>())
-	{
-		OutCameraLocation = CameraComp->GetComponentLocation();
-		OutCameraRotation = CameraComp->GetComponentRotation();
-		return true;
-	}
-
-	OutCameraLocation = Interactor->GetActorLocation();
-	OutCameraRotation = Interactor->GetActorRotation();
-	return true;
 }
 
 void UInteractableManager::StartCameraFacingUpdates()
@@ -702,48 +632,14 @@ void UInteractableManager::UpdateWidgetText()
 	{
 		return;
 	}
-	
+
 	if (!Config.InputAction)
 	{
-		UE_LOG(LogInteractable, Error, TEXT("InteractableManager: InputAction not set on %s! Widget will not show key icon."), 
+		UE_LOG(LogInteractable, Error, TEXT("InteractableManager: InputAction not set on %s! Widget will not show key icon."),
 			*GetOwner()->GetName());
 	}
 
-	Widget->SetInteractionData(Config.InputAction, GetDisplayTextForCurrentType());
-}
-
-FText UInteractableManager::GetDisplayTextForCurrentType() const
-{
-	switch (Config.InteractionType)
-	{
-	case EInteractionType::IT_Tap:
-		return Config.InteractionText;
-			
-	case EInteractionType::IT_Hold:
-		return Config.HoldText;
-			
-	case EInteractionType::IT_Mash:
-		return Config.MashText;
-			
-	case EInteractionType::IT_TapOrHold:
-		return FText::Format(
-			FText::FromString("{0}\n{1}"),
-			Config.TapText,
-			Config.HoldActionText
-		);
-			
-	case EInteractionType::IT_Toggle:
-	case EInteractionType::IT_Continuous:
-	default:
-		return Config.InteractionText;
-	}
-}
-
-bool UInteractableManager::SupportsProgressBar() const
-{
-	return Config.InteractionType == EInteractionType::IT_Hold
-		|| Config.InteractionType == EInteractionType::IT_TapOrHold
-		|| Config.InteractionType == EInteractionType::IT_Mash;
+	Widget->SetInteractionData(Config.InputAction, UInteractionFunctionLibrary::GetDisplayTextForConfig(Config));
 }
 
 void UInteractableManager::ApplyHighlight(bool bHighlight)
@@ -767,5 +663,3 @@ void UInteractableManager::ApplyHighlight(bool bHighlight)
 		}
 	}
 }
-
-

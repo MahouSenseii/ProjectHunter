@@ -1,4 +1,3 @@
-// Copyright © 2025 MahouSensei
 // Author: Quentin Davis
 
 #pragma once
@@ -7,13 +6,11 @@
 #include "Character/HUD/HunterHUDBaseWidget.h"
 #include "GameplayEffectTypes.h"
 #include "AttributeSet.h"
-#include "AbilitySystem/Library/MMCEnumLibrary.h"
+#include "AbilitySystem/Library/Enums/HunterResourceEnums.h"
 #include "Engine/TimerHandle.h"
 #include "Styling/SlateTypes.h"
 #include "Widgets/Notifications/SProgressBar.h"
 #include "HunterHUDResourceWidget.generated.h"
-
-// EHunterResourceType is defined in AbilitySystem/Library/MMCEnumLibrary.h
 
 class UProgressBar;
 class USizeBox;
@@ -28,9 +25,7 @@ class ALS_PROJECTHUNTER_API UHunterHUDResourceWidget : public UHunterHUDBaseWidg
 	GENERATED_BODY()
 
 public:
-	// ─────────────────────────────────────────────────────────────────────────
-	// Resource type — set this in BP defaults, everything else is automatic
-	// ─────────────────────────────────────────────────────────────────────────
+	// Resource type - set this in BP defaults, everything else is automatic
 
 	/**
 	 * Which resource pool to track.
@@ -40,16 +35,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HUD|Resource")
 	EHunterResourceType ResourceType = EHunterResourceType::Health;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// Attribute overrides — leave invalid to use the ResourceType preset
-	// ─────────────────────────────────────────────────────────────────────────
+	// Attribute overrides - leave invalid to use the ResourceType preset
 
 	/** The live resource pool. Auto-set from ResourceType if left invalid. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD|Resource|Override")
 	FGameplayAttribute CurrentAttribute;
 
 	/**
-	 * The effective maximum — the ceiling of the bar.
+	 * The effective maximum - the ceiling of the bar.
 	 * Uses MaxEffective* variants so the reserved portion is already factored in.
 	 * Auto-set from ResourceType if left invalid.
 	 */
@@ -57,15 +50,13 @@ public:
 	FGameplayAttribute MaxAttribute;
 
 	/**
-	 * The reserved (locked) portion — shown as a greyed segment at the right of the bar.
+	 * The reserved (locked) portion - shown as a greyed segment at the right of the bar.
 	 * Auto-set from ResourceType if left invalid.
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD|Resource|Override")
 	FGameplayAttribute ReservedAttribute;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// Bar feel — interpolation speeds for the smoothed display values
-	// ─────────────────────────────────────────────────────────────────────────
+	// Bar feel - interpolation speeds for the smoothed display values
 
 	/** How fast the fill bar catches up to the real value. Higher = snappier. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HUD|Resource|Feel", meta = (ClampMin = "0.0"))
@@ -121,10 +112,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HUD|Resource|Designer", meta = (ClampMin = "0.0", ClampMax = "1.0", EditCondition = "bShowDesignerPreview"))
 	float DesignerPreviewReservedPercent = 0.20f;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// Managed visibility (optional) — C++ shows/hides the bar by policy.
+	// Managed visibility (optional) - C++ shows/hides the bar by policy.
 	// Static styling can be driven by the BP defaults or the setters below.
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/** When true, C++ drives visibility (player Stamina hides when full; enemy bars show briefly on change). Turn off to control visibility entirely in BP. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD|Resource|Visibility")
@@ -142,9 +131,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HUD|Resource|Visibility", meta = (ClampMin = "0.0"))
 	float NonPlayerAutoHideDelay = 3.0f;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// Accessors — read current cached values from Blueprint
-	// ─────────────────────────────────────────────────────────────────────────
+	// Accessors - read current cached values from Blueprint
 
 	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
 	float GetCurrentValue() const { return CachedCurrent; }
@@ -155,28 +142,26 @@ public:
 	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
 	float GetReservedValue() const { return CachedReserved; }
 
-	/** Current / Max.  Drives the filled portion of the bar (0–1). */
+	/** Current / Max.  Drives the filled portion of the bar (0-1). */
 	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
 	float GetFillPercent() const;
 
-	/** Reserved / Max.  Drives the locked portion of the bar (0–1). */
+	/** Reserved / Max.  Drives the locked portion of the bar (0-1). */
 	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
 	float GetReservedPercent() const;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// Smoothed display values — bound ProgressBars use these directly; BP can also
+	// Smoothed display values - bound ProgressBars use these directly; BP can also
 	// read them when custom visuals need to drive the percent manually.
-	// ─────────────────────────────────────────────────────────────────────────
 
-	/** Interpolated fill (0–1). Bind the main bar's Percent to this. */
+	/** Interpolated fill (0-1). Bind the main bar's Percent to this. */
 	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
 	float GetDisplayFillPercent() const { return DisplayFillPercent; }
 
-	/** Trailing "damage lag" fill (0–1): snaps up on gain, lags behind on loss. */
+	/** Trailing "damage lag" fill (0-1): snaps up on gain, lags behind on loss. */
 	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
 	float GetDamageLagPercent() const { return DamageLagPercent; }
 
-	/** Interpolated reserved fraction (0–1). Bind the reserved bar's Percent to this. */
+	/** Interpolated reserved fraction (0-1). Bind the reserved bar's Percent to this. */
 	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
 	float GetDisplayReservedPercent() const { return DisplayReservedPercent; }
 
@@ -201,9 +186,7 @@ public:
 	void SetSize(float InWidthOverride, float InHeightOverride);
 
 protected:
-	// ─────────────────────────────────────────────────────────────────────────
 	// HunterHUDBaseWidget overrides
-	// ─────────────────────────────────────────────────────────────────────────
 
 	virtual void NativeInitializeForCharacter(APHBaseCharacter* Character) override;
 	virtual void NativeReleaseCharacter() override;
@@ -224,9 +207,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "HUD|Resource|Widgets", meta = (BindWidget))
 	TObjectPtr<USizeBox> BarSize;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// Blueprint events — implement the bar visuals in BP
-	// ─────────────────────────────────────────────────────────────────────────
+	// Blueprint events - implement the bar visuals in BP
 
 	/**
 	 * Fired whenever any of the three tracked values changes.
@@ -235,29 +216,27 @@ protected:
 	 * @param Current          Raw current value
 	 * @param Max              Raw max value
 	 * @param Reserved         Raw reserved value
-	 * @param FillPercent      Current / Max  (0–1)
-	 * @param ReservedPercent  Reserved / Max (0–1)
+	 * @param FillPercent      Current / Max  (0-1)
+	 * @param ReservedPercent  Reserved / Max (0-1)
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "HUD|Resource")
 	void OnResourceUpdated(float Current, float Max, float Reserved,
 	                       float FillPercent, float ReservedPercent);
 
-	/** Fired only when Current changes — useful for damage/heal flash effects. */
+	/** Fired only when Current changes - useful for damage/heal flash effects. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "HUD|Resource")
 	void OnCurrentValueChanged(float NewValue, float Delta);
 
-	/** Fired only when Max changes — useful for scaling the bar container. */
+	/** Fired only when Max changes - useful for scaling the bar container. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "HUD|Resource")
 	void OnMaxValueChanged(float NewValue);
 
-	/** Fired only when Reserved changes — useful for animating the locked segment. */
+	/** Fired only when Reserved changes - useful for animating the locked segment. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "HUD|Resource")
 	void OnReservedValueChanged(float NewValue);
 
 private:
-	// ─────────────────────────────────────────────────────────────────────────
 	// Internal helpers
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/** Resolves attributes from ResourceType if the individual fields are not set. */
 	void ResolveAttributesFromResourceType();
@@ -286,9 +265,7 @@ private:
 	/** Timer callback: hides a non-player bar after NonPlayerAutoHideDelay. */
 	void HideBar();
 
-	// ─────────────────────────────────────────────────────────────────────────
 	// State
-	// ─────────────────────────────────────────────────────────────────────────
 
 	float CachedCurrent  = 0.f;
 	float CachedMax      = 1.f;  // Start at 1 to avoid div-by-zero before init

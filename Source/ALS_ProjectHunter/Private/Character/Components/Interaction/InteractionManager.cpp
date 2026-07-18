@@ -8,7 +8,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
-#include "Interactable/Library/InteractionStructLibrary.h"
+#include "Interactable/Library/Structs/InteractionStructs.h"
 
 DEFINE_LOG_CATEGORY(LogInteractionManager);
 
@@ -92,7 +92,7 @@ void UInteractionManager::BeginPlay()
 	{
 		// The server needs sub-managers initialized to handle RPCs
 		// (ValidatorManager distance checks, PickupManager inventory calls).
-		// Skip the timer and widget — those are client-only.
+		// Skip the timer and widget - those are client-only.
 		InitializeSubManagers();
 		ApplyQuickSettings();
 		UE_LOG(LogInteractionManager, Log,
@@ -353,7 +353,7 @@ void UInteractionManager::CheckForInteractables()
 	int32 NewGroundItemID = INDEX_NONE;
 	TraceManager.FindBestInteractionTarget(CurrentInteractable, CurrentGroundItemID, NewInteractable, NewGroundItemID);
 
-	// Don't shift focus while an interaction is in progress — the outline and
+	// Don't shift focus while an interaction is in progress - the outline and
 	// ground-item widget must stay on the active target until it completes.
 	if (!HasActiveInteraction())
 	{
@@ -430,9 +430,7 @@ void UInteractionManager::InitializeInteractionSystem()
 		return;
 	}
 
-	UE_LOG(LogInteractionManager, Log, TEXT("═══════════════════════════════════════════"));
 	UE_LOG(LogInteractionManager, Log, TEXT("  INTERACTION MANAGER - Initializing"));
-	UE_LOG(LogInteractionManager, Log, TEXT("═══════════════════════════════════════════"));
 
 	InitializeSubManagers();
 	InitializeWidget();
@@ -454,8 +452,6 @@ void UInteractionManager::InitializeInteractionSystem()
 	}
 
 	bSystemInitialized = true;
-
-	UE_LOG(LogInteractionManager, Log, TEXT("═══════════════════════════════════════════"));
 }
 
 void UInteractionManager::InitializeSubManagers()
@@ -569,7 +565,7 @@ bool UInteractionManager::InteractWithActor(AActor* TargetActor)
 	}
 
 	// Remote client: route the authoritative interaction through OUR Server RPC
-	// (player-owned component — target-actor Server RPCs from clients are
+	// (player-owned component - target-actor Server RPCs from clients are
 	// dropped by the engine). The local execution below still runs for
 	// immediate presentation; target actors gate gameplay on HasAuthority.
 	if (!Owner->HasAuthority())
@@ -1232,7 +1228,7 @@ void UInteractionManager::Server_PickupToInventory_Implementation(
 		if (DistSq > MaxPickupDistSq)
 		{
 			UE_LOG(LogInteractionManager, Warning,
-				TEXT("Server_PickupToInventory: Rejected — client location too far (%.0f cm) for item %d"),
+				TEXT("Server_PickupToInventory: Rejected - client location too far (%.0f cm) for item %d"),
 				FMath::Sqrt(DistSq), ItemID);
 			return;
 		}
@@ -1257,7 +1253,7 @@ void UInteractionManager::Server_PickupAndEquip_Implementation(
 		if (DistSq > MaxPickupDistSq)
 		{
 			UE_LOG(LogInteractionManager, Warning,
-				TEXT("Server_PickupAndEquip: Rejected — client location too far (%.0f cm) for item %d"),
+				TEXT("Server_PickupAndEquip: Rejected - client location too far (%.0f cm) for item %d"),
 				FMath::Sqrt(DistSq), ItemID);
 			return;
 		}
@@ -1266,9 +1262,7 @@ void UInteractionManager::Server_PickupAndEquip_Implementation(
 	PickupManager.PickupAndEquip(ItemID);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // SERVER-SIDE ACTOR INTERACTION
-// ─────────────────────────────────────────────────────────────────────────────
 
 bool UInteractionManager::ValidateServerInteraction(AActor* TargetActor)
 {
@@ -1278,7 +1272,7 @@ bool UInteractionManager::ValidateServerInteraction(AActor* TargetActor)
 		return false;
 	}
 
-	// Validate against the SERVER's view of the pawn — the client-reported
+	// Validate against the SERVER's view of the pawn - the client-reported
 	// location is informational only and never trusted for range checks.
 	return ValidatorManager.ValidateActorInteraction(
 		TargetActor,

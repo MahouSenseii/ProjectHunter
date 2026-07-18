@@ -2,7 +2,7 @@
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Tower/Actors/ISMContainerActor.h"
 #include "Item/ItemInstance.h"
-#include "Item/Library/ItemStructs.h"
+#include "Item/Library/Structs/ItemStructs.h"
 #include "Engine/World.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "DrawDebugHelpers.h"

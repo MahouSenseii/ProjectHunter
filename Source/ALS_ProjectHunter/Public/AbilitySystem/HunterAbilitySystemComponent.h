@@ -1,11 +1,10 @@
-// Copyright © 2025 MahouSensei
-// Author: Quentin Davis
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/Abilities/PHGameplayAbility.h"
+#include "AbilitySystem/Library/Structs/PHAbilityRuntimeStructs.h"
 #include "GameplayEffect.h"
 #include "TimerManager.h"
 #include "HunterAbilitySystemComponent.generated.h"
@@ -25,10 +24,7 @@ UCLASS()
 class ALS_PROJECTHUNTER_API UHunterAbilitySystemComponent : public UAbilitySystemComponent
 {
 	GENERATED_BODY()
-
-	// ========================================
 	// FUNCTIONS
-	// ========================================
 public:
 	UHunterAbilitySystemComponent();
 	
@@ -125,10 +121,7 @@ protected:
 	void ShowEffectDebug(const FGameplayEffectSpec& EffectSpec, 
 		const FGameplayTagContainer& TagContainer) const;
 #endif
-	
-	// ========================================
 	// VARIABLES
-	// ========================================
 public:
 	FEffectAssetTags EffectAssetTags;
 
@@ -191,25 +184,11 @@ private:
 	bool bWarnedNonNativeManaRegenGE = false;
 	bool bWarnedNonNativeStaminaRegenGE = false;
 	bool bWarnedNonNativeArcaneShieldRegenGE = false;
-	bool bSprintStaminaDegenRequested = false;
-	bool bWallRunningStaminaDegenRequested = false;
 
-	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
-	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
-	TArray<FGameplayAbilitySpecHandle> InputHeldSpecHandles;
-
-	int32 ActivationGroupCounts[static_cast<uint8>(EPHAbilityActivationGroup::MAX)];
-
-	// GE specs built once in StartPassiveRegen and applied immediately as infinite
-	// periodic effects. Each handle is invalid until StartPassiveRegen() runs (or if
-	// the GE class is null).
-	FGameplayEffectSpecHandle CachedHealthRegenSpec;
-	FGameplayEffectSpecHandle CachedManaRegenSpec;
-	FGameplayEffectSpecHandle CachedStaminaRegenSpec;
-	FGameplayEffectSpecHandle CachedArcaneShieldRegenSpec;
-
-	// Handles for the infinite periodic resource GEs applied once in StartPassiveRegen.
-	TArray<FActiveGameplayEffectHandle> ActivePassiveEffectHandles;
+	FPHAbilityInputRuntimeState AbilityInputState;
+	FPHAbilityActivationGroupRuntimeState ActivationGroupState;
+	FPHPassiveResourceEffectRuntimeState PassiveResourceEffectState;
+	FPHStaminaDegenRequestRuntimeState StaminaDegenRequestState;
 
 	FActiveGameplayEffectHandle ActiveSprintStaminaDrainHandle;
 	FActiveGameplayEffectHandle ActiveStaminaExhaustionHandle;

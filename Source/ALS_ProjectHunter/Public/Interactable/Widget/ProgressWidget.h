@@ -7,11 +7,11 @@
 #include "ProgressWidget.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UProgressWidget : public UUserWidget
 {
 	GENERATED_BODY()
-	
+
 };

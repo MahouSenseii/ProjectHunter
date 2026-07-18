@@ -9,7 +9,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "HAL/PlatformTime.h"
-#include "Stats/StatsEnumLibrary.h"
+#include "Stats/Library/Enums/StatsEnumLibrary.h"
 
 #include <cfloat>
 

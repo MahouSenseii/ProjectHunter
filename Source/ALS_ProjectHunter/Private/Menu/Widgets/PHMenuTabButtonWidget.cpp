@@ -1,7 +1,5 @@
-// Copyright © 2025 MahouSensei
-// Author: Quentin Davis
-
 #include "Menu/Widgets/PHMenuTabButtonWidget.h"
+
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"

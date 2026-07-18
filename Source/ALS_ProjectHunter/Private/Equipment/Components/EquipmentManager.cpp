@@ -1,12 +1,13 @@
 #include "Equipment/Components/EquipmentManager.h"
 
 #include "Engine/ActorChannel.h"
-#include "Equipment/Library/EquipmentLog.h"
-#include "Item/ItemInstance.h"
-#include "Net/UnrealNetwork.h"
+#include "Equipment/Helpers/EquipmentDebugItemFactory.h"
 #include "Equipment/Helpers/EquipmentMutationHelper.h"
 #include "Equipment/Helpers/EquipmentReplicationHelper.h"
 #include "Equipment/Helpers/EquipmentSlotResolver.h"
+#include "Equipment/Library/EquipmentLog.h"
+#include "Item/ItemInstance.h"
+#include "Net/UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY(LogEquipmentManager);
 
@@ -71,47 +72,7 @@ UItemInstance* UEquipmentManager::GiveWeapon(
 	EItemRarity Rarity,
 	bool bGenerateAffixes)
 {
-	if (BaseItemHandle.IsNull() || BaseItemHandle.DataTable == nullptr)
-	{
-		UE_LOG(LogEquipmentManager, Warning,
-			TEXT("GiveWeapon: BaseItemHandle is null or has no DataTable assigned."));
-		return nullptr;
-	}
-
-	AActor* OwnerActor = GetOwner();
-	if (!OwnerActor)
-	{
-		UE_LOG(LogEquipmentManager, Warning,
-			TEXT("GiveWeapon: EquipmentManager has no owner — cannot create item."));
-		return nullptr;
-	}
-
-	UItemInstance* NewItem = NewObject<UItemInstance>(OwnerActor);
-	if (!NewItem)
-	{
-		UE_LOG(LogEquipmentManager, Warning,
-			TEXT("GiveWeapon: NewObject<UItemInstance> returned null."));
-		return nullptr;
-	}
-
-	NewItem->Initialize(BaseItemHandle, ItemLevel, Rarity, bGenerateAffixes);
-
-	if (!NewItem->HasValidBaseData())
-	{
-		UE_LOG(LogEquipmentManager, Warning,
-			TEXT("GiveWeapon: Initialized item '%s' has no valid base data — "
-			     "row handle probably points at a row that doesn't exist."),
-			*NewItem->GetName());
-		return nullptr;
-	}
-
-	EquipItem(NewItem, EEquipmentSlot::ES_None, /*bSwapToBag*/ true);
-
-	UE_LOG(LogEquipmentManager, Log,
-		TEXT("GiveWeapon: created and equipped '%s' (level=%d, rarity=%d)."),
-		*NewItem->GetName(), ItemLevel, (int32)Rarity);
-
-	return NewItem;
+	return FEquipmentDebugItemFactory::GiveWeapon(*this, BaseItemHandle, ItemLevel, Rarity, bGenerateAffixes);
 }
 
 UItemInstance* UEquipmentManager::SwapEquipment(UItemInstance* Item, EEquipmentSlot Slot)
@@ -172,14 +133,10 @@ bool UEquipmentManager::IsRingSlot(EEquipmentSlot Slot) const
 	return FEquipmentSlotResolver::IsRingSlot(Slot);
 }
 
-UItemInstance* UEquipmentManager::EquipItemInternal(UItemInstance* Item, EEquipmentSlot Slot, bool bSwapToBag, bool bUseGroundPickupRules)
+UItemInstance* UEquipmentManager::EquipItemInternal(UItemInstance* Item, EEquipmentSlot Slot, bool bSwapToBag,
+	bool bUseGroundPickupRules)
 {
 	return FEquipmentMutationHelper::EquipItemInternal(*this, Item, Slot, bSwapToBag, bUseGroundPickupRules);
-}
-
-bool UEquipmentManager::HandleTwoHandedWeapon(UItemInstance* Item, bool bSwapToBag, UItemInstance*& OutOldMainHand, UItemInstance*& OutOldOffHand, UItemInstance*& OutOldTwoHand)
-{
-	return FEquipmentMutationHelper::HandleTwoHandedWeapon(*this, Item, bSwapToBag, OutOldMainHand, OutOldOffHand, OutOldTwoHand);
 }
 
 void UEquipmentManager::OnRep_EquippedItems()
@@ -197,7 +154,8 @@ void UEquipmentManager::ServerUnequipItem_Implementation(EEquipmentSlot Slot, bo
 	FEquipmentReplicationHelper::ServerUnequipItem(*this, Slot, bMoveToBag);
 }
 
-void UEquipmentManager::MulticastEquipmentChanged_Implementation(EEquipmentSlot Slot, UItemInstance* NewItem, UItemInstance* OldItem)
+void UEquipmentManager::MulticastEquipmentChanged_Implementation(EEquipmentSlot Slot, UItemInstance* NewItem,
+	UItemInstance* OldItem)
 {
 	(void)Slot;
 	(void)NewItem;

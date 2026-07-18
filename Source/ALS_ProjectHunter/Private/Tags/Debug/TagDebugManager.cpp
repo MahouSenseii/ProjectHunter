@@ -3,6 +3,8 @@
 #include "Engine/Engine.h"
 #include "PHGameplayTags.h"
 
+#include <initializer_list>
+
 DEFINE_LOG_CATEGORY(LogTagDebugManager);
 
 namespace TagDebugPrivate
@@ -187,7 +189,7 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
             if (!bActive && !bShowInactiveTags) { continue; }
 
             OutLines.Add(FString::Printf(TEXT("  %s %s"),
-                bActive ? TEXT("[●]") : TEXT("[ ]"),
+                bActive ? TEXT("[*]") : TEXT("[ ]"),
                 *GetShortTagName(Tag)));
             OutColors.Add(bActive ? ActiveColor : TagDebugPrivate::InactiveColor);
         }
@@ -320,7 +322,7 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
 
             for (const FGameplayTag& Tag : OtherTags)
             {
-                OutLines.Add(FString::Printf(TEXT("  [●] %s"), *Tag.GetTagName().ToString()));
+                OutLines.Add(FString::Printf(TEXT("  [*] %s"), *Tag.GetTagName().ToString()));
                 OutColors.Add(TagDebugPrivate::ActiveOtherColor);
             }
         }
@@ -335,6 +337,8 @@ void FTagDebugManager::BuildDisplayLines(UTagManager* TagManager,
 
 void FTagDebugManager::DrawDebug(UTagManager* TagManager, UObject* WorldContext)
 {
+    (void)WorldContext;
+
     if (!bEnableDebug)
     {
         ClearDrawnMessages();

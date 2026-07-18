@@ -1,17 +1,18 @@
-// ProjectHunter combat front door. Routes combat intent without owning combat math.
+// Compatibility shim for saved Blueprints that still serialize this component.
+// New combat work should use UCombatManager directly.
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Combat/Library/CombatStructs.h"
+#include "Combat/Library/Structs/CombatStructs.h"
 #include "CombatSystemManagerComponent.generated.h"
 
 class UCombatManager;
-class UCombatStatusManager;
+class UCombatStatusEffectApplier;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCombatSystemManager, Log, All);
 
-UCLASS(ClassGroup=(ProjectHunter), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(ProjectHunter))
 class ALS_PROJECTHUNTER_API UCombatSystemManagerComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -25,10 +26,10 @@ public:
 	UCombatManager* GetCombatManager() const { return CombatManager; }
 
 	UFUNCTION(BlueprintPure, Category = "Combat|Status")
-	UCombatStatusManager* GetCombatStatusManager() const { return CombatStatusManager; }
+	UCombatStatusEffectApplier* GetCombatStatusManager() const { return CombatStatusEffectApplier; }
 
 	UFUNCTION(BlueprintPure, Category = "Combat|Status")
-	UCombatStatusManager* GetStatusManager() const { return GetCombatStatusManager(); }
+	UCombatStatusEffectApplier* GetStatusManager() const { return GetCombatStatusManager(); }
 
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	bool ApplyHit(AActor* AttackerActor, AActor* DefenderActor,
@@ -45,5 +46,5 @@ private:
 	TObjectPtr<UCombatManager> CombatManager = nullptr;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UCombatStatusManager> CombatStatusManager = nullptr;
+	TObjectPtr<UCombatStatusEffectApplier> CombatStatusEffectApplier = nullptr;
 };

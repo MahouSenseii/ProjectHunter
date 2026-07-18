@@ -1,4 +1,4 @@
-﻿#include "Character/Components/Interaction/InteractionValidatorManager.h"
+#include "Character/Components/Interaction/InteractionValidatorManager.h"
 #include "Interactable/Interface/Interactable.h"
 #include "Interactable/Components/InteractableManager.h"
 #include "Tower/Subsystems/GroundItemSubsystem.h"
@@ -28,7 +28,7 @@ void FInteractionValidatorManager::Initialize(AActor* Owner, UWorld* World)
 {
 	OwnerActor = Owner;
 	WorldContext = World;
-	
+
 	if (!OwnerActor || !WorldContext)
 	{
 		UE_LOG(LogInteractionValidatorManager, Error, TEXT("InteractionValidatorManager: Invalid initialization parameters"));
@@ -36,7 +36,7 @@ void FInteractionValidatorManager::Initialize(AActor* Owner, UWorld* World)
 	}
 
 	CacheComponents();
-	
+
 	UE_LOG(LogInteractionValidatorManager, Log, TEXT("InteractionValidatorManager: Initialized for %s"), *OwnerActor->GetName());
 }
 
@@ -159,7 +159,7 @@ bool FInteractionValidatorManager::HasLineOfSight(FVector Start, FVector End, AA
 	{
 		QueryParams.AddIgnoredActor(SourceActor);
 	}
-	
+
 	QueryParams.bTraceComplex = false;
 
 	FHitResult HitResult;

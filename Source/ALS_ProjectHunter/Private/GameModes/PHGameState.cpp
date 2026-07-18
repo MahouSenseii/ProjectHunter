@@ -36,7 +36,7 @@ void APHGameState::SetMatchPhase(EPHMatchPhase NewPhase)
 		}
 	}
 
-	UE_LOG(LogPHGameState, Log, TEXT("Match phase: %s → %s"),
+	UE_LOG(LogPHGameState, Log, TEXT("Match phase: %s -> %s"),
 		*UEnum::GetValueAsString(OldPhase),
 		*UEnum::GetValueAsString(NewPhase));
 

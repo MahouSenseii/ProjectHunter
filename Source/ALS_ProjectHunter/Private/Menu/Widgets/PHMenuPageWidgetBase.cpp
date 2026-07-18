@@ -1,22 +1,25 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Menu/Widgets/PHMenuPageWidgetBase.h"
 
 #include "Character/PHBaseCharacter.h"
+#include "Equipment/Components/EquipmentManager.h"
 #include "Inventory/Components/InventoryManager.h"
+#include "Stats/Components/StatsManager.h"
 
 void UPHMenuPageWidgetBase::NativeInitializeForCharacter(APHBaseCharacter* Character)
 {
 	Super::NativeInitializeForCharacter(Character);
 
-	EquipmentManager = Character->GetEquipmentManager();
-	StatsManager     = Character->GetStatsManager();
+	if (!Character)
+	{
+		EquipmentManager = nullptr;
+		InventoryManager = nullptr;
+		StatsManager = nullptr;
+		return;
+	}
 
-	// InventoryManager is a Blueprint-added component (no C++ getter on the
-	// character), so resolve it generically. This was declared + exposed via
-	// GetInventoryManager() but never assigned — every menu page saw null.
+	EquipmentManager = Character->GetEquipmentManager();
 	InventoryManager = Character->FindComponentByClass<UInventoryManager>();
+	StatsManager = Character->GetStatsManager();
 }
 
 void UPHMenuPageWidgetBase::NativeReleaseCharacter()
@@ -24,6 +27,6 @@ void UPHMenuPageWidgetBase::NativeReleaseCharacter()
 	Super::NativeReleaseCharacter();
 
 	EquipmentManager = nullptr;
-	StatsManager = nullptr;
 	InventoryManager = nullptr;
+	StatsManager = nullptr;
 }

@@ -456,7 +456,7 @@ void UHunterHUDResourceWidget::NativeTick(const FGeometry& MyGeometry, float InD
 {
 	// Tick exists only to smooth the displayed bar toward the real attribute value,
 	// decoupling the visual from how often the attribute changes. It early-outs once
-	// settled (below) so at-rest/hidden bars are effectively free — important since
+	// settled (below) so at-rest/hidden bars are effectively free - important since
 	// many enemy bars can exist at once.
 	Super::NativeTick(MyGeometry, InDeltaTime);
 

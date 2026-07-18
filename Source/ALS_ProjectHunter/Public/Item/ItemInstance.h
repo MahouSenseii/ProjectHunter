@@ -2,19 +2,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Item/Library/ItemEnums.h"
-#include "Item/Library/ItemStructs.h"
+#include "Item/Library/Enums/ItemEnums.h"
+#include "Item/Library/Structs/ItemStructs.h"
 #include "GameplayEffectTypes.h"
 #include "ItemInstance.generated.h"
 
-// Forward declarations
 class UAbilitySystemComponent;
 class UStaticMesh;
 class USkeletalMesh;
 class UMaterialInstance;
 
 /**
- * Runtime Item Instance 
+ * Runtime Item Instance
  */
 UCLASS(BlueprintType)
 class ALS_PROJECTHUNTER_API UItemInstance : public UObject
@@ -36,24 +35,18 @@ public:
 	bool MigrateToCurrentVersion();
 
 	/**
-	 * PostLoadInit — call after deserializing from a save file.
+	 * PostLoadInit - call after deserializing from a save file.
 	 * Runs version migration, recomputes transients (TotalWeight, DisplayName), etc.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Item|Serialization")
 	void PostLoadInit();
 
-	// ═══════════════════════════════════════════════
-	// STATIC DATA REFERENCE
-	// ═══════════════════════════════════════════════
-	
+
 	/** Reference to base item data in DataTable */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item")
 	FDataTableRowHandle BaseItemHandle;
 
-	// ═══════════════════════════════════════════════
-	// IDENTITY
-	// ═══════════════════════════════════════════════
-	
+
 	/** Unique identifier for this item instance */
 	UPROPERTY(SaveGame, BlueprintReadOnly, Replicated, Category = "Item")
 	FGuid UniqueID;
@@ -62,9 +55,6 @@ public:
 	UPROPERTY(SaveGame, BlueprintReadOnly, Replicated, Category = "Item")
 	int32 Seed;
 
-	// ═══════════════════════════════════════════════
-	// SERIALIZATION VERSION
-	// ═══════════════════════════════════════════════
 
 	/**
 	 * Schema version for save-data migration.
@@ -72,74 +62,43 @@ public:
 	 * (new fields, renamed fields, changed semantics).  The save/load system
 	 * can branch on this value to upgrade old items without data loss.
 	 */
-	static constexpr int32 ITEM_CURRENT_VERSION = 1;
+	static constexpr int32 ITEM_CURRENT_VERSION = 2;
 
 	UPROPERTY(SaveGame, BlueprintReadOnly, Replicated, Category = "Item")
 	int32 SerializationVersion = ITEM_CURRENT_VERSION;
 
-	// ═══════════════════════════════════════════════
-	// QUANTITY & WEIGHT
-	// ═══════════════════════════════════════════════
-	
+
 	/** Stack quantity (for stackable items) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item")
 	int32 Quantity = 1;
 
-	/** Total weight (base weight × quantity) - Hunter manga weight limit */
+	/** Total weight (base weight x quantity) */
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Item")
 	float TotalWeight = 0.0f;
-	
-	// ═══════════════════════════════════════════════
-	// HUNTER MANGA PROPERTIES (Equipment)
-	// ═══════════════════════════════════════════════
-	
+
+
 	/** Item level (1-100) - Affects affix tier rolls */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter")
 	int32 ItemLevel = 1;
-	
+
 	/** Item rarity grade (F-SS) - Determines affix count */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter")
 	EItemRarity Rarity = EItemRarity::IR_GradeF;
 
-	/** Has item been identified? (unidentified items hide affixes) */
+	/** Has every item affix been identified? Individual affixes still own their reveal state. */
 	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter")
 	bool bIdentified = true;
 
-	/**
-	 * Reinforcement level (0 = unenhanced, max 999).
-	 * Each successful reinforce attempt increments this by 1.
-	 * The success chance decreases as the level rises — each attempt becomes
-	 * progressively harder (success-chance logic is NOT yet implemented;
-	 * this field is the persistent counter that logic will read/write).
-	 *
-	 * Stat effect of the current level is calculated in GetReinforcementMultiplier().
-	 * The formula is a placeholder and will be tuned alongside the success-chance curve.
-	 */
+	/** Force all affixes on this instance to be identified. Useful for debug, fixed rewards, and non-mystery items. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter")
+	bool bForceAllAffixesIdentified = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter",
 		meta = (ClampMin = "0", ClampMax = "999"))
 	int32 Quality = 0;
 
-	/**
-	 * Returns the stat multiplier for the current reinforcement level.
-	 * Placeholder formula — tune alongside the success-chance curve once
-	 * the reinforcement system is implemented.
-	 * Currently: logarithmic growth so early levels give noticeable gains
-	 * but the curve flattens heavily toward 999 (avoids exponential blow-up).
-	 *   Level   0 → ×1.000
-	 *   Level  10 → ×1.024
-	 *   Level 100 → ×1.046
-	 *   Level 500 → ×1.062
-	 *   Level 999 → ×1.069
-	 * TODO: replace with final tuned formula before shipping the reinforce system.
-	 */
 	UFUNCTION(BlueprintPure, Category = "Item|Hunter")
-	float GetReinforcementMultiplier() const
-	{
-		if (Quality <= 0) return 1.0f;
-		// log10(1 + level) / log10(1000) gives a 0–1 range over the full 999 span.
-		// Scale to a max +7% bonus at level 999 (placeholder; adjust the 0.07f constant).
-		return 1.0f + (FMath::LogX(10.0f, 1.0f + static_cast<float>(Quality)) / FMath::LogX(10.0f, 1000.0f)) * 0.07f;
-	}
+	float GetReinforcementMultiplier() const;
 
 	/** Generated display name (cached for performance) */
 	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated, Category = "Item|Hunter")
@@ -149,24 +108,17 @@ public:
 	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated, Category = "Item|Hunter")
 	bool bHasNameBeenGenerated = false;
 
-	// ═══════════════════════════════════════════════
-	// AFFIXES (Equipment Only)
-	// ═══════════════════════════════════════════════
-	
+
 	/** All item stats (implicits + generated affixes) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Affixes")
 	FPHItemStats Stats;
 
 
-	// ═══════════════════════════════════════════════
-	// CONSUMABLE PROPERTIES
-	// ═══════════════════════════════════════════════
-	
+
 	/** Remaining uses (for multi-use consumables like potions) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Consumable")
 	int32 RemainingUses = 1;
 
-	// C-5 FIX: CooldownRemaining was a mutable countdown field that was never ticked down
 	// (UItemInstance has no Tick). Replaced by LastUseTime (a wall-clock timestamp) and
 	// removed here to prevent Blueprint misuse. Use GetCooldownProgress() / CanUseConsumable().
 
@@ -174,17 +126,11 @@ public:
 	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Consumable")
 	float LastUseTime = 0.0f;
 
-	// ═══════════════════════════════════════════════
-	// DURABILITY (Equipment)
-	// ═══════════════════════════════════════════════
-	
+
 	/** Durability system (equipment only) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Durability")
 	FItemDurability Durability;
 
-	// ═══════════════════════════════════════════════
-	// CORRUPTION STATE (Negative Affixes)
-	// ═══════════════════════════════════════════════
 
 	/** Does this item have ANY corrupted (negative) affixes? */
 	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated, Category = "Item|Corruption")
@@ -198,18 +144,12 @@ public:
 	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|State")
 	bool bCanBeModified = true;
 
-	// ═══════════════════════════════════════════════
-	// RUNE CRAFTING (Hunter Manga Style)
-	// ═══════════════════════════════════════════════
-	
+
 	/** Rune crafting data (equipment only) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Runes")
 	FRuneCraftingData RuneCraftingData;
 
-	// ═══════════════════════════════════════════════
-	// QUEST ITEMS
-	// ═══════════════════════════════════════════════
-	
+
 	/** Quest ID this item belongs to (if quest item) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Quest")
 	FName QuestID;
@@ -218,10 +158,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Quest")
 	bool bIsKeyItem = false;
 
-	// ═══════════════════════════════════════════════
-	// ECONOMY
-	// ═══════════════════════════════════════════════
-	
+
 	/** Can this item be traded with other hunters? */
 	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Economy")
 	bool bIsTradeable = true;
@@ -234,10 +171,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Economy")
 	float ValueModifier = 0.0f;
 
-	// ═══════════════════════════════════════════════
-	// TRANSIENT (NOT SAVED)
-	// ═══════════════════════════════════════════════
-	
+
 	/** Active Gameplay Effect handles (from affixes) */
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Item|Effects")
 	TArray<FActiveGameplayEffectHandle> AppliedEffectHandles;
@@ -253,14 +187,11 @@ public:
 	UPROPERTY(Transient)
 	mutable bool bCacheDirty = true;
 
-	// ═══════════════════════════════════════════════
-	// INITIALIZATION
-	// ═══════════════════════════════════════════════
-	
+
 	/**
 	 * Initialize item instance (NO corruption)
 	 * Uses AffixGenerator internally for affix rolling
-	 * 
+	 *
 	 * @param InBaseItemHandle - Row handle to FItemBase in DataTable
 	 * @param InItemLevel - Item level (1-100) affects affix tier rolls
 	 * @param InRarity - Item grade (F-SS) determines affix count
@@ -275,7 +206,7 @@ public:
 
 	/**
 	 * Initialize item instance WITH CORRUPTION SUPPORT
-	 * 
+	 *
 	 * @param InBaseItemHandle - Row handle to FItemBase in DataTable
 	 * @param InItemLevel - Item level (1-100) affects affix tier rolls
 	 * @param InRarity - Item grade (F-SS) determines affix count
@@ -292,17 +223,10 @@ public:
 		float CorruptionChance,
 		bool bForceCorrupted);
 
-	// ═══════════════════════════════════════════════
-	// NAME GENERATION
-	// ═══════════════════════════════════════════════
-	
+
 	/**
 	 * Get display name (generates if not cached)
-	 * Hunter Manga Style:
-	 * - Grade F: "Iron Sword"
-	 * - Grade D: "Flaming Iron Sword of Power"
-	 * - Grade A: "Demon-Slaying Blade"
-	 * - Grade SS: "[Shadow Monarch's Dagger]"
+	 * Higher-grade items may compose names from affixes or unique data.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	FText GetDisplayName();
@@ -311,10 +235,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void RegenerateDisplayName();
 
-	// ═══════════════════════════════════════════════
-	// VISUAL GETTERS
-	// ═══════════════════════════════════════════════
-	
+
 	/** Get mesh for ground display */
 	UFUNCTION(BlueprintPure, Category = "Item|Visuals")
 	UStaticMesh* GetGroundMesh() const;
@@ -330,12 +251,9 @@ public:
 	/** Get rarity color (Grade F-SS colors) */
 	UFUNCTION(BlueprintPure, Category = "Item|Visuals")
 	FLinearColor GetRarityColor() const;
-	
 
-	// ═══════════════════════════════════════════════
-	// CONVENIENCE GETTERS (Cached)
-	// ═══════════════════════════════════════════════
-	
+
+
 	/** Get base item name */
 	UFUNCTION(BlueprintPure, Category = "Item|Base")
 	FText GetBaseItemName() const;
@@ -370,10 +288,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void UpdateTotalWeight();
 
-	// ═══════════════════════════════════════════════
-	// AFFIX OPERATIONS (Equipment)
-	// ═══════════════════════════════════════════════
-	
+
 	/**
 	 * Apply all affix effects to character via GAS
 	 * @param ASC - Target's Ability System Component
@@ -388,10 +303,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item|Affixes")
 	void RemoveAffixesFromCharacter(UAbilitySystemComponent* ASC);
 
-	// ═══════════════════════════════════════════════
-	// CONSUMABLE OPERATIONS
-	// ═══════════════════════════════════════════════
-	
+
 	/**
 	 * Use consumable (apply effects, reduce quantity/uses)
 	 * @param Target - Target to apply consumable effects to
@@ -414,9 +326,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Item|Consumable")
 	float GetCooldownProgress() const;
 
-	// ═══════════════════════════════════════════════
-	// SETTERS (For Loot System Integration)
-	// ═══════════════════════════════════════════════
 
 	/**
 	 * Set seed before initialization (for deterministic generation)
@@ -441,26 +350,36 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item|Consumable")
 	bool ReduceUses(int32 Amount = 1);
 
-	// ═══════════════════════════════════════════════
-	// IDENTIFICATION (Equipment)
-	// ═══════════════════════════════════════════════
-	
+
 	/** Identify item (reveal all affixes) */
 	UFUNCTION(BlueprintCallable, Category = "Item|Hunter")
 	void Identify();
 
+	/** Identify one affix by its generated runtime UID */
+	UFUNCTION(BlueprintCallable, Category = "Item|Hunter")
+	bool IdentifyAffix(FGuid AffixUID);
+
+	/** Identify every affix on this item */
+	UFUNCTION(BlueprintCallable, Category = "Item|Hunter")
+	void IdentifyAllAffixes();
+
+	/** Runtime setter that also updates every affix when forcing identification on */
+	UFUNCTION(BlueprintCallable, Category = "Item|Hunter")
+	void SetForceAllAffixesIdentified(bool bInForceAllAffixesIdentified);
+
+	/** Refresh the cached whole-item identification flag from per-affix state */
+	UFUNCTION(BlueprintCallable, Category = "Item|Hunter")
+	void RefreshIdentificationState();
+
 	/** Check if item is identified */
 	UFUNCTION(BlueprintPure, Category = "Item|Hunter")
-	bool IsIdentified() const { return bIdentified; }
+	bool IsIdentified() const;
 
 	/** Check if has unidentified affixes */
 	UFUNCTION(BlueprintPure, Category = "Item|Hunter")
 	bool HasUnidentifiedAffixes() const;
 
-	// ═══════════════════════════════════════════════
-	// ITEM TYPE CHECKS
-	// ═══════════════════════════════════════════════
-	
+
 	/** Is this equipment? (weapon, armor, accessory) */
 	UFUNCTION(BlueprintPure, Category = "Item|Type")
 	bool IsEquipment() const;
@@ -485,9 +404,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Item|Type")
 	bool IsKeyItem() const;
 
-	// ═══════════════════════════════════════════════
-	// CORRUPTION CHECKS
-	// ═══════════════════════════════════════════════
 
 	/** Check if item has any corrupted (negative) affixes */
 	UFUNCTION(BlueprintPure, Category = "Item|Corruption")
@@ -509,10 +425,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item|Corruption")
 	TArray<FPHAttributeData> GetCorruptedAffixes() const;
 
-	// ═══════════════════════════════════════════════
-	// ITEM STATE CHECKS
-	// ═══════════════════════════════════════════════
-	
+
 	/** Can this item be equipped? */
 	UFUNCTION(BlueprintPure, Category = "Item|State")
 	bool CanBeEquipped() const;
@@ -537,10 +450,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Item|State")
 	bool IsConsumed() const;
 
-	// ═══════════════════════════════════════════════
-	// DURABILITY (Equipment)
-	// ═══════════════════════════════════════════════
-	
+
 	/** Reduce durability by amount */
 	UFUNCTION(BlueprintCallable, Category = "Item|Durability")
 	void ReduceDurability(float Amount) { Durability.Reduce(Amount); }
@@ -553,10 +463,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Item|Durability")
 	float GetDurabilityPercent() const { return Durability.GetDurabilityPercent(); }
 
-	// ═══════════════════════════════════════════════
 	// STACKING (Consumables, Materials, Currency)
-	// ═══════════════════════════════════════════════
-	
+
 	/**
 	 * Add to stack
 	 * @param Amount - Amount to add
@@ -588,13 +496,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Item|Stack")
 	int32 GetRemainingStackSpace() const;
 
-	// ═══════════════════════════════════════════════
-	// VALUE & ECONOMY
-	// ═══════════════════════════════════════════════
-	
+
 	/**
 	 * Get calculated value (with affixes, grade, quantity, etc.)
-	 * Hunter Manga: Higher grades worth exponentially more
 	 */
 	UFUNCTION(BlueprintPure, Category = "Item|Economy")
 	int32 GetCalculatedValue() const;
@@ -606,10 +510,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Item|Economy")
 	int32 GetSellValue(float SellPercentage = 0.5f) const;
 
-	// ═══════════════════════════════════════════════
-	// BASE DATA ACCESS (Cached for Performance)
-	// ═══════════════════════════════════════════════
-	
+
 	/**
 	 * Get base item data from DataTable (cached)
 	 * @return Pointer to FItemBase, nullptr if invalid
@@ -636,10 +537,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item|Base")
 	void InvalidateBaseCache();
 
-	// ═══════════════════════════════════════════════
-	// SERIALIZATION HELPERS
-	// ═══════════════════════════════════════════════
-	
+
 	/** Prepare item for save (cleanup transient data) */
 	UFUNCTION(BlueprintCallable, Category = "Item|Serialization")
 	void PrepareForSave();
@@ -652,7 +550,7 @@ public:
 private:
 	/** Generate rare/legendary name for high-grade items */
 	FText GenerateRareName() const;
-	
+
 
 	/** Apply consumable effects to target */
 	bool ApplyConsumableEffects(AActor* Target);

@@ -3,9 +3,9 @@
 
 #include "CoreMinimal.h"
 #include "Components/SplineComponent.h"
-#include "Combat/Library/CombatStructs.h"
+#include "Combat/Library/Structs/CombatStructs.h"
 #include "GameFramework/Actor.h"
-#include "Item/Library/ItemEnums.h"
+#include "Item/Library/Enums/ItemEnums.h"
 #include "EquippedItemRuntimeActor.generated.h"
 
 class APHBaseCharacter;

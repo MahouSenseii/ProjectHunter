@@ -1,14 +1,11 @@
-// Character/Components/Interaction/InteractionWidgetPresenter.h
 
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "InputCoreTypes.h"
-#include "Interactable/Library/InteractionEnumLibrary.h"
+#include "Interactable/Library/Enums/InteractionEnums.h"
 #include "InteractionWidgetPresenter.generated.h"
-
-// Forward declarations
 class UInteractableWidget;
 class UWidgetComponent;
 class UMaterialInterface;
@@ -41,9 +38,7 @@ struct ALS_PROJECTHUNTER_API FInteractionWidgetPresenter
 public:
 	FInteractionWidgetPresenter();
 
-	// ═══════════════════════════════════════════════
 	// WIDGET CONFIGURATION (Blueprint-editable via outer component)
-	// ═══════════════════════════════════════════════
 
 	/** Widget class for the screen-space HUD overlay (hold-progress, cancellation, key prompt). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
@@ -93,7 +88,7 @@ public:
 
 	/**
 	 * Physical draw size of the world-space widget that floats above ground items
-	 * (mirrors InteractableManager's WidgetDrawSize). Width × Height in cm.
+	 * (mirrors InteractableManager's WidgetDrawSize). Width x Height in cm.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
 	FVector2D GroundItemWidgetDrawSize = FVector2D(300.0f, 80.0f);
@@ -113,9 +108,7 @@ public:
 		meta = (EditCondition = "!bUseGroundItemDesiredSize", ClampMin = "0.5", ClampMax = "4.0"))
 	float GroundItemResolutionScale = 2.0f;
 
-	// ═══════════════════════════════════════════════
 	// HIGHLIGHT / OUTLINE CONFIGURATION
-	// ═══════════════════════════════════════════════
 
 	/** Post-process material for the focus outline effect. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Highlight")
@@ -139,9 +132,7 @@ public:
 		meta = (ClampMin = "0.0", ClampMax = "50.0"))
 	float PlayerHighlightThreshold = 50.0f;
 
-	// ═══════════════════════════════════════════════
 	// INITIALIZATION
-	// ═══════════════════════════════════════════════
 
 	/**
 	 * Create widget instances and register the world-space widget component.
@@ -153,9 +144,7 @@ public:
 	 */
 	void Initialize(UActorComponent* InOwnerComponent, UWorld* InWorld);
 
-	// ═══════════════════════════════════════════════
 	// WIDGET UPDATE
-	// ═══════════════════════════════════════════════
 
 	/** Update the HUD widget for the currently focused actor interactable. */
 	void UpdateForActorInteractable(const TScriptInterface<IInteractable>& Interactable);
@@ -204,9 +193,7 @@ public:
 	/** Drive both widgets to the cancelled state. */
 	void SetCancelledState();
 
-	// ═══════════════════════════════════════════════
 	// OUTLINE / HIGHLIGHT
-	// ═══════════════════════════════════════════════
 
 	/** Lazily create and register the OutlineMID on the PostProcessVolume. */
 	bool InitializeOutlineMID();
@@ -217,9 +204,7 @@ public:
 	/** Reset outline parameters to the player's default highlight settings. */
 	void ResetHighlightStyle();
 
-	// ═══════════════════════════════════════════════
 	// ACCESSORS
-	// ═══════════════════════════════════════════════
 
 	/** Return the screen-space HUD widget (may be nullptr if not initialized). */
 	UInteractableWidget* GetHUDWidget() const { return InteractionWidget; }
@@ -227,19 +212,15 @@ public:
 	/** True if the HUD widget exists and is currently visible. */
 	bool IsHUDWidgetShown() const;
 
-	// ═══════════════════════════════════════════════
 	// CLEANUP
-	// ═══════════════════════════════════════════════
 
 	/** Remove the HUD widget from viewport and destroy the world-space widget component. */
 	void Shutdown();
 
 private:
-	// ─────────────────────────────────────────────
 	// WIDGET INSTANCES (GC-tracked via outer UPROPERTY on UInteractionManager)
-	// ─────────────────────────────────────────────
 
-	/** Screen-space HUD overlay — hold progress, cancellation feedback, key prompt. */
+	/** Screen-space HUD overlay - hold progress, cancellation feedback, key prompt. */
 	UPROPERTY()
 	TObjectPtr<UInteractableWidget> InteractionWidget;
 
@@ -251,9 +232,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> OutlineMID;
 
-	// ─────────────────────────────────────────────
-	// CACHED CONTEXT (raw pointers — valid for lifetime of owner component)
-	// ─────────────────────────────────────────────
+	// CACHED CONTEXT (raw pointers - valid for lifetime of owner component)
 
 	UActorComponent* OwnerComponent = nullptr;
 	UWorld*          WorldContext   = nullptr;
@@ -265,9 +244,7 @@ private:
 	 */
 	bool bPostProcessSearchFailed = false;
 
-	// ─────────────────────────────────────────────
 	// INTERNAL HELPERS
-	// ─────────────────────────────────────────────
 
 	/** Resolve the PlayerController from the owning pawn. May return nullptr. */
 	APlayerController* GetOwnerPlayerController() const;

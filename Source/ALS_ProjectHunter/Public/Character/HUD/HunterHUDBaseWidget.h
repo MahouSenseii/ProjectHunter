@@ -1,4 +1,3 @@
-// Copyright © 2025 MahouSensei
 // Author: Quentin Davis
 
 #pragma once
@@ -18,12 +17,10 @@ class ALS_PROJECTHUNTER_API UHunterHUDBaseWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	// ─────────────────────────────────────────────────────────────────────────
-	// Public API — called by AHunterHUD
-	// ─────────────────────────────────────────────────────────────────────────
+	// Public API - called by AHunterHUD
 
 	/**
-	 * Bind this widget to a character.  Safe to call multiple times — will
+	 * Bind this widget to a character.  Safe to call multiple times - will
 	 * automatically release any previously bound character first.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "HUD")
@@ -42,18 +39,16 @@ public:
 	APHBaseCharacter* GetBoundCharacter() const { return BoundCharacter.Get(); }
 
 protected:
-	// ─────────────────────────────────────────────────────────────────────────
 	// Overridable hooks for subclasses
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/**
-	 * Called after BoundCharacter is set — bind your GAS / component delegates here.
+	 * Called after BoundCharacter is set - bind your GAS / component delegates here.
 	 * Character is guaranteed non-null and valid at this point.
 	 */
 	virtual void NativeInitializeForCharacter(APHBaseCharacter* Character) {}
 
 	/**
-	 * Called before BoundCharacter is cleared — remove your delegate handles here.
+	 * Called before BoundCharacter is cleared - remove your delegate handles here.
 	 * BoundCharacter is still valid inside this call.
 	 */
 	virtual void NativeReleaseCharacter() {}
@@ -61,9 +56,7 @@ protected:
 	/** Cleans up delegates when the widget itself is destroyed. */
 	virtual void NativeDestruct() override;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// Blueprint events — implement visuals in BP
-	// ─────────────────────────────────────────────────────────────────────────
+	// Blueprint events - implement visuals in BP
 
 	/** Fired after a character is bound and the initial stat snapshot has been sent. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "HUD")
@@ -73,9 +66,7 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "HUD")
 	void OnCharacterReleased();
 
-	// ─────────────────────────────────────────────────────────────────────────
 	// State
-	// ─────────────────────────────────────────────────────────────────────────
 
 	void InitializeChildHUDWidgets(APHBaseCharacter* Character);
 	void ReleaseChildHUDWidgets();

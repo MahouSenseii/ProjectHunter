@@ -173,7 +173,7 @@ void UStatusEffectHUDWidget::AddIconForEffect(UAbilitySystemComponent* ASC,
 	if (ActiveIcons.Num() >= MaxVisibleIcons)
 	{
 		UE_LOG(LogStatusEffectHUD, Verbose,
-			TEXT("StatusEffectHUDWidget: MaxVisibleIcons (%d) reached — skipping new icon"),
+			TEXT("StatusEffectHUDWidget: MaxVisibleIcons (%d) reached - skipping new icon"),
 			MaxVisibleIcons);
 		return;
 	}

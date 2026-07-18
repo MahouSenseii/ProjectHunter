@@ -474,7 +474,7 @@ FVector UPHCharacterMovementComponent::ConvertCameraDirectionToWallDirection(
 	}
 
 	// If the player looks straight into the wall, projection has no tangent
-	// component. For the forward axis, keep the expected Naruto-style behavior:
+	// component. For the forward axis, keep the expected wall-climb behavior:
 	// forward runs up the wall, backward runs down. Strafe input does not use this
 	// fallback because "right into the wall" should not become vertical movement.
 	if (bTreatIntoSurfaceAsUp)

@@ -1,6 +1,3 @@
-// Copyright © 2025 MahouSensei
-// Author: Quentin Davis
-
 #include "Interactable/Widget/ItemTooltipWidget.h"
 
 #include "Blueprint/WidgetTree.h"
@@ -8,8 +5,8 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
-#include "Item/Library/ItemTooltipFunctionLibrary.h"
-#include "Item/Library/ItemStructs.h"
+#include "Item/Library/FunctionLibraries/ItemTooltipFunctionLibrary.h"
+#include "Item/Library/Structs/ItemStructs.h"
 
 namespace ItemTooltipWidgetPrivate
 {
@@ -140,7 +137,7 @@ void UItemTooltipWidget::UpdateTooltip(UItemInstance* Item)
 	PopulateLore(Item);
 	OnTooltipDataUpdated(TooltipData);
 
-	// Blueprint extension point — runs after the base population pass.
+	// Blueprint extension point - runs after the base population pass.
 	OnTooltipUpdated(Item);
 }
 

@@ -83,7 +83,7 @@ void AHunterController::Menu(const FInputActionValue& Value)
 	else
 	{
 		UE_LOG(LogHunterController, Warning,
-			TEXT("Menu: HUD is not an AHunterHUD (current: %s) — set HUD Class in your GameMode."),
+			TEXT("Menu: HUD is not an AHunterHUD (current: %s) - set HUD Class in your GameMode."),
 			*GetNameSafe(GetHUD()));
 	}
 }
@@ -113,7 +113,7 @@ const UInputAction* AHunterController::GetInputActionByName(const FString& InStr
 
 float AHunterController::GetElapsedSeconds(const UInputAction* Action) const
 {
-	
+
 	if (const auto EnhancedInput = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(this->GetLocalPlayer()))
 	{
 		if (const auto LocalPlayerInput = EnhancedInput->GetPlayerInput())
@@ -152,17 +152,17 @@ bool AHunterController::DoOnce(FDoOnceState& State, bool bReset, bool bStartClos
 		return true;
 	}
 
-	return false; 
+	return false;
 }
 void AHunterController::CacheComponents()
 {
 	if (APawn* PossessedPawn = GetPawn())
 	{
 		InteractionManager = PossessedPawn->FindComponentByClass<UInteractionManager>();
-		
+
 		if (!InteractionManager)
 		{
-			UE_LOG(LogHunterController, Warning, TEXT("HunterController: No InteractionManager found on %s"), 
+			UE_LOG(LogHunterController, Warning, TEXT("HunterController: No InteractionManager found on %s"),
 				*PossessedPawn->GetName());
 		}
 		else

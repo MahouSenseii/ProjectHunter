@@ -1,5 +1,6 @@
 #include "Item/Generation/AffixGenerator.h"
 #include "Engine/DataTable.h"
+#include "Item/Library/FunctionLibraries/ItemAffixSelectionFunctionLibrary.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogAffixGenerator, Log, All);
 
@@ -12,7 +13,6 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 	bool bForceOneCorrupted) const
 {
 	FPHItemStats Stats;
-
 
 	FRandomStream RandStream(Seed);
 
@@ -135,17 +135,16 @@ bool FAffixGenerator::ApplyEnchant(
 		return false;
 	}
 
-	// Filter pool by item type, subtype, and level — same rules as regular affixes.
-	TArray<FPHAttributeData*> Pool;
-	Pool.Reserve(CachedEnchantRows.Num());
-	for (FPHAttributeData* Row : CachedEnchantRows)
-	{
-		if (!Row) continue;
-		if (!Row->IsAllowedOnItemType(BaseItem.ItemType)) continue;
-		if (!Row->IsAllowedOnSubType(BaseItem.ItemSubType)) continue;
-		if (!Row->IsValidForItemLevel(ItemLevel)) continue;
-		Pool.Add(Row);
-	}
+	const TSet<FName> EmptyExcludedAffixes;
+	const TSet<FName> EmptyExcludedGroups;
+	TArray<FPHAttributeData*> Pool = UItemAffixSelectionFunctionLibrary::BuildAffixPoolByCorruption(
+		CachedEnchantRows,
+		BaseItem.ItemType,
+		BaseItem.ItemSubType,
+		ItemLevel,
+		false,
+		EmptyExcludedAffixes,
+		EmptyExcludedGroups);
 
 	if (Pool.Num() == 0)
 	{
@@ -156,16 +155,16 @@ bool FAffixGenerator::ApplyEnchant(
 	}
 
 	FRandomStream RandStream(Seed);
-	const FPHAttributeData* Selected = SelectRandomAffix(Pool, RandStream);
+	const FPHAttributeData* Selected = UItemAffixSelectionFunctionLibrary::SelectWeightedAffix(Pool, RandStream);
 	if (!Selected)
 	{
 		return false;
 	}
 
-	FPHAttributeData Rolled = CreateRolledAffix(*Selected, RandStream);
+	FPHAttributeData Rolled = UItemAffixSelectionFunctionLibrary::CreateRolledAffix(*Selected, RandStream);
 	Rolled.AffixType = EAffixes::AF_Enchant;
 
-	// Items can only hold one enchant at a time — replace any existing one.
+	// Items can only hold one enchant at a time - replace any existing one.
 	OutStats.Enchants.Reset(1);
 	OutStats.Enchants.Add(Rolled);
 	return true;
@@ -193,7 +192,6 @@ UDataTable* FAffixGenerator::LoadPrefixDataTable() const
 	}
 	else
 	{
-		// Cache all row pointers once so BuildAffixPoolByCorruption never calls
 		// GetAllRows again. Raw pointers stay valid as long as the DataTable is alive.
 		CachedPrefixRows.Reset();
 		CachedPrefixTable->GetAllRows<FPHAttributeData>("LoadPrefixDataTable", CachedPrefixRows);
@@ -252,9 +250,7 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 	TArray<FPHAttributeData> RolledAffixes;
 	// TSet for O(1) Contains() lookups instead of O(n) TArray::Contains.
 	TSet<FName> ExcludedAffixes;
-	// Group exclusion: prevents two affixes from the same AffixGroup rolling on
-	// the same item (e.g. two different "fire damage" affixes).  Mirrors the
-	// POE2 affix-conflict system.  Affixes with AffixGroup == NAME_None are exempt.
+	// Prevent duplicate exclusive affix groups on the same item; NAME_None is exempt.
 	TSet<FName> ExcludedGroups;
 	ExcludedAffixes.Reserve(Count);
 	ExcludedGroups.Reserve(Count);
@@ -266,8 +262,12 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 		const bool bShouldBeCorrupted = bMustRollOneCorrupted
 			|| (CorruptionChance > 0.0f && RandStream.FRand() < CorruptionChance);
 
-		TArray<FPHAttributeData*> AvailableAffixes = BuildAffixPoolByCorruption(
-			AffixType, ItemType, ItemSubType, ItemLevel,
+		GetAffixDataTable(AffixType);
+		const TArray<FPHAttributeData*>& SourceAffixes =
+			(AffixType == EAffixes::AF_Prefix) ? CachedPrefixRows : CachedSuffixRows;
+
+		TArray<FPHAttributeData*> AvailableAffixes = UItemAffixSelectionFunctionLibrary::BuildAffixPoolByCorruption(
+			SourceAffixes, ItemType, ItemSubType, ItemLevel,
 			bShouldBeCorrupted, ExcludedAffixes, ExcludedGroups
 		);
 
@@ -275,8 +275,8 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 		{
 			if (bShouldBeCorrupted)
 			{
-				AvailableAffixes = BuildAffixPoolByCorruption(
-					AffixType, ItemType, ItemSubType, ItemLevel,
+				AvailableAffixes = UItemAffixSelectionFunctionLibrary::BuildAffixPoolByCorruption(
+					SourceAffixes, ItemType, ItemSubType, ItemLevel,
 					false, ExcludedAffixes, ExcludedGroups
 				);
 			}
@@ -289,13 +289,13 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 			}
 		}
 
-		const FPHAttributeData* SelectedAffix = SelectRandomAffix(AvailableAffixes, RandStream);
+		const FPHAttributeData* SelectedAffix = UItemAffixSelectionFunctionLibrary::SelectWeightedAffix(AvailableAffixes, RandStream);
 		if (!SelectedAffix)
 		{
 			continue;
 		}
 
-		FPHAttributeData RolledAffix = CreateRolledAffix(*SelectedAffix, RandStream);
+		FPHAttributeData RolledAffix = UItemAffixSelectionFunctionLibrary::CreateRolledAffix(*SelectedAffix, RandStream);
 		RolledAffixes.Add(RolledAffix);
 
 		if (RolledAffix.IsCorruptedAffix())
@@ -311,132 +311,6 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 	}
 
 	return RolledAffixes;
-}
-
-TArray<FPHAttributeData*> FAffixGenerator::BuildAffixPoolByCorruption(
-	EAffixes AffixType,
-	EItemType ItemType,
-	EItemSubType ItemSubType,
-	int32 ItemLevel,
-	bool bCorruptedOnly,
-	const TSet<FName>& ExcludeAffixes,
-	const TSet<FName>& ExcludeGroups) const
-{
-	TArray<FPHAttributeData*> Pool;
-
-	// Ensure the table (and its row cache) is loaded, then use the cached row
-	// pointers directly instead of calling GetAllRows<> on every invocation.
-	// GetAllRows performs a full table scan each call; with many items generating
-	// affixes per frame this was a significant hotspot.
-	UDataTable* AffixTable = GetAffixDataTable(AffixType);
-	if (!AffixTable)
-	{
-		return Pool;
-	}
-
-	const TArray<FPHAttributeData*>& AllAffixes =
-		(AffixType == EAffixes::AF_Prefix)  ? CachedPrefixRows  :
-		(AffixType == EAffixes::AF_Enchant) ? CachedEnchantRows :
-		                                       CachedSuffixRows;
-
-	Pool.Reserve(AllAffixes.Num() / 4);
-
-	for (FPHAttributeData* Affix : AllAffixes)
-	{
-		if (!Affix)
-		{
-			continue;
-		}
-
-		// Exclude by exact affix name (prevents exact duplicate)
-		if (ExcludeAffixes.Contains(Affix->AttributeName))
-		{
-			continue;
-		}
-
-		// Exclude by group (prevents two affixes from the same category, e.g. two fire-damage mods)
-		if (Affix->AffixGroup != NAME_None && ExcludeGroups.Contains(Affix->AffixGroup))
-		{
-			continue;
-		}
-
-		if (!Affix->IsAllowedOnItemType(ItemType))
-		{
-			continue;
-		}
-
-		if (!Affix->IsAllowedOnSubType(ItemSubType))
-		{
-			continue;
-		}
-
-		if (!Affix->IsValidForItemLevel(ItemLevel))
-		{
-			continue;
-		}
-
-		const bool bIsNegative = Affix->IsCorruptedAffix();
-
-		if (bCorruptedOnly && !bIsNegative)
-		{
-			continue;
-		}
-
-		if (!bCorruptedOnly && bIsNegative)
-		{
-			continue;
-		}
-
-		Pool.Add(Affix);
-	}
-
-	return Pool;
-}
-
-const FPHAttributeData* FAffixGenerator::SelectRandomAffix(
-	const TArray<FPHAttributeData*>& AvailableAffixes,
-	FRandomStream& RandStream) const
-{
-	if (AvailableAffixes.Num() == 0)
-	{
-		return nullptr;
-	}
-
-	int32 TotalWeight = 0;
-	for (const FPHAttributeData* Affix : AvailableAffixes)
-	{
-		TotalWeight += Affix->GetWeight();
-	}
-
-	if (TotalWeight <= 0)
-	{
-		return AvailableAffixes[RandStream.RandRange(0, AvailableAffixes.Num() - 1)];
-	}
-
-	const int32 RandomValue = RandStream.RandRange(0, TotalWeight - 1);
-	int32 CurrentWeight = 0;
-
-	for (const FPHAttributeData* Affix : AvailableAffixes)
-	{
-		CurrentWeight += Affix->GetWeight();
-		if (RandomValue < CurrentWeight)
-		{
-			return Affix;
-		}
-	}
-
-	return AvailableAffixes.Last();
-}
-
-FPHAttributeData FAffixGenerator::CreateRolledAffix(
-	const FPHAttributeData& TemplateAffix,
-	FRandomStream& RandStream) const
-{
-	FPHAttributeData RolledAffix = TemplateAffix;
-
-	RolledAffix.RollValue(RandStream);
-	RolledAffix.GenerateUID();
-	return RolledAffix;
 }
 
 void FAffixGenerator::GetAffixCountByRarity(

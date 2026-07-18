@@ -6,9 +6,9 @@
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "Item/ItemInstance.h"
-#include "Stats/EquipmentStatsApplier.h"
-#include "Stats/StatsAttributeResolver.h"
-#include "Stats/StatsInitializer.h"
+#include "Stats/Library/FunctionLibraries/EquipmentStatsApplier.h"
+#include "Stats/Library/FunctionLibraries/StatsAttributeResolver.h"
+#include "Stats/Library/FunctionLibraries/StatsInitializer.h"
 
 DEFINE_LOG_CATEGORY(LogStatsManager);
 UStatsManager::UStatsManager()

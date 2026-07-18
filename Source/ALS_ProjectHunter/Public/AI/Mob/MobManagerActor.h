@@ -1,11 +1,9 @@
-// AI/Mob/MobManagerActor.h
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "AI/Mob/MobSpawnTypes.h"
-#include "AI/Mob/MobSpawnRules.h"
+#include "AI/Library/Structs/MobStructs.h"
 #include "Data/MonsterModifierData.h"
 #include "MobManagerActor.generated.h"
 
@@ -17,13 +15,11 @@ class UNavigationSystemV1;
 
 // Log category declared here, defined once in the .cpp.
 // The old DEFINE_LOG_CATEGORY_STATIC in a header would create a separate
-// static category per translation unit — breaking shared verbosity settings
+// static category per translation unit - breaking shared verbosity settings
 // the moment a second file includes this header.
 DECLARE_LOG_CATEGORY_EXTERN(LogMobManager, Log, All);
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Delegates
-// ─────────────────────────────────────────────────────────────────────────────
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMobSpawned,  APHBaseCharacter*, Mob);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMobDied,     APHBaseCharacter*, Mob);
@@ -34,7 +30,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnManagerFull);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSpecialSpawnExecuted,
 	FName, RuleId, APHBaseCharacter*, SpawnedMob);
 
-// ─────────────────────────────────────────────────────────────────────────────
 UCLASS()
 class ALS_PROJECTHUNTER_API AMobManagerActor : public AActor
 {
@@ -50,7 +45,6 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
-	// ── Components ────────────────────────────────────────────────────────────
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USceneComponent* SceneRoot;
@@ -63,9 +57,6 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UBoxComponent* SpawnArea;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ SPAWN CONFIGURATION ═════════════════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/**
 	 * Enemy types this manager can spawn.
@@ -93,7 +84,7 @@ public:
 	/**
 	 * Max retries per tick when a candidate location is invalid.
 	 * With smart placement enabled, 20 is usually more than enough.
-	 * Without it, increase to 30–50 if you see frequent exhaustion.
+	 * Without it, increase to 30-50 if you see frequent exhaustion.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mob Manager|Spawn",
 		meta = (ClampMin = 1, ClampMax = 100))
@@ -116,15 +107,12 @@ public:
 
 	/**
 	 * OPT-POOL: Use the MobPoolSubsystem to recycle dead actors instead of
-	 * calling SpawnActor/Destroy each time.  Roughly 10× cheaper on a warm pool.
+	 * calling SpawnActor/Destroy each time.  Roughly 10x cheaper on a warm pool.
 	 * Disable if you need unique per-spawn construction logic that can't be reset.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mob Manager|Spawn")
 	bool bUseActorPooling = true;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ SPAWN RULES ═════════════════════════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/**
 	 * Mobs will not spawn within this distance of any player.
@@ -169,7 +157,7 @@ public:
 	 * Must be large enough to reach the NavMesh from the top of the SpawnArea box.
 	 * The NavMesh lives on the ground surface, so if your SpawnArea extends 200+
 	 * units above ground, this needs to be at least that tall.
-	 * Defaults to 1000 — generous enough for most layouts.
+	 * Defaults to 1000 - generous enough for most layouts.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mob Manager|Spawn Rules",
 		meta = (EditCondition = "bUseNavCheck", ClampMin = 50.0f))
@@ -201,9 +189,6 @@ public:
 		meta = (EditCondition = "bUseGroundCheck", ClampMin = 50.0f))
 	float GroundTraceDistance = 500.0f;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ AI / WANDER ══════════════════════════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/**
 	 * Default wander radius passed to each mob via IMobWanderable::SetWanderRadius.
@@ -213,9 +198,6 @@ public:
 		meta = (ClampMin = 100.0f))
 	float WanderRadius = 1200.0f;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ MONSTER MODIFIER INTEGRATION ════════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/**
 	 * Area level passed to UMonsterModifierComponent (if the spawned mob has one).
@@ -233,13 +215,10 @@ public:
 		meta = (ClampMin = 0.0f))
 	float NearbyMagicFind = 0.0f;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ SPECIAL / EVENT SPAWN RULES ═════════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/**
 	 * Designer-authored rules that trigger special spawns based on gameplay state
-	 * (player holds a key item, total kills of a mob class reached a threshold, …).
+	 * (player holds a key item, total kills of a mob class reached a threshold, ...).
 	 *
 	 * Rules are evaluated at the top of every SpawnTick. When a rule is ready,
 	 * its action runs (force-spawn a specific mob, or boost the tier of the next
@@ -251,9 +230,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mob Manager|Special Spawns")
 	TArray<FMobSpecialSpawnRule> SpecialSpawnRules;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ DEBUG ════════════════════════════════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/** Draw spawn-attempt spheres and the SpawnArea box each frame (editor+dev). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mob Manager|Debug")
@@ -269,9 +245,6 @@ public:
 		meta = (ClampMin = 0.1f))
 	float DebugDrawDuration = 8.0f;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ POOL RECYCLE ═══════════════════════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/**
 	 * Seconds to wait after a mob dies before returning it to the pool.
@@ -299,13 +272,10 @@ public:
 		meta = (ClampMin = 1, ClampMax = 10))
 	int32 MaxSpawnsPerTick = 1;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ BATCH / PACK SPAWNING ═══════════════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/**
-	 * When true, mobs spawn in packs/batches — a group of N mobs at nearby
-	 * locations — instead of one at a time.  The spawner finds one valid
+	 * When true, mobs spawn in packs/batches - a group of N mobs at nearby
+	 * locations - instead of one at a time.  The spawner finds one valid
 	 * "leader" position, then spawns PackSize mobs in a cluster around it.
 	 * Much more natural-looking than one mob popping in every 5 seconds.
 	 */
@@ -346,9 +316,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mob Manager|Spawn")
 	bool bInitialBurst = false;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ RUNTIME STATE ════════════════════════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/** Current manager state. */
 	UPROPERTY(BlueprintReadOnly, Category = "Mob Manager|State")
@@ -356,15 +323,12 @@ public:
 
 	/**
 	 * Weak pointers to every currently alive mob owned by this manager.
-	 * TWeakObjectPtr is not Blueprint-compatible — use GetActiveMobsArray()
+	 * TWeakObjectPtr is not Blueprint-compatible - use GetActiveMobsArray()
 	 * for Blueprint access.
 	 */
 	UPROPERTY()
 	TArray<TWeakObjectPtr<APHBaseCharacter>> ActiveMobs;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ EVENTS ═══════════════════════════════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/** Fired when a mob is successfully spawned and made visible. */
 	UPROPERTY(BlueprintAssignable, Category = "Mob Manager|Events")
@@ -386,9 +350,6 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Mob Manager|Events")
 	FOnSpecialSpawnExecuted OnSpecialSpawnExecuted;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ PUBLIC API ═══════════════════════════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/** Start or resume the spawn timer. */
 	UFUNCTION(BlueprintCallable, Category = "Mob Manager")
@@ -419,7 +380,7 @@ public:
 	int32 GetActiveCount() const;
 
 	/**
-	 * Returns a plain array of live mob pointers — safe for Blueprint iteration.
+	 * Returns a plain array of live mob pointers - safe for Blueprint iteration.
 	 * Stale (destroyed) entries are filtered out automatically.
 	 */
 	UFUNCTION(BlueprintPure, Category = "Mob Manager")
@@ -433,12 +394,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Mob Manager")
 	void CleanActiveMobs();
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ═══ SPECIAL SPAWN / KILL-COUNT API ══════════════════════════════════════
-	// ─────────────────────────────────────────────────────────────────────────
 
 	/**
-	 * BlueprintNativeEvent — returns true if ANY tracked player currently has
+	 * BlueprintNativeEvent - returns true if ANY tracked player currently has
 	 * the item identified by KeyItemId in their inventory.
 	 *
 	 * The C++ default returns false so rule systems can't spuriously trigger
@@ -481,9 +439,7 @@ public:
 	void ClearDebugHistory() { DebugHistory.Empty(); DebugHistoryIndex = 0; }
 
 protected:
-	// ─────────────────────────────────────────────────────────────────────────
-	// Blueprint events — override in child Blueprint
-	// ─────────────────────────────────────────────────────────────────────────
+	// Blueprint events - override in child Blueprint
 
 	/** Called after a mob is fully spawned and made visible. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Mob Manager|Events")
@@ -497,11 +453,9 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Mob Manager|Events")
 	void BP_OnSpawnFailed(EMobSpawnFailReason Reason);
 
-	// ─────────────────────────────────────────────────────────────────────────
 	// Core spawn pipeline (virtual so Blueprint-child C++ subclasses can extend)
-	// ─────────────────────────────────────────────────────────────────────────
 
-	/** Spawn-timer callback — runs every SpawnInterval seconds. */
+	/** Spawn-timer callback - runs every SpawnInterval seconds. */
 	virtual void SpawnTick();
 
 	/**
@@ -518,7 +472,7 @@ protected:
 	virtual bool GetRandomSpawnLocation(FVector& OutLocation);
 
 	/**
-	 * Spawn a pack of mobs — finds one valid leader location, then spawns
+	 * Spawn a pack of mobs - finds one valid leader location, then spawns
 	 * PackSize mobs in a cluster around it.  Returns number of mobs spawned.
 	 */
 	virtual int32 SpawnBatch();
@@ -534,20 +488,19 @@ protected:
 	/** Cache per-tick derived values (nav system, box transform, distances). */
 	void CacheTickValues();
 
-	// ── Location validation helpers ───────────────────────────────────────────
 
 	/** NavMesh projection. Returns false if the point can't be projected. */
 	bool CheckNavMesh(FVector Candidate, FVector& OutProjected) const;
 
 	/**
-	 * Capsule overlap — returns false if the capsule at Location overlaps
+	 * Capsule overlap - returns false if the capsule at Location overlaps
 	 * WorldStatic, WorldDynamic, or Pawn channels.
 	 * Optionally pass an actor to ignore (the hidden test actor).
 	 */
 	bool CheckCollision(FVector Location, AActor* IgnoreActor = nullptr) const;
 
 	/**
-	 * Distance check — returns false if too close to ANY player (MinDist)
+	 * Distance check - returns false if too close to ANY player (MinDist)
 	 * or too far from ALL players (MaxDist).  In multiplayer, a spawn only
 	 * needs to be within MaxDistance of at least one player.
 	 * Uses CachedPlayerLocations gathered once per SpawnTick for performance.
@@ -573,7 +526,6 @@ protected:
 	 */
 	bool CheckGround(FVector Candidate, FVector& OutGroundLocation) const;
 
-	// ── Spawn lifecycle ───────────────────────────────────────────────────────
 
 	/**
 	 * Spawn the character hidden with no collision and no AI.
@@ -592,7 +544,7 @@ protected:
 	 * Configure UMonsterModifierComponent if the mob has one.
 	 * Called during FinalizeSpawn.
 	 *
-	 * Not const — consumes PendingForcedTier if a special rule has queued a
+	 * Not const - consumes PendingForcedTier if a special rule has queued a
 	 * tier boost for the next spawn.
 	 */
 	void ApplyModifierComponent(APHBaseCharacter* Mob);
@@ -604,7 +556,6 @@ protected:
 	 */
 	virtual void EvaluateSpecialSpawnRules();
 
-	// ── Death tracking ────────────────────────────────────────────────────────
 
 	/**
 	 * Bound to APHBaseCharacter::OnDeathEvent for every spawned mob.
@@ -613,7 +564,6 @@ protected:
 	UFUNCTION()
 	void OnMobDeathEvent(APHBaseCharacter* DeadMob, AActor* Killer);
 
-	// ── Weighted random selection ─────────────────────────────────────────────
 
 	/**
 	 * Pick a random eligible mob class using the weight table.
@@ -621,7 +571,6 @@ protected:
 	 */
 	int32 GetWeightedRandomMobTypeIndex() const;
 
-	// ── Debug ─────────────────────────────────────────────────────────────────
 
 	void RecordDebugAttempt(const FVector& Location, bool bSuccess,
 		EMobSpawnFailReason Reason);

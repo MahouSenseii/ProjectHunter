@@ -1,4 +1,4 @@
-﻿#include "Character/Components/Interaction/InteractionTraceManager.h"
+#include "Character/Components/Interaction/InteractionTraceManager.h"
 #include "Interactable/Interface/Interactable.h"
 #include "Interactable/Components/InteractableManager.h"
 #include "Tower/Subsystems/GroundItemSubsystem.h"
@@ -15,7 +15,7 @@
 DEFINE_LOG_CATEGORY(LogInteractionTraceManager);
 FInteractionTraceManager::FInteractionTraceManager()
 	: InteractionDistance(300.0f)
-	  // 20Hz focus updates — 0.1 (10Hz) read as visibly steppy when sweeping
+	  // 20Hz focus updates - 0.1 (10Hz) read as visibly steppy when sweeping
 	  // the camera across interactables. Still timer-driven, still cheap.
 	  , CheckFrequency(0.05f)
 	  , InteractionTraceChannel(ECC_Visibility)
@@ -39,7 +39,7 @@ void FInteractionTraceManager::Initialize(AActor* Owner, UWorld* World)
 {
 	OwnerActor = Owner;
 	WorldContext = World;
-	
+
 	if (!OwnerActor || !WorldContext)
 	{
 		UE_LOG(LogInteractionTraceManager, Error, TEXT("InteractionTraceManager: Invalid initialization parameters"));
@@ -47,7 +47,7 @@ void FInteractionTraceManager::Initialize(AActor* Owner, UWorld* World)
 	}
 
 	CacheComponents();
-	
+
 	UE_LOG(LogInteractionTraceManager, Log, TEXT("InteractionTraceManager: Initialized for %s"), *OwnerActor->GetName());
 }
 
@@ -85,7 +85,7 @@ void FInteractionTraceManager::FindBestInteractionTarget(
 
 	const FVector TraceEnd = TraceStart + CameraForward * InteractionDistance;
 
-	// ── 1. Line trace ────────────────────────────────────────────────────────
+	// 1. Line trace
 	FHitResult LineHit;
 	const bool bHit = PerformLineTrace(TraceStart, TraceEnd, LineHit);
 	const FVector SearchCenter = bHit ? LineHit.ImpactPoint : TraceEnd;
@@ -94,11 +94,11 @@ void FInteractionTraceManager::FindBestInteractionTarget(
 	{
 		DebugManager->DrawTraceResult(TraceStart, TraceEnd, LineHit, bHit, 0.0f);
 		if (bHit) DebugManager->DrawHitPoint(LineHit.Location, LineHit.Normal, 0.0f);
-		// Overlap sphere — shows exactly what radius is active and where candidates are searched.
+		// Overlap sphere - shows exactly what radius is active and where candidates are searched.
 		DebugManager->DrawInteractionRange(SearchCenter, OverlapRadius);
 	}
 
-	// ── 2. Sphere overlap at hit point ───────────────────────────────────────
+	// 2. Sphere overlap at hit point
 	TArray<FOverlapResult> Overlaps;
 	FCollisionQueryParams OverlapParams;
 	OverlapParams.AddIgnoredActor(OwnerActor);
@@ -112,8 +112,7 @@ void FInteractionTraceManager::FindBestInteractionTarget(
 		OverlapParams
 	);
 
-	// ── 3. Dot-product scoring — best dot wins, no rejection threshold ───────
-
+	// 3. Dot-product scoring - best dot wins, no rejection threshold
 	// Resolve the actor that owns the currently focused interactable so we can
 	// apply the same hysteresis bonus that ground items already receive.
 	AActor* CurrentFocusActor = nullptr;
@@ -157,7 +156,7 @@ void FInteractionTraceManager::FindBestInteractionTarget(
 		}
 	}
 
-	// Ground items — scan registered locations within OverlapRadius of the hit
+	// Ground items - scan registered locations within OverlapRadius of the hit
 	if (CachedGroundItemSubsystem)
 	{
 		const float RadiusSq = FMath::Square(OverlapRadius);
@@ -183,7 +182,7 @@ void FInteractionTraceManager::FindBestInteractionTarget(
 		}
 	}
 
-	// ── 4. Debug — single dot at winner ─────────────────────────────────────
+	// 4. Debug - single dot at winner
 	if (DebugManager)
 	{
 		if (BestActor)
@@ -200,7 +199,7 @@ void FInteractionTraceManager::FindBestInteractionTarget(
 		}
 	}
 
-	// ── 5. Output ────────────────────────────────────────────────────────────
+	// 5. Output
 	if (BestActor)
 	{
 		LastTraceResult = LineHit;
@@ -347,13 +346,13 @@ void FInteractionTraceManager::GetTraceOrigin(FVector& OutCameraLocation, FVecto
 	FRotator CameraRotation;
 	GetCameraViewPoint(OutCameraLocation, CameraRotation);
 
-	
+
 	OutCameraDirection = CameraRotation.Vector();
 }
 
 FVector FInteractionTraceManager::GetTraceStartLocation(const FVector& CameraLocation, const FRotator& CameraRotation) const
 {
-	
+
 	if (bUseALSCameraOrigin && CachedALSCameraManager)
 	{
 		return CachedALSCameraManager->GetCameraLocation();

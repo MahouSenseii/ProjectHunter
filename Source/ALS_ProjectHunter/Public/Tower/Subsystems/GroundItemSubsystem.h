@@ -1,66 +1,27 @@
-// Tower/Subsystems/GroundItemSubsystem.h
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Subsystems/WorldSubsystem.h"
 #include "HAL/CriticalSection.h"
+#include "Subsystems/WorldSubsystem.h"
+#include "Tower/Library/Structs/GroundItemStructs.h"
 #include "GroundItemSubsystem.generated.h"
 
-// Forward declarations
-class UItemInstance;
 class AISMContainerActor;
 class UInstancedStaticMeshComponent;
+class UItemInstance;
 class UStaticMesh;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogGroundItemSubsystem, Log, All);
 
-/**
- * Struct to track ISM instance data
- */
-USTRUCT()
-struct FGroundItemISMData
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-	UInstancedStaticMeshComponent* ISMComponent = nullptr;
-
-	int32 InstanceIndex = INDEX_NONE;
-
-	UPROPERTY()
-	UStaticMesh* Mesh = nullptr;
-
-	FGroundItemISMData() = default;
-
-	FGroundItemISMData(UInstancedStaticMeshComponent* InISM, int32 InIndex, UStaticMesh* InMesh)
-		: ISMComponent(InISM)
-		, InstanceIndex(InIndex)
-		, Mesh(InMesh)
-	{}
-
-	bool IsValid() const { return ISMComponent != nullptr && InstanceIndex != INDEX_NONE; }
-};
-
-/**
- * UGroundItemSubsystem - Manages items on the ground using ISM
- */
 UCLASS()
 class ALS_PROJECTHUNTER_API UGroundItemSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 
 public:
-	// ═══════════════════════════════════════════════
-	// SUBSYSTEM LIFECYCLE
-	// ═══════════════════════════════════════════════
-
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override { return true; }
-
-	// ═══════════════════════════════════════════════
-	// PRIMARY API
-	// ═══════════════════════════════════════════════
 
 	UFUNCTION(BlueprintCallable, Category = "Ground Items")
 	int32 AddItemToGround(UItemInstance* Item, FVector Location, FRotator Rotation = FRotator::ZeroRotator);
@@ -68,15 +29,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ground Items")
 	UItemInstance* RemoveItemFromGround(int32 ItemID);
 
-	/**
-	 * Remove multiple items efficiently (FIX: batch removal)
-	 */
 	UFUNCTION(BlueprintCallable, Category = "Ground Items")
 	TArray<UItemInstance*> RemoveMultipleItemsFromGround(const TArray<int32>& ItemIDs);
-
-	// ═══════════════════════════════════════════════
-	// QUERIES
-	// ═══════════════════════════════════════════════
 
 	UFUNCTION(BlueprintPure, Category = "Ground Items")
 	UItemInstance* GetItemByID(int32 ItemID) const;
@@ -92,7 +46,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Ground Items")
 	int32 GetInstanceID(UItemInstance* Item) const;
-	
+
 	int32 FindItemByISMInstance(UInstancedStaticMeshComponent* ISMComponent, int32 InstanceIndex) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Ground Items")
@@ -100,10 +54,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Ground Items")
 	void ClearAllItems();
-
-	// ═══════════════════════════════════════════════
-	// ACCESSORS
-	// ═══════════════════════════════════════════════
 
 	UFUNCTION(BlueprintPure, Category = "Ground Items")
 	int32 GetTotalItemCount() const { return GroundItems.Num(); }
@@ -116,30 +66,16 @@ public:
 #endif
 
 protected:
-	// ═══════════════════════════════════════════════
-	// ISM MANAGEMENT
-	// ═══════════════════════════════════════════════
-
 	void EnsureISMContainerExists();
 	UInstancedStaticMeshComponent* GetOrCreateISMComponent(UStaticMesh* Mesh);
-	
-	void UpdateIndexAfterSwap(UInstancedStaticMeshComponent* ISMComponent,
-	                          int32 RemovedIndex, int32 LastIndex);
+	void UpdateIndexAfterSwap(UInstancedStaticMeshComponent* ISMComponent, int32 RemovedIndex, int32 LastIndex);
 
 private:
-	// ═══════════════════════════════════════════════
-	// INTERNAL
-	// ═══════════════════════════════════════════════
-
 	UItemInstance* RemoveItemFromGroundInternal(int32 ItemID);
 
-	// ═══════════════════════════════════════════════
-	// DATA
-	// ═══════════════════════════════════════════════
-	
 	UPROPERTY()
 	TWeakObjectPtr<AISMContainerActor> ISMContainerActor;
-		
+
 	UPROPERTY()
 	TMap<int32, UItemInstance*> GroundItems;
 
@@ -151,18 +87,12 @@ private:
 
 	UPROPERTY()
 	TMap<UStaticMesh*, UInstancedStaticMeshComponent*> MeshToISM;
-	
+
 	UPROPERTY()
 	TMap<UItemInstance*, int32> InstanceToIDMap;
 
 	int32 NextItemID = 0;
-
-	// ═══════════════════════════════════════════════
-	// THREAD SAFETY
-	// ═══════════════════════════════════════════════
-
 	bool bIsProcessingRemoval = false;
-	
 	FCriticalSection PendingRemovalsCS;
 	TArray<int32> PendingRemovals;
 };

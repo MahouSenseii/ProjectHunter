@@ -10,8 +10,7 @@
 #include "Inventory/Components/InventoryManager.h"
 #include "Stats/Components/StatsManager.h"
 #include "Combat/Components/CombatManager.h"
-#include "Combat/Components/CombatStatusManager.h"
-#include "Combat/Components/CombatSystemManagerComponent.h"
+#include "Combat/Components/UCombatStatusEffectApplier.h"
 #include "Item/ItemInstance.h"
 
 DEFINE_LOG_CATEGORY(LogCharacterSystemCoordinator);
@@ -20,7 +19,7 @@ UCharacterSystemCoordinatorComponent::UCharacterSystemCoordinatorComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	bWantsInitializeComponent = false;
-	// The coordinator is not replicated — each machine wires its own managers.
+	// The coordinator is not replicated - each machine wires its own managers.
 	SetIsReplicatedByDefault(false);
 }
 
@@ -53,10 +52,15 @@ void UCharacterSystemCoordinatorComponent::EndPlay(const EEndPlayReason::Type En
 	Super::EndPlay(EndPlayReason);
 }
 
+UCombatStatusEffectApplier* UCharacterSystemCoordinatorComponent::GetCombatStatusManager() const
+{
+	return CombatManager ? CombatManager->GetCombatStatusManager() : nullptr;
+}
+
 void UCharacterSystemCoordinatorComponent::CacheManagerReferences()
 {
 	AActor* Owner = GetOwner();
-	
+
 	if (!Owner)
 	{
 		PH_LOG_ERROR(LogCharacterSystemCoordinator,
@@ -69,8 +73,6 @@ void UCharacterSystemCoordinatorComponent::CacheManagerReferences()
 	InventoryManager      = Owner->FindComponentByClass<UInventoryManager>();
 	InteractionManager    = Owner->FindComponentByClass<UInteractionManager>();
 	CombatManager         = Owner->FindComponentByClass<UCombatManager>();
-	CombatSystemManager   = Owner->FindComponentByClass<UCombatSystemManagerComponent>();
-	CombatStatusManager   = Owner->FindComponentByClass<UCombatStatusManager>();
 	EquipmentPresentation = Owner->FindComponentByClass<UEquipmentPresentationComponent>();
 }
 

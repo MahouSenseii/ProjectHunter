@@ -119,7 +119,7 @@ void UMobPoolSubsystem::Release(APHBaseCharacter* Mob)
 	if (ClassPool.Num() >= MaxPoolSizePerClass)
 	{
 		UE_LOG(LogMobPool, Verbose,
-			TEXT("Release: pool full for '%s' (%d/%d) — destroying '%s'"),
+			TEXT("Release: pool full for '%s' (%d/%d) - destroying '%s'"),
 			*MobClass->GetName(), ClassPool.Num(), MaxPoolSizePerClass, *Mob->GetName());
 		Mob->Destroy();
 		return;
@@ -220,7 +220,7 @@ void UMobPoolSubsystem::ResetMobState(APHBaseCharacter* Mob) const
 
 	if (UMonsterModifierComponent* ModComp = Mob->FindComponentByClass<UMonsterModifierComponent>())
 	{
-		// For MT_Unique monsters, AppliedMods is populated externally before RollAndApplyMods
+		// For MT_Unique monsters, AppliedMods is assigned before this step before RollAndApplyMods
 		// is called (RollAndApplyMods rolls 0 mods for Unique and iterates whatever is already
 		// in AppliedMods). Clearing it here would cause a recycled Unique to re-spawn with no
 		// mod effects. Preserve it so RerollMods can re-apply the same fixed mods next life.

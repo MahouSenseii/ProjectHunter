@@ -4,7 +4,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Interactable/Interface/Interactable.h"
-#include "Interactable/Library/InteractionEnumLibrary.h"
+#include "Interactable/Library/Structs/InteractionStructs.h"
 #include "InteractableManager.generated.h"
 
 class UWidgetComponent;
@@ -28,10 +28,8 @@ class ALS_PROJECTHUNTER_API UInteractableManager : public UActorComponent, publi
 public:
 	UInteractableManager();
 
-	// ═══════════════════════════════════════════════════════════════════════
 	// CONFIGURATION (Set in Blueprint)
-	// ═══════════════════════════════════════════════════════════════════════
-	
+
 	/** Interaction configuration */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	FInteractionConfig Config;
@@ -55,8 +53,8 @@ public:
 	/**
 	 * Desired-size mode: the engine resizes the render target to the UMG
 	 * widget's authored size every frame. Looks LOW-RES whenever the widget is
-	 * authored smaller than it appears on screen. Recommended: false — the
-	 * ResolutionScale path renders at N× resolution with compensated component
+	 * authored smaller than it appears on screen. Recommended: false - the
+	 * ResolutionScale renders at multiplied resolution with compensated component
 	 * scale, keeping the same world size but sharp.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Widget")
@@ -64,34 +62,30 @@ public:
 
 	/**
 	 * Render-target supersampling (when not using desired size): the widget is
-	 * rendered at WidgetDrawSize × this, and the component is scaled by the
+	 * rendered at WidgetDrawSize x this, and the component is scaled by the
 	 * inverse so its WORLD size stays WidgetDrawSize. 2 = sharp at typical
 	 * interaction distances; 3-4 only if prompts are viewed very close.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Widget", meta = (EditCondition = "!bUseDesiredSize", ClampMin = "0.5", ClampMax = "4.0"))
 	float ResolutionScale = 2.0f;
 
-	// ─────────────────────────────────────────────────────────────────────
 	// CAMERA-FACING WIDGET SETTINGS
-	// ─────────────────────────────────────────────────────────────────────
 
 	/** Make widget always face the camera? (Prevents disappearing at angles) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Widget")
 	bool bAlwaysFaceCamera = true;
 
 	/** How often to update widget rotation (seconds). Lower = smoother but more expensive. 0 = only update at key moments */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Widget", 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Widget",
 		meta = (EditCondition = "bAlwaysFaceCamera", ClampMin = "0.0", ClampMax = "1.0"))
 	float CameraFacingUpdateRate = 0.05f;
 
 	/** Smooth rotation speed (degrees/second). 0 = instant snap */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Widget", 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Widget",
 		meta = (EditCondition = "bAlwaysFaceCamera", ClampMin = "0.0", ClampMax = "1000.0"))
 	float RotationSmoothSpeed = 0.0f;
 
-	// ─────────────────────────────────────────────────────────────────────
 	// HIGHLIGHT SETTINGS
-	// ─────────────────────────────────────────────────────────────────────
 
 	/** Meshes to highlight on focus. Player-side highlight overrides come from InteractionManager at runtime. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Highlight")
@@ -107,23 +101,21 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Highlight", meta = (ClampMin = "0.0", ClampMax = "10.0"))
 	float HighlightWidth = 3.0f;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Highlight", meta = (ClampMin = "0.0", ClampMax = "50.0"))
 	float HighlightThreshold = 50.0f;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Highlight")
 	APostProcessVolume* TargetPostProcessVolume = nullptr;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Highlight")
 	UMaterialInterface* OutlineMaterial = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Highlight")
 	FLinearColor HighlightColor = FLinearColor::Yellow;
 
-	// ═══════════════════════════════════════════════════════════════════════
 	// EVENTS (Blueprint implementable)
-	// ═══════════════════════════════════════════════════════════════════════
-	
+
 	/** Called when tap interacted with */
 	UPROPERTY(BlueprintAssignable, Category = "Interaction|Events")
 	FInteractionEvent OnTapInteracted;
@@ -156,10 +148,8 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Interaction|Events")
 	FInteractionEvent OnFocusEnd;
 
-	// ═══════════════════════════════════════════════════════════════════════
 	// INTERACTABLE INTERFACE IMPLEMENTATION
-	// ═══════════════════════════════════════════════════════════════════════
-	
+
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
 	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
 	virtual void OnBeginFocus_Implementation(AActor* Interactor) override;
@@ -168,8 +158,8 @@ public:
 	virtual UInputAction* GetInputAction_Implementation() const override;
 	virtual FText GetInteractionText_Implementation() const override;
 	virtual FVector GetWidgetOffset_Implementation() const override;
-	virtual FInteractableHighlightStyle GetHighlightStyle_Implementation() const override; 
-	
+	virtual FInteractableHighlightStyle GetHighlightStyle_Implementation() const override;
+
 	// Hold interaction interface
 	virtual float GetTapHoldThreshold_Implementation() const override;
 	virtual float GetHoldDuration_Implementation() const override;
@@ -198,19 +188,15 @@ public:
 	virtual UObject* GetTooltipData_Implementation() const override;
 	virtual FVector GetTooltipWorldLocation_Implementation() const override;
 
-	// ═══════════════════════════════════════════════════════════════════════
 	// PROGRESS BAR SUPPORT (for hold/mash interactions)
-	// ═══════════════════════════════════════════════════════════════════════
-	
+
 	/** Update progress bar on widget [0.0 - 1.0] */
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void UpdateProgress(float Progress, bool bIsDepleting = false);
 	void SetProgressBarVisible(bool bVisible);
 
-	// ═══════════════════════════════════════════════════════════════════════
 	// BLUEPRINT CALLABLE
-	// ═══════════════════════════════════════════════════════════════════════
-	
+
 	/** Enable/disable interaction */
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void SetCanInteract(bool bNewCanInteract) { Config.bCanInteract = bNewCanInteract; }
@@ -242,21 +228,19 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
-	// ═══════════════════════════════════════════════════════════════════════
 	// WIDGET MANAGEMENT
-	// ═══════════════════════════════════════════════════════════════════════
 
 	/** Widget component (created in BeginPlay) */
 	UPROPERTY()
 	UWidgetComponent* WidgetComponent = nullptr;
 
-	/** Current interactor (for camera-facing calculations — the most recent focuser) */
+	/** Current interactor (for camera-facing calculations - the most recent focuser) */
 	UPROPERTY()
 	AActor* CurrentInteractor = nullptr;
 
 	/**
 	 * Every actor currently focusing this interactable (co-op safe).
-	 * Highlight/widget turn ON with the first focuser and OFF with the last —
+	 * Highlight/widget turn ON with the first focuser and OFF with the last -
 	 * previously a single CurrentInteractor meant player B walking away
 	 * cleared player A's highlight and prompt.
 	 * NOTE: the world-space widget itself is still visible to everyone while
@@ -272,34 +256,17 @@ private:
 
 	/** Create and setup widget component */
 	void CreateWidgetComponent();
-	
+
 	/** Update widget text based on the interaction type */
 	void UpdateWidgetText();
 
-	/** Get Display Text For Current Interaction Type*/ 
-	FText GetDisplayTextForCurrentType() const;
 
-	bool SupportsProgressBar() const;
-
-	// ═══════════════════════════════════════════════════════════════════════
-	// CAMERA-FACING LOGIC (SINGLE RESPONSIBILITY: Widget rotation)
-	// ═══════════════════════════════════════════════════════════════════════
-
-	/** 
+	/**
 	 * Update widget rotation to face interactor's camera
 	 * @param Interactor - Actor to face towards
 	 * @param DeltaTime - Time delta for smooth rotation (0 for instant)
 	 */
 	void UpdateWidgetRotationToFaceCamera(AActor* Interactor, float DeltaTime = 0.0f);
-
-	/** 
-	 * Get camera location and rotation for the given actor
-	 * @param Interactor - Actor to get camera from
-	 * @param OutCameraLocation - Camera world location
-	 * @param OutCameraRotation - Camera world rotation
-	 * @return True if camera found
-	 */
-	bool GetInteractorCamera(AActor* Interactor, FVector& OutCameraLocation, FRotator& OutCameraRotation) const;
 
 	/** Start camera-facing update timer */
 	void StartCameraFacingUpdates();
@@ -310,14 +277,12 @@ private:
 	/** Timer callback for continuous camera-facing updates */
 	void UpdateCameraFacingTimer();
 
-	// ═══════════════════════════════════════════════════════════════════════
 	// MESH MANAGEMENT
-	// ═══════════════════════════════════════════════════════════════════════
 
 	/** Auto-find meshes to highlight */
 	void AutoFindMeshes();
 
 	/** Apply highlight */
 	void ApplyHighlight(bool bHighlight);
-	
+
 };

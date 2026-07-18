@@ -1,7 +1,7 @@
 #include "AI/Mob/MobManagerActor.h"
 #include "AI/Mob/MobPoolSubsystem.h"
 #include "AI/Mob/MobWanderInterface.h"
-#include "AI/Mob/MobSpawnConditionEvaluator.h"
+#include "AI/Helpers/MobSpawnConditionEvaluator.h"
 #include "AI/ALSAIController.h"
 #include "AI/Components/MonsterModifierComponent.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
@@ -87,14 +87,14 @@ void AMobManagerActor::StartSpawning()
 	if (!HasAuthority())
 	{
 		UE_LOG(LogMobManager, Warning,
-			TEXT("[%s] StartSpawning: called without authority — ignoring"), *GetName());
+			TEXT("[%s] StartSpawning: called without authority - ignoring"), *GetName());
 		return;
 	}
 
 	if (MobTypes.IsEmpty())
 	{
 		UE_LOG(LogMobManager, Warning,
-			TEXT("[%s] StartSpawning: MobTypes array is empty — nothing to spawn"),
+			TEXT("[%s] StartSpawning: MobTypes array is empty - nothing to spawn"),
 			*GetName());
 		return;
 	}
@@ -105,7 +105,7 @@ void AMobManagerActor::StartSpawning()
 		&& !GetWorldTimerManager().IsTimerPaused(SpawnTimerHandle))
 	{
 		UE_LOG(LogMobManager, Verbose,
-			TEXT("[%s] StartSpawning: already active and running — ignoring duplicate call"),
+			TEXT("[%s] StartSpawning: already active and running - ignoring duplicate call"),
 			*GetName());
 		return;
 	}
@@ -456,7 +456,7 @@ bool AMobManagerActor::TrySpawnMob()
 	if (DistanceFailCount > MaxSpawnAttempts / 2)
 	{
 		UE_LOG(LogMobManager, Warning,
-			TEXT("[%s] TrySpawnMob: exhausted %d attempts for '%s' — %d/%d were DistanceFailed. "
+			TEXT("[%s] TrySpawnMob: exhausted %d attempts for '%s' - %d/%d were DistanceFailed. "
 			     "Consider enlarging SpawnArea, reducing MinDistanceFromPlayer (%.0f), or enabling bUseSmartSpawnPlacement."),
 			*GetName(), MaxSpawnAttempts, *MobClass->GetName(),
 			DistanceFailCount, MaxSpawnAttempts, MinDistanceFromPlayer);
@@ -1011,7 +1011,7 @@ void AMobManagerActor::FinalizeSpawn(APHBaseCharacter* Mob, const FVector& Spawn
 			{
 				UE_LOG(LogMobManager, Warning,
 					TEXT("FinalizeSpawn: '%s' could not be projected to navmesh "
-					     "from %s — pathfinding will likely fail."),
+					     "from %s - pathfinding will likely fail."),
 					*Mob->GetName(), *Mob->GetActorLocation().ToString());
 			}
 		}

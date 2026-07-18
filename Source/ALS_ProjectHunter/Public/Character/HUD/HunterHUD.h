@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/HUD.h"
-#include "Menu/Library/MenuEnumLibrary.h"
+#include "Menu/Library/Enums/MenuEnums.h"
 #include "HunterHUD.generated.h"
 
 class APHBaseCharacter;
@@ -36,7 +36,7 @@ public:
 
 	/**
 	 * Mash-progress HUD hooks. The C++ side only routes to the Blueprint
-	 * events below — implement the actual widget in your HUD Blueprint
+	 * events below - implement the actual widget in your HUD Blueprint
 	 * (these were silent empty stubs before).
 	 */
 	void ShowMashProgressWidget(const FText& Text, int32 RequiredCount);
@@ -53,9 +53,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "HUD|Widgets")
 	UHunterMainHUDWidget* GetMainHUDWidget() const { return MainHUDWidget; }
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// MENU (tabbed pause-less menu — Equipment / Stats / PassiveTree / Settings)
-	// ─────────────────────────────────────────────────────────────────────────
+	// MENU (tabbed pause-less menu - Equipment / Stats / PassiveTree / Settings)
 
 	/** Open the menu if closed, close it if open. Bind your Menu input to this. */
 	UFUNCTION(BlueprintCallable, Category = "HUD|Menu")

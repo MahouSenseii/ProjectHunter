@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
-#include "AbilitySystem/Library/PHAbilityEnumLibrary.h"
+#include "AbilitySystem/Library/Enums/PHAbilityEnums.h"
 #include "PHGameplayAbility.generated.h"
 
 class APHBaseCharacter;

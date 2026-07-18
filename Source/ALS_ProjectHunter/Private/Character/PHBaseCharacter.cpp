@@ -7,9 +7,8 @@
 #include "Progression/Components/CharacterProgressionManager.h"
 #include "Stats/Components/StatsManager.h"
 #include "Tags/Components/TagManager.h"
-#include "Combat/Components/CombatStatusManager.h"
-#include "Combat/Components/CombatSystemManagerComponent.h"
 #include "Combat/Components/CombatManager.h"
+#include "Combat/Components/UCombatStatusEffectApplier.h"
 #include "Combat/Components/HunterDamagePopupPresentationComponent.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
@@ -62,13 +61,11 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer)
 
 	TagManager = CreateDefaultSubobject<UTagManager>(TEXT("TagManager"));
 
-	// Owns the damage pipeline for this character. Weapons and unarmed hits both route through this.
-	// Assign DamageApplicationGE and RecoveryApplicationGE in Blueprint defaults.
+	// Owns the damage pipeline for this character, including its own CombatStatus
+	// sub-object (Bleed/Ignite/Poison/etc.). Weapons and unarmed hits both route
+	// through this. Assign DamageApplicationGE and RecoveryApplicationGE in
+	// Blueprint defaults.
 	CombatManager = CreateDefaultSubobject<UCombatManager>(TEXT("CombatManager"));
-
-	CombatStatusManager = CreateDefaultSubobject<UCombatStatusManager>(TEXT("CombatStatusManager"));
-
-	CombatSystemManager = CreateDefaultSubobject<UCombatSystemManagerComponent>(TEXT("CombatSystemManager"));
 
 	// Does not replicate; each machine rebuilds presentation from replicated slot state.
 	EquipmentPresentation = CreateDefaultSubobject<UEquipmentPresentationComponent>(TEXT("EquipmentPresentation"));
@@ -84,26 +81,30 @@ void APHBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+UCombatStatusEffectApplier* APHBaseCharacter::GetCombatStatusManager() const
+{
+	return CombatManager ? CombatManager->GetCombatStatusManager() : nullptr;
+}
+
 
 void APHBaseCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
 	// BLUEPRINT-CDO RECOVERY
-	// ─────────────────────────────────────────────────────────────────────────
 	// PostInitializeComponents fires AFTER the Blueprint CDO has stamped its
 	// serialized property overrides onto this instance. If any Blueprint in the
 	// hierarchy (ALS_BaseCharacterBP, ALS_PlayerCharacterBP, etc.) was saved
-	// before these UPROPERTY members existed on PHBaseCharacter — or was saved
-	// during a class reparent — the CDO carries null for those properties and
+	// before these UPROPERTY members existed on PHBaseCharacter - or was saved
+	// during a class reparent - the CDO carries null for those properties and
 	// overwrites the valid TObjectPtrs the C++ constructor just set.
 	//
 	// The underlying UObjects still exist (CreateDefaultSubobject creates them
 	// and registers them regardless), so we can recover the pointers here:
-	//   • UActorComponents  → FindComponentByClass
-	//   • Plain UObject subobjects (AttributeSet) → FindObject with outer = this
+	//    UActorComponents  -> FindComponentByClass
+	//    Plain UObject subobjects (AttributeSet) -> FindObject with outer = this
 	//
-	// PERMANENT FIX: Open every Blueprint child of PHBaseCharacter in the editor,
+	// Blueprint cleanup: open every Blueprint child of PHBaseCharacter in the editor,
 	// click Compile, then Save. The Blueprint CDO will regenerate from the current
 	// C++ defaults and stop serializing null for these members. Once all Blueprints
 	// are resaved these recovery blocks become permanent no-ops.
@@ -121,8 +122,6 @@ void APHBaseCharacter::PostInitializeComponents()
 	PH_RECOVER_COMPONENT(StatsManager,           UStatsManager)
 	PH_RECOVER_COMPONENT(TagManager,             UTagManager)
 	PH_RECOVER_COMPONENT(CombatManager,          UCombatManager)
-	PH_RECOVER_COMPONENT(CombatStatusManager,    UCombatStatusManager)
-	PH_RECOVER_COMPONENT(CombatSystemManager,    UCombatSystemManagerComponent)
 	PH_RECOVER_COMPONENT(EquipmentPresentation,  UEquipmentPresentationComponent)
 	PH_RECOVER_COMPONENT(DamagePopupPresentation, UHunterDamagePopupPresentationComponent)
 	PH_RECOVER_COMPONENT(SystemCoordinator,      UCharacterSystemCoordinatorComponent)
@@ -600,7 +599,7 @@ void APHBaseCharacter::OnRep_PlayerState()
 	{
 		InitializeAbilitySystem();
 
-		// Same safety net as PossessedBy — for clients where PlayerState replication makes the ASC available.
+		// Same safety net as PossessedBy - for clients where PlayerState replication makes the ASC available.
 		if (TagManager && !TagManager->IsInitialized())
 		{
 			TagManager->Initialize(AbilitySystemComponent);
@@ -683,7 +682,7 @@ void APHBaseCharacter::InitializeAbilitySystem()
 	const bool bHasLiveAttributeSet = EnsureAttributeSetRegisteredWithAbilitySystem();
 	if (!bHasLiveAttributeSet)
 	{
-		PH_LOG_ERROR(LogPHBaseCharacter, "InitializeAbilitySystem failed for Character=%s because the live AttributeSet was missing on ASC=%s.", *GetName(), *GetNameSafe(AbilitySystemComponent));
+		PH_LOG_ERROR(LogPHBaseCharacter, "InitializeAbilitySystem failed for Character=%s because the live AttributeSet is missing on ASC=%s.", *GetName(), *GetNameSafe(AbilitySystemComponent));
 		return;
 	}
 
@@ -770,7 +769,7 @@ void APHBaseCharacter::InitializeAttributes()
 	{
 		return;
 	}
-	
+
 }
 
 void APHBaseCharacter::BindAttributeDelegates()
@@ -942,7 +941,7 @@ void APHBaseCharacter::ApplyStartupEffects()
 		{
 			FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(
 				EffectClass, 1, EffectContext);
-			
+
 			if (SpecHandle.IsValid())
 			{
 				AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
@@ -975,5 +974,3 @@ void APHBaseCharacter::RemoveAllAbilities()
 
 	GrantedAbilityHandles.Empty();
 }
-
-

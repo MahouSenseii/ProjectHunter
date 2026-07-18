@@ -56,7 +56,7 @@ void UStashSubsystem::LoadStashHandles(const FString& CharacterSlotName)
 	}
 
 	UE_LOG(LogStashSubsystem, Log,
-		TEXT("LoadStashHandles: %d tab handles ready (data NOT loaded — lazy)"),
+		TEXT("LoadStashHandles: %d tab handles ready (data NOT loaded - lazy)"),
 		TabHandles.Num());
 }
 
@@ -122,7 +122,7 @@ bool UStashSubsystem::AddItemToTab(int32 TabIndex, UItemInstance* Item, FIntPoin
 	if (!TabData)
 	{
 		UE_LOG(LogStashSubsystem, Warning,
-			TEXT("AddItemToTab: Tab %d not loaded — call RequestTabData first"), TabIndex);
+			TEXT("AddItemToTab: Tab %d not loaded - call RequestTabData first"), TabIndex);
 		return false;
 	}
 
@@ -340,7 +340,7 @@ void UStashSubsystem::SaveTab(int32 TabIndex)
 	UGameplayStatics::SaveGameToSlot(SaveObj, SlotName, 0);
 
 	UE_LOG(LogStashSubsystem, Log,
-		TEXT("SaveTab: Saved %d items for tab '%s' → slot '%s'"),
+		TEXT("SaveTab: Saved %d items for tab '%s' -> slot '%s'"),
 		SaveObj->Items.Num(), *Handle.TabID.ToString(), *SlotName);
 }
 
@@ -368,7 +368,7 @@ void UStashSubsystem::SaveHandles()
 	UGameplayStatics::SaveGameToSlot(SaveObj, Slot, 0);
 
 	UE_LOG(LogStashSubsystem, Log,
-		TEXT("SaveHandles: Saved %d handles → slot '%s'"),
+		TEXT("SaveHandles: Saved %d handles -> slot '%s'"),
 		SaveObj->Handles.Num(), *Slot);
 }
 
@@ -398,7 +398,7 @@ bool UStashSubsystem::LoadTab(int32 TabIndex)
 		if (!ItemClass)
 		{
 			UE_LOG(LogStashSubsystem, Warning,
-				TEXT("LoadTab: Could not resolve item class '%s' — skipping"),
+				TEXT("LoadTab: Could not resolve item class '%s' - skipping"),
 				*ItemSave.ItemClassPath.ToString());
 			continue;
 		}

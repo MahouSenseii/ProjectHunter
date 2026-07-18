@@ -6,7 +6,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Engine/DataTable.h"
-#include "Item/Library/ItemEnums.h"
+#include "Item/Library/Enums/ItemEnums.h"
 #include "WeaponPlacementActor.generated.h"
 
 class UItemInstance;
@@ -14,7 +14,7 @@ class UBillboardComponent;
 class USceneComponent;
 
 /**
- * AWeaponPlacementActor — places a single item in the world via the
+ * AWeaponPlacementActor - places a single item in the world via the
  * existing UGroundItemSubsystem (ISM-backed ground items).
  */
 UCLASS(Blueprintable, BlueprintType,
@@ -26,21 +26,18 @@ class ALS_PROJECTHUNTER_API AWeaponPlacementActor : public AActor
 public:
 	AWeaponPlacementActor();
 
-	// ═══════════════════════════════════════════════
-	// CONFIG (set in editor or Blueprint)
-	// ═══════════════════════════════════════════════
 
 	/** Row handle pointing at the FItemBase row to spawn at this location. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item",
 	          meta = (DisplayName = "Base Item"))
 	FDataTableRowHandle BaseItemHandle;
 
-	/** Item level (1–100) — affects affix tier rolls. */
+	/** Item level (1-100) - affects affix tier rolls. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item",
 	          meta = (ClampMin = "1", ClampMax = "100"))
 	int32 ItemLevel = 1;
 
-	/** Item grade (F–SS) — determines affix count. */
+	/** Item grade (F-SS) - determines affix count. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	EItemRarity Rarity = EItemRarity::IR_GradeF;
 
@@ -60,9 +57,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	bool bRemoveOnDestroyed = true;
 
-	// ═══════════════════════════════════════════════
-	// API
-	// ═══════════════════════════════════════════════
 
 	/**
 	 * Build the UItemInstance and register it with UGroundItemSubsystem.

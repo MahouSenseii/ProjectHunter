@@ -1,50 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Item/Library/ItemEnums.h"
+#include "Menu/Library/Structs/MenuStructs.h"
 #include "Menu/Widgets/PHMenuPageWidgetBase.h"
 #include "PHEquipmentMenuPageWidget.generated.h"
 
 class UItemInstance;
-
-USTRUCT(BlueprintType)
-struct ALS_PROJECTHUNTER_API FEquipmentMenuSlotViewData
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu")
-	EEquipmentSlot Slot = EEquipmentSlot::ES_None;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu")
-	FText DisplayName;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu")
-	TObjectPtr<UItemInstance> Item = nullptr;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu")
-	bool bOccupied = false;
-};
-
-USTRUCT(BlueprintType)
-struct ALS_PROJECTHUNTER_API FEquipmentMenuInventorySlotViewData
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu")
-	int32 SlotIndex = INDEX_NONE;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu")
-	TObjectPtr<UItemInstance> Item = nullptr;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu")
-	bool bOccupied = false;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu")
-	bool bCanEquip = false;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu")
-	EEquipmentSlot SuggestedEquipmentSlot = EEquipmentSlot::ES_None;
-};
+class UPHEquipmentSlotWidget;
+class UPHInventoryMenuPanelWidget;
 
 /**
  * C++ base for the equipment menu page.
@@ -127,6 +90,8 @@ public:
 	static FText GetEquipmentSlotDisplayName(EEquipmentSlot EquipmentSlot);
 
 protected:
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 	virtual void NativeInitializeForCharacter(APHBaseCharacter* Character) override;
 	virtual void NativeReleaseCharacter() override;
 
@@ -141,6 +106,12 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu")
 	TArray<FEquipmentMenuInventorySlotViewData> InventorySlots;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu|Equipment")
+	TArray<TObjectPtr<UPHEquipmentSlotWidget>> EquipmentSlotWidgets;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Equipment Menu|Inventory")
+	TObjectPtr<UPHInventoryMenuPanelWidget> InventoryPanel;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu|Selection")
 	TObjectPtr<UItemInstance> SelectedItem = nullptr;
@@ -179,6 +150,11 @@ protected:
 	void OnCarryWeightChanged(float NewCurrentWeight, float NewMaxWeight);
 
 private:
+	void CacheChildWidgets();
+	void BindInventoryPanelDelegates();
+	void UnbindInventoryPanelDelegates();
+	void RefreshEquipmentSlotWidgets();
+	void SyncInventoryStateFromPanel();
 	void BindManagerDelegates();
 	void UnbindManagerDelegates();
 	void RebuildEquipmentSlots();
@@ -195,4 +171,13 @@ private:
 
 	UFUNCTION()
 	void HandleCarryWeightChanged(float NewCurrentWeight, float NewMaxWeight);
+
+	UFUNCTION()
+	void HandleInventoryPanelDataRefreshed();
+
+	UFUNCTION()
+	void HandleInventoryPanelSelectionChanged(UItemInstance* NewSelectedItem, int32 NewInventorySlotIndex, EEquipmentSlot SuggestedEquipmentSlot);
+
+	UFUNCTION()
+	void HandleInventoryPanelCarryWeightChanged(float NewCurrentWeight, float NewMaxWeight);
 };

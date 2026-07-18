@@ -1,6 +1,7 @@
 #include "AbilitySystem/ModMagnitude/HunterMMC_StaminaDegen.h"
 
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystem/Library/FunctionLibraries/PHResourceFunctionLibrary.h"
 #include "GameplayEffectExtension.h"
 
 namespace HunterMMCStaminaDegenPrivate
@@ -49,5 +50,5 @@ float UHunterMMC_StaminaDegen::CalculateBaseMagnitude_Implementation(const FGame
 
 	// Negative so an Additive periodic modifier drains Stamina. The GE coefficient
 	// scales this per-second value by the tick period for smoother updates.
-	return -(FMath::Max(Rate, 0.f) * FMath::Max(Amount, 0.f));
+	return UPHResourceFunctionLibrary::CalculateResourceDrainAmount(Rate, Amount);
 }

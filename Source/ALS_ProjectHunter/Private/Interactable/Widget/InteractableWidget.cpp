@@ -194,7 +194,7 @@ void UInteractableWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 				bIsUsingGamepad ? TEXT("Gamepad") : TEXT("Keyboard"));
 		}
 	}
-	
+
 	TickState(InDeltaTime);
 }
 
@@ -365,9 +365,9 @@ void UInteractableWidget::TickState(float DeltaTime)
 		{
 			float DepleteSpeed = 2.0f;
 			CurrentProgress = FMath::Max(0.0f, CurrentProgress - (DeltaTime * DepleteSpeed));
-			
+
 			UpdateMaterialParameters();
-			
+
 			// Return to idle when depleted
 			if (CurrentProgress <= 0.0f)
 			{
@@ -468,7 +468,7 @@ void UInteractableWidget::UpdateKeyIcon()
 		{
 			Img_Key->SetVisibility(ESlateVisibility::Collapsed);
 		}
-		
+
 		UE_LOG(LogInteractableWidget, Warning, TEXT("CurrentInputKey is invalid, using fallback or hiding"));
 		return;
 	}
@@ -481,7 +481,7 @@ void UInteractableWidget::UpdateKeyIcon()
 		{
 			Img_Key->SetBrushFromTexture(*FoundIcon);
 			Img_Key->SetVisibility(ESlateVisibility::HitTestInvisible);
-			
+
 			UE_LOG(LogInteractableWidget, Verbose, TEXT("Showing icon for key: %s (%s mode)"),
 				*CurrentInputKey.ToString(),
 				bIsUsingGamepad ? TEXT("Gamepad") : TEXT("Keyboard"));
@@ -493,14 +493,14 @@ void UInteractableWidget::UpdateKeyIcon()
 	{
 		Img_Key->SetBrushFromTexture(FallbackIcon);
 		Img_Key->SetVisibility(ESlateVisibility::HitTestInvisible);
-		
+
 		UE_LOG(LogInteractableWidget, Verbose, TEXT("No specific icon for key '%s', using fallback"),
 			*CurrentInputKey.ToString());
 		return;
 	}
 
 	Img_Key->SetVisibility(ESlateVisibility::Collapsed);
-	
+
 	UE_LOG(LogInteractableWidget, Warning, TEXT("No icon found for key '%s' in %s mode (no fallback configured)"),
 		*CurrentInputKey.ToString(),
 		bIsUsingGamepad ? TEXT("Gamepad") : TEXT("Keyboard"));
@@ -575,7 +575,7 @@ FKey UInteractableWidget::GetBoundKeyForInputAction(UInputAction* InputAction) c
 					*MappedKey.ToString(),
 					*InputAction->GetName(),
 					bIsUsingGamepad ? TEXT("Gamepad") : TEXT("Keyboard"));
-				
+
 				return MappedKey;
 			}
 
@@ -593,7 +593,7 @@ FKey UInteractableWidget::GetBoundKeyForInputAction(UInputAction* InputAction) c
 
 	UE_LOG(LogInteractableWidget, Warning, TEXT("No key binding found for InputAction '%s'!"),
 		*InputAction->GetName());
-	
+
 	return EKeys::Invalid;
 }
 

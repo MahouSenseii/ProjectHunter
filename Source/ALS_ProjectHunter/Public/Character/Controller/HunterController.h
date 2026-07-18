@@ -1,4 +1,3 @@
-// Character/Controller/HunterController.h
 
 #pragma once
 
@@ -7,32 +6,16 @@
 
 #include "InputActionValue.h"
 #include "Character/ALSPlayerController.h"
-#include "Interactable/Library/InteractionEnumLibrary.h"
+#include "Character/Library/Structs/HunterControllerStructs.h"
+#include "Interactable/Library/Enums/InteractionEnums.h"
 #include "HunterController.generated.h"
 
-// Forward declarations
 class UInteractionManager;
 class UInputMappingContext;
 class UHunterCheatComponent;
 
 /**
- * DoOnce State - Helper for DoOnce pattern
- * Ensures code executes only once until explicitly reset.
- * Lives here because it is exclusively used by HunterController::DoOnce().
- */
-USTRUCT(BlueprintType)
-struct FDoOnceState
-{
-	GENERATED_BODY()
-
-	bool bHasBeenInitialized = false;
-	bool bIsClosed = false;
-
-	FDoOnceState() = default;
-};
-
-/**
- * Hunter Player Controller 
+ * Hunter Player Controller
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API AHunterController : public AALSPlayerController
@@ -43,16 +26,7 @@ public:
 	AHunterController(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	virtual void OnPossess(APawn* NewPawn) override;
-	
 
-	// ═══════════════════════════════════════════════
-	// INPUT HANDLERS (Route to Components)
-	// ═══════════════════════════════════════════════
-
-	/**
-	 * Interact input handler
-	 * Routes to InteractionManager - that's it! :D 
-	 */
 	UFUNCTION()
 	void Interact(const FInputActionValue& Value);
 
@@ -64,41 +38,33 @@ public:
 
 	UFUNCTION()
 	void Interact_Canceled(const FInputActionValue& Value);
-	
+
 	/**
-	 * Menu input handler — toggles the tabbed menu on AHunterHUD.
+	 * Menu input handler - toggles the tabbed menu on AHunterHUD.
 	 * BlueprintCallable so the BP controller's EnhancedInputAction event can
 	 * route here with a single node (pass the action's bool value).
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	void Menu(const FInputActionValue& Value);
-	
-	/* Relays input action*/
+
 	UFUNCTION(BlueprintCallable)
 	const UInputAction* GetInputActionByName(const FString& InString) const;
-	
+
 	UFUNCTION(BlueprintCallable)
 	float GetElapsedSeconds(const UInputAction* Action) const;
-	
+
 	UFUNCTION(BlueprintCallable)
 	bool DoOnce(FDoOnceState& State, bool bReset, bool bStartClosed);
 
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Project Hunter|Cheats", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UHunterCheatComponent> CheatComponent;
-	
+
 protected:
-	// ═══════════════════════════════════════════════
-	// CACHED REFERENCES
-	// ═══════════════════════════════════════════════
 
 	/** Cached interaction manager */
 	UPROPERTY()
 	TObjectPtr<UInteractionManager> InteractionManager = nullptr;
-	
-	// ═══════════════════════════════════════════════
-	// INTERNAL METHODS
-	// ═══════════════════════════════════════════════
 
 	/** Cache component references on possess */
 	void CacheComponents();

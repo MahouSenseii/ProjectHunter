@@ -1,4 +1,6 @@
 #include "Loot/Generation/LootGenerator.h"
+#include "Loot/Library/FunctionLibraries/LootRarityFunctionLibrary.h"
+#include "Loot/Library/FunctionLibraries/LootSelectionFunctionLibrary.h"
 #include "Item/ItemInstance.h"
 #include "Engine/DataTable.h"
 
@@ -21,7 +23,7 @@ FLootResultBatch FLootGenerator::GenerateLoot(
 	FRandomStream RandStream(Seed != 0 ? Seed : FMath::Rand());
 	Batch.Seed = RandStream.GetCurrentSeed();
 
-	TArray<FLootEntry> FilteredEntries = FilterEntries(LootTable.Entries, Settings);
+	const TArray<FLootEntry> FilteredEntries = ULootSelectionFunctionLibrary::FilterEntries(LootTable.Entries, Settings);
 
 	if (FilteredEntries.Num() == 0)
 	{
@@ -29,30 +31,30 @@ FLootResultBatch FLootGenerator::GenerateLoot(
 		return Batch;
 	}
 
-	int32 DropCount = CalculateDropCount(LootTable, Settings, RandStream);
+	const int32 DropCount = ULootSelectionFunctionLibrary::CalculateDropCount(LootTable, Settings, RandStream);
 
 	TArray<int32> SelectedIndices;
 
 	switch (LootTable.SelectionMethod)
 	{
 		case ELootSelectionMethod::LSM_Weighted:
-			SelectedIndices = SelectWeighted(FilteredEntries, DropCount, LootTable.bAllowDuplicates, RandStream);
+			SelectedIndices = ULootSelectionFunctionLibrary::SelectWeighted(FilteredEntries, DropCount, LootTable.bAllowDuplicates, RandStream);
 			break;
 
 		case ELootSelectionMethod::LSM_Sequential:
-			SelectedIndices = SelectSequential(FilteredEntries, Settings, RandStream);
+			SelectedIndices = ULootSelectionFunctionLibrary::SelectSequential(FilteredEntries, Settings, RandStream);
 			break;
 
 		case ELootSelectionMethod::LSM_GuaranteedOne:
-			SelectedIndices = SelectGuaranteedOne(FilteredEntries, RandStream);
+			SelectedIndices = ULootSelectionFunctionLibrary::SelectGuaranteedOne(FilteredEntries, RandStream);
 			break;
 
 		case ELootSelectionMethod::LSM_All:
-			SelectedIndices = SelectAll(FilteredEntries, Settings, RandStream);
+			SelectedIndices = ULootSelectionFunctionLibrary::SelectAll(FilteredEntries);
 			break;
 
 		default:
-			SelectedIndices = SelectWeighted(FilteredEntries, DropCount, LootTable.bAllowDuplicates, RandStream);
+			SelectedIndices = ULootSelectionFunctionLibrary::SelectWeighted(FilteredEntries, DropCount, LootTable.bAllowDuplicates, RandStream);
 			break;
 	}
 
@@ -129,10 +131,10 @@ FLootResult FLootGenerator::CreateItemFromEntry(
 		return Result;
 	}
 
-	int32 Quantity = RollQuantity(Entry, Settings, RandStream);
-	int32 ItemLevel = RollItemLevel(Entry, Settings, RandStream);
-	EItemRarity Rarity = DetermineRarity(Entry, Settings, RandStream);
-	int32 ItemSeed = RandStream.RandHelper(INT32_MAX);
+	const int32 Quantity = RollQuantity(Entry, Settings, RandStream);
+	const int32 ItemLevel = RollItemLevel(Entry, Settings, RandStream);
+	const EItemRarity Rarity = DetermineRarity(Entry, Settings, RandStream);
+	const int32 ItemSeed = RandStream.RandHelper(INT32_MAX);
 
 	float FinalCorruptionChance = 0.0f;
 	bool bForceCorrupted = false;
@@ -174,12 +176,9 @@ int32 FLootGenerator::RollQuantity(
 	const FLootDropSettings& Settings,
 	FRandomStream& RandStream) const
 {
-	int32 BaseQuantity = RandStream.RandRange(Entry.MinQuantity, Entry.MaxQuantity);
-
-	float Multiplier = Settings.QuantityMultiplier;
-	Multiplier += Settings.PlayerMagicFindBonus * 0.01f;
-
-	int32 FinalQuantity = FMath::RoundToInt(BaseQuantity * Multiplier);
+	const int32 BaseQuantity = RandStream.RandRange(Entry.MinQuantity, Entry.MaxQuantity);
+	const float Multiplier = Settings.QuantityMultiplier + Settings.PlayerMagicFindBonus * 0.01f;
+	const int32 FinalQuantity = FMath::RoundToInt(BaseQuantity * Multiplier);
 
 	return FMath::Max(1, FinalQuantity);
 }
@@ -223,33 +222,12 @@ EItemRarity FLootGenerator::DetermineRarity(
 	float UpgradeChance = Settings.RarityBonusChance;
 	UpgradeChance += Settings.PlayerLuckBonus * 0.005f;
 
-	EItemRarity BaseRarity = EItemRarity::IR_GradeF;
-
-	switch (Settings.SourceRarity)
+	EItemRarity BaseRarity = ULootRarityFunctionLibrary::DropRarityToItemRarity(Settings.SourceRarity);
+	if (BaseRarity == EItemRarity::IR_None)
 	{
-		case EDropRarity::DR_Common:
-			BaseRarity = EItemRarity::IR_GradeF;
-			break;
-		case EDropRarity::DR_Uncommon:
-			BaseRarity = EItemRarity::IR_GradeE;
-			break;
-		case EDropRarity::DR_Rare:
-			BaseRarity = EItemRarity::IR_GradeD;
-			break;
-		case EDropRarity::DR_Epic:
-			BaseRarity = EItemRarity::IR_GradeC;
-			break;
-		case EDropRarity::DR_Legendary:
-			BaseRarity = EItemRarity::IR_GradeB;
-			break;
-		case EDropRarity::DR_Mythical:
-			BaseRarity = EItemRarity::IR_GradeA;
-			break;
+		BaseRarity = EItemRarity::IR_GradeF;
 	}
 
-	// High magic-find values can push items multiple rarity tiers upward. Each iteration
-	// the chance is multiplied by a decay factor (0.35) to make each successive upgrade
-	// exponentially less likely — diminishing returns for magic find investment.
 	if (UpgradeChance > 0.0f)
 	{
 		constexpr float DecayFactor = 0.35f;
@@ -258,31 +236,18 @@ EItemRarity FLootGenerator::DetermineRarity(
 		float CurrentChance = UpgradeChance;
 		while (CurrentChance > 0.0f && RandStream.FRand() < CurrentChance)
 		{
-			int32 RarityInt = static_cast<int32>(BaseRarity);
+			const int32 RarityInt = static_cast<int32>(BaseRarity);
 			if (RarityInt >= MaxRarityInt)
 			{
-				break; // Already at maximum non-unique rarity
+				break;
 			}
+
 			BaseRarity = static_cast<EItemRarity>(RarityInt + 1);
 			CurrentChance *= DecayFactor;
 		}
 	}
 
 	return BaseRarity;
-}
-
-int32 FLootGenerator::CalculateDropCount(
-	const FLootTable& Table,
-	const FLootDropSettings& Settings,
-	FRandomStream& RandStream) const
-{
-	int32 Min = Table.MinSelections > 0 ? Table.MinSelections : Settings.MinDrops;
-	int32 Max = Table.MaxSelections > 0 ? Table.MaxSelections : Settings.MaxDrops;
-
-	Max = FMath::RoundToInt(Max * (1.0f + Settings.PlayerMagicFindBonus * 0.01f));
-	Max = FMath::Max(Min, Max);
-
-	return RandStream.RandRange(Min, Max);
 }
 
 UItemInstance* FLootGenerator::CreateItemInstance(
@@ -315,200 +280,10 @@ UItemInstance* FLootGenerator::CreateItemInstance(
 			bForceCorrupted
 		);
 	}
-	else if (Entry.ItemClass)
+	else if (Entry.ItemClass.Get())
 	{
 		UE_LOG(LogLootGenerator, Warning, TEXT("Class-based item creation not yet implemented"));
 	}
 
 	return Item;
-}
-
-TArray<int32> FLootGenerator::SelectWeighted(
-	const TArray<FLootEntry>& Entries,
-	int32 NumToSelect,
-	bool bAllowDuplicates,
-	FRandomStream& RandStream) const
-{
-	TArray<int32> Selected;
-
-	if (Entries.Num() == 0 || NumToSelect <= 0)
-	{
-		return Selected;
-	}
-
-	float TotalWeight = 0.0f;
-	for (const FLootEntry& Entry : Entries)
-	{
-		TotalWeight += Entry.GetEffectiveWeight();
-	}
-
-	if (TotalWeight <= 0.0f)
-	{
-		return Selected;
-	}
-
-	TArray<int32> AvailableIndices;
-	TArray<float> AvailableWeights;
-
-	// Track remaining weight as a running sum rather than re-summing the entire
-	// AvailableWeights array on every iteration (was O(n) per pick → O(n²) total).
-	float RemainingWeight = TotalWeight;
-
-	if (!bAllowDuplicates)
-	{
-		for (int32 i = 0; i < Entries.Num(); ++i)
-		{
-			AvailableIndices.Add(i);
-			AvailableWeights.Add(Entries[i].GetEffectiveWeight());
-		}
-	}
-
-	for (int32 i = 0; i < NumToSelect; ++i)
-	{
-		if (!bAllowDuplicates)
-		{
-			if (AvailableIndices.Num() == 0)
-			{
-				break;
-			}
-		}
-
-		float CurrentTotalWeight = bAllowDuplicates ? TotalWeight : RemainingWeight;
-
-		float RandomValue = RandStream.FRandRange(0.0f, CurrentTotalWeight);
-		float CurrentWeight = 0.0f;
-
-		if (bAllowDuplicates)
-		{
-			for (int32 j = 0; j < Entries.Num(); ++j)
-			{
-				CurrentWeight += Entries[j].GetEffectiveWeight();
-				if (RandomValue < CurrentWeight)
-				{
-					Selected.Add(j);
-					break;
-				}
-			}
-		}
-		else
-		{
-			for (int32 j = 0; j < AvailableIndices.Num(); ++j)
-			{
-				CurrentWeight += AvailableWeights[j];
-				if (RandomValue < CurrentWeight)
-				{
-					Selected.Add(AvailableIndices[j]);
-					RemainingWeight -= AvailableWeights[j];
-					AvailableIndices.RemoveAtSwap(j);
-					AvailableWeights.RemoveAtSwap(j);
-					break;
-				}
-			}
-		}
-	}
-
-	return Selected;
-}
-
-TArray<int32> FLootGenerator::SelectSequential(
-	const TArray<FLootEntry>& Entries,
-	const FLootDropSettings& Settings,
-	FRandomStream& RandStream) const
-{
-	TArray<int32> Selected;
-
-	for (int32 i = 0; i < Entries.Num(); ++i)
-	{
-		const FLootEntry& Entry = Entries[i];
-		float EffectiveChance = Entry.DropChance * Settings.DropChanceMultiplier;
-
-		if (RandStream.FRand() < EffectiveChance)
-		{
-			Selected.Add(i);
-		}
-	}
-
-	return Selected;
-}
-
-TArray<int32> FLootGenerator::SelectGuaranteedOne(
-	const TArray<FLootEntry>& Entries,
-	FRandomStream& RandStream) const
-{
-	TArray<int32> Selected;
-
-	if (Entries.Num() == 0)
-	{
-		return Selected;
-	}
-
-	float TotalWeight = 0.0f;
-	for (const FLootEntry& Entry : Entries)
-	{
-		TotalWeight += Entry.GetEffectiveWeight();
-	}
-
-	if (TotalWeight <= 0.0f)
-	{
-		Selected.Add(RandStream.RandRange(0, Entries.Num() - 1));
-		return Selected;
-	}
-
-	float RandomValue = RandStream.FRandRange(0.0f, TotalWeight);
-	float CurrentWeight = 0.0f;
-
-	for (int32 i = 0; i < Entries.Num(); ++i)
-	{
-		CurrentWeight += Entries[i].GetEffectiveWeight();
-		if (RandomValue < CurrentWeight)
-		{
-			Selected.Add(i);
-			break;
-		}
-	}
-
-	return Selected;
-}
-
-TArray<int32> FLootGenerator::SelectAll(
-	const TArray<FLootEntry>& Entries,
-	const FLootDropSettings& Settings,
-	FRandomStream& RandStream) const
-{
-	// LSM_All must return every valid entry unconditionally. Entries have already
-	// been validated by FilterEntries. Settings and RandStream are unused by design —
-	// suppress warnings without removing the parameters, which would break the shared
-	// calling convention with the other Select* methods.
-	(void)Settings;
-	(void)RandStream;
-
-	TArray<int32> Selected;
-	Selected.Reserve(Entries.Num());
-
-	for (int32 i = 0; i < Entries.Num(); ++i)
-	{
-		Selected.Add(i);
-	}
-
-	return Selected;
-}
-
-TArray<FLootEntry> FLootGenerator::FilterEntries(
-	const TArray<FLootEntry>& Entries,
-	const FLootDropSettings& Settings) const
-{
-	TArray<FLootEntry> Filtered;
-	Filtered.Reserve(Entries.Num());
-
-	for (const FLootEntry& Entry : Entries)
-	{
-		if (!Entry.IsValid())
-		{
-			continue;
-		}
-
-		Filtered.Add(Entry);
-	}
-
-	return Filtered;
 }

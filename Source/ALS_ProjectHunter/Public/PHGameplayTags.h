@@ -1,27 +1,17 @@
-// Copyright@2024 Quentin Davis
 #pragma once
 
 #include "CoreMinimal.h"
 #include "AttributeSet.h"
 #include "GameplayTagContainer.h"
 
-/**
- * Singleton containing all native gameplay tags.
- */
 struct FPHGameplayTags
 {
 public:
-	/** Singleton accessor */
 	static const FPHGameplayTags& Get() { return GameplayTags; }
 
-
-	/** Initialization entry points */
 	static void InitializeNativeGameplayTags();
 	static void InitRegister();
 
-	
-
-	/** Registration helpers (public for clarity; keep signatures to avoid breaking .cpp) */
 	static void RegisterPrimaryAttributes();
 	static void RegisterSecondaryVitals();
 	static void RegisterDamageTags();
@@ -35,8 +25,7 @@ public:
 	static void RegisterAttributeToTagMappings();
 	static void RegisterTagToAttributeMappings();
 	static FGameplayAttribute GetAttributeFromTag(const FGameplayTag& Tag);
-	
-	// Extra registrars used by your map/automation build
+
 	static void RegisterStatusEffectAttributes();
 	static void RegisterMinMaxTagMap();
 	static void RegisterBaseDamageAttributes();
@@ -48,43 +37,11 @@ public:
 	static void RegisterDamageConversionTags();
 	static void RegisterStatusEffectAliases();
 	static void RegisterSetByCallerDamageTags();
-	static void RegisterSkillKeywordTags(); // [SKILL_KW] – POE2-style keyword tags on UGameplayAbility::AbilityTags
-	static void RegisterMinionTags();       // [MINION]   – Covenant-driven minion scaling tags
+	static void RegisterSkillKeywordTags();
+	static void RegisterMinionTags();
 
-	// Keep both to preserve ABI/use-sites (you can deprecate one later)
 	static void RegisterAllAttribute();
-
-	/*
-	 * QUICK-FIND  —  Ctrl+F any [ANCHOR] to jump to that section.
-	 * All [ANCHOR] markers appear both here and at the section header below.
-	 * ────────────────────────────────────────────────────────────────────
-	 * [PRIMARY]    Primary Attributes (7)
-	 * [VITALS]     Health / Mana / Stamina / ArcaneShield
-	 * [DAMAGE]     Damage min/max, flat/percent bonuses
-	 * [RESIST]     Resistances, Armour, BlockStrength
-	 * [OFFENSIVE]  Attack/Cast speed, Crits, AoE, Chain/Fork
-	 * [PIERCING]   Penetration per element
-	 * [REFLECT]    Damage reflection
-	 * [CONVERT]    Damage type conversion (5×5 matrix)
-	 * [AILMENTS]   Status effect chances + durations
-	 * [MISC]       Leech, OnHit, Movement, Costs, Poise
-	 * [CONDITIONS] State / Threshold / Trigger / Proximity conditions
-	 * [SKILL_KW]   Skill keyword metadata tags (POE2 AbilityTags pattern)
-	 * [MINION]     Minion/summon scaling tags (Covenant system)
-	 * [DATA_MORE]  More / Increased multiplier SetByCaller tags
-	 * [DATA_COST]  Skill cost SetByCaller tags
-	 * [TRIGGERS]   HitWith / KilledRecently / weapon-equipped event tags
-	 * [SETBYCALL]  Damage / Recovery SetByCaller tags
-	 * [EFFECTS]    Active regen/degen state tags
-	 * [MAPS]       Tag ↔ Attribute helper maps
-	 */
-
-	/* =========================================================
-	 * ================ ATTRIBUTE TAG DECLARATIONS =============
-	 * =======================================================*/
-
-	/* [PRIMARY] ════════════════════════════════════════════ */
-	/* === Primary Attributes ===                            */
+	// Primary Attributes
 	static FGameplayTag Attributes_Primary_Strength;
 	static FGameplayTag Attributes_Primary_Intelligence;
 	static FGameplayTag Attributes_Primary_Dexterity;
@@ -92,13 +49,9 @@ public:
 	static FGameplayTag Attributes_Primary_Affliction;
 	static FGameplayTag Attributes_Primary_Luck;
 	static FGameplayTag Attributes_Primary_Covenant;
-
-	/* [DEFENSES] ═══════════════════════════════════════════ */
-	/* === Secondary: Defenses ===                           */
+	// Secondary: Defenses
 	static FGameplayTag Attributes_Secondary_Defenses_Armor;
-
-	/* [VITALS] ══════════════════════════════════════════════ */
-	/* === Secondary: Vitals ===                             */
+	// Secondary: Vitals
 	// Health
 	static FGameplayTag Attributes_Secondary_Vital_MaxHealth;
 	static FGameplayTag Attributes_Secondary_Vital_MaxEffectiveHealth;
@@ -149,9 +102,7 @@ public:
 	static FGameplayTag Attributes_Secondary_Vital_MaxArcaneShieldReservedAmount;
 	static FGameplayTag Attributes_Secondary_Vital_ArcaneShieldFlatReservedAmount;
 	static FGameplayTag Attributes_Secondary_Vital_ArcaneShieldPercentageReserved;
-
-	/* [DAMAGE] ══════════════════════════════════════════════ */
-	/* === Damage Tags ===                                   */
+	// Damage Tags
 	// Min
 	static FGameplayTag Attributes_Secondary_Damages_MinPhysicalDamage;
 	static FGameplayTag Attributes_Secondary_Damages_MinFireDamage;
@@ -182,9 +133,7 @@ public:
 	static FGameplayTag Attributes_Secondary_BonusDamage_LightningFlatBonus;
 	static FGameplayTag Attributes_Secondary_BonusDamage_CorruptionPercentBonus;
 	static FGameplayTag Attributes_Secondary_BonusDamage_CorruptionFlatBonus;
-
-	/* [RESIST] ══════════════════════════════════════════════ */
-	/* === Resistance Tags ===                               */
+	// Resistance Tags
 	static FGameplayTag Attributes_Secondary_Resistances_GlobalDefenses;
 	static FGameplayTag Attributes_Secondary_Resistances_BlockStrength;
 	static FGameplayTag Attributes_Secondary_Resistances_Armour;
@@ -208,9 +157,7 @@ public:
 	static FGameplayTag Attributes_Secondary_Resistances_MaxLightResistance;
 	static FGameplayTag Attributes_Secondary_Resistances_MaxLightningResistance;
 	static FGameplayTag Attributes_Secondary_Resistances_MaxCorruptionResistance;
-
-	/* [OFFENSIVE] ═══════════════════════════════════════════ */
-	/* === Secondary: Offensive ===                          */
+	// Secondary: Offensive
 	static FGameplayTag Attributes_Secondary_Offensive_AreaDamage;
 	static FGameplayTag Attributes_Secondary_Offensive_AreaOfEffect;
 	static FGameplayTag Attributes_Secondary_Offensive_AttackRange;
@@ -232,25 +179,19 @@ public:
 	static FGameplayTag Attributes_Secondary_Offensive_ChainDamage;
 	static FGameplayTag Attributes_Secondary_Offensive_DamageBonusWhileAtFullHP;
 	static FGameplayTag Attributes_Secondary_Offensive_DamageBonusWhileAtLowHP;
-
-	/* [PIERCING] ════════════════════════════════════════════ */
-	/* === Secondary: Piercing ===                           */
+	// Secondary: Piercing
 	static FGameplayTag Attributes_Secondary_Piercing_Armour;
 	static FGameplayTag Attributes_Secondary_Piercing_Fire;
 	static FGameplayTag Attributes_Secondary_Piercing_Ice;
 	static FGameplayTag Attributes_Secondary_Piercing_Light;
 	static FGameplayTag Attributes_Secondary_Piercing_Lightning;
 	static FGameplayTag Attributes_Secondary_Piercing_Corruption;
-
-	/* [REFLECT] ═════════════════════════════════════════════ */
-	/* === Secondary: Reflection ===                         */
+	// Secondary: Reflection
 	static FGameplayTag Attributes_Secondary_Reflection_Physical;
 	static FGameplayTag Attributes_Secondary_Reflection_Elemental;
 	static FGameplayTag Attributes_Secondary_Reflection_ChancePhysical;
 	static FGameplayTag Attributes_Secondary_Reflection_ChanceElemental;
-
-	/* [CONVERT] ═════════════════════════════════════════════ */
-	/* === Secondary: Conversions ===                        */
+	// Secondary: Conversions
 	// Physical ->
 	static FGameplayTag Attributes_Secondary_Conversion_PhysicalToFire;
 	static FGameplayTag Attributes_Secondary_Conversion_PhysicalToIce;
@@ -287,13 +228,11 @@ public:
 	static FGameplayTag Attributes_Secondary_Conversion_CorruptionToIce;
 	static FGameplayTag Attributes_Secondary_Conversion_CorruptionToLightning;
 	static FGameplayTag Attributes_Secondary_Conversion_CorruptionToLight;
-
-	/* [MISC] ════════════════════════════════════════════════ */
-	/* === Miscellaneous ===                                 */
+	// Miscellaneous
 	static FGameplayTag Attributes_Secondary_Money_Gems;
 	static FGameplayTag Attributes_Secondary_Misc_ComboCounter;
 	static FGameplayTag Attributes_Secondary_Misc_Poise;
-	static FGameplayTag Attributes_Secondary_Misc_PoiseResistance; // if you add later
+	static FGameplayTag Attributes_Secondary_Misc_PoiseResistance;
 	static FGameplayTag Attributes_Secondary_Misc_Weight;
 	static FGameplayTag Attributes_Secondary_Misc_StunRecovery;
 	static FGameplayTag Attributes_Secondary_Misc_MovementSpeed;
@@ -308,17 +247,13 @@ public:
 	static FGameplayTag Attributes_Secondary_Misc_StaminaCostChanges;
 	static FGameplayTag Attributes_Secondary_Misc_CritChance;
 	static FGameplayTag Attributes_Secondary_Misc_CritMultiplier;
-	static FGameplayTag Attributes_Secondary_Misc_CombatAlignment; // ensure single definition
+	static FGameplayTag Attributes_Secondary_Misc_CombatAlignment;
 	static FGameplayTag Relation_HostileToSource;
-
-	/* [VITAL_CURRENT] ═══════════════════════════════════════ */
-	/* === Current Vitals (Health/Mana/Stamina) ===          */
+	// Current Vitals (Health/Mana/Stamina)
 	static FGameplayTag Attributes_Vital_Health;
 	static FGameplayTag Attributes_Vital_Stamina;
 	static FGameplayTag Attributes_Vital_Mana;
-
-	/* [AILMENTS] ════════════════════════════════════════════ */
-	/* === Status Effect Chances ===                         */
+	// Status Effect Chances
 	// Aliases under Attributes.Secondary.* to match FindAttributeByTag usage
 	static FGameplayTag Attributes_Secondary_Ailments_ChanceToBleed;
 	static FGameplayTag Attributes_Secondary_Ailments_ChanceToIgnite;
@@ -329,9 +264,7 @@ public:
 	static FGameplayTag Attributes_Secondary_Ailments_ChanceToPetrify;
 	static FGameplayTag Attributes_Secondary_Ailments_ChanceToPurify;
 	static FGameplayTag Attributes_Secondary_Ailments_ChanceToCorrupt;
-
-	/* [DURATIONS] ═══════════════════════════════════════════ */
-	/* === Status Effect Durations ===                       */
+	// Status Effect Durations
 	// Aliases under Attributes.Secondary.* to match FindAttributeByTag usage
 	static FGameplayTag Attributes_Secondary_Duration_Bleed;
 	static FGameplayTag Attributes_Secondary_Duration_Burn;
@@ -340,9 +273,7 @@ public:
 	static FGameplayTag Attributes_Secondary_Duration_Corruption;
 	static FGameplayTag Attributes_Secondary_Duration_PetrifyBuildUp;
 	static FGameplayTag Attributes_Secondary_Duration_Purify;
-
-	/* [CONDITIONS] ══════════════════════════════════════════ */
-	/* === Conditions ===                                    */
+	// Conditions
 	// Life/Death
 	static FGameplayTag Condition_Alive;
 	static FGameplayTag Condition_Dead;
@@ -444,20 +375,20 @@ public:
 	static FGameplayTag Condition_CannotBeKnockedBack;
 
 	// Enemy target rarity
-	static FGameplayTag Condition_Target_IsElite;     // "Condition.Target.IsElite" – named/elite enemy tier
-	static FGameplayTag Condition_Target_IsRare;      // "Condition.Target.IsRare"  – magic/rare enemy tier
+	static FGameplayTag Condition_Target_IsElite;     // "Condition.Target.IsElite"  named/elite enemy tier
+	static FGameplayTag Condition_Target_IsRare;      // "Condition.Target.IsRare"   magic/rare enemy tier
 
-	// ── Parry / Stagger (PoE2 + Elden Ring hybrid) ────────────────────────────
-	// Condition_Self_IsParrying       — tight window GE set by parry animation notify state.
+	// Parry / Stagger
+	// Condition_Self_IsParrying        tight window GE set by parry animation notify state.
 	//                                   CombatManager checks this to route EHitResponse::Parry.
-	// Condition_Self_RecentlyParried  — granted after a successful parry (~2s). Enables
+	// Condition_Self_RecentlyParried   granted after a successful parry (~2s). Enables
 	//                                   "after parrying" conditional modifiers on skills/passives.
-	// Condition_Self_IsStaggered      — set when bShouldStagger fires. Cleared on recovery.
-	// Condition_Self_StaminaDepleted  — set when Stamina reaches 0. Drives stagger eligibility
+	// Condition_Self_IsStaggered       set when bShouldStagger fires. Cleared on recovery.
+	// Condition_Self_StaminaDepleted   set when Stamina reaches 0. Drives stagger eligibility
 	//                                   and "while stamina is low" conditional modifiers.
-	// Condition_Self_IsInvincible     — i-frames / divine blessings. Routes EHitResponse::Invincible.
+	// Condition_Self_IsInvincible      i-frames / divine blessings. Routes EHitResponse::Invincible.
 	//                                   Negates both damage and ailments.
-	// State_Self_ExecutingSkill       — set by skill start notify, cleared on skill end.
+	// State_Self_ExecutingSkill        set by skill start notify, cleared on skill end.
 	//                                   While active, stagger cannot trigger even at 0 stamina.
 	static FGameplayTag Condition_Self_IsParrying;
 	static FGameplayTag Condition_Self_RecentlyParried;
@@ -466,27 +397,25 @@ public:
 	static FGameplayTag Condition_Self_IsInvincible;
 	static FGameplayTag State_Self_ExecutingSkill;
 
-	// [SKILL_KW] ── Skill keyword metadata tags ───────────────────────────────
-	// Applied to UGameplayAbility::AbilityTags at design time — NOT runtime state.
+	// Skill keyword metadata tags are authored on UGameplayAbility::AbilityTags, not applied as runtime state.
 	// The combat calculator checks the executing ability's tags to route
 	// Data.More.Attack/Spell and ability-scoped Increased bonuses correctly.
 	// A skill can hold multiple keywords simultaneously (e.g., Fireball =
 	// Skill.Spell + Skill.Projectile + Skill.AoE).
-	static FGameplayTag Skill_Attack;      // "Skill.Attack"      – player attack (not spell)
-	static FGameplayTag Skill_Spell;       // "Skill.Spell"       – magical cast
-	static FGameplayTag Skill_Projectile;  // "Skill.Projectile"  – launches a projectile
-	static FGameplayTag Skill_AoE;         // "Skill.AoE"         – hits an area
-	static FGameplayTag Skill_Melee;       // "Skill.Melee"       – close-range
-	static FGameplayTag Skill_Strike;      // "Skill.Strike"      – single-target melee
-	static FGameplayTag Skill_Duration;    // "Skill.Duration"    – applies an effect over time
-	static FGameplayTag Skill_Channelling; // "Skill.Channelling" – held/channelled
-	static FGameplayTag Skill_Movement;    // "Skill.Movement"    – repositions the character
-	static FGameplayTag Skill_Summon;      // "Skill.Summon"      – creates a minion (Covenant)
+	static FGameplayTag Skill_Attack;      // "Skill.Attack"       player attack (not spell)
+	static FGameplayTag Skill_Spell;       // "Skill.Spell"        magical cast
+	static FGameplayTag Skill_Projectile;  // "Skill.Projectile"   launches a projectile
+	static FGameplayTag Skill_AoE;         // "Skill.AoE"          hits an area
+	static FGameplayTag Skill_Melee;       // "Skill.Melee"        close-range
+	static FGameplayTag Skill_Strike;      // "Skill.Strike"       single-target melee
+	static FGameplayTag Skill_Duration;    // "Skill.Duration"     applies an effect over time
+	static FGameplayTag Skill_Channelling; // "Skill.Channelling"  held/channelled
+	static FGameplayTag Skill_Movement;    // "Skill.Movement"     repositions the character
+	static FGameplayTag Skill_Summon;      // "Skill.Summon"       creates a minion (Covenant)
 
-	// [DATA_MORE] ── More / Increased damage modifier tags (PoE2 style) ───────
-	// These are used as SetByCaller tags on GEs that apply temporary damage bonuses.
-	// "More" = multiplicative — each source is a separate multiplier.
-	// "Increased" = additive — all sources pool before applying as one multiplier.
+	// More/Increased SetByCaller tags apply temporary damage bonuses.
+	// "More" = multiplicative  each source is a separate multiplier.
+	// "Increased" = additive  all sources pool before applying as one multiplier.
 	static FGameplayTag Data_More_Physical;
 	static FGameplayTag Data_More_Fire;
 	static FGameplayTag Data_More_Ice;
@@ -504,19 +433,17 @@ public:
 	static FGameplayTag Data_Increased_Corruption;
 	static FGameplayTag Data_Increased_Elemental;
 	static FGameplayTag Data_Increased_Global;
-	// Skill-type more/increased – separate from element; checked against Skill.Attack / Skill.Spell
+	// Skill-type more/increased  separate from element; checked against Skill.Attack / Skill.Spell
 	static FGameplayTag Data_More_Attack;
 	static FGameplayTag Data_More_Spell;
 	static FGameplayTag Data_Increased_Attack;
 	static FGameplayTag Data_Increased_Spell;
 
-	// [DATA_COST] ── Skill resource cost tags (SetByCaller on cost GEs) ────────
+	// Skill resource cost SetByCaller tags.
 	static FGameplayTag Data_Cost_Stamina;
 	static FGameplayTag Data_Cost_Mana;
 	static FGameplayTag Data_Cost_Health;
-
-	/* [TRIGGERS] ════════════════════════════════════════════ */
-	/* === Triggers ===                                      */
+	// Triggers
 	static FGameplayTag Condition_SkillRecentlyUsed;
 	static FGameplayTag Condition_HitTakenRecently;
 	static FGameplayTag Condition_CritTakenRecently;
@@ -527,9 +454,9 @@ public:
 	static FGameplayTag Condition_HitWithLightningDamage;
 	static FGameplayTag Condition_HitWithProjectile;
 	static FGameplayTag Condition_HitWithAoE;
-	static FGameplayTag Condition_HitWithIceDamage;         // was missing
-	static FGameplayTag Condition_HitWithLightDamage;       // was missing
-	static FGameplayTag Condition_HitWithCorruptionDamage;  // was missing
+	static FGameplayTag Condition_HitWithIceDamage;
+	static FGameplayTag Condition_HitWithLightDamage;
+	static FGameplayTag Condition_HitWithCorruptionDamage;
 	static FGameplayTag Condition_HasMeleeWeaponEquipped;
 	static FGameplayTag Condition_HasBowEquipped;
 	static FGameplayTag Condition_HasShieldEquipped;
@@ -544,15 +471,11 @@ public:
 	 * tag meant input blocking never engaged).
 	 */
 	static FGameplayTag Gameplay_AbilityInputBlocked;
-
-	/* [SETBYCALL] ═══════════════════════════════════════════ */
-	/* === SetByCaller Data Tags (Damage / Recovery via GE) */
-	/** Used by DamageApplicationGE SetByCaller modifiers — pass negative values to subtract. */
+	// DamageApplicationGE reads these SetByCaller tags as negative health/resource deltas.
 	static FGameplayTag Data_Damage_Health;
 	static FGameplayTag Data_Damage_ArcaneShield;
 	static FGameplayTag Data_Damage_Stamina;
 
-	// N-20 FIX: Recovery (healing) SetByCaller tags were missing.
 	// HealingApplicationGE and regen GEs use these as SetByCaller keys,
 	// mirroring the damage tag pattern.  Pass positive values to add.
 	static FGameplayTag Data_Recovery_Health;
@@ -560,10 +483,10 @@ public:
 	static FGameplayTag Data_Recovery_Stamina;
 	static FGameplayTag Data_Recovery_ArcaneShield;
 
-	// DoT/ailment SetByCaller keys used by UCombatStatusManager (see
+	// DoT/ailment SetByCaller keys used by UCombatStatusEffectApplier (see
 	// CombatStatusSetByCallerTags). Registered natively so the
 	// RequestGameplayTag lookups can never fail when the tags are missing
-	// from DefaultGameplayTags.ini — an unregistered tag silently skipped the
+	// from DefaultGameplayTags.ini  an unregistered tag silently skipped the
 	// SetByCaller write, applying bleeds/ignites with no magnitude.
 	static FGameplayTag Data_DoT_Bleed_DamagePerTick;
 	static FGameplayTag Data_DoT_Ignite_DamagePerTick;
@@ -571,9 +494,7 @@ public:
 	static FGameplayTag Data_DoT_Corruption_DamagePerTick;
 	static FGameplayTag Data_DoT_Chill_Magnitude;
 	static FGameplayTag Data_DoT_Shock_Magnitude;
-
-	/* [EFFECTS] ═════════════════════════════════════════════ */
-	/* === Active Regen/Degen Effect State Tags ===          */
+	// Active Regen/Degen Effect State Tags
 	static FGameplayTag Effect_Stamina_RegenActive;
 	static FGameplayTag Effect_Stamina_DegenActive;
 	// Granted for a fixed duration by the exhaustion GE when the resource hits 0.
@@ -585,20 +506,14 @@ public:
 	static FGameplayTag Effect_Mana_RegenActive;
 	static FGameplayTag Effect_Health_DegenActive;
 	static FGameplayTag Effect_Mana_DegenActive;
-
-	
-
-	/* [MINION] ══════════════════════════════════════════════ */
-	/* === Minion / Summon Scaling Tags (Covenant) ===       */
+	// Minion / Summon Scaling Tags (Covenant)
 	// These tags back GAS attributes that store accumulated Covenant bonuses.
 	// Apply as Add modifiers on a persistent summon-buff GE driven by Covenant value.
 	static FGameplayTag Attributes_Minion_DamageBonus;     // "Attributes.Minion.DamageBonus"
 	static FGameplayTag Attributes_Minion_LifeBonus;       // "Attributes.Minion.LifeBonus"
 	static FGameplayTag Attributes_Minion_SpeedBonus;      // "Attributes.Minion.SpeedBonus"
 	static FGameplayTag Attributes_Minion_ResistanceBonus; // "Attributes.Minion.ResistanceBonus"
-
-	/* [MAPS] ════════════════════════════════════════════════ */
-	/* === Tag ↔ Attribute / Helper Maps ===                 */
+	// Tag  Attribute / Helper Maps
 	static TMap<FGameplayTag, FGameplayAttribute> StatusEffectTagToAttributeMap;
 	static TMap<FGameplayTag, FGameplayTag>        TagsMinMax;
 	static TMap<FString, FGameplayAttribute>       BaseDamageToAttributesMap;

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Interactable/Interface/Interactable.h"
+#include "Interactable/Library/Enums/PortalEnums.h"
 #include "PortalActor.generated.h"
 
 class UStaticMeshComponent;
@@ -16,25 +17,9 @@ class UPortalSubsystem;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPortalActor, Log, All);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Portal state
-// ─────────────────────────────────────────────────────────────────────────────
-UENUM(BlueprintType)
-enum class EPortalState : uint8
-{
-	PS_Inactive     UMETA(DisplayName = "Inactive"),
-	PS_Active       UMETA(DisplayName = "Active"),
-	PS_Cooldown     UMETA(DisplayName = "Cooldown"),    // Brief lockout after use
-	PS_Disabled     UMETA(DisplayName = "Disabled"),    // Cannot be used (e.g., quest-locked)
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Delegate — broadcast when a player uses this portal
-// ─────────────────────────────────────────────────────────────────────────────
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPortalActivated,
 	APortalActor*, Portal, APawn*, Traveller);
 
-// ─────────────────────────────────────────────────────────────────────────────
 UCLASS()
 class ALS_PROJECTHUNTER_API APortalActor : public AActor, public IInteractable
 {
@@ -48,24 +33,17 @@ public:
 	virtual void GetLifetimeReplicatedProps(
 		TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	// ── Components ────────────────────────────────────────────────────────────
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USceneComponent* RootSceneComponent;
 
-	/** Optional decorative mesh (arch, ring, etc.) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* PortalMesh;
 
-	/** Niagara visual effect for the portal aperture */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UNiagaraComponent* PortalVFX;
 
-	/** Interaction manager that links this actor to the interaction system */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UInteractableManager* InteractableManager;
-
-	// ── Identity ──────────────────────────────────────────────────────────────
 
 	/**
 	 * Unique ID for this portal within a level.
@@ -81,11 +59,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Identity")
 	FText PortalDisplayName = FText::FromString(TEXT("Portal"));
 
-	// ── Destination (same-map travel) ─────────────────────────────────────────
-
 	/**
 	 * Direct reference to the destination portal on the SAME map.
-	 * Drag the other APortalActor from the Outliner into this slot —
+	 * Drag the other APortalActor from the Outliner into this slot -
 	 * no need to type matching IDs manually.
 	 * At BeginPlay this is resolved and DestinationPortalID is set automatically.
 	 * Leave null for cross-map travel (set DestinationLevelName instead).
@@ -115,9 +91,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Destination")
 	FVector ArrivalOffset = FVector(150.0f, 0.0f, 0.0f);
 
-	// ── Behaviour ─────────────────────────────────────────────────────────────
-
-	/** Per-use cooldown in seconds — prevents immediate return travel spam. */
+	/** Per-use cooldown in seconds - prevents immediate return travel spam. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Behaviour",
 		meta = (ClampMin = 0.0f))
 	float UseCooldown = 2.0f;
@@ -130,32 +104,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Behaviour")
 	bool bSingleUse = false;
 
-	// ── Visuals / Feedback ────────────────────────────────────────────────────
-
-	/** Niagara system to play when portal is idle/active. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Visuals")
 	UNiagaraSystem* IdleVFXSystem = nullptr;
 
-	/** Niagara burst when a player teleports through. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Visuals")
 	UNiagaraSystem* TravelBurstVFX = nullptr;
 
-	/** Sound played when portal is activated by a player. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Visuals")
 	USoundBase* TravelSound = nullptr;
-
-	// ── State ─────────────────────────────────────────────────────────────────
 
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_PortalState,
 		Category = "Portal|State")
 	EPortalState PortalState = EPortalState::PS_Inactive;
 
-	// ── Events ────────────────────────────────────────────────────────────────
-
 	UPROPERTY(BlueprintAssignable, Category = "Portal|Events")
 	FOnPortalActivated OnPortalActivated;
-
-	// ── Public API ────────────────────────────────────────────────────────────
 
 	/** Activate or deactivate this portal at runtime (e.g., from quest logic). */
 	UFUNCTION(BlueprintCallable, Category = "Portal")
@@ -170,8 +133,6 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Portal")
 	bool IsUsable() const { return PortalState == EPortalState::PS_Active; }
-
-	// ── IInteractable ─────────────────────────────────────────────────────────
 
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
 	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
@@ -204,8 +165,6 @@ public:
 	virtual FVector GetWidgetOffset_Implementation() const override;
 
 protected:
-	// ── InteractableManager bridge ────────────────────────────────────────────
-
 	/**
 	 * Bound to InteractableManager->OnTapInteracted in BeginPlay.
 	 * The player's InteractionManager routes interaction to the UInteractableManager
@@ -214,34 +173,24 @@ protected:
 	UFUNCTION()
 	void OnInteractableManagerTap(AActor* Interactor);
 
-	// ── Server logic ──────────────────────────────────────────────────────────
-
 	UFUNCTION(Server, Reliable)
 	void Server_ActivatePortal(APawn* Traveller);
 
-	/** Performs the actual teleport on the authority — called after validation. */
+	/** Performs the actual teleport on the authority - called after validation. */
 	void ExecuteTravel(APawn* Traveller);
-
-	// ── State helpers ─────────────────────────────────────────────────────────
 
 	void SetStateInternal(EPortalState NewState);
 	void StartCooldown();
 	void EndCooldown();
 
-	// ── Replication ───────────────────────────────────────────────────────────
-
 	UFUNCTION()
 	void OnRep_PortalState();
-
-	// ── Visuals ───────────────────────────────────────────────────────────────
 
 	void UpdateVFXForState();
 	void PlayTravelFeedback();
 
-	// ── Data ──────────────────────────────────────────────────────────────────
-
 	FTimerHandle CooldownTimer;
 	// InputAction is configured directly on the InteractableManager component's
-	// Config.InputAction (Details panel → InteractableManager → Interaction →
-	// Config → Input Action).  No separate portal-level property is needed.
+	// Config.InputAction (Details panel -> InteractableManager -> Interaction ->
+	// Config -> Input Action).  No separate portal-level property is needed.
 };

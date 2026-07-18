@@ -5,10 +5,11 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Equipment/Components/EquipmentManager.h"
+#include "Equipment/Library/EquipmentLog.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
 #include "Item/ItemInstance.h"
-#include "Item/Library/ItemStructs.h"
+#include "Item/Library/Structs/ItemStructs.h"
 #include "Equipment/Actors/EquippedItemRuntimeActor.h"
 
 DEFINE_LOG_CATEGORY(LogEquipmentPresentation);

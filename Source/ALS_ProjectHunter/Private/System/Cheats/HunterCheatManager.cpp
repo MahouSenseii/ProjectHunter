@@ -1,12 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "System/Cheats/HunterCheatManager.h"
-
-#include "System/Cheats/HunterCheatComponent.h"
 
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "System/Cheats/HunterCheatComponent.h"
 
 void UHunterCheatManager::DisableStaminaDrain()
 {
@@ -40,7 +36,7 @@ void UHunterCheatManager::RefillStamina()
 	}
 }
 
-void UHunterCheatManager::ReserveHealth(float NewValue)
+void UHunterCheatManager::ReserveHealth(const float NewValue)
 {
 	if (UHunterCheatComponent* CheatComponent = GetHunterCheatComponent())
 	{
@@ -58,18 +54,17 @@ void UHunterCheatManager::ShowCheatList()
 
 UHunterCheatComponent* UHunterCheatManager::GetHunterCheatComponent() const
 {
-	APlayerController* PC = GetPlayerController();
-	if (!PC)
+	APlayerController* PlayerController = GetPlayerController();
+	if (!PlayerController)
 	{
 		return nullptr;
 	}
 
-	if (UHunterCheatComponent* CheatComponent =
-		PC->FindComponentByClass<UHunterCheatComponent>())
+	if (UHunterCheatComponent* CheatComponent = PlayerController->FindComponentByClass<UHunterCheatComponent>())
 	{
 		return CheatComponent;
 	}
 
-	APawn* Pawn = PC->GetPawn();
+	APawn* Pawn = PlayerController->GetPawn();
 	return Pawn ? Pawn->FindComponentByClass<UHunterCheatComponent>() : nullptr;
 }

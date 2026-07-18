@@ -4,7 +4,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "InputAction.h"
-#include "Interactable/Library/InteractionEnumLibrary.h"
+#include "Interactable/Library/Enums/InteractionEnums.h"
 #include "InteractableWidget.generated.h"
 
 class UImage;
@@ -16,7 +16,7 @@ class UEnhancedInputLocalPlayerSubsystem;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInteractableWidget, Log, All);
 
-// EInteractionWidgetState is defined in Interactable/Library/InteractionEnumLibrary.h
+// EInteractionWidgetState is defined in Interactable/Library/Enums/InteractionEnums.h.
 
 /**
  * UInteractableWidget - Universal interaction prompt widget
@@ -33,15 +33,13 @@ public:
 	virtual void NativeDestruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
-	// ═══════════════════════════════════════════════
 	// WIDGET BINDINGS (Set in Blueprint)
-	// ═══════════════════════════════════════════════
-	
+
 	/** Background image (the inner square/circle area) */
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	TObjectPtr<UImage> Img_Background;
 
-	/** 
+	/**
 	 * Fill border image - THIS IS THE PROGRESS INDICATOR
 	 * Uses the border material progress scalar (0.0-1.0)
 	 * Fills clockwise around the border like reference image
@@ -61,10 +59,8 @@ public:
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	TObjectPtr<UOverlay> RootOverlay;
 
-	// ═══════════════════════════════════════════════
 	// MATERIALS
-	// ═══════════════════════════════════════════════
-	
+
 	/** Material for square border (keyboard mode) - needs a "progress" scalar parameter */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Materials")
 	TObjectPtr<UMaterialInterface> SquareBorderMaterial;
@@ -73,26 +69,24 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Materials")
 	TObjectPtr<UMaterialInterface> CircleBorderMaterial;
 
-	// ═══════════════════════════════════════════════
 	// ICONS - REFACTORED TO USE FKey
-	// ═══════════════════════════════════════════════
 
-	/** 
+	/**
 	 * Keyboard key textures mapped by FKey
 	 * Example setup in editor:
-	 *   E → Texture_E_Key.png
-	 *   F → Texture_F_Key.png
-	 *   R → Texture_R_Key.png
+	 *   E -> Texture_E_Key.png
+	 *   F -> Texture_F_Key.png
+	 *   R -> Texture_R_Key.png
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Icons")
 	TMap<FKey, TObjectPtr<UTexture2D>> KeyboardIcons;
 
-	/** 
+	/**
 	 * Gamepad button textures mapped by FKey
 	 * Example setup in editor:
-	 *   Gamepad_FaceButton_Bottom (A/X) → Texture_A_Button.png
-	 *   Gamepad_FaceButton_Right (B/Circle) → Texture_B_Button.png
-	 *   Gamepad_LeftShoulder (LB/L1) → Texture_LB_Button.png
+	 *   Gamepad_FaceButton_Bottom (A/X) -> Texture_A_Button.png
+	 *   Gamepad_FaceButton_Right (B/Circle) -> Texture_B_Button.png
+	 *   Gamepad_LeftShoulder (LB/L1) -> Texture_LB_Button.png
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Icons")
 	TMap<FKey, TObjectPtr<UTexture2D>> GamepadIcons;
@@ -104,9 +98,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Icons")
 	TObjectPtr<UTexture2D> FallbackIcon;
 
-	// ═══════════════════════════════════════════════
 	// COLORS
-	// ═══════════════════════════════════════════════
 
 	/** Border fill color - idle/holding state (green from reference) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Colors")
@@ -124,9 +116,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Colors")
 	FLinearColor BorderBackgroundColor = FLinearColor(0.5f, 0.5f, 0.5f, 0.6f);  // Gray
 
-	// ═══════════════════════════════════════════════
 	// ANIMATION
-	// ═══════════════════════════════════════════════
 
 	/** Idle animation speed (shimmer/pulse when waiting for input) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Animation", meta = (ClampMin = "0.0"))
@@ -140,10 +130,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Animation", meta = (ClampMin = "0.1"))
 	float CompletionFlashDuration = 0.3f;
 
-	// ═══════════════════════════════════════════════
 	// PUBLIC API
-	// ═══════════════════════════════════════════════
-	
+
 	/**
 	 * Set interaction data using InputAction (automatically gets bound key)
 	 * @param InputAction - The Enhanced Input Action (e.g., IA_Interact)
@@ -216,9 +204,7 @@ public:
 	bool IsShown() const { return GetVisibility() == ESlateVisibility::HitTestInvisible || GetVisibility() == ESlateVisibility::Visible; }
 
 protected:
-	// ═══════════════════════════════════════════════
 	// STATE
-	// ═══════════════════════════════════════════════
 
 	/** Current widget state */
 	UPROPERTY(BlueprintReadOnly, Category = "Interaction|State")
@@ -234,17 +220,15 @@ protected:
 
 	UPROPERTY()
 	float InputCheckAccumulator = 0.0f;
-	
-	/** 
+
+	/**
 	 * Current input key to display
 	 * REFACTORED: Changed from FName to FKey for direct key lookup
 	 */
 	UPROPERTY(BlueprintReadOnly, Category = "Interaction|State")
 	FKey CurrentInputKey;
 
-	// ═══════════════════════════════════════════════
 	// INTERNAL
-	// ═══════════════════════════════════════════════
 
 	/** Dynamic material instance for border fill */
 	UPROPERTY()
@@ -262,9 +246,7 @@ protected:
 	/** Cached last input mode to detect changes */
 	bool bLastInputModeGamepad = false;
 
-	// ═══════════════════════════════════════════════
 	// INTERNAL METHODS
-	// ═══════════════════════════════════════════════
 
 	/** Create/update material instance for current input mode */
 	void UpdateBorderMaterial();

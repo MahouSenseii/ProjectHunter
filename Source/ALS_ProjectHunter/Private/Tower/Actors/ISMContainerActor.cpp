@@ -80,9 +80,9 @@ void AISMContainerActor::RegisterItemForAnimation(
 	State.BasePitch     = BaseRotation.Pitch;
 	State.BaseRoll      = BaseRotation.Roll;
 
-	// Distribute phases using the golden angle (≈137.5°) so N items are
+	// Distribute phases using the golden angle (about 137.5 deg) so N items are
 	// evenly spread without clustering even at small N.
-	const float GoldenAngleRad = 2.399963f; // 137.508° in radians
+	const float GoldenAngleRad = 2.399963f; // 137.508 deg in radians
 	State.PhaseOffset = FMath::Fmod(static_cast<float>(ItemID) * GoldenAngleRad, TWO_PI);
 
 	AnimationStates.Add(ItemID, State);

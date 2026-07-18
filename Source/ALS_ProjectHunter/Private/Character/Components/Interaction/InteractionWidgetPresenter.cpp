@@ -12,7 +12,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Interactable/Interface/Interactable.h"
 #include "Interactable/Widget/InteractableWidget.h"
-#include "Interactable/Library/InteractionStructLibrary.h"
+#include "Interactable/Library/Structs/InteractionStructs.h"
 #include "Item/ItemInstance.h"
 #include "Tower/Subsystems/GroundItemSubsystem.h"
 
@@ -43,7 +43,7 @@ void FInteractionWidgetPresenter::Initialize(UActorComponent* InOwnerComponent, 
 	if (!PC)
 	{
 		UE_LOG(LogInteractionWidgetPresenter, Warning,
-			TEXT("FInteractionWidgetPresenter::Initialize — no PlayerController on '%s'; widget deferred."),
+			TEXT("FInteractionWidgetPresenter::Initialize - no PlayerController on '%s'; widget deferred."),
 			*Owner->GetName());
 		return;
 	}
@@ -60,14 +60,14 @@ void FInteractionWidgetPresenter::Initialize(UActorComponent* InOwnerComponent, 
 		else
 		{
 			UE_LOG(LogInteractionWidgetPresenter, Error,
-				TEXT("FInteractionWidgetPresenter::Initialize — failed to create screen HUD widget on '%s'"),
+				TEXT("FInteractionWidgetPresenter::Initialize - failed to create screen HUD widget on '%s'"),
 				*Owner->GetName());
 		}
 	}
 	else
 	{
 		UE_LOG(LogInteractionWidgetPresenter, Warning,
-			TEXT("FInteractionWidgetPresenter::Initialize — InteractionWidgetClass not set; screen HUD widget disabled."));
+			TEXT("FInteractionWidgetPresenter::Initialize - InteractionWidgetClass not set; screen HUD widget disabled."));
 	}
 
 	const TSubclassOf<UUserWidget> GroundWidgetClass =
@@ -447,7 +447,7 @@ bool FInteractionWidgetPresenter::InitializeOutlineMID()
 		{
 			bPostProcessSearchFailed = true;
 			UE_LOG(LogInteractionWidgetPresenter, Warning,
-				TEXT("FInteractionWidgetPresenter: No PostProcessVolume found — outline disabled."));
+				TEXT("FInteractionWidgetPresenter: No PostProcessVolume found - outline disabled."));
 			return false;
 		}
 	}

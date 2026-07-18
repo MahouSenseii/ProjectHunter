@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystem/Library/Enums/HunterResourceEnums.h"
 #include "GameplayModMagnitudeCalculation.h"
-#include "AbilitySystem/Library/MMCEnumLibrary.h"
 #include "HunterMMC_EffectiveResource.generated.h"
 
 /**

@@ -1,3 +1,3 @@
 #pragma once
 
-#include "Inventory/Library/InventoryEnums.h"
+#include "Inventory/Library/Enums/InventoryEnums.h"

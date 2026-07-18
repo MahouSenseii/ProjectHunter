@@ -1,6 +1,7 @@
 #include "AbilitySystem/ModMagnitude/HunterMMC_EnduranceMaxStamina.h"
 
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystem/Library/FunctionLibraries/PHResourceFunctionLibrary.h"
 #include "GameplayEffectExtension.h"
 
 namespace HunterMMCEnduranceMaxStaminaPrivate
@@ -55,10 +56,10 @@ float UHunterMMC_EnduranceMaxStamina::CalculateBaseMagnitude_Implementation(cons
 	GetCapturedAttributeMagnitude(CaptureDefinitions.PlayerLevelDef, Spec, EvaluationParameters, PlayerLevel);
 	PlayerLevel = FMath::Max(PlayerLevel, 1.0f);
 
-	const float CalculatedMaxStamina =
-		HunterMMCEnduranceMaxStaminaPrivate::BaseMaxValue +
-		(HunterMMCEnduranceMaxStaminaPrivate::BasePrimaryBonus + Endurance) +
-		(HunterMMCEnduranceMaxStaminaPrivate::PerLevelBonus * (PlayerLevel - 1.0f));
-
-	return FMath::Max(CalculatedMaxStamina, 0.0f);
+	return UPHResourceFunctionLibrary::CalculatePrimaryDerivedMaxValue(FPHPrimaryDerivedResourceInput(
+		HunterMMCEnduranceMaxStaminaPrivate::BaseMaxValue,
+		HunterMMCEnduranceMaxStaminaPrivate::BasePrimaryBonus,
+		Endurance,
+		PlayerLevel,
+		HunterMMCEnduranceMaxStaminaPrivate::PerLevelBonus));
 }

@@ -1,5 +1,5 @@
 #include "Tower/Subsystems/RunSubsystem.h"
-#include "Tower/Library/RunStructs.h"
+#include "Tower/Library/Structs/RunStructs.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 
@@ -21,7 +21,7 @@ void URunSubsystem::StartRun()
 	if (bRunActive)
 	{
 		UE_LOG(LogRunSubsystem, Warning,
-			TEXT("StartRun called while a run is already active — ignored."));
+			TEXT("StartRun called while a run is already active - ignored."));
 		return;
 	}
 
@@ -29,7 +29,7 @@ void URunSubsystem::StartRun()
 	bRunActive   = true;
 
 	// Real time, not world time: this is a GameInstance subsystem, but
-	// World->GetTimeSeconds() resets to ~0 on every OpenLevel — a run that
+	// World->GetTimeSeconds() resets to ~0 on every OpenLevel - a run that
 	// crosses map loads would report nonsense elapsed time. FPlatformTime is
 	// monotonic for the process. (Includes pause time, which is the standard
 	// roguelite run-clock behavior.)
@@ -37,7 +37,7 @@ void URunSubsystem::StartRun()
 
 	ResetState();
 
-	UE_LOG(LogRunSubsystem, Log, TEXT("Run started — Floor 1"));
+	UE_LOG(LogRunSubsystem, Log, TEXT("Run started - Floor 1"));
 	OnRunStarted.Broadcast();
 }
 
@@ -46,14 +46,14 @@ void URunSubsystem::AdvanceFloor()
 	if (!bRunActive)
 	{
 		UE_LOG(LogRunSubsystem, Warning,
-			TEXT("AdvanceFloor called with no active run — ignored."));
+			TEXT("AdvanceFloor called with no active run - ignored."));
 		return;
 	}
 
 	++CurrentFloor;
 	++SessionData.FloorsCleared;
 
-	UE_LOG(LogRunSubsystem, Log, TEXT("Floor advanced — now on Floor %d"), CurrentFloor);
+	UE_LOG(LogRunSubsystem, Log, TEXT("Floor advanced - now on Floor %d"), CurrentFloor);
 	OnFloorAdvanced.Broadcast(CurrentFloor);
 }
 
@@ -68,7 +68,7 @@ void URunSubsystem::EndRun()
 	SessionData.TimeElapsed = GetElapsedTime();
 
 	UE_LOG(LogRunSubsystem, Log,
-		TEXT("Run ended — Floors cleared: %d  |  Time: %.1fs"),
+		TEXT("Run ended - Floors cleared: %d  |  Time: %.1fs"),
 		SessionData.FloorsCleared,
 		SessionData.TimeElapsed);
 
@@ -94,7 +94,7 @@ float URunSubsystem::GetElapsedTime() const
 		return SessionData.TimeElapsed;
 	}
 
-	// Matches the FPlatformTime base captured in StartRun — survives OpenLevel.
+	// Matches the FPlatformTime base captured in StartRun - survives OpenLevel.
 	// Subtract in double, then narrow: the difference is small even when the
 	// absolute timestamps are large.
 	return static_cast<float>(FPlatformTime::Seconds() - RunStartTimeSeconds);

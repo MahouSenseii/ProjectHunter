@@ -3,34 +3,6 @@
 #include "AbilitySystem/HunterAttributeSet.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogPHGameplayTags, Log, All);
-
-/*
- * QUICK-FIND (this file)  —  Ctrl+F any [ANCHOR] to jump to that function.
- * ──────────────────────────────────────────────────────────────────────────
- * [PRIMARY]    RegisterPrimaryAttributes()
- * [VITALS]     RegisterSecondaryVitals()
- * [DAMAGE]     RegisterDamageTags()
- * [RESIST]     RegisterResistanceTags()
- * [MISC]       RegisterMiscAttributes()
- * [VITAL_CURR] RegisterVitals()
- * [AILMENTS]   RegisterStatusEffectChances() / RegisterStatusEffectDurations()
- * [CONDITIONS] RegisterConditions()
- * [TRIGGERS]   RegisterConditionTriggers()
- * [OFFENSIVE]  RegisterOffensiveTags()
- * [PIERCING]   RegisterPiercingTags()
- * [REFLECT]    RegisterReflectionTags()
- * [CONVERT]    RegisterDamageConversionTags()
- * [ALIASES]    RegisterStatusEffectAliases()
- * [SETBYCALL]  RegisterSetByCallerDamageTags()
- * [SKILL_KW]   RegisterSkillKeywordTags()    ← new
- * [MINION]     RegisterMinionTags()          ← new
- * [ATTR_MAP]   RegisterAttributeToTagMappings()
- * [TAG_MAP]    RegisterTagToAttributeMappings()
- * [ALL_ATTR]   RegisterAllAttribute()
- */
-
-
-
 TMap<FGameplayTag, FGameplayAttribute> FPHGameplayTags::StatusEffectTagToAttributeMap;
 TMap<FGameplayTag, FGameplayTag>        FPHGameplayTags::TagsMinMax;
 TMap<FString, FGameplayAttribute>       FPHGameplayTags::FlatDamageToAttributesMap;
@@ -405,7 +377,7 @@ DEFINE_GAMEPLAY_TAG(Data_Cost_Stamina)
 DEFINE_GAMEPLAY_TAG(Data_Cost_Mana)
 DEFINE_GAMEPLAY_TAG(Data_Cost_Health)
 
-// [SKILL_KW] Skill keyword metadata tags
+// Skill keyword metadata tags.
 DEFINE_GAMEPLAY_TAG(Skill_Attack)
 DEFINE_GAMEPLAY_TAG(Skill_Spell)
 DEFINE_GAMEPLAY_TAG(Skill_Projectile)
@@ -417,24 +389,24 @@ DEFINE_GAMEPLAY_TAG(Skill_Channelling)
 DEFINE_GAMEPLAY_TAG(Skill_Movement)
 DEFINE_GAMEPLAY_TAG(Skill_Summon)
 
-// [MINION] Minion/summon scaling attribute tags
+// Minion/summon scaling attribute tags.
 DEFINE_GAMEPLAY_TAG(Attributes_Minion_DamageBonus)
 DEFINE_GAMEPLAY_TAG(Attributes_Minion_LifeBonus)
 DEFINE_GAMEPLAY_TAG(Attributes_Minion_SpeedBonus)
 DEFINE_GAMEPLAY_TAG(Attributes_Minion_ResistanceBonus)
 
-// [TRIGGERS] Previously missing HitWith damage-type triggers
+// HitWith damage-type triggers.
 DEFINE_GAMEPLAY_TAG(Condition_HitWithIceDamage)
 DEFINE_GAMEPLAY_TAG(Condition_HitWithLightDamage)
 DEFINE_GAMEPLAY_TAG(Condition_HitWithCorruptionDamage)
 
-// [DATA_MORE] Skill-type more/increased (attack vs spell axis)
+// Skill-type more/increased tags on the attack/spell axis.
 DEFINE_GAMEPLAY_TAG(Data_More_Attack)
 DEFINE_GAMEPLAY_TAG(Data_More_Spell)
 DEFINE_GAMEPLAY_TAG(Data_Increased_Attack)
 DEFINE_GAMEPLAY_TAG(Data_Increased_Spell)
 
-// [CONDITIONS] Target rarity tiers
+// Target rarity tiers.
 DEFINE_GAMEPLAY_TAG(Condition_Target_IsElite)
 DEFINE_GAMEPLAY_TAG(Condition_Target_IsRare)
 
@@ -761,7 +733,7 @@ void FPHGameplayTags::RegisterConditions()
 	Condition_Target_Petrified = T.AddNativeGameplayTag("Condition.Target.Petrified", TEXT("Target petrified."));
 	Condition_Target_Purified  = T.AddNativeGameplayTag("Condition.Target.Purified",  TEXT("Target purified."));
 
-	// Target rarity tiers — for "deal increased damage against X" modifiers
+	// Target rarity tiers  for "deal increased damage against X" modifiers
 	Condition_Target_IsElite = T.AddNativeGameplayTag("Condition.Target.IsElite", TEXT("Target is an elite/named enemy."));
 	Condition_Target_IsRare  = T.AddNativeGameplayTag("Condition.Target.IsRare",  TEXT("Target is a rare/magic-tier enemy."));
 }
@@ -907,20 +879,19 @@ void FPHGameplayTags::RegisterSetByCallerDamageTags()
 	Data_Recovery_Stamina       = T.AddNativeGameplayTag("Data.Recovery.Stamina",       TEXT("SetByCaller key for stamina recovery in HealingApplicationGE."));
 	Data_Recovery_ArcaneShield  = T.AddNativeGameplayTag("Data.Recovery.ArcaneShield",  TEXT("SetByCaller key for arcane shield recovery in HealingApplicationGE."));
 
-	// DoT/ailment SetByCaller keys — string values MUST stay in sync with
-	// CombatStatusSetByCallerTags (CombatStatusManager.h) and the GE assets.
-	Data_DoT_Bleed_DamagePerTick      = T.AddNativeGameplayTag("DoT.Bleed.DamagePerTick",      TEXT("SetByCaller key: bleed damage per tick (CombatStatusManager)."));
-	Data_DoT_Ignite_DamagePerTick     = T.AddNativeGameplayTag("DoT.Ignite.DamagePerTick",     TEXT("SetByCaller key: ignite damage per tick (CombatStatusManager)."));
-	Data_DoT_Poison_DamagePerTick     = T.AddNativeGameplayTag("DoT.Poison.DamagePerTick",     TEXT("SetByCaller key: poison damage per tick (CombatStatusManager)."));
-	Data_DoT_Corruption_DamagePerTick = T.AddNativeGameplayTag("DoT.Corruption.DamagePerTick", TEXT("SetByCaller key: corruption damage per tick (CombatStatusManager)."));
-	Data_DoT_Chill_Magnitude          = T.AddNativeGameplayTag("DoT.Chill.Magnitude",          TEXT("SetByCaller key: chill slow fraction (CombatStatusManager)."));
-	Data_DoT_Shock_Magnitude          = T.AddNativeGameplayTag("DoT.Shock.Magnitude",          TEXT("SetByCaller key: shock damage-amp fraction (CombatStatusManager)."));
+	// DoT/ailment SetByCaller keys must stay in sync with CombatStatusSetByCallerTags and the GE assets.
+	Data_DoT_Bleed_DamagePerTick      = T.AddNativeGameplayTag("DoT.Bleed.DamagePerTick",      TEXT("SetByCaller key: bleed damage per tick."));
+	Data_DoT_Ignite_DamagePerTick     = T.AddNativeGameplayTag("DoT.Ignite.DamagePerTick",     TEXT("SetByCaller key: ignite damage per tick."));
+	Data_DoT_Poison_DamagePerTick     = T.AddNativeGameplayTag("DoT.Poison.DamagePerTick",     TEXT("SetByCaller key: poison damage per tick."));
+	Data_DoT_Corruption_DamagePerTick = T.AddNativeGameplayTag("DoT.Corruption.DamagePerTick", TEXT("SetByCaller key: corruption damage per tick."));
+	Data_DoT_Chill_Magnitude          = T.AddNativeGameplayTag("DoT.Chill.Magnitude",          TEXT("SetByCaller key: chill slow fraction."));
+	Data_DoT_Shock_Magnitude          = T.AddNativeGameplayTag("DoT.Shock.Magnitude",          TEXT("SetByCaller key: shock damage-amp fraction."));
 
 	Condition_Self_IsParrying      = T.AddNativeGameplayTag("Condition.Self.IsParrying",      TEXT("Character is in the active parry window. CombatManager routes EHitResponse::Parry when this is present."));
 	Condition_Self_RecentlyParried = T.AddNativeGameplayTag("Condition.Self.RecentlyParried", TEXT("Character successfully parried within the last few seconds. Enables 'after parrying' conditional modifiers."));
 	Condition_Self_IsStaggered     = T.AddNativeGameplayTag("Condition.Self.IsStaggered",     TEXT("Character is in a stagger state. Set when bShouldStagger fires; cleared on stagger recovery."));
 	Condition_Self_StaminaDepleted = T.AddNativeGameplayTag("Condition.Self.StaminaDepleted", TEXT("Stamina is at zero. Required condition for stagger on incoming hits."));
-	Condition_Self_IsInvincible    = T.AddNativeGameplayTag("Condition.Self.IsInvincible",    TEXT("Character has invincibility frames active. Routes EHitResponse::Invincible — negates damage and ailments."));
+	Condition_Self_IsInvincible    = T.AddNativeGameplayTag("Condition.Self.IsInvincible",    TEXT("Character has invincibility frames active. Routes EHitResponse::Invincible  negates damage and ailments."));
 	State_Self_ExecutingSkill      = T.AddNativeGameplayTag("State.Self.ExecutingSkill",      TEXT("Character is mid-execution of an active skill. Suppresses stagger trigger even at zero stamina."));
 	Gameplay_AbilityInputBlocked   = T.AddNativeGameplayTag("Gameplay.AbilityInputBlocked",   TEXT("While present on the ASC, ProcessAbilityInput clears and ignores all ability input (stuns, cutscenes, menus)."));
 
@@ -942,7 +913,7 @@ void FPHGameplayTags::RegisterSetByCallerDamageTags()
 	Data_Increased_Elemental  = T.AddNativeGameplayTag("Data.Increased.Elemental",  TEXT("SetByCaller: X% increased elemental damage. Pools additively."));
 	Data_Increased_Global     = T.AddNativeGameplayTag("Data.Increased.Global",     TEXT("SetByCaller: X% increased damage of all types. Pools additively."));
 
-	// Skill-type more/increased — Attack vs Spell axis (checked against Skill.Attack / Skill.Spell on the ability)
+	// Skill-type more/increased  Attack vs Spell axis (checked against Skill.Attack / Skill.Spell on the ability)
 	Data_More_Attack      = T.AddNativeGameplayTag("Data.More.Attack",      TEXT("SetByCaller: X% more damage with Attack skills. Stacks multiplicatively."));
 	Data_More_Spell       = T.AddNativeGameplayTag("Data.More.Spell",       TEXT("SetByCaller: X% more damage with Spell skills. Stacks multiplicatively."));
 	Data_Increased_Attack = T.AddNativeGameplayTag("Data.Increased.Attack", TEXT("SetByCaller: X% increased damage with Attack skills. Pools additively."));
@@ -1019,11 +990,11 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
 
     if (!UHunterAttributeSet::GetHealthAttribute().IsValid())
     {
-        UE_LOG(LogPHGameplayTags, Error, TEXT("❌ AttributeSet not ready - skipping tag mappings"));
+        UE_LOG(LogPHGameplayTags, Error, TEXT(" AttributeSet not ready - skipping tag mappings"));
         return;
     }
 
-    UE_LOG(LogPHGameplayTags, Warning, TEXT("=== Registering Tag-to-Attribute Mappings ==="));
+    UE_LOG(LogPHGameplayTags, Warning, TEXT("Registering tag-to-attribute mappings"));
 
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Health")), UHunterAttributeSet::GetHealthAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Mana")), UHunterAttributeSet::GetManaAttribute());
@@ -1114,7 +1085,7 @@ void FPHGameplayTags::RegisterTagToAttributeMappings()
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Piercing.Armour")), UHunterAttributeSet::GetArmourPiercingAttribute());
     TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Piercing.Armor")), UHunterAttributeSet::GetArmourPiercingAttribute());
 
-    UE_LOG(LogPHGameplayTags, Log, TEXT("✓ Tag-to-Attribute mappings initialized with %d entries"), TagToAttributeMap.Num());
+    UE_LOG(LogPHGameplayTags, Log, TEXT(" Tag-to-Attribute mappings initialized with %d entries"), TagToAttributeMap.Num());
 }
 
 FGameplayAttribute FPHGameplayTags::GetAttributeFromTag(const FGameplayTag& Tag)
@@ -1462,8 +1433,6 @@ void FPHGameplayTags::RegisterAllAttribute()
 		StatusEffectTagToAttributeMap.Num(),
 		TagsMinMax.Num());
 }
-
-// [SKILL_KW] ─────────────────────────────────────────────────────────────────
 // Registers keyword tags that live on UGameplayAbility::AbilityTags at design
 // time.  The combat calculator checks the executing ability's tag container to
 // decide which Data.More.Attack/Spell / Data.Increased.Attack/Spell values to
@@ -1483,8 +1452,6 @@ void FPHGameplayTags::RegisterSkillKeywordTags()
 	Skill_Movement    = T.AddNativeGameplayTag("Skill.Movement",    TEXT("Skill repositions the character."));
 	Skill_Summon      = T.AddNativeGameplayTag("Skill.Summon",      TEXT("Skill creates a minion (Covenant system)."));
 }
-
-// [MINION] ────────────────────────────────────────────────────────────────────
 // Registers tags that back Covenant-driven minion bonus attributes.
 // These are applied as Add modifiers on a persistent summon-buff GE whose
 // magnitude is derived from the caster's Covenant value.

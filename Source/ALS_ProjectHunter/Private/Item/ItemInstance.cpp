@@ -1,10 +1,12 @@
 #include "Item/ItemInstance.h"
 
-#include "Item/ItemInitializationHandler.h"
+#include "Item/Helpers/ItemInitializationHelper.h"
 #include "Item/ItemNameBuilder.h"
-#include "Item/ItemStackingHandler.h"
-#include "Item/ItemUsageHandler.h"
+#include "Item/Helpers/ItemStackingHelper.h"
+#include "Item/Helpers/ItemUsageHelper.h"
 #include "Item/ItemValueCalculator.h"
+#include "Item/Library/FunctionLibraries/ItemEnumFunctionLibrary.h"
+#include "Item/Library/FunctionLibraries/ItemReinforcementFunctionLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "Item/Library/ItemLog.h"
 
@@ -29,6 +31,7 @@ void UItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(UItemInstance, ItemLevel);
 	DOREPLIFETIME(UItemInstance, Rarity);
 	DOREPLIFETIME(UItemInstance, bIdentified);
+	DOREPLIFETIME(UItemInstance, bForceAllAffixesIdentified);
 	DOREPLIFETIME(UItemInstance, DisplayName);
 	DOREPLIFETIME(UItemInstance, bHasNameBeenGenerated);
 	DOREPLIFETIME(UItemInstance, Stats);
@@ -48,32 +51,37 @@ void UItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 
 bool UItemInstance::MigrateToCurrentVersion()
 {
-	return FItemInitializationHandler::MigrateToCurrentVersion(*this);
+	return FItemInitializationHelper::MigrateToCurrentVersion(*this);
 }
 
 void UItemInstance::PostLoadInit()
 {
-	FItemInitializationHandler::PostLoadInit(*this);
+	FItemInitializationHelper::PostLoadInit(*this);
+}
+
+float UItemInstance::GetReinforcementMultiplier() const
+{
+	return UItemReinforcementFunctionLibrary::CalculateReinforcementMultiplier(Quality);
 }
 
 void UItemInstance::Initialize(FDataTableRowHandle InBaseItemHandle, int32 InItemLevel, EItemRarity InRarity, bool bGenerateAffixes)
 {
-	FItemInitializationHandler::Initialize(*this, InBaseItemHandle, InItemLevel, InRarity, bGenerateAffixes);
+	FItemInitializationHelper::Initialize(*this, InBaseItemHandle, InItemLevel, InRarity, bGenerateAffixes);
 }
 
 void UItemInstance::InitializeWithCorruption(FDataTableRowHandle InBaseItemHandle, int32 InItemLevel, EItemRarity InRarity, bool bGenerateAffixes, float CorruptionChance, bool bForceCorrupted)
 {
-	FItemInitializationHandler::InitializeWithCorruption(*this, InBaseItemHandle, InItemLevel, InRarity, bGenerateAffixes, CorruptionChance, bForceCorrupted);
+	FItemInitializationHelper::InitializeWithCorruption(*this, InBaseItemHandle, InItemLevel, InRarity, bGenerateAffixes, CorruptionChance, bForceCorrupted);
 }
 
 void UItemInstance::CalculateCorruptionState()
 {
-	FItemInitializationHandler::CalculateCorruptionState(*this);
+	FItemInitializationHelper::CalculateCorruptionState(*this);
 }
 
 TArray<FPHAttributeData> UItemInstance::GetCorruptedAffixes() const
 {
-	return FItemInitializationHandler::GetCorruptedAffixes(*this);
+	return FItemInitializationHelper::GetCorruptedAffixes(*this);
 }
 
 FText UItemInstance::GetDisplayName()
@@ -116,7 +124,7 @@ FLinearColor UItemInstance::GetRarityColor() const
 		return FLinearColor(0.5f, 0.0f, 0.3f, 1.0f);
 	}
 
-	return GetItemRarityColor(Rarity);
+	return UItemEnumFunctionLibrary::GetItemRarityColor(Rarity);
 }
 
 FText UItemInstance::GetBaseItemName() const
@@ -168,79 +176,108 @@ bool UItemInstance::bIsTwoHanded() const
 
 void UItemInstance::UpdateTotalWeight()
 {
-	FItemStackingHandler::UpdateTotalWeight(*this);
+	FItemStackingHelper::UpdateTotalWeight(*this);
 }
 
 void UItemInstance::ApplyAffixesToCharacter(UAbilitySystemComponent* ASC)
 {
-	FItemUsageHandler::ApplyAffixesToCharacter(*this, ASC);
+	FItemUsageHelper::ApplyAffixesToCharacter(*this, ASC);
 }
 
 void UItemInstance::RemoveAffixesFromCharacter(UAbilitySystemComponent* ASC)
 {
-	FItemUsageHandler::RemoveAffixesFromCharacter(*this, ASC);
+	FItemUsageHelper::RemoveAffixesFromCharacter(*this, ASC);
 }
 
 bool UItemInstance::UseConsumable(AActor* Target)
 {
-	return FItemUsageHandler::UseConsumable(*this, Target);
+	return FItemUsageHelper::UseConsumable(*this, Target);
 }
 
 bool UItemInstance::CanUseConsumable() const
 {
-	return FItemUsageHandler::CanUseConsumable(*this);
+	return FItemUsageHelper::CanUseConsumable(*this);
 }
 
 float UItemInstance::GetCooldownProgress() const
 {
-	return FItemUsageHandler::GetCooldownProgress(*this);
+	return FItemUsageHelper::GetCooldownProgress(*this);
 }
 
 bool UItemInstance::ReduceUses(int32 Amount)
 {
-	return FItemUsageHandler::ReduceUses(*this, Amount);
+	return FItemUsageHelper::ReduceUses(*this, Amount);
 }
 
 bool UItemInstance::ApplyConsumableEffects(AActor* Target)
 {
-	return FItemUsageHandler::ApplyConsumableEffects(*this, Target);
+	return FItemUsageHelper::ApplyConsumableEffects(*this, Target);
 }
 
 void UItemInstance::Identify()
+{
+	IdentifyAllAffixes();
+}
+
+bool UItemInstance::IdentifyAffix(FGuid AffixUID)
+{
+	if (!IsEquipment() || !AffixUID.IsValid())
+	{
+		return false;
+	}
+
+	const bool bIdentifiedAffix = Stats.IdentifyStatByUID(AffixUID);
+	if (bIdentifiedAffix)
+	{
+		RefreshIdentificationState();
+		RegenerateDisplayName();
+	}
+
+	return bIdentifiedAffix;
+}
+
+void UItemInstance::IdentifyAllAffixes()
 {
 	if (!IsEquipment())
 	{
 		return;
 	}
 
-	bIdentified = true;
-
-	for (FPHAttributeData& Affix : Stats.Prefixes)
-	{
-		Affix.bIsIdentified = true;
-	}
-
-	for (FPHAttributeData& Affix : Stats.Suffixes)
-	{
-		Affix.bIsIdentified = true;
-	}
-
-	for (FPHAttributeData& Affix : Stats.Implicits)
-	{
-		Affix.bIsIdentified = true;
-	}
-
-	for (FPHAttributeData& Affix : Stats.Crafted)
-	{
-		Affix.bIsIdentified = true;
-	}
-
+	Stats.SetAllIdentified(true);
+	RefreshIdentificationState();
 	RegenerateDisplayName();
+}
+
+void UItemInstance::SetForceAllAffixesIdentified(bool bInForceAllAffixesIdentified)
+{
+	bForceAllAffixesIdentified = bInForceAllAffixesIdentified;
+	if (bForceAllAffixesIdentified)
+	{
+		Stats.SetAllIdentified(true);
+	}
+
+	RefreshIdentificationState();
+	RegenerateDisplayName();
+}
+
+void UItemInstance::RefreshIdentificationState()
+{
+	if (bForceAllAffixesIdentified)
+	{
+		Stats.SetAllIdentified(true);
+	}
+
+	bIdentified = !HasUnidentifiedAffixes();
+}
+
+bool UItemInstance::IsIdentified() const
+{
+	return !HasUnidentifiedAffixes();
 }
 
 bool UItemInstance::HasUnidentifiedAffixes() const
 {
-	return IsEquipment() && Stats.HasUnidentifiedStats();
+	return IsEquipment() && !bForceAllAffixesIdentified && Stats.HasUnidentifiedStats();
 }
 
 bool UItemInstance::IsEquipment() const
@@ -283,37 +320,37 @@ bool UItemInstance::CanBeEquipped() const
 
 bool UItemInstance::IsStackable() const
 {
-	return FItemStackingHandler::IsStackable(*this);
+	return FItemStackingHelper::IsStackable(*this);
 }
 
 bool UItemInstance::CanStackWith(const UItemInstance* Other) const
 {
-	return FItemStackingHandler::CanStackWith(*this, Other);
+	return FItemStackingHelper::CanStackWith(*this, Other);
 }
 
 bool UItemInstance::IsConsumed() const
 {
-	return FItemStackingHandler::IsConsumed(*this);
+	return FItemStackingHelper::IsConsumed(*this);
 }
 
 int32 UItemInstance::AddToStack(int32 Amount)
 {
-	return FItemStackingHandler::AddToStack(*this, Amount);
+	return FItemStackingHelper::AddToStack(*this, Amount);
 }
 
 int32 UItemInstance::RemoveFromStack(int32 Amount)
 {
-	return FItemStackingHandler::RemoveFromStack(*this, Amount);
+	return FItemStackingHelper::RemoveFromStack(*this, Amount);
 }
 
 UItemInstance* UItemInstance::SplitStack(int32 Amount)
 {
-	return FItemStackingHandler::SplitStack(*this, Amount);
+	return FItemStackingHelper::SplitStack(*this, Amount);
 }
 
 int32 UItemInstance::GetRemainingStackSpace() const
 {
-	return FItemStackingHandler::GetRemainingStackSpace(*this);
+	return FItemStackingHelper::GetRemainingStackSpace(*this);
 }
 
 int32 UItemInstance::GetCalculatedValue() const
@@ -368,10 +405,10 @@ void UItemInstance::InvalidateBaseCache()
 
 void UItemInstance::PrepareForSave()
 {
-	FItemInitializationHandler::PrepareForSave(*this);
+	FItemInitializationHelper::PrepareForSave(*this);
 }
 
 void UItemInstance::PostLoadInitialize()
 {
-	FItemInitializationHandler::PostLoadInitialize(*this);
+	FItemInitializationHelper::PostLoadInitialize(*this);
 }

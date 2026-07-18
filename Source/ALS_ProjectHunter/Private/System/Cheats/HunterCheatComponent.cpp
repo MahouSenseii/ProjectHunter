@@ -1,43 +1,64 @@
 #include "System/Cheats/HunterCheatComponent.h"
 
-#include "AbilitySystemInterface.h"
 #include "AbilitySystem/HunterAbilitySystemComponent.h"
-
+#include "AbilitySystemInterface.h"
 #include "Engine/Engine.h"
-#include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
 
-namespace
+DEFINE_LOG_CATEGORY_STATIC(LogHunterCheats, Log, All);
+
+namespace HunterCheatComponentPrivate
 {
-	void PrintCheatMessage(const FString& Message, const FColor& Color = FColor::Green, float Duration = 5.0f)
+	void PrintCheatMessage(const FString& Message, const FColor& Color = FColor::Green, const float Duration = 5.0f)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s"), *Message);
+		UE_LOG(LogHunterCheats, Warning, TEXT("%s"), *Message);
 
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(
-				-1,
-				Duration,
-				Color,
-				Message
-			);
+			GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
 		}
 	}
 
-	bool ValidateASC(UHunterAbilitySystemComponent* ASC, const FString& CheatName)
+	bool ValidateASC(const UHunterAbilitySystemComponent* ASC, const TCHAR* CheatName)
 	{
-		if (!ASC)
+		if (ASC)
 		{
-			PrintCheatMessage(
-				FString::Printf(TEXT("%s failed: No Hunter ASC found."), *CheatName),
-				FColor::Red
-			);
-
-			return false;
+			return true;
 		}
 
-		return true;
+		PrintCheatMessage(FString::Printf(TEXT("%s failed: No Hunter ASC found."), CheatName), FColor::Red);
+		return false;
+	}
+
+	UHunterAbilitySystemComponent* GetHunterASCFromActor(AActor* Actor)
+	{
+		if (!Actor)
+		{
+			return nullptr;
+		}
+
+		if (const IAbilitySystemInterface* AbilityInterface = Cast<IAbilitySystemInterface>(Actor))
+		{
+			if (UAbilitySystemComponent* ASC = AbilityInterface->GetAbilitySystemComponent())
+			{
+				return Cast<UHunterAbilitySystemComponent>(ASC);
+			}
+		}
+
+		return Actor->FindComponentByClass<UHunterAbilitySystemComponent>();
+	}
+
+	UHunterAbilitySystemComponent* GetHunterASCFromPawn(APawn* Pawn)
+	{
+		if (UHunterAbilitySystemComponent* ASC = GetHunterASCFromActor(Pawn))
+		{
+			return ASC;
+		}
+
+		APlayerState* PlayerState = Pawn ? Pawn->GetPlayerState() : nullptr;
+		return GetHunterASCFromActor(PlayerState);
 	}
 }
 
@@ -46,176 +67,116 @@ UHunterCheatComponent::UHunterCheatComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-
 void UHunterCheatComponent::DisableStaminaDrain()
 {
 #if UE_BUILD_SHIPPING
 	return;
-#endif
-
+#else
 	UHunterAbilitySystemComponent* ASC = GetTargetASC();
-	if (!ASC)
+	if (!HunterCheatComponentPrivate::ValidateASC(ASC, TEXT("DisableStaminaDrain")))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("DisableStaminaDrain failed: No Hunter ASC found."));
 		return;
 	}
 
 	ASC->Debug_DisableStaminaDrain();
-
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(
-			-1,
-			5.0f,
-			FColor::Green,
-			TEXT("Cheat: Stamina drain disabled.")
-		);
-	}
+	HunterCheatComponentPrivate::PrintCheatMessage(TEXT("Cheat: stamina drain disabled."));
+#endif
 }
 
 void UHunterCheatComponent::ReactivateStaminaDrain()
 {
 #if UE_BUILD_SHIPPING
 	return;
-#endif
-
+#else
 	UHunterAbilitySystemComponent* ASC = GetTargetASC();
-	if (!ASC)
+	if (!HunterCheatComponentPrivate::ValidateASC(ASC, TEXT("ReactivateStaminaDrain")))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ReactivateStaminaDrain failed: No Hunter ASC found."));
 		return;
 	}
 
 	ASC->Debug_ReactivateStaminaDrain();
-
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(
-			-1,
-			5.0f,
-			FColor::Green,
-			TEXT("Cheat: Stamina drain reactivated.")
-		);
-	}
+	HunterCheatComponentPrivate::PrintCheatMessage(TEXT("Cheat: stamina drain reactivated."));
+#endif
 }
 
 void UHunterCheatComponent::RefillHealth()
 {
 #if UE_BUILD_SHIPPING
 	return;
-#endif
-
+#else
 	UHunterAbilitySystemComponent* ASC = GetTargetASC();
-	if (!ValidateASC(ASC, TEXT("RefillHealth")))
+	if (!HunterCheatComponentPrivate::ValidateASC(ASC, TEXT("RefillHealth")))
 	{
 		return;
 	}
 
 	ASC->Debug_RefillHealth();
-
-	PrintCheatMessage(TEXT("Cheat: health refilled."));
+	HunterCheatComponentPrivate::PrintCheatMessage(TEXT("Cheat: health refilled."));
+#endif
 }
 
 void UHunterCheatComponent::RefillStamina()
 {
 #if UE_BUILD_SHIPPING
 	return;
-#endif
-
+#else
 	UHunterAbilitySystemComponent* ASC = GetTargetASC();
-	if (!ValidateASC(ASC, TEXT("RefillStamina")))
+	if (!HunterCheatComponentPrivate::ValidateASC(ASC, TEXT("RefillStamina")))
 	{
 		return;
 	}
 
 	ASC->Debug_RefillStamina();
-
-	PrintCheatMessage(TEXT("Cheat: stamina refilled."));
+	HunterCheatComponentPrivate::PrintCheatMessage(TEXT("Cheat: stamina refilled."));
+#endif
 }
 
-void UHunterCheatComponent::ReserveHealth(float NewValue)
+void UHunterCheatComponent::ReserveHealth(const float NewValue)
 {
 #if UE_BUILD_SHIPPING
 	return;
-#endif
-
+#else
 	UHunterAbilitySystemComponent* ASC = GetTargetASC();
-	if (!ValidateASC(ASC, TEXT("ReserveHealth")))
+	if (!HunterCheatComponentPrivate::ValidateASC(ASC, TEXT("ReserveHealth")))
 	{
 		return;
 	}
 
 	ASC->Debug_ReserveHealth(NewValue);
-
-	PrintCheatMessage(
-		FString::Printf(TEXT("Cheat: reserved health set to %.2f."), NewValue)
-	);
+	HunterCheatComponentPrivate::PrintCheatMessage(FString::Printf(TEXT("Cheat: reserved health set to %.2f."), NewValue));
+#endif
 }
 
 void UHunterCheatComponent::ShowCheatList()
 {
 #if UE_BUILD_SHIPPING
 	return;
-#endif
-
+#else
 	const FString HelpText =
-		TEXT("\n==== Project Hunter Cheat Commands ====\n")
+		TEXT("\nProject Hunter Cheat Commands\n")
 		TEXT("ShowCheatList\n")
 		TEXT("DisableStaminaDrain\n")
 		TEXT("ReactivateStaminaDrain\n")
 		TEXT("RefillHealth\n")
 		TEXT("RefillStamina\n")
-		TEXT("ReserveHealth (Amount)\n")
-		TEXT("=======================================\n");
+		TEXT("ReserveHealth (Amount)\n");
 
-	UE_LOG(LogTemp, Warning, TEXT("%s"), *HelpText);
-
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(
-			-1,
-			12.0f,
-			FColor::Green,
-			HelpText
-		);
-	}
-}
-
-void UHunterCheatComponent::BeginPlay()
-{
-	Super::BeginPlay();
+	HunterCheatComponentPrivate::PrintCheatMessage(HelpText, FColor::Green, 12.0f);
+#endif
 }
 
 UHunterAbilitySystemComponent* UHunterCheatComponent::GetTargetASC() const
 {
-	const APlayerController* PC = Cast<APlayerController>(GetOwner());
-	if (!PC)
+	AActor* Owner = GetOwner();
+	if (UHunterAbilitySystemComponent* OwnerASC = HunterCheatComponentPrivate::GetHunterASCFromActor(Owner))
 	{
-		return nullptr;
+		return OwnerASC;
 	}
 
-	APawn* Pawn = PC->GetPawn();
-	if (!Pawn)
+	if (APlayerController* PlayerController = Cast<APlayerController>(Owner))
 	{
-		return nullptr;
+		return HunterCheatComponentPrivate::GetHunterASCFromPawn(PlayerController->GetPawn());
 	}
 
-	if (const IAbilitySystemInterface* AbilityInterface = Cast<IAbilitySystemInterface>(Pawn))
-	{
-		return Cast<UHunterAbilitySystemComponent>(
-			AbilityInterface->GetAbilitySystemComponent()
-		);
-	}
-
-	if (APlayerState* PlayerState = Pawn->GetPlayerState())
-	{
-		if (const IAbilitySystemInterface* AbilityInterface = Cast<IAbilitySystemInterface>(PlayerState))
-		{
-			return Cast<UHunterAbilitySystemComponent>(
-				AbilityInterface->GetAbilitySystemComponent()
-			);
-		}
-	}
-
-	return nullptr;
+	return HunterCheatComponentPrivate::GetHunterASCFromPawn(Cast<APawn>(Owner));
 }

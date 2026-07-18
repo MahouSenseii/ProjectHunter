@@ -108,9 +108,7 @@ void AHunterHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // MENU
-// ─────────────────────────────────────────────────────────────────────────────
 
 void AHunterHUD::ToggleMenu()
 {

@@ -58,7 +58,7 @@ int32 AWeaponPlacementActor::SpawnIntoWorld()
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("WeaponPlacementActor '%s': BaseItemHandle is null or has no "
-			     "DataTable assigned — nothing will be placed."),
+			     "DataTable assigned - nothing will be placed."),
 			*GetName());
 		return INDEX_NONE;
 	}
@@ -91,7 +91,7 @@ int32 AWeaponPlacementActor::SpawnIntoWorld()
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("WeaponPlacementActor '%s': Initialized item has no valid base "
-			     "data — row handle probably points at a row that doesn't exist."),
+			     "data - row handle probably points at a row that doesn't exist."),
 			*GetName());
 		return INDEX_NONE;
 	}

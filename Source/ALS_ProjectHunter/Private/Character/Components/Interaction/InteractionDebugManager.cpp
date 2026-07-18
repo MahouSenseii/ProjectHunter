@@ -1,4 +1,4 @@
-﻿#include "Character/Components/Interaction/InteractionDebugManager.h"
+#include "Character/Components/Interaction/InteractionDebugManager.h"
 #include "Interactable/Components/InteractableManager.h"
 #include "Components/ALSDebugComponent.h"
 #include "DrawDebugHelpers.h"
@@ -35,7 +35,7 @@ void FInteractionDebugManager::Initialize(AActor* Owner, UWorld* World)
 {
 	OwnerActor = Owner;
 	WorldContext = World;
-	
+
 	if (!OwnerActor || !WorldContext)
 	{
 		UE_LOG(LogInteractionDebugManager, Error, TEXT("InteractionDebugManager: Invalid initialization parameters"));
@@ -45,13 +45,13 @@ void FInteractionDebugManager::Initialize(AActor* Owner, UWorld* World)
 	CachedALSDebugComponent = OwnerActor->FindComponentByClass<UALSDebugComponent>();
 	if (CachedALSDebugComponent)
 	{
-		UE_LOG(LogInteractionDebugManager, Log, TEXT("InteractionDebugManager: ✓ ALS Debug Component found - Using ALS debug toggle"));
+		UE_LOG(LogInteractionDebugManager, Log, TEXT("InteractionDebugManager:  ALS Debug Component found - Using ALS debug toggle"));
 	}
 	else
 	{
 		UE_LOG(LogInteractionDebugManager, Log, TEXT("InteractionDebugManager: ALS Debug Component not found - Using manual toggle"));
 	}
-	
+
 	UE_LOG(LogInteractionDebugManager, Log, TEXT("InteractionDebugManager: Initialized for %s"), *OwnerActor->GetName());
 }
 
@@ -63,7 +63,7 @@ void FInteractionDebugManager::DrawTraceLine(FVector Start, FVector End, bool bH
 	}
 
 	FColor LineColor = bHit ? TraceHitColor : TraceMissColor;
-	
+
 	DrawDebugLine(
 		WorldContext,
 		Start,
@@ -258,7 +258,7 @@ void FInteractionDebugManager::DrawAimCandidate(FVector Location, float Dot, boo
 		DrawDebugString(
 			WorldContext,
 			Location + FVector(0, 0, 40.0f),
-			FString::Printf(TEXT("dot %.3f%s"), Dot, bWinner ? TEXT(" ★") : TEXT("")),
+			FString::Printf(TEXT("dot %.3f%s"), Dot, bWinner ? TEXT(" ") : TEXT("")),
 			nullptr,
 			CandidateColor,
 			DrawDuration <= 0.0f ? 0.05f : DrawDuration,
@@ -389,7 +389,7 @@ void FInteractionDebugManager::DrawInteractableInfo(UInteractableManager* Intera
 			Distance,
 			*UEnum::GetValueAsString(Interactable->Config.InteractionType)
 		);
-		
+
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(
@@ -419,7 +419,7 @@ void FInteractionDebugManager::DisplayInteractionState(UInteractableManager* Int
 	}
 
 	FString DebugText;
-	
+
 	if (Interactable)
 	{
 		AActor* TargetActor = Interactable->GetOwner();
@@ -493,17 +493,17 @@ void FInteractionDebugManager::DisplayPerformanceMetrics(float TraceTime, float 
 void FInteractionDebugManager::LogInteraction(UInteractableManager* Interactable, bool bSuccess, const FString& Reason)
 {
 	TotalInteractions++;
-	
+
 	if (bSuccess)
 	{
 		SuccessfulInteractions++;
-		UE_LOG(LogInteractionDebugManager, Log, TEXT("✓ Interaction Success: %s"), 
+		UE_LOG(LogInteractionDebugManager, Log, TEXT("Interaction Success: %s"),
 			Interactable ? *Interactable->GetOwner()->GetName() : TEXT("Unknown"));
 	}
 	else
 	{
 		FailedInteractions++;
-		UE_LOG(LogInteractionDebugManager, Warning, TEXT("✗ Interaction Failed: %s | Reason: %s"), 
+		UE_LOG(LogInteractionDebugManager, Warning, TEXT("Interaction Failed: %s | Reason: %s"),
 			Interactable ? *Interactable->GetOwner()->GetName() : TEXT("Unknown"),
 			*Reason);
 	}
@@ -514,19 +514,19 @@ void FInteractionDebugManager::LogGroundItemPickup(int32 ItemID, bool bToInvento
 	if (bSuccess)
 	{
 		TotalGroundItemsPickedUp++;
-		UE_LOG(LogInteractionDebugManager, Log, TEXT("✓ Ground Item Pickup: ID=%d | Destination=%s"), 
+		UE_LOG(LogInteractionDebugManager, Log, TEXT("Ground Item Pickup: ID=%d | Destination=%s"),
 			ItemID,
 			bToInventory ? TEXT("Inventory") : TEXT("Equipment"));
 	}
 	else
 	{
-		UE_LOG(LogInteractionDebugManager, Warning, TEXT("✗ Ground Item Pickup Failed: ID=%d"), ItemID);
+		UE_LOG(LogInteractionDebugManager, Warning, TEXT("Ground Item Pickup Failed: ID=%d"), ItemID);
 	}
 }
 
 void FInteractionDebugManager::LogValidationFailure(const FString& ValidationReason, float Distance, float MaxDistance)
 {
-	UE_LOG(LogInteractionDebugManager, Warning, TEXT("✗ Validation Failed: %s | Distance: %.1f / %.1f"), 
+	UE_LOG(LogInteractionDebugManager, Warning, TEXT("Validation Failed: %s | Distance: %.1f / %.1f"),
 		*ValidationReason,
 		Distance,
 		MaxDistance);
@@ -534,12 +534,10 @@ void FInteractionDebugManager::LogValidationFailure(const FString& ValidationRea
 
 void FInteractionDebugManager::PrintDebugStats()
 {
-	float SuccessRate = TotalInteractions > 0 ? 
+	float SuccessRate = TotalInteractions > 0 ?
 		(static_cast<float>(SuccessfulInteractions) / TotalInteractions) * 100.0f : 0.0f;
 
-	UE_LOG(LogInteractionDebugManager, Display, TEXT("═══════════════════════════════════════════"));
 	UE_LOG(LogInteractionDebugManager, Display, TEXT("  INTERACTION DEBUG STATISTICS"));
-	UE_LOG(LogInteractionDebugManager, Display, TEXT("═══════════════════════════════════════════"));
 	UE_LOG(LogInteractionDebugManager, Display, TEXT("Total Interactions: %d"), TotalInteractions);
 	UE_LOG(LogInteractionDebugManager, Display, TEXT("Successful: %d"), SuccessfulInteractions);
 	UE_LOG(LogInteractionDebugManager, Display, TEXT("Failed: %d"), FailedInteractions);
@@ -547,7 +545,6 @@ void FInteractionDebugManager::PrintDebugStats()
 	UE_LOG(LogInteractionDebugManager, Display, TEXT("Ground Items Picked Up: %d"), TotalGroundItemsPickedUp);
 	UE_LOG(LogInteractionDebugManager, Display, TEXT("Avg Trace Time: %.2f ms"), AverageTraceTime);
 	UE_LOG(LogInteractionDebugManager, Display, TEXT("Avg Validation Time: %.2f ms"), AverageValidationTime);
-	UE_LOG(LogInteractionDebugManager, Display, TEXT("═══════════════════════════════════════════"));
 }
 
 bool FInteractionDebugManager::ShouldShowDebugTraces() const

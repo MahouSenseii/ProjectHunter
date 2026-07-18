@@ -1,11 +1,8 @@
-﻿// Character/Components/Interaction/InteractionDebugManager.h
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Character/Components/Library/InteractionDebugEnumLibrary.h"
+#include "Character/Library/Enums/InteractionDebugEnumLibrary.h"
 #include "InteractionDebugManager.generated.h"
-
-// Forward declarations
 class UInteractableManager;
 class AActor;
 class UWorld;
@@ -21,13 +18,11 @@ USTRUCT(BlueprintType)
 struct ALS_PROJECTHUNTER_API FInteractionDebugManager
 {
 	GENERATED_BODY()
-	
+
 public:
 	FInteractionDebugManager();
 
-	// ═══════════════════════════════════════════════
 	// CONFIGURATION (Blueprint-editable)
-	// ═══════════════════════════════════════════════
 
 	/** Debug visualization mode */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
@@ -89,15 +84,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Display")
 	float DrawThickness = 2.0f;
 
-	// ═══════════════════════════════════════════════
 	// INITIALIZATION
-	// ═══════════════════════════════════════════════
 
 	void Initialize(AActor* Owner, UWorld* World);
 
-	// ═══════════════════════════════════════════════
 	// DEBUG DRAWING
-	// ═══════════════════════════════════════════════
 
 	void DrawTraceLine(FVector Start, FVector End, bool bHit);
 	void DrawTraceResult(FVector Start, FVector End, const FHitResult& HitResult, bool bHit, float TraceRadius);
@@ -126,30 +117,22 @@ public:
 	void DrawGroundItemAimWindow(
 		FVector Origin, FVector Forward, float MinDistance, float MaxDistance, float Radius, bool bLimitedByTraceHit);
 
-	// ═══════════════════════════════════════════════
 	// DEBUG TEXT
-	// ═══════════════════════════════════════════════
 
 	void DisplayInteractionState(UInteractableManager* Interactable, float Distance, int32 GroundItemID);
 	void DisplayPerformanceMetrics(float TraceTime, float ValidationTime);
 
-	// ═══════════════════════════════════════════════
 	// LOGGING
-	// ═══════════════════════════════════════════════
 
 	void LogInteraction(UInteractableManager* Interactable, bool bSuccess, const FString& Reason = "");
 	void LogGroundItemPickup(int32 ItemID, bool bToInventory, bool bSuccess);
 	void LogValidationFailure(const FString& ValidationReason, float Distance, float MaxDistance);
 
-	// ═══════════════════════════════════════════════
 	// STATS
-	// ═══════════════════════════════════════════════
 
 	void PrintDebugStats();
 
-	// ═══════════════════════════════════════════════
 	// ALS DEBUG INTEGRATION
-	// ═══════════════════════════════════════════════
 
 	/**
 	 * Check if debug traces should be shown
@@ -158,9 +141,7 @@ public:
 	bool ShouldShowDebugTraces() const;
 
 private:
-	// ═══════════════════════════════════════════════
 	// CACHED REFERENCES (Not Blueprint-exposed)
-	// ═══════════════════════════════════════════════
 
 	AActor* OwnerActor = nullptr;
 	UWorld* WorldContext = nullptr;

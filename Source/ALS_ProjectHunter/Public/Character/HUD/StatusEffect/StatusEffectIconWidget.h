@@ -1,4 +1,3 @@
-// Character/HUD/StatusEffect/StatusEffectIconWidget.h
 
 #pragma once
 
@@ -11,15 +10,13 @@ class UTexture2D;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogStatusEffectIcon, Log, All);
 
-// ─────────────────────────────────────────────────────────────────────────────
 UCLASS(Abstract, BlueprintType, Blueprintable)
 class ALS_PROJECTHUNTER_API UStatusEffectIconWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
-	// ── Setup — called once by UStatusEffectHUDWidget after creation ──────────
-
+	// Setup - called once by UStatusEffectHUDWidget after creation
 	/**
 	 * Bind this icon to a specific active GE handle.
 	 * @param InASC            The ASC that owns the effect.
@@ -39,8 +36,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "StatusEffect")
 	void UnbindEffect();
 
-	// ── Accessors ─────────────────────────────────────────────────────────────
-
+	// Accessors
 	UFUNCTION(BlueprintPure, Category = "StatusEffect")
 	FActiveGameplayEffectHandle GetHandle() const { return EffectHandle; }
 
@@ -55,13 +51,12 @@ public:
 	bool IsBound() const { return EffectHandle.IsValid(); }
 
 protected:
-	// ── NativeTick — polls GAS for remaining time each frame ─────────────────
+	// NativeTick - polls GAS for remaining time each frame
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
-	// ── Blueprint hooks — implement all visuals in BP ─────────────────────────
-
+	// Blueprint hooks - implement all visuals in BP
 	/**
-	 * Fired once immediately after BindToEffect — set up the initial icon state.
+	 * Fired once immediately after BindToEffect - set up the initial icon state.
 	 * @param Icon            The texture to display.
 	 * @param RemainingTime   Total duration in seconds (or -1 for permanent).
 	 * @param bBuff           True if this is a beneficial effect.
@@ -74,7 +69,7 @@ protected:
 	/**
 	 * Fired each tick while the effect is active.
 	 * @param RemainingTime   Seconds remaining.
-	 * @param Progress        0.0 (expired) → 1.0 (full duration).
+	 * @param Progress        0.0 (expired) -> 1.0 (full duration).
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "StatusEffect")
 	void BP_OnTimeUpdate(float RemainingTime, float Progress);
@@ -87,8 +82,7 @@ protected:
 	void BP_OnEffectExpired();
 
 private:
-	// ── Internal state ────────────────────────────────────────────────────────
-
+	// Internal state
 	UPROPERTY()
 	TWeakObjectPtr<UAbilitySystemComponent> BoundASC;
 

@@ -1,6 +1,6 @@
 #include "Character/HUD/HunterDamagePopupWidget.h"
 
-#include "Combat/Library/CombatFunctionLibrary.h"
+#include "Combat/Library/FunctionLibraries/CombatFunctionLibrary.h"
 #include "Components/WidgetComponent.h"
 
 void UHunterDamagePopupWidget::InitializeDamagePopup(const FCombatDamagePopupData& InPopupData)

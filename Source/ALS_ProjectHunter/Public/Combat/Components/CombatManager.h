@@ -1,15 +1,15 @@
 // ProjectHunter combat owner: resolves animation-authored hits against
-// attacker/defender attributes using a Path of Exile 2 style damage pipeline.
+// attacker and defender attributes using the damage pipeline.
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Combat/Library/CombatStructs.h"
+#include "Combat/Library/Structs/CombatStructs.h"
 #include "CombatManager.generated.h"
 
 class AActor;
 class UAbilitySystemComponent;
-class UCombatStatusManager;
+class UCombatStatusEffectApplier;
 class UGameplayEffect;
 class UHunterAttributeSet;
 
@@ -56,11 +56,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatDamagePopupRequested, const
  *
  * Outgoing pipeline (attacker attributes + FAnimationDamageInfo):
  *   1. Base:       roll weapon Min/Max per type + flat added damage.
- *   2. Convert:    attribute conversion matrix, one pass, no chaining —
- *                  converted damage scales only as its final type (PoE2 rule).
- *   3. Increased:  one additive pool per type — global + type% + elemental +
+ *   2. Convert:    attribute conversion matrix, one pass, no chaining.
+ *                  converted damage scales only as its final type.
+ *   3. Increased:  one additive pool per type: global + type + elemental +
  *                  tag-conditional buckets + animation BaseMulti + HP-state bonuses.
- *   4. More:       multiplicative — global x elemental x type.
+ *   4. More:       multiplicative: global x elemental x type.
  *   5. Crit:       one roll per hit; spells use spell crit attributes;
  *                  damage-over-time hits never crit.
  *
@@ -104,7 +104,7 @@ public:
 
 	/**
 	 * Instant GE used to apply reflected damage back to the attacker.
-	 * Must be non-recursive — it must NOT trigger ailments or reflect again.
+	 * Must be non-recursive; it must NOT trigger ailments or reflect again.
 	 * Configure with one Additive SetByCaller modifier:
 	 *   Health -> Data.Damage.Health (magnitude arrives negative).
 	 * If unset, reflect damage is logged but not applied.
@@ -120,6 +120,21 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Combat|Damage Popup")
 	FOnCombatDamagePopupRequested OnDamagePopupRequested;
+
+	/**
+	 * Owned status helper (Bleed/Ignite/Poison/etc.). The class still derives
+	 * from UActorComponent for saved Blueprint compatibility, but CombatManager
+	 * owns this instance as an instanced subobject rather than a sibling actor
+	 * component.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Instanced, Category = "Combat|Status")
+	TObjectPtr<UCombatStatusEffectApplier> CombatStatus;
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Status")
+	UCombatStatusEffectApplier* GetCombatStatus() const { return CombatStatus; }
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Status")
+	UCombatStatusEffectApplier* GetCombatStatusManager() const { return CombatStatus; }
 
 	/**
 	 * Main hit entry point. AnimationDamageInfo is the only Blueprint-authored
@@ -145,88 +160,17 @@ public:
 		bool bCanApplyAilments = true);
 
 protected:
+	//~ Application
+	//
+	// Hit-resolution math is split across plain, stateless C++ helpers
+	// with no Blueprint/serialization surface:
+	//   FCombatOutgoingDamageCalculator - base roll, conversion, increased/more, crit.
+	//   FCombatIncomingDamageResolver   - armour/resist mitigation, block, stagger, hit-response.
+	// CombatManager only validates the hit, directs both helpers in order,
+	// and applies the resulting FCombatResolveResult through GAS below.
+
 	static UAbilitySystemComponent* GetAbilitySystemComponentFromActor(const AActor* Actor);
 	static const UHunterAttributeSet* GetHunterAttributeSetFromActor(const AActor* Actor);
-	static float RollDamageRange(float MinDamage, float MaxDamage);
-
-	//~ Outgoing stages ────────────────────────────────────────────────────────
-
-	FCombatDamagePacket BuildOutgoingDamagePacket(
-		const UHunterAttributeSet* AttackerAttributes,
-		const FAnimationDamageInfo& DamageInfo) const;
-
-	// Weapon roll + flat added damage for one type, before any scaling.
-	float CalculateBaseDamageForType(
-		EHunterDamageType DamageType,
-		const UHunterAttributeSet* AttackerAttributes) const;
-
-	// One-pass attribute conversion. Runs on unscaled base damage so converted
-	// damage scales only with modifiers of its final type.
-	FCombatDamagePacket ApplyDamageConversion(
-		const FCombatDamagePacket& InPacket,
-		const UHunterAttributeSet* AttackerAttributes) const;
-
-	// Additive increased pool for one type: global + type + elemental +
-	// tag-conditional attribute buckets + animation BaseMulti + HP-state bonuses.
-	float GetIncreasedDamagePercent(
-		EHunterDamageType DamageType,
-		const UHunterAttributeSet* AttackerAttributes,
-		const FAnimationDamageInfo& DamageInfo) const;
-
-	// Multiplicative more multipliers: global x elemental x type.
-	float GetMoreDamageMultiplier(
-		EHunterDamageType DamageType,
-		const UHunterAttributeSet* AttackerAttributes) const;
-
-	// One crit roll for the whole hit. Damage-over-time hits never crit.
-	void ResolveCriticalStrike(
-		FCombatDamagePacket& Packet,
-		const UHunterAttributeSet* AttackerAttributes,
-		const FAnimationDamageInfo& DamageInfo) const;
-
-	//~ Incoming stages ────────────────────────────────────────────────────────
-
-	FCombatResolveResult MitigateDamagePacket(
-		const FCombatDamagePacket& InPacket,
-		AActor* AttackerActor,
-		AActor* DefenderActor,
-		const UHunterAttributeSet* AttackerAttributes,
-		const UHunterAttributeSet* DefenderAttributes,
-		const FAnimationDamageInfo& DamageInfo) const;
-
-	static float GetResistanceValue(EHunterDamageType DamageType, const UHunterAttributeSet* DefenderAttributes);
-	float GetResistanceCap(EHunterDamageType DamageType, const UHunterAttributeSet* DefenderAttributes) const;
-
-	// Attacker attribute piercing + animation piercing, clamped 0-100.
-	float GetResistancePierceValue(
-		EHunterDamageType DamageType,
-		const UHunterAttributeSet* AttackerAttributes,
-		const FAnimationDamageInfo& DamageInfo) const;
-
-	float GetDamageTakenMultiplier(EHunterDamageType DamageType, const UHunterAttributeSet* DefenderAttributes) const;
-
-	bool IsActorBlocking(AActor* Actor) const;
-	bool CanBlockHit(AActor* AttackerActor, AActor* DefenderActor, const UHunterAttributeSet* DefenderAttributes) const;
-	float GetBlockTypeMultiplier(EHunterDamageType DamageType, const UHunterAttributeSet* DefenderAttributes) const;
-	void ApplyBlockingToMitigatedResult(
-		AActor* AttackerActor,
-		AActor* DefenderActor,
-		const UHunterAttributeSet* DefenderAttributes,
-		FCombatResolveResult& InOutResult) const;
-	void ApplyStaminaBlockCost(const UHunterAttributeSet* DefenderAttributes, FCombatResolveResult& InOutResult) const;
-
-	// Sets bShouldStagger when the hit depletes stamina and the defender is not
-	// protected by the State_Self_ExecutingSkill gameplay tag.
-	void EvaluateStagger(
-		AActor* DefenderActor,
-		const UHunterAttributeSet* DefenderAttributes,
-		FCombatResolveResult& InOutResult) const;
-
-	// Parry zeroes routed damage but keeps per-type taken values so ailments
-	// still roll with real magnitudes. Invincible zeroes everything.
-	void ApplyHitResponse(EHitResponse HitResponse, bool bCanApplyAilments, FCombatResolveResult& InOutResult) const;
-
-	//~ Application ────────────────────────────────────────────────────────────
 
 	void ApplyResolvedDamage(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result) const;
 
@@ -238,8 +182,7 @@ protected:
 		UAbilitySystemComponent* AttackerASC,
 		const UHunterAttributeSet* AttackerAttributes) const;
 
-	// Rolls attacker ailment chances against per-type mitigated damage and
-	// routes successful rolls through UCombatStatusManager.
+	// Rolls attacker ailment chances against per-type mitigated damage and routes successful rolls through CombatStatus.
 	void ApplyAilments(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result) const;
 
 	// Defender reflect chance/percent attributes returned to the attacker
@@ -247,6 +190,4 @@ protected:
 	void ApplyReflect(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result) const;
 
 	void BroadcastDamagePopup(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result);
-
-	UCombatStatusManager* ResolveStatusManager(AActor* PreferredActor) const;
 };

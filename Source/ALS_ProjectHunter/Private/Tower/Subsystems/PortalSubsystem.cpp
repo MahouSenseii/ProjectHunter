@@ -27,7 +27,7 @@ void UPortalSubsystem::RegisterPortal(FName PortalID, APortalActor* Portal)
 	if (PortalRegistry.Contains(PortalID))
 	{
 		UE_LOG(LogPortalSubsystem, Warning,
-			TEXT("RegisterPortal: Portal '%s' is already registered — overwriting. "
+			TEXT("RegisterPortal: Portal '%s' is already registered - overwriting. "
 				 "Check for duplicate PortalIDs in the level."),
 			*PortalID.ToString());
 	}

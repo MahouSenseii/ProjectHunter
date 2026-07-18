@@ -1,10 +1,7 @@
-﻿// Character/Components/Interaction/InteractionValidatorManager.h
 #pragma once
 
 #include "CoreMinimal.h"
 #include "InteractionValidatorManager.generated.h"
-
-// Forward declarations
 class IInteractable;
 class UInteractableManager;
 class UGroundItemSubsystem;
@@ -22,13 +19,11 @@ USTRUCT(BlueprintType)
 struct ALS_PROJECTHUNTER_API FInteractionValidatorManager
 {
 	GENERATED_BODY()
-	
+
 public:
 	FInteractionValidatorManager();
 
-	// ═══════════════════════════════════════════════
 	// CONFIGURATION (Blueprint-editable)
-	// ═══════════════════════════════════════════════
 
 	/** Additional distance buffer for network latency/lag compensation */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Validation")
@@ -54,9 +49,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Validation")
 	bool bLogValidationFailures = true;
 
-	// ═══════════════════════════════════════════════
 	// INITIALIZATION
-	// ═══════════════════════════════════════════════
 
 	/**
 	 * Initialize validator manager
@@ -65,9 +58,7 @@ public:
 	 */
 	void Initialize(AActor* Owner, UWorld* World);
 
-	// ═══════════════════════════════════════════════
 	// VALIDATION FUNCTIONS (Server-side)
-	// ═══════════════════════════════════════════════
 
 	/**
 	 * Validate actor interaction request
@@ -120,9 +111,7 @@ public:
 	void LogValidationFailure(const FString& Reason, FVector ClientLocation, FVector TargetLocation);
 
 private:
-	// ═══════════════════════════════════════════════
 	// CACHED REFERENCES (Not Blueprint-exposed)
-	// ═══════════════════════════════════════════════
 
 	AActor* OwnerActor = nullptr;
 	UWorld* WorldContext = nullptr;
@@ -132,9 +121,7 @@ private:
 	int32 ValidationFailureCount = 0;
 	float LastValidationFailureTime = 0.0f;
 
-	// ═══════════════════════════════════════════════
 	// INTERNAL HELPERS
-	// ═══════════════════════════════════════════════
 
 	void CacheComponents();
 };

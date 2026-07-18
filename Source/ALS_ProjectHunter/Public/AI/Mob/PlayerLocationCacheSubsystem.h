@@ -1,11 +1,10 @@
-// AI/Mob/PlayerLocationCacheSubsystem.h
 
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
-#include "AI/Library/MobStructs.h"
+#include "AI/Library/Structs/MobStructs.h"
 #include "PlayerLocationCacheSubsystem.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayerLocationCache, Log, All);

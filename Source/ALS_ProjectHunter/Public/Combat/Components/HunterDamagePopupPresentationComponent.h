@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Combat/Library/CombatStructs.h"
+#include "Combat/Library/Structs/CombatStructs.h"
 #include "HunterDamagePopupPresentationComponent.generated.h"
 
 class APlayerController;

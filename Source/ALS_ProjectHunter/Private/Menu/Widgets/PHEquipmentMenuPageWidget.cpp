@@ -1,40 +1,41 @@
 #include "Menu/Widgets/PHEquipmentMenuPageWidget.h"
 
+#include "Blueprint/WidgetTree.h"
+#include "Components/Widget.h"
 #include "Equipment/Components/EquipmentManager.h"
 #include "Inventory/Components/InventoryManager.h"
 #include "Item/ItemInstance.h"
+#include "Menu/Library/FunctionLibraries/MenuFunctionLibrary.h"
+#include "Menu/Widgets/PHEquipmentSlotWidget.h"
+#include "Menu/Widgets/PHInventoryMenuPanelWidget.h"
 
 UPHEquipmentMenuPageWidget::UPHEquipmentMenuPageWidget()
 {
-	EquipmentSlotOrder =
-	{
-		EEquipmentSlot::ES_MainHand,
-		EEquipmentSlot::ES_OffHand,
-		EEquipmentSlot::ES_TwoHand,
-		EEquipmentSlot::ES_Head,
-		EEquipmentSlot::ES_Chest,
-		EEquipmentSlot::ES_Hands,
-		EEquipmentSlot::ES_Legs,
-		EEquipmentSlot::ES_Feet,
-		EEquipmentSlot::ES_Amulet,
-		EEquipmentSlot::ES_Belt,
-		EEquipmentSlot::ES_Ring1,
-		EEquipmentSlot::ES_Ring2,
-		EEquipmentSlot::ES_Ring3,
-		EEquipmentSlot::ES_Ring4,
-		EEquipmentSlot::ES_Ring5,
-		EEquipmentSlot::ES_Ring6,
-		EEquipmentSlot::ES_Ring7,
-		EEquipmentSlot::ES_Ring8,
-		EEquipmentSlot::ES_Ring9,
-		EEquipmentSlot::ES_Ring10
-	};
+	EquipmentSlotOrder = UMenuFunctionLibrary::GetDefaultEquipmentSlotOrder();
+}
+
+void UPHEquipmentMenuPageWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	CacheChildWidgets();
+	BindInventoryPanelDelegates();
+	RefreshEquipmentSlotWidgets();
+}
+
+void UPHEquipmentMenuPageWidget::NativeDestruct()
+{
+	UnbindInventoryPanelDelegates();
+
+	Super::NativeDestruct();
 }
 
 void UPHEquipmentMenuPageWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
 {
 	Super::NativeInitializeForCharacter(Character);
 
+	CacheChildWidgets();
+	BindInventoryPanelDelegates();
 	BindManagerDelegates();
 	RefreshMenuData();
 }
@@ -42,10 +43,12 @@ void UPHEquipmentMenuPageWidget::NativeInitializeForCharacter(APHBaseCharacter* 
 void UPHEquipmentMenuPageWidget::NativeReleaseCharacter()
 {
 	UnbindManagerDelegates();
+	UnbindInventoryPanelDelegates();
 	ClearSelection();
 
 	EquipmentSlots.Reset();
 	InventorySlots.Reset();
+	EquipmentSlotWidgets.Reset();
 	CurrentCarryWeight = 0.0f;
 	MaxCarryWeight = 0.0f;
 	OccupiedInventorySlots = 0;
@@ -57,8 +60,19 @@ void UPHEquipmentMenuPageWidget::NativeReleaseCharacter()
 void UPHEquipmentMenuPageWidget::RefreshMenuData()
 {
 	RebuildEquipmentSlots();
-	RebuildInventorySlots();
-	UpdateInventorySummary();
+	RefreshEquipmentSlotWidgets();
+
+	if (InventoryPanel)
+	{
+		InventoryPanel->SetEquipmentSlotOrder(EquipmentSlotOrder);
+		InventoryPanel->RefreshInventoryData();
+		SyncInventoryStateFromPanel();
+	}
+	else
+	{
+		RebuildInventorySlots();
+		UpdateInventorySummary();
+	}
 
 	OnMenuDataRefreshed();
 }
@@ -79,6 +93,11 @@ bool UPHEquipmentMenuPageWidget::GetEquipmentSlotData(EEquipmentSlot EquipmentSl
 
 bool UPHEquipmentMenuPageWidget::GetInventorySlotData(int32 SlotIndex, FEquipmentMenuInventorySlotViewData& OutData) const
 {
+	if (InventoryPanel)
+	{
+		return InventoryPanel->GetInventorySlotData(SlotIndex, OutData);
+	}
+
 	for (const FEquipmentMenuInventorySlotViewData& SlotData : InventorySlots)
 	{
 		if (SlotData.SlotIndex == SlotIndex)
@@ -98,11 +117,21 @@ UItemInstance* UPHEquipmentMenuPageWidget::GetEquippedItem(EEquipmentSlot Equipm
 
 UItemInstance* UPHEquipmentMenuPageWidget::GetInventoryItem(int32 SlotIndex) const
 {
+	if (InventoryPanel)
+	{
+		return InventoryPanel->GetInventoryItem(SlotIndex);
+	}
+
 	return InventoryManager ? InventoryManager->GetItemAtSlot(SlotIndex) : nullptr;
 }
 
 bool UPHEquipmentMenuPageWidget::CanEquipInventorySlotToSlot(int32 SlotIndex, EEquipmentSlot TargetSlot) const
 {
+	if (InventoryPanel)
+	{
+		return InventoryPanel->CanEquipInventorySlotToSlot(SlotIndex, TargetSlot);
+	}
+
 	return CanEquipItemToSlot(GetInventoryItem(SlotIndex), TargetSlot);
 }
 
@@ -124,6 +153,12 @@ bool UPHEquipmentMenuPageWidget::CanEquipItemToSlot(UItemInstance* Item, EEquipm
 
 void UPHEquipmentMenuPageWidget::SelectInventorySlot(int32 SlotIndex)
 {
+	if (InventoryPanel)
+	{
+		InventoryPanel->SelectInventorySlot(SlotIndex);
+		return;
+	}
+
 	SetSelection(GetInventoryItem(SlotIndex), SlotIndex, EEquipmentSlot::ES_None);
 }
 
@@ -134,11 +169,21 @@ void UPHEquipmentMenuPageWidget::SelectEquipmentSlot(EEquipmentSlot EquipmentSlo
 
 void UPHEquipmentMenuPageWidget::ClearSelection()
 {
+	if (InventoryPanel)
+	{
+		InventoryPanel->ClearSelection();
+	}
+
 	SetSelection(nullptr, INDEX_NONE, EEquipmentSlot::ES_None);
 }
 
 bool UPHEquipmentMenuPageWidget::RequestEquipInventorySlot(int32 SlotIndex, EEquipmentSlot TargetSlot)
 {
+	if (InventoryPanel)
+	{
+		return InventoryPanel->RequestEquipInventorySlot(SlotIndex, TargetSlot);
+	}
+
 	return RequestEquipItem(GetInventoryItem(SlotIndex), TargetSlot);
 }
 
@@ -176,12 +221,87 @@ bool UPHEquipmentMenuPageWidget::RequestUnequipSelectedSlot(bool bMoveToBag)
 
 FText UPHEquipmentMenuPageWidget::GetEquipmentSlotDisplayName(EEquipmentSlot EquipmentSlot)
 {
-	if (const UEnum* EquipmentSlotEnum = StaticEnum<EEquipmentSlot>())
+	return UMenuFunctionLibrary::GetEquipmentSlotDisplayName(EquipmentSlot);
+}
+
+void UPHEquipmentMenuPageWidget::CacheChildWidgets()
+{
+	EquipmentSlotWidgets.Reset();
+
+	if (!WidgetTree)
 	{
-		return EquipmentSlotEnum->GetDisplayNameTextByValue(static_cast<int64>(EquipmentSlot));
+		return;
 	}
 
-	return FText::FromString(TEXT("None"));
+	TArray<UWidget*> ChildWidgets;
+	WidgetTree->GetAllWidgets(ChildWidgets);
+
+	for (UWidget* ChildWidget : ChildWidgets)
+	{
+		if (UPHEquipmentSlotWidget* EquipmentSlotWidget = Cast<UPHEquipmentSlotWidget>(ChildWidget))
+		{
+			EquipmentSlotWidget->SetOwningEquipmentPage(this);
+			EquipmentSlotWidgets.AddUnique(EquipmentSlotWidget);
+			continue;
+		}
+
+		if (!InventoryPanel)
+		{
+			InventoryPanel = Cast<UPHInventoryMenuPanelWidget>(ChildWidget);
+		}
+	}
+}
+
+void UPHEquipmentMenuPageWidget::BindInventoryPanelDelegates()
+{
+	if (!InventoryPanel)
+	{
+		return;
+	}
+
+	InventoryPanel->InventoryDataRefreshed.AddUniqueDynamic(this, &UPHEquipmentMenuPageWidget::HandleInventoryPanelDataRefreshed);
+	InventoryPanel->InventorySelectionChanged.AddUniqueDynamic(this, &UPHEquipmentMenuPageWidget::HandleInventoryPanelSelectionChanged);
+	InventoryPanel->InventoryCarryWeightChanged.AddUniqueDynamic(this, &UPHEquipmentMenuPageWidget::HandleInventoryPanelCarryWeightChanged);
+}
+
+void UPHEquipmentMenuPageWidget::UnbindInventoryPanelDelegates()
+{
+	if (!InventoryPanel)
+	{
+		return;
+	}
+
+	InventoryPanel->InventoryDataRefreshed.RemoveDynamic(this, &UPHEquipmentMenuPageWidget::HandleInventoryPanelDataRefreshed);
+	InventoryPanel->InventorySelectionChanged.RemoveDynamic(this, &UPHEquipmentMenuPageWidget::HandleInventoryPanelSelectionChanged);
+	InventoryPanel->InventoryCarryWeightChanged.RemoveDynamic(this, &UPHEquipmentMenuPageWidget::HandleInventoryPanelCarryWeightChanged);
+}
+
+void UPHEquipmentMenuPageWidget::RefreshEquipmentSlotWidgets()
+{
+	for (UPHEquipmentSlotWidget* EquipmentSlotWidget : EquipmentSlotWidgets)
+	{
+		if (!EquipmentSlotWidget)
+		{
+			continue;
+		}
+
+		EquipmentSlotWidget->SetOwningEquipmentPage(this);
+		EquipmentSlotWidget->RefreshSlot();
+	}
+}
+
+void UPHEquipmentMenuPageWidget::SyncInventoryStateFromPanel()
+{
+	if (!InventoryPanel)
+	{
+		return;
+	}
+
+	InventorySlots = InventoryPanel->GetInventorySlots();
+	CurrentCarryWeight = InventoryPanel->GetCurrentCarryWeight();
+	MaxCarryWeight = InventoryPanel->GetMaxCarryWeight();
+	OccupiedInventorySlots = InventoryPanel->GetOccupiedInventorySlots();
+	MaxInventorySlots = InventoryPanel->GetMaxInventorySlots();
 }
 
 void UPHEquipmentMenuPageWidget::BindManagerDelegates()
@@ -223,11 +343,8 @@ void UPHEquipmentMenuPageWidget::RebuildEquipmentSlots()
 			continue;
 		}
 
-		FEquipmentMenuSlotViewData SlotData;
-		SlotData.Slot = EquipmentSlot;
-		SlotData.DisplayName = GetEquipmentSlotDisplayName(EquipmentSlot);
-		SlotData.Item = EquipmentManager ? EquipmentManager->GetEquippedItem(EquipmentSlot) : nullptr;
-		SlotData.bOccupied = SlotData.Item != nullptr;
+		UItemInstance* Item = EquipmentManager ? EquipmentManager->GetEquippedItem(EquipmentSlot) : nullptr;
+		const FEquipmentMenuSlotViewData SlotData = UMenuFunctionLibrary::MakeEquipmentSlotViewData(EquipmentSlot, Item);
 
 		EquipmentSlots.Add(SlotData);
 	}
@@ -237,12 +354,18 @@ void UPHEquipmentMenuPageWidget::RebuildInventorySlots()
 {
 	InventorySlots.Reset();
 
+	if (InventoryPanel)
+	{
+		SyncInventoryStateFromPanel();
+		return;
+	}
+
 	if (!InventoryManager)
 	{
 		return;
 	}
 
-	const int32 SlotCount = FMath::Max(InventoryManager->GetMaxSlots(), InventoryManager->Items.Num());
+	const int32 SlotCount = InventoryManager->GetSlotCount();
 	for (int32 SlotIndex = 0; SlotIndex < SlotCount; ++SlotIndex)
 	{
 		UItemInstance* Item = InventoryManager->GetItemAtSlot(SlotIndex);
@@ -251,12 +374,9 @@ void UPHEquipmentMenuPageWidget::RebuildInventorySlots()
 			continue;
 		}
 
-		FEquipmentMenuInventorySlotViewData SlotData;
-		SlotData.SlotIndex = SlotIndex;
-		SlotData.Item = Item;
-		SlotData.bOccupied = Item != nullptr;
-		SlotData.SuggestedEquipmentSlot = ResolveSuggestedSlot(Item);
-		SlotData.bCanEquip = SlotData.SuggestedEquipmentSlot != EEquipmentSlot::ES_None;
+		const EEquipmentSlot SuggestedSlot = ResolveSuggestedSlot(Item);
+		const FEquipmentMenuInventorySlotViewData SlotData =
+			UMenuFunctionLibrary::MakeInventorySlotViewData(SlotIndex, Item, SuggestedSlot);
 
 		InventorySlots.Add(SlotData);
 	}
@@ -264,6 +384,12 @@ void UPHEquipmentMenuPageWidget::RebuildInventorySlots()
 
 void UPHEquipmentMenuPageWidget::UpdateInventorySummary()
 {
+	if (InventoryPanel)
+	{
+		SyncInventoryStateFromPanel();
+		return;
+	}
+
 	if (!InventoryManager)
 	{
 		CurrentCarryWeight = 0.0f;
@@ -274,7 +400,7 @@ void UPHEquipmentMenuPageWidget::UpdateInventorySummary()
 	}
 
 	CurrentCarryWeight = InventoryManager->GetTotalWeight();
-	MaxCarryWeight = InventoryManager->MaxWeight;
+	MaxCarryWeight = InventoryManager->GetMaxWeight();
 	OccupiedInventorySlots = InventoryManager->GetItemCount();
 	MaxInventorySlots = InventoryManager->GetMaxSlots();
 }
@@ -333,6 +459,24 @@ void UPHEquipmentMenuPageWidget::HandleInventoryChanged()
 }
 
 void UPHEquipmentMenuPageWidget::HandleCarryWeightChanged(float NewCurrentWeight, float NewMaxWeight)
+{
+	CurrentCarryWeight = NewCurrentWeight;
+	MaxCarryWeight = NewMaxWeight;
+
+	OnCarryWeightChanged(CurrentCarryWeight, MaxCarryWeight);
+}
+
+void UPHEquipmentMenuPageWidget::HandleInventoryPanelDataRefreshed()
+{
+	SyncInventoryStateFromPanel();
+}
+
+void UPHEquipmentMenuPageWidget::HandleInventoryPanelSelectionChanged(UItemInstance* NewSelectedItem, int32 NewInventorySlotIndex, EEquipmentSlot)
+{
+	SetSelection(NewSelectedItem, NewInventorySlotIndex, EEquipmentSlot::ES_None);
+}
+
+void UPHEquipmentMenuPageWidget::HandleInventoryPanelCarryWeightChanged(float NewCurrentWeight, float NewMaxWeight)
 {
 	CurrentCarryWeight = NewCurrentWeight;
 	MaxCarryWeight = NewMaxWeight;

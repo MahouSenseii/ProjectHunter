@@ -1,6 +1,3 @@
-// Copyright © 2025 MahouSensei
-// Author: Quentin Davis
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -10,7 +7,7 @@
  *
  * DefaultEngine.ini maps ECC_GameTraceChannel1 to the "Interactable" channel.
  * Every system that traces for interactables or configures collision responses
- * for them should reference THIS constant instead of a raw ECC_ value — change
+ * for them should reference THIS constant instead of a raw ECC_ value - change
  * the channel here once and everything stays in sync.
  *
  * NOTE: FInteractionTraceManager::InteractionTraceChannel currently defaults to

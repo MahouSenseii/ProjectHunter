@@ -1,4 +1,3 @@
-// AI/Mob/MobPoolSubsystem.h
 
 #pragma once
 
@@ -18,7 +17,6 @@ class ALS_PROJECTHUNTER_API UMobPoolSubsystem : public UWorldSubsystem
 	GENERATED_BODY()
 
 public:
-	// ── Configuration ────────────────────────────────────────────────────────
 
 	/**
 	 * Maximum number of inactive actors kept per class.
@@ -27,11 +25,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pool")
 	int32 MaxPoolSizePerClass = 20;
 
-	// ── Public API ───────────────────────────────────────────────────────────
 
 	/**
 	 * Get a mob from the pool, or spawn a fresh one if the pool is empty.
-	 * The returned actor is hidden with collision/AI disabled — the caller
+	 * The returned actor is hidden with collision/AI disabled - the caller
 	 * is responsible for calling FinalizeSpawn / making it visible.
 	 *
 	 * Returns nullptr on failure (bad class, world shutting down, etc.).
@@ -62,7 +59,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Mob Pool")
 	int32 GetTotalPooledCount() const;
 
-	// ── UWorldSubsystem interface ────────────────────────────────────────────
 	virtual void Deinitialize() override;
 
 protected:
@@ -75,13 +71,13 @@ protected:
 
 	/**
 	 * Deactivate a mob: hide, disable collision, pause AI, stop movement.
-	 * Does NOT reset state — call ResetMobState separately if needed.
+	 * Does NOT reset state - call ResetMobState separately if needed.
 	 */
 	void DeactivateMob(APHBaseCharacter* Mob) const;
 
 	/**
 	 * Teleport a pooled mob to a new location and prepare it for reuse.
-	 * The mob is still hidden after this — caller must finalize.
+	 * The mob is still hidden after this - caller must finalize.
 	 */
 	void PrepareMobForReuse(APHBaseCharacter* Mob,
 		const FVector& Location, const FRotator& Rotation) const;

@@ -1,6 +1,7 @@
 #include "AbilitySystem/Abilities/PHGameplayAbility.h"
 
 #include "AbilitySystem/HunterAbilitySystemComponent.h"
+#include "AbilitySystem/Library/FunctionLibraries/PHAbilitySystemFunctionLibrary.h"
 #include "Character/PHBaseCharacter.h"
 
 #include "AbilitySystemLog.h"
@@ -64,7 +65,7 @@ bool UPHGameplayAbility::CanActivateAbility(
 
 void UPHGameplayAbility::SetCanBeCanceled(bool bCanBeCanceled)
 {
-	if (!bCanBeCanceled && ActivationGroup == EPHAbilityActivationGroup::Exclusive_Replaceable)
+	if (!bCanBeCanceled && UPHAbilitySystemFunctionLibrary::IsReplaceableActivationGroup(ActivationGroup))
 	{
 		UE_LOG(LogHunterGAS, Error, TEXT("SetCanBeCanceled: Ability [%s] cannot block canceling while replaceable."), *GetName());
 		return;
@@ -95,7 +96,7 @@ void UPHGameplayAbility::OnPawnAvatarSet()
 
 void UPHGameplayAbility::TryActivateAbilityOnSpawn(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) const
 {
-	if (!ActorInfo || Spec.IsActive() || ActivationPolicy != EPHAbilityActivationPolicy::OnSpawn)
+	if (!ActorInfo || Spec.IsActive() || !UPHAbilitySystemFunctionLibrary::ShouldActivateOnSpawn(ActivationPolicy))
 	{
 		return;
 	}
@@ -140,12 +141,12 @@ bool UPHGameplayAbility::CanChangeActivationGroup(EPHAbilityActivationGroup NewG
 		return false;
 	}
 
-	if (ActivationGroup != EPHAbilityActivationGroup::Exclusive_Blocking && HunterASC->IsActivationGroupBlocked(NewGroup))
+	if (!UPHAbilitySystemFunctionLibrary::IsBlockingActivationGroup(ActivationGroup) && HunterASC->IsActivationGroupBlocked(NewGroup))
 	{
 		return false;
 	}
 
-	if (NewGroup == EPHAbilityActivationGroup::Exclusive_Replaceable && !CanBeCanceled())
+	if (UPHAbilitySystemFunctionLibrary::IsReplaceableActivationGroup(NewGroup) && !CanBeCanceled())
 	{
 		return false;
 	}

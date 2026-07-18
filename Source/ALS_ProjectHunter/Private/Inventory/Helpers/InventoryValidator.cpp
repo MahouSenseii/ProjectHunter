@@ -3,7 +3,7 @@
 #include "Item/ItemInstance.h"
 #include "Inventory/Components/InventoryManager.h"
 #include "Inventory/Helpers/InventoryWeightCalculator.h"
-#include "Inventory/Library/InventoryFunctionLibrary.h"
+#include "Inventory/Library/FunctionLibraries/InventoryFunctionLibrary.h"
 
 bool FInventoryValidator::IsFull(const UInventoryManager& Manager)
 {

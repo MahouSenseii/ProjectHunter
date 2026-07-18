@@ -3,7 +3,7 @@
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Item/ItemInstance.h"
 #include "Inventory/Components/InventoryManager.h"
-#include "Inventory/Helpers/InventoryStackHandler.h"
+#include "Inventory/Helpers/InventoryStackHelper.h"
 #include "Inventory/Helpers/InventoryValidator.h"
 #include "Inventory/Library/InventoryLog.h"
 
@@ -24,7 +24,7 @@ bool FInventoryAdder::AddItem(UInventoryManager& Manager, UItemInstance* Item)
 
 	if (Manager.bAutoStack && Item->IsStackable())
 	{
-		if (FInventoryStackHandler::TryStackItem(Manager, Item))
+		if (FInventoryStackHelper::TryStackItem(Manager, Item))
 		{
 			UE_LOG(LogInventoryManager, Log, TEXT("InventoryManager: Stacked %s"),
 				*Item->GetDisplayName().ToString());

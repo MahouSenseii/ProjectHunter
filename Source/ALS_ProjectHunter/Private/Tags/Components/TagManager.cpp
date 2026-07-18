@@ -4,23 +4,22 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "Character/PHBaseCharacter.h"
-#include "Tags/Debug/TagDebugManager.h"
 #include "GameFramework/Character.h"
 #include "PHGameplayTags.h"
+#include "Tags/Debug/TagDebugManager.h"
 
 DEFINE_LOG_CATEGORY(LogTagManager);
 
 namespace TagManagerPrivate
 {
 	constexpr float LowResourceThreshold = 0.35f;
-	constexpr float MovementStartSpeedThresholdSq = 400.f;
-	constexpr float MovementStopSpeedThresholdSq = 25.f;
-
+	constexpr float MovementStartSpeedThresholdSq = 400.0f;
+	constexpr float MovementStopSpeedThresholdSq = 25.0f;
 	constexpr float ConditionRefreshInterval = 0.1f;
 
 	float GetEffectiveMaxValue(const float EffectiveMaxValue, const float RawMaxValue)
 	{
-		return EffectiveMaxValue > 0.f ? EffectiveMaxValue : FMath::Max(RawMaxValue, 0.f);
+		return EffectiveMaxValue > 0.0f ? EffectiveMaxValue : FMath::Max(RawMaxValue, 0.0f);
 	}
 
 	bool IsActivelySprinting(const APHBaseCharacter* HunterCharacter, const bool bMoving)
@@ -28,6 +27,27 @@ namespace TagManagerPrivate
 		return HunterCharacter
 			&& bMoving
 			&& HunterCharacter->GetDesiredGait() == EALSGait::Sprinting;
+	}
+
+	bool HasInitializedSiblingTagManager(AActor* Owner, const UTagManager* CurrentManager)
+	{
+		if (!Owner)
+		{
+			return false;
+		}
+
+		TArray<UTagManager*> AllManagers;
+		Owner->GetComponents<UTagManager>(AllManagers);
+
+		for (UTagManager* OtherManager : AllManagers)
+		{
+			if (OtherManager != CurrentManager && OtherManager && OtherManager->IsInitialized())
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
 
@@ -42,56 +62,34 @@ void UTagManager::BeginPlay()
 {
 	Super::BeginPlay();
 
+	AActor* Owner = GetOwner();
 	if (!ASC)
 	{
+		if (TagManagerPrivate::HasInitializedSiblingTagManager(Owner, this))
 		{
-			TArray<UTagManager*> AllManagers;
-			if (GetOwner())
-			{
-				GetOwner()->GetComponents<UTagManager>(AllManagers);
-			}
-
-			bool bAnotherIsInitialized = false;
-			for (UTagManager* Other : AllManagers)
-			{
-				if (Other != this && Other && Other->IsInitialized())
-				{
-					bAnotherIsInitialized = true;
-					break;
-				}
-			}
-
-			if (bAnotherIsInitialized)
-			{
-				UE_LOG(LogTagManager, Warning,
-					TEXT("TagManager::BeginPlay: '%s' has multiple TagManager components "
-					     "and this one (%s) is NOT the initialized instance. "
-					     "Open '%s' in the Blueprint Editor → Components panel and remove "
-					     "the extra TagManager — only the C++ one (from PHBaseCharacter) "
-					     "should exist."),
-					*GetNameSafe(GetOwner()),
-					*GetName(),
-					*GetNameSafe(GetOwner()->GetClass()));
-				SetComponentTickEnabled(false);
-				return;
-			}
+			UE_LOG(
+				LogTagManager,
+				Warning,
+				TEXT("TagManager::BeginPlay: '%s' has multiple TagManager components and this one (%s) is not initialized. Remove the extra TagManager from the Blueprint Components panel."),
+				*GetNameSafe(Owner),
+				*GetName());
+			SetComponentTickEnabled(false);
+			return;
 		}
 
-
-		if (IAbilitySystemInterface* AbilitySystemInterface = Cast<IAbilitySystemInterface>(GetOwner()))
+		if (IAbilitySystemInterface* AbilitySystemInterface = Cast<IAbilitySystemInterface>(Owner))
 		{
-			UAbilitySystemComponent* OwnerASC = AbilitySystemInterface->GetAbilitySystemComponent();
-			if (OwnerASC)
+			if (UAbilitySystemComponent* OwnerASC = AbilitySystemInterface->GetAbilitySystemComponent())
 			{
 				Initialize(OwnerASC);
 			}
 			else
 			{
-				UE_LOG(LogTagManager, Verbose,
-					TEXT("TagManager::BeginPlay: '%s' ASC not available yet "
-					     "(PlayerState-based ASC or deferred init). "
-					     "Tags will initialize via PossessedBy / OnRep_PlayerState."),
-					*GetNameSafe(GetOwner()));
+				UE_LOG(
+					LogTagManager,
+					Verbose,
+					TEXT("TagManager::BeginPlay: '%s' ASC not available yet. Tags will initialize through the character ASC ready path."),
+					*GetNameSafe(Owner));
 			}
 		}
 	}
@@ -114,9 +112,6 @@ void UTagManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComp
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	(void)TickType;
-	(void)ThisTickFunction;
-
 #if !UE_BUILD_SHIPPING
 	if (DebugManager.bEnableDebug)
 	{
@@ -138,14 +133,14 @@ void UTagManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComp
 	ConditionRefreshAccumulator += DeltaTime;
 	if (ConditionRefreshAccumulator >= TagManagerPrivate::ConditionRefreshInterval)
 	{
-		ConditionRefreshAccumulator = 0.f;
+		ConditionRefreshAccumulator = 0.0f;
 		RefreshMovementConditionTags();
 	}
 }
 
 void UTagManager::Initialize(UAbilitySystemComponent* InASC)
 {
-	if (InASC == NULL)
+	if (!InASC)
 	{
 		return;
 	}
@@ -163,16 +158,9 @@ void UTagManager::Initialize(UAbilitySystemComponent* InASC)
 	SetComponentTickEnabled(ASC != nullptr || DebugManager.bEnableDebug);
 #endif
 
-	if (!ASC)
-	{
-		UE_LOG(LogTagManager, Verbose, TEXT("Initialize called without a valid ASC for owner %s."), *GetNameSafe(GetOwner()));
-		return;
-	}
-
 	UE_LOG(LogTagManager, Verbose, TEXT("Initialized TagManager for owner %s with ASC %s."), *GetNameSafe(GetOwner()), *GetNameSafe(ASC));
 
 	ApplyPendingStates();
-
 	BindAttributeChangeDelegates();
 	RefreshBaseConditionTags();
 }
@@ -223,8 +211,7 @@ void UTagManager::RemoveTag(const FGameplayTag& Tag)
 	}
 
 	ASC->RemoveLooseGameplayTag(Tag, ExistingCount);
-	UE_LOG(LogTagManager, VeryVerbose, TEXT("Removed tag %s from owner %s. ClearedCount=%d"),
-		*Tag.ToString(), *GetNameSafe(GetOwner()), ExistingCount);
+	UE_LOG(LogTagManager, VeryVerbose, TEXT("Removed tag %s from owner %s. ClearedCount=%d"), *Tag.ToString(), *GetNameSafe(GetOwner()), ExistingCount);
 }
 
 void UTagManager::SetTagState(const FGameplayTag& Tag, const bool bEnabled)
@@ -232,7 +219,6 @@ void UTagManager::SetTagState(const FGameplayTag& Tag, const bool bEnabled)
 	if (bEnabled)
 	{
 		AddTag(Tag);
-		
 	}
 	else
 	{
@@ -302,11 +288,8 @@ void UTagManager::RefreshBaseConditionTags()
 {
 	if (!ASC)
 	{
-		bPendingBaseRefresh = true;
 		return;
 	}
-
-	bPendingBaseRefresh = false;
 
 	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
 	const UHunterAttributeSet* Attributes = GetHunterAttributeSet();
@@ -315,17 +298,17 @@ void UTagManager::RefreshBaseConditionTags()
 
 	if (Attributes)
 	{
-		const float Health = FMath::Max(Attributes->GetHealth(), 0.f);
+		const float Health = FMath::Max(Attributes->GetHealth(), 0.0f);
 		const float MaxHealth = TagManagerPrivate::GetEffectiveMaxValue(Attributes->GetMaxEffectiveHealth(), Attributes->GetMaxHealth());
-		const float Mana = FMath::Max(Attributes->GetMana(), 0.f);
+		const float Mana = FMath::Max(Attributes->GetMana(), 0.0f);
 		const float MaxMana = TagManagerPrivate::GetEffectiveMaxValue(Attributes->GetMaxEffectiveMana(), Attributes->GetMaxMana());
-		const float Stamina = FMath::Max(Attributes->GetStamina(), 0.f);
+		const float Stamina = FMath::Max(Attributes->GetStamina(), 0.0f);
 		const float MaxStamina = TagManagerPrivate::GetEffectiveMaxValue(Attributes->GetMaxEffectiveStamina(), Attributes->GetMaxStamina());
-		const float ArcaneShield = FMath::Max(Attributes->GetArcaneShield(), 0.f);
+		const float ArcaneShield = FMath::Max(Attributes->GetArcaneShield(), 0.0f);
 		const float MaxArcaneShield = TagManagerPrivate::GetEffectiveMaxValue(Attributes->GetMaxEffectiveArcaneShield(), Attributes->GetMaxArcaneShield());
 
 		const bool bDead = HasTag(Tags.Condition_Dead);
-		SetTagState(Tags.Condition_Alive, Health > 0.f && !bDead);
+		SetTagState(Tags.Condition_Alive, Health > 0.0f && !bDead);
 
 		SetTagState(Tags.Condition_OnFullHealth, ComputeFullResourceState(Health, MaxHealth));
 		SetTagState(Tags.Condition_OnLowHealth, ComputeLowResourceState(Health, MaxHealth));
@@ -424,12 +407,12 @@ bool UTagManager::ComputeMovementConditionState(const ACharacter* CharacterOwner
 
 bool UTagManager::ComputeLowResourceState(const float CurrentValue, const float MaxValue) const
 {
-	return MaxValue > 0.f && (CurrentValue / MaxValue) <= TagManagerPrivate::LowResourceThreshold;
+	return MaxValue > 0.0f && (CurrentValue / MaxValue) <= TagManagerPrivate::LowResourceThreshold;
 }
 
 bool UTagManager::ComputeFullResourceState(const float CurrentValue, const float MaxValue) const
 {
-	return MaxValue > 0.f && CurrentValue >= (MaxValue - KINDA_SMALL_NUMBER);
+	return MaxValue > 0.0f && CurrentValue >= (MaxValue - KINDA_SMALL_NUMBER);
 }
 
 const UHunterAttributeSet* UTagManager::GetHunterAttributeSet() const
@@ -509,8 +492,7 @@ void UTagManager::BindAttributeChangeDelegates()
 		bBaseConditionsDirty = true;
 	};
 
-	const UHunterAttributeSet* AttrSet = GetHunterAttributeSet();
-	if (!AttrSet)
+	if (!GetHunterAttributeSet())
 	{
 		return;
 	}
@@ -524,22 +506,17 @@ void UTagManager::BindAttributeChangeDelegates()
 	BindAttributeChange(UHunterAttributeSet::GetHealthAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxHealthAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveHealthAttribute());
-
 	BindAttributeChange(UHunterAttributeSet::GetManaAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxManaAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveManaAttribute());
-
 	BindAttributeChange(UHunterAttributeSet::GetStaminaAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxStaminaAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveStaminaAttribute());
-
 	BindAttributeChange(UHunterAttributeSet::GetArcaneShieldAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxArcaneShieldAttribute());
 	BindAttributeChange(UHunterAttributeSet::GetMaxEffectiveArcaneShieldAttribute());
 
-	UE_LOG(LogTagManager, Verbose,
-		TEXT("BindAttributeChangeDelegates: bound resource delegates for owner %s (Health/Mana/Stamina/ArcaneShield x3 each = 12 bindings)."),
-		*GetNameSafe(GetOwner()));
+	UE_LOG(LogTagManager, Verbose, TEXT("BindAttributeChangeDelegates: bound resource delegates for owner %s."), *GetNameSafe(GetOwner()));
 }
 
 void UTagManager::UnbindAttributeChangeDelegates()

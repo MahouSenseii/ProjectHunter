@@ -3,7 +3,8 @@
 #include "DetailWidgetRow.h"
 #include "DetailLayoutBuilder.h"
 #include "IPropertyUtilities.h"
-#include "Item/Library/ItemStructs.h"
+#include "Item/Library/FunctionLibraries/ItemEnumFunctionLibrary.h"
+#include "Item/Library/Structs/ItemStructs.h"
 #include "PropertyHandle.h"
 #include "UObject/UnrealType.h"
 #include "Widgets/Input/SComboBox.h"
@@ -124,7 +125,7 @@ void FItemBaseCustomization::RefreshSubTypeOptions()
 			continue;
 		}
 
-		if (IsItemSubTypeAllowedForItemType(ItemType, SubType))
+		if (UItemEnumFunctionLibrary::IsItemSubTypeAllowedForItemType(ItemType, SubType))
 		{
 			SubTypeOptions.Add(MakeShared<EItemSubType>(SubType));
 		}
@@ -144,7 +145,7 @@ FText FItemBaseCustomization::GetSelectedSubTypeText() const
 	const EItemSubType SubType = GetItemSubTypeValue();
 	const FText SubTypeText = GetItemSubTypeText(SubType);
 
-	if (SubType != EItemSubType::IST_None && !IsItemSubTypeAllowedForItemType(ItemType, SubType))
+	if (SubType != EItemSubType::IST_None && !UItemEnumFunctionLibrary::IsItemSubTypeAllowedForItemType(ItemType, SubType))
 	{
 		return FText::FromString(FString::Printf(
 			TEXT("%s (invalid for %s)"),

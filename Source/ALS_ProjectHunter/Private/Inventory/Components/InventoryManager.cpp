@@ -7,11 +7,11 @@
 #include "Net/UnrealNetwork.h"
 #include "Inventory/Helpers/InventoryAdder.h"
 #include "Inventory/Helpers/InventoryRemover.h"
-#include "Inventory/Helpers/InventoryStackHandler.h"
+#include "Inventory/Helpers/InventoryStackHelper.h"
 #include "Inventory/Helpers/InventorySwapper.h"
 #include "Inventory/Helpers/InventoryValidator.h"
 #include "Inventory/Helpers/InventoryWeightCalculator.h"
-#include "Inventory/Library/InventoryFunctionLibrary.h"
+#include "Inventory/Library/FunctionLibraries/InventoryFunctionLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogInventoryManager);
 
@@ -152,7 +152,7 @@ bool UInventoryManager::TryStackItem(UItemInstance* Item)
 		return false;
 	}
 
-	return FInventoryStackHandler::TryStackItem(*this, Item);
+	return FInventoryStackHelper::TryStackItem(*this, Item);
 }
 
 bool UInventoryManager::StackItems(UItemInstance* SourceItem, UItemInstance* TargetItem)
@@ -162,7 +162,7 @@ bool UInventoryManager::StackItems(UItemInstance* SourceItem, UItemInstance* Tar
 		return false;
 	}
 
-	return FInventoryStackHandler::StackItems(*this, SourceItem, TargetItem);
+	return FInventoryStackHelper::StackItems(*this, SourceItem, TargetItem);
 }
 
 UItemInstance* UInventoryManager::SplitStack(UItemInstance* Item, int32 Amount)
@@ -172,7 +172,7 @@ UItemInstance* UInventoryManager::SplitStack(UItemInstance* Item, int32 Amount)
 		return nullptr;
 	}
 
-	return FInventoryStackHandler::SplitStack(*this, Item, Amount);
+	return FInventoryStackHelper::SplitStack(*this, Item, Amount);
 }
 
 bool UInventoryManager::IsFull() const
@@ -353,17 +353,6 @@ void UInventoryManager::BroadcastInventoryChanged()
 UItemInstance* UInventoryManager::FindStackableItem(UItemInstance* Item) const
 {
 	return UInventoryFunctionLibrary::FindStackableItem(Items, Item);
-}
-
-void UInventoryManager::CleanupInvalidItems()
-{
-	for (int32 i = Items.Num() - 1; i >= 0; i--)
-	{
-		if (Items[i] && !Items[i]->HasValidBaseData())
-		{
-			Items[i] = nullptr;
-		}
-	}
 }
 
 bool UInventoryManager::HasInventoryWriteAuthority(const TCHAR* FunctionName) const

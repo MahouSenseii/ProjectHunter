@@ -1,6 +1,7 @@
 #include "AbilitySystem/ModMagnitude/HunterMMC_StrengthMaxHealth.h"
 
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystem/Library/FunctionLibraries/PHResourceFunctionLibrary.h"
 #include "GameplayEffectExtension.h"
 
 namespace HunterMMCStrengthMaxHealthPrivate
@@ -55,10 +56,10 @@ float UHunterMMC_StrengthMaxHealth::CalculateBaseMagnitude_Implementation(const 
 	GetCapturedAttributeMagnitude(CaptureDefinitions.PlayerLevelDef, Spec, EvaluationParameters, PlayerLevel);
 	PlayerLevel = FMath::Max(PlayerLevel, 1.0f);
 
-	const float CalculatedMaxHealth =
-		HunterMMCStrengthMaxHealthPrivate::BaseMaxValue +
-		(HunterMMCStrengthMaxHealthPrivate::BasePrimaryBonus + Strength) +
-		(HunterMMCStrengthMaxHealthPrivate::PerLevelBonus * (PlayerLevel - 1.0f));
-
-	return FMath::Max(CalculatedMaxHealth, 0.0f);
+	return UPHResourceFunctionLibrary::CalculatePrimaryDerivedMaxValue(FPHPrimaryDerivedResourceInput(
+		HunterMMCStrengthMaxHealthPrivate::BaseMaxValue,
+		HunterMMCStrengthMaxHealthPrivate::BasePrimaryBonus,
+		Strength,
+		PlayerLevel,
+		HunterMMCStrengthMaxHealthPrivate::PerLevelBonus));
 }

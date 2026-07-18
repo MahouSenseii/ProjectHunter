@@ -1,10 +1,9 @@
-// AI/Mob/MobWanderInterface.h
 // Interface implemented by spawnable characters so the AI Controller (set up
 // in Blueprint) can query wander data without knowing the concrete actor type.
 //
 // BLUEPRINT SETUP:
 //   1. Open your NPC Blueprint (child of APHBaseCharacter).
-//   2. Add "Interfaces → MobWanderable" in Class Settings.
+//   2. Add "Interfaces -> MobWanderable" in Class Settings.
 //   3. Implement the three events.  SetHomeLocation stores the vector in a
 //      Blueprint variable; GetHomeLocation returns it; GetWanderRadius returns
 //      whatever you set on the mob or fallback to the manager default.
@@ -29,7 +28,6 @@ class ALS_PROJECTHUNTER_API IMobWanderable
 	GENERATED_BODY()
 
 public:
-	// ── Called by AMobManagerActor on finalize ────────────────────────────────
 
 	/**
 	 * Store the spawn point this mob should wander around.
@@ -45,7 +43,6 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Mob|Wander")
 	void SetWanderRadius(float WanderRadius);
 
-	// ── Queried by AI Controller ──────────────────────────────────────────────
 
 	/** Returns the home (spawn) location this mob wanders around. */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Mob|Wander")

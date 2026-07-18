@@ -5,6 +5,7 @@
 #include "AbilitySystem/Effects/HunterGE_StaminaDegen.h"
 #include "AbilitySystem/Effects/HunterGE_StaminaRegen.h"
 #include "AbilitySystem/Effects/HunterGE_ArcaneShieldRegen.h"
+#include "AbilitySystem/Library/FunctionLibraries/PHAbilitySystemFunctionLibrary.h"
 #include "Tags/Components/TagManager.h"
 #include "Character/PHBaseCharacter.h"
 #include "Engine/Engine.h"
@@ -61,7 +62,7 @@ namespace HunterAbilitySystemComponentPrivate
 		const TCHAR* SlotName,
 		bool& bWarned)
 	{
-		if (ConfiguredClass && ConfiguredClass.Get()->IsChildOf(NativeClass.Get()))
+		if (UPHAbilitySystemFunctionLibrary::IsGameplayEffectClassCompatible(ConfiguredClass, NativeClass))
 		{
 			return ConfiguredClass;
 		}
@@ -78,7 +79,7 @@ namespace HunterAbilitySystemComponentPrivate
 				*GetNameSafe(NativeClass.Get()));
 		}
 
-		return NativeClass;
+		return UPHAbilitySystemFunctionLibrary::ResolveGameplayEffectClass(ConfiguredClass, NativeClass);
 	}
 }
 
@@ -113,10 +114,8 @@ UHunterAbilitySystemComponent::UHunterAbilitySystemComponent()
 	ArcaneShieldRegenGE = UHunterGE_ArcaneShieldRegen::StaticClass();
 	SprintStaminaDrainGE = UHunterGE_StaminaDegen::StaticClass();
 
-	InputPressedSpecHandles.Reset();
-	InputReleasedSpecHandles.Reset();
-	InputHeldSpecHandles.Reset();
-	FMemory::Memzero(ActivationGroupCounts, sizeof(ActivationGroupCounts));
+	AbilityInputState.Reset();
+	ActivationGroupState.Reset();
 }
 
 void UHunterAbilitySystemComponent::InitAbilityActorInfo(AActor* InOwnerActor, AActor* InAvatarActor)
@@ -217,9 +216,7 @@ void UHunterAbilitySystemComponent::CancelInputActivatedAbilities(bool bReplicat
 	auto ShouldCancelFunc = [](const UPHGameplayAbility* PHAbility, FGameplayAbilitySpecHandle Handle)
 	{
 		(void)Handle;
-		const EPHAbilityActivationPolicy ActivationPolicy = PHAbility->GetActivationPolicy();
-		return ActivationPolicy == EPHAbilityActivationPolicy::OnInputTriggered ||
-			ActivationPolicy == EPHAbilityActivationPolicy::WhileInputActive;
+		return UPHAbilitySystemFunctionLibrary::IsInputActivatedPolicy(PHAbility->GetActivationPolicy());
 	};
 
 	CancelAbilitiesByFunc(ShouldCancelFunc, bReplicateCancelAbility);
@@ -270,8 +267,8 @@ void UHunterAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& I
 	{
 		if (AbilitySpec.Ability && AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag))
 		{
-			InputPressedSpecHandles.AddUnique(AbilitySpec.Handle);
-			InputHeldSpecHandles.AddUnique(AbilitySpec.Handle);
+			AbilityInputState.AddPressedSpecHandle(AbilitySpec.Handle);
+			AbilityInputState.AddHeldSpecHandle(AbilitySpec.Handle);
 		}
 	}
 }
@@ -287,8 +284,8 @@ void UHunterAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& 
 	{
 		if (AbilitySpec.Ability && AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag))
 		{
-			InputReleasedSpecHandles.AddUnique(AbilitySpec.Handle);
-			InputHeldSpecHandles.Remove(AbilitySpec.Handle);
+			AbilityInputState.AddReleasedSpecHandle(AbilitySpec.Handle);
+			AbilityInputState.RemoveHeldSpecHandle(AbilitySpec.Handle);
 		}
 	}
 }
@@ -308,14 +305,14 @@ void UHunterAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bG
 	static TArray<FGameplayAbilitySpecHandle> AbilitiesToActivate;
 	AbilitiesToActivate.Reset();
 
-	for (const FGameplayAbilitySpecHandle& SpecHandle : InputHeldSpecHandles)
+	for (const FGameplayAbilitySpecHandle& SpecHandle : AbilityInputState.GetHeldSpecHandles())
 	{
 		if (const FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
 			if (AbilitySpec->Ability && !AbilitySpec->IsActive())
 			{
 				const UPHGameplayAbility* PHAbilityCDO = Cast<UPHGameplayAbility>(AbilitySpec->Ability);
-				if (PHAbilityCDO && PHAbilityCDO->GetActivationPolicy() == EPHAbilityActivationPolicy::WhileInputActive)
+				if (PHAbilityCDO && UPHAbilitySystemFunctionLibrary::ShouldActivateWhileInputHeld(PHAbilityCDO->GetActivationPolicy()))
 				{
 					AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
 				}
@@ -323,7 +320,7 @@ void UHunterAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bG
 		}
 	}
 
-	for (const FGameplayAbilitySpecHandle& SpecHandle : InputPressedSpecHandles)
+	for (const FGameplayAbilitySpecHandle& SpecHandle : AbilityInputState.GetPressedSpecHandles())
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
@@ -338,7 +335,7 @@ void UHunterAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bG
 				else
 				{
 					const UPHGameplayAbility* PHAbilityCDO = Cast<UPHGameplayAbility>(AbilitySpec->Ability);
-					if (PHAbilityCDO && PHAbilityCDO->GetActivationPolicy() == EPHAbilityActivationPolicy::OnInputTriggered)
+					if (PHAbilityCDO && UPHAbilitySystemFunctionLibrary::ShouldActivateOnInputPressed(PHAbilityCDO->GetActivationPolicy()))
 					{
 						AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
 					}
@@ -352,7 +349,7 @@ void UHunterAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bG
 		TryActivateAbility(AbilitySpecHandle);
 	}
 
-	for (const FGameplayAbilitySpecHandle& SpecHandle : InputReleasedSpecHandles)
+	for (const FGameplayAbilitySpecHandle& SpecHandle : AbilityInputState.GetReleasedSpecHandles())
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
@@ -368,15 +365,12 @@ void UHunterAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bG
 		}
 	}
 
-	InputPressedSpecHandles.Reset();
-	InputReleasedSpecHandles.Reset();
+	AbilityInputState.ResetFrameInput();
 }
 
 void UHunterAbilitySystemComponent::ClearAbilityInput()
 {
-	InputPressedSpecHandles.Reset();
-	InputReleasedSpecHandles.Reset();
-	InputHeldSpecHandles.Reset();
+	AbilityInputState.Reset();
 }
 
 void UHunterAbilitySystemComponent::NotifyAbilityActivated(const FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability)
@@ -401,48 +395,21 @@ void UHunterAbilitySystemComponent::NotifyAbilityEnded(FGameplayAbilitySpecHandl
 
 bool UHunterAbilitySystemComponent::IsActivationGroupBlocked(EPHAbilityActivationGroup Group) const
 {
-	switch (Group)
-	{
-	case EPHAbilityActivationGroup::Independent:
-		return false;
-
-	case EPHAbilityActivationGroup::Exclusive_Replaceable:
-	case EPHAbilityActivationGroup::Exclusive_Blocking:
-		return ActivationGroupCounts[static_cast<uint8>(EPHAbilityActivationGroup::Exclusive_Blocking)] > 0;
-
-	default:
-		checkf(false, TEXT("IsActivationGroupBlocked: Invalid ActivationGroup [%d]."), static_cast<uint8>(Group));
-		return false;
-	}
+	return ActivationGroupState.IsActivationGroupBlocked(Group);
 }
 
 void UHunterAbilitySystemComponent::AddAbilityToActivationGroup(EPHAbilityActivationGroup Group, UPHGameplayAbility* PHAbility)
 {
 	check(PHAbility);
-	check(ActivationGroupCounts[static_cast<uint8>(Group)] < INT32_MAX);
-
-	ActivationGroupCounts[static_cast<uint8>(Group)]++;
+	ActivationGroupState.AddAbilityToActivationGroup(Group);
 
 	const bool bReplicateCancelAbility = false;
-	switch (Group)
+	if (UPHAbilitySystemFunctionLibrary::IsExclusiveActivationGroup(Group))
 	{
-	case EPHAbilityActivationGroup::Independent:
-		break;
-
-	case EPHAbilityActivationGroup::Exclusive_Replaceable:
-	case EPHAbilityActivationGroup::Exclusive_Blocking:
 		CancelActivationGroupAbilities(EPHAbilityActivationGroup::Exclusive_Replaceable, PHAbility, bReplicateCancelAbility);
-		break;
-
-	default:
-		checkf(false, TEXT("AddAbilityToActivationGroup: Invalid ActivationGroup [%d]."), static_cast<uint8>(Group));
-		break;
 	}
 
-	const int32 ExclusiveCount =
-		ActivationGroupCounts[static_cast<uint8>(EPHAbilityActivationGroup::Exclusive_Replaceable)] +
-		ActivationGroupCounts[static_cast<uint8>(EPHAbilityActivationGroup::Exclusive_Blocking)];
-	if (!ensure(ExclusiveCount <= 1))
+	if (!ensure(ActivationGroupState.GetExclusiveActivationGroupCount() <= 1))
 	{
 		UE_LOG(LogHunterGAS, Error, TEXT("AddAbilityToActivationGroup: Multiple exclusive PH abilities are running."));
 	}
@@ -451,12 +418,7 @@ void UHunterAbilitySystemComponent::AddAbilityToActivationGroup(EPHAbilityActiva
 void UHunterAbilitySystemComponent::RemoveAbilityFromActivationGroup(EPHAbilityActivationGroup Group, UPHGameplayAbility* PHAbility)
 {
 	check(PHAbility);
-
-	int32& GroupCount = ActivationGroupCounts[static_cast<uint8>(Group)];
-	if (ensure(GroupCount > 0))
-	{
-		GroupCount--;
-	}
+	ActivationGroupState.RemoveAbilityFromActivationGroup(Group);
 }
 
 void UHunterAbilitySystemComponent::CancelActivationGroupAbilities(EPHAbilityActivationGroup Group, UPHGameplayAbility* IgnorePHAbility, bool bReplicateCancelAbility)
@@ -534,11 +496,11 @@ void UHunterAbilitySystemComponent::HandleSprintingTagChanged(const FGameplayTag
 
 	if (NewCount > 0)
 	{
-		bSprintStaminaDegenRequested = true;
+		StaminaDegenRequestState.SetSprintRequested(true);
 	}
 	else
 	{
-		bSprintStaminaDegenRequested = false;
+		StaminaDegenRequestState.SetSprintRequested(false);
 	}
 
 	RefreshStaminaDegenEffect();
@@ -557,8 +519,7 @@ void UHunterAbilitySystemComponent::HandleStaminaExhaustedTagChanged(const FGame
 
 	if (NewCount > 0)
 	{
-		bSprintStaminaDegenRequested = false;
-		bWallRunningStaminaDegenRequested = false;
+		StaminaDegenRequestState.Clear();
 		HunterAbilitySystemComponentPrivate::ForceStopSprinting(this);
 		StopSprintStaminaDegen();
 		RefreshStaminaExhaustionRecovery();
@@ -588,8 +549,7 @@ void UHunterAbilitySystemComponent::Debug_StopStaminaDegen()
 		return;
 	}
 
-	bSprintStaminaDegenRequested = false;
-	bWallRunningStaminaDegenRequested = false;
+	StaminaDegenRequestState.Clear();
 
 	HunterAbilitySystemComponentPrivate::ForceStopSprinting(this);
 
@@ -665,8 +625,7 @@ void UHunterAbilitySystemComponent::Debug_DisableStaminaDrain()
 
 	bDebugStaminaDrainDisabled = true;
 
-	bSprintStaminaDegenRequested = false;
-	bWallRunningStaminaDegenRequested = false;
+	StaminaDegenRequestState.Clear();
 
 	HunterAbilitySystemComponentPrivate::ForceStopSprinting(this);
 	StopSprintStaminaDegen();
@@ -697,7 +656,7 @@ void UHunterAbilitySystemComponent::Debug_ReactivateStaminaDrain()
 
 void UHunterAbilitySystemComponent::SetWallRunningStaminaDegenActive(const bool bActive)
 {
-	bWallRunningStaminaDegenRequested = bActive;
+	StaminaDegenRequestState.SetWallRunningRequested(bActive);
 	RefreshStaminaExhaustionRecovery();
 	RefreshStaminaDegenEffect();
 }
@@ -721,10 +680,10 @@ void UHunterAbilitySystemComponent::RefreshStaminaDegenEffect()
 	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
 
 	const bool bCanSprintDegen =
-		bSprintStaminaDegenRequested && !IsAvatarAirborneForStamina();
+		StaminaDegenRequestState.IsSprintRequested() && !IsAvatarAirborneForStamina();
 
 	const bool bShouldDegen =
-		(bCanSprintDegen || bWallRunningStaminaDegenRequested)
+		(bCanSprintDegen || StaminaDegenRequestState.IsWallRunningRequested())
 		&& (!bShouldCheckExhaustion || !HasMatchingGameplayTag(Tags.Effect_Stamina_Exhausted));
 
 	if (bShouldDegen)
@@ -751,7 +710,7 @@ void UHunterAbilitySystemComponent::StartSprintStaminaDegen()
 		return;
 	}
 
-	if (IsAvatarAirborneForStamina() && !bWallRunningStaminaDegenRequested)
+	if (IsAvatarAirborneForStamina() && !StaminaDegenRequestState.IsWallRunningRequested())
 	{
 		return;
 	}
@@ -769,25 +728,15 @@ void UHunterAbilitySystemComponent::StartSprintStaminaDegen()
 		return;
 	}
 
-	TSubclassOf<UGameplayEffect> SprintDrainClass = UHunterGE_StaminaDegen::StaticClass();
-	if (SprintStaminaDrainGE && SprintStaminaDrainGE.Get()->IsChildOf(UHunterGE_StaminaDegen::StaticClass()))
-	{
-		SprintDrainClass = SprintStaminaDrainGE;
-	}
-	else if (SprintStaminaDrainGE && !bWarnedNonNativeSprintDrainGE)
-	{
-		bWarnedNonNativeSprintDrainGE = true;
-		UE_LOG(
-			LogHunterGAS,
-			Warning,
-			TEXT("StartSprintStaminaDegen: SprintStaminaDrainGE=%s is not a child of UHunterGE_StaminaDegen. Using native drain GE so copied regen assets cannot block stamina drain."),
-			*GetNameSafe(SprintStaminaDrainGE.Get()));
-	}
+	const TSubclassOf<UGameplayEffect> SprintDrainClass =
+		HunterAbilitySystemComponentPrivate::ResolveNativeGameplayEffectClass(
+			SprintStaminaDrainGE,
+			UHunterGE_StaminaDegen::StaticClass(),
+			TEXT("SprintStaminaDrainGE"),
+			bWarnedNonNativeSprintDrainGE);
 
-	FGameplayEffectContextHandle Context = MakeEffectContext();
-	Context.AddSourceObject(GetOwner());
-
-	const FGameplayEffectSpecHandle Spec = MakeOutgoingSpec(SprintDrainClass, 1.f, Context);
+	const FGameplayEffectSpecHandle Spec =
+		UPHAbilitySystemFunctionLibrary::MakeSelfEffectSpec(this, SprintDrainClass, GetOwner());
 	if (Spec.IsValid())
 	{
 		ActiveSprintStaminaDrainHandle = ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
@@ -825,7 +774,7 @@ bool UHunterAbilitySystemComponent::IsStaminaMovementInputHeldForRecovery() cons
 		return HunterCharacter->IsStaminaMovementInputHeld();
 	}
 
-	return bSprintStaminaDegenRequested || bWallRunningStaminaDegenRequested;
+	return StaminaDegenRequestState.HasAnyRequest();
 }
 
 bool UHunterAbilitySystemComponent::IsAvatarAirborneForStamina() const
@@ -984,22 +933,14 @@ void UHunterAbilitySystemComponent::StartPassiveRegen()
 			TEXT("ArcaneShieldRegenGE"),
 			bWarnedNonNativeArcaneShieldRegenGE);
 
-	auto MakeSpec = [this](TSubclassOf<UGameplayEffect> GEClass) -> FGameplayEffectSpecHandle
-	{
-		if (!GEClass)
-		{
-			return FGameplayEffectSpecHandle();
-		}
-		FGameplayEffectContextHandle Context = MakeEffectContext();
-		Context.AddSourceObject(GetOwner());
-		FGameplayEffectSpecHandle Spec = MakeOutgoingSpec(GEClass, 1.f, Context);
-		return Spec;
-	};
-
-	CachedHealthRegenSpec       = MakeSpec(HealthRegenClass);
-	CachedManaRegenSpec         = MakeSpec(ManaRegenClass);
-	CachedStaminaRegenSpec      = MakeSpec(StaminaRegenClass);
-	CachedArcaneShieldRegenSpec = MakeSpec(ArcaneShieldRegenClass);
+	PassiveResourceEffectState.HealthRegenSpec =
+		UPHAbilitySystemFunctionLibrary::MakeSelfEffectSpec(this, HealthRegenClass, GetOwner());
+	PassiveResourceEffectState.ManaRegenSpec =
+		UPHAbilitySystemFunctionLibrary::MakeSelfEffectSpec(this, ManaRegenClass, GetOwner());
+	PassiveResourceEffectState.StaminaRegenSpec =
+		UPHAbilitySystemFunctionLibrary::MakeSelfEffectSpec(this, StaminaRegenClass, GetOwner());
+	PassiveResourceEffectState.ArcaneShieldRegenSpec =
+		UPHAbilitySystemFunctionLibrary::MakeSelfEffectSpec(this, ArcaneShieldRegenClass, GetOwner());
 
 	// Apply each resource GE once as an infinite, server-driven periodic effect.
 	// The native MMCs read Rate and Amount live and return zero when their
@@ -1008,7 +949,7 @@ void UHunterAbilitySystemComponent::StartPassiveRegen()
 	// GEs are server-authoritative and replicate down (Mixed mode), so only apply
 	// them on the server. The loose RegenActive tags above stay on both sides for
 	// local HUD. The previous authority check lived inside the now-removed tick.
-	ActivePassiveEffectHandles.Reset();
+	PassiveResourceEffectState.ResetActiveEffectHandles();
 	const AActor* AvatarForApply = GetAvatarActor();
 	if (AvatarForApply && AvatarForApply->HasAuthority())
 	{
@@ -1016,35 +957,31 @@ void UHunterAbilitySystemComponent::StartPassiveRegen()
 		{
 			if (InSpec.IsValid())
 			{
-				ActivePassiveEffectHandles.Add(ApplyGameplayEffectSpecToSelf(*InSpec.Data.Get()));
+				PassiveResourceEffectState.AddActiveEffectHandle(
+					ApplyGameplayEffectSpecToSelf(*InSpec.Data.Get()));
 			}
 		};
-		ApplyOnce(CachedHealthRegenSpec);
-		ApplyOnce(CachedManaRegenSpec);
-		ApplyOnce(CachedStaminaRegenSpec);
-		ApplyOnce(CachedArcaneShieldRegenSpec);
+		ApplyOnce(PassiveResourceEffectState.HealthRegenSpec);
+		ApplyOnce(PassiveResourceEffectState.ManaRegenSpec);
+		ApplyOnce(PassiveResourceEffectState.StaminaRegenSpec);
+		ApplyOnce(PassiveResourceEffectState.ArcaneShieldRegenSpec);
 	}
 
 	bPassiveRegenStarted = true;
-	UE_LOG(LogHunterGAS, Verbose, TEXT("StartPassiveRegen: ASC=%s — RegenActive tags granted"), *GetName());
+	UE_LOG(LogHunterGAS, Verbose, TEXT("StartPassiveRegen: ASC=%s - RegenActive tags granted"), *GetName());
 }
 
 void UHunterAbilitySystemComponent::StopPassiveRegen()
 {
-	for (const FActiveGameplayEffectHandle& Handle : ActivePassiveEffectHandles)
+	for (const FActiveGameplayEffectHandle& Handle : PassiveResourceEffectState.GetActiveEffectHandles())
 	{
 		if (Handle.IsValid())
 		{
 			RemoveActiveGameplayEffect(Handle);
 		}
 	}
-	ActivePassiveEffectHandles.Reset();
 	StopSprintStaminaDegen();
-
-	CachedHealthRegenSpec       = FGameplayEffectSpecHandle();
-	CachedManaRegenSpec         = FGameplayEffectSpecHandle();
-	CachedStaminaRegenSpec      = FGameplayEffectSpecHandle();
-	CachedArcaneShieldRegenSpec = FGameplayEffectSpecHandle();
+	PassiveResourceEffectState.Reset();
 
 	const FPHGameplayTags& PHT = FPHGameplayTags::Get();
 	RemoveLooseGameplayTag(PHT.Effect_Health_RegenActive);
@@ -1053,7 +990,7 @@ void UHunterAbilitySystemComponent::StopPassiveRegen()
 	RemoveLooseGameplayTag(PHT.Effect_ArcaneShield_RegenActive);
 
 	bPassiveRegenStarted = false;
-	UE_LOG(LogHunterGAS, Verbose, TEXT("StopPassiveRegen: ASC=%s — RegenActive tags removed"), *GetName());
+	UE_LOG(LogHunterGAS, Verbose, TEXT("StopPassiveRegen: ASC=%s - RegenActive tags removed"), *GetName());
 }
 
 void UHunterAbilitySystemComponent::HandleStaminaDepleted()
@@ -1069,8 +1006,7 @@ void UHunterAbilitySystemComponent::HandleStaminaDepleted()
 		return;
 	}
 
-	bSprintStaminaDegenRequested = false;
-	bWallRunningStaminaDegenRequested = false;
+	StaminaDegenRequestState.Clear();
 
 	// Stop stamina-draining movement so the drain GE deactivates immediately.
 	HunterAbilitySystemComponentPrivate::ForceStopSprinting(this);
@@ -1083,9 +1019,8 @@ void UHunterAbilitySystemComponent::HandleStaminaDepleted()
 	if (StaminaExhaustionGE &&
 		!HasMatchingGameplayTag(FPHGameplayTags::Get().Effect_Stamina_Exhausted))
 	{
-		FGameplayEffectContextHandle Context = MakeEffectContext();
-		Context.AddSourceObject(GetOwner());
-		const FGameplayEffectSpecHandle Spec = MakeOutgoingSpec(StaminaExhaustionGE, 1.f, Context);
+		const FGameplayEffectSpecHandle Spec =
+			UPHAbilitySystemFunctionLibrary::MakeSelfEffectSpec(this, StaminaExhaustionGE, GetOwner());
 		if (Spec.IsValid())
 		{
 			ActiveStaminaExhaustionHandle = ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
@@ -1105,9 +1040,8 @@ void UHunterAbilitySystemComponent::HandleManaDepleted()
 	if (ManaExhaustionGE &&
 		!HasMatchingGameplayTag(FPHGameplayTags::Get().Effect_Mana_Exhausted))
 	{
-		FGameplayEffectContextHandle Context = MakeEffectContext();
-		Context.AddSourceObject(GetOwner());
-		const FGameplayEffectSpecHandle Spec = MakeOutgoingSpec(ManaExhaustionGE, 1.f, Context);
+		const FGameplayEffectSpecHandle Spec =
+			UPHAbilitySystemFunctionLibrary::MakeSelfEffectSpec(this, ManaExhaustionGE, GetOwner());
 		if (Spec.IsValid())
 		{
 			ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());

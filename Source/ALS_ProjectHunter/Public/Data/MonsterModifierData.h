@@ -5,21 +5,18 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "Engine/DataTable.h"
-#include "AI/Library/MobEnumLibrary.h"
-#include "AI/Library/MobStructs.h"
+#include "AI/Library/Enums/MobEnumLibrary.h"
+#include "AI/Library/Structs/MobStructs.h"
 #include "MonsterModifierData.generated.h"
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Global spawn config DA — one per game, referenced by GameMode or WorldSettings
-// ─────────────────────────────────────────────────────────────────────────────
+// Global spawn config DA - one per game, referenced by GameMode or WorldSettings
 UCLASS(BlueprintType)
 class ALS_PROJECTHUNTER_API UMonsterSpawnConfig : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
 public:
-	// ── Tier spawn chances (base, before area-level scaling) ─────────────────
-
+	// Tier spawn chances (base, before area-level scaling)
 	/**
 	 * Base probability [0-1] that any spawned monster will be Magic (Blue).
 	 * Affected by player's MagicFind attribute at runtime.
@@ -30,7 +27,7 @@ public:
 
 	/**
 	 * Base probability [0-1] that any spawned monster will be Rare (Yellow).
-	 * Checked after Magic — so actual rare rate = BaseRareChance * (1 - BaseMagicChance).
+	 * Checked after Magic - so actual rare rate = BaseRareChance * (1 - BaseMagicChance).
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Tier Chances",
 		meta = (ClampMin = 0.0f, ClampMax = 1.0f))
@@ -44,8 +41,7 @@ public:
 		meta = (ClampMin = 0.0f))
 	float MagicFindChanceScalar = 0.001f;
 
-	// ── Mod counts per tier ───────────────────────────────────────────────────
-
+	// Mod counts per tier
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mod Counts",
 		meta = (ClampMin = 0))
 	int32 MagicModMin = 1;
@@ -62,8 +58,7 @@ public:
 		meta = (ClampMin = 0))
 	int32 RareModMax = 6;
 
-	// ── Pack sizes ────────────────────────────────────────────────────────────
-
+	// Pack sizes
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pack Sizes",
 		meta = (ClampMin = 1))
 	int32 NormalPackMin = 3;
@@ -88,8 +83,7 @@ public:
 		meta = (ClampMin = 1))
 	int32 RarePackMax = 4;
 
-	// ── Per-area-level scaling ────────────────────────────────────────────────
-
+	// Per-area-level scaling
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Area Scaling",
 		meta = (ClampMin = 0.0f))
 	float MagicChancePerAreaLevel = 0.001f;
@@ -98,14 +92,12 @@ public:
 		meta = (ClampMin = 0.0f))
 	float RareChancePerAreaLevel = 0.0005f;
 
-	// ── DataTable reference ───────────────────────────────────────────────────
-
+	// DataTable reference
 	/** The DataTable of FMonsterModRow entries used when rolling mods. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data")
 	TSoftObjectPtr<UDataTable> ModifierTable;
 
-	// ── Helpers ───────────────────────────────────────────────────────────────
-
+	// Helpers
 	UFUNCTION(BlueprintPure, Category = "Spawn Config")
 	float GetEffectiveMagicChance(int32 AreaLevel, float MagicFind) const;
 

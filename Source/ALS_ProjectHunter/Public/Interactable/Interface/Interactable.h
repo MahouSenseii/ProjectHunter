@@ -2,8 +2,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Interactable/Library/InteractionEnumLibrary.h"
-#include "Interactable/Library/InteractionStructLibrary.h"
+#include "Interactable/Library/Enums/InteractionEnums.h"
+#include "Interactable/Library/Structs/InteractionStructs.h"
 #include "UObject/Interface.h"
 #include "Interactable.generated.h"
 
@@ -24,9 +24,7 @@ class ALS_PROJECTHUNTER_API IInteractable
 	GENERATED_BODY()
 
 public:
-	// ═══════════════════════════════════════════════
 	// BASIC INTERACTION (Tap/Single Press)
-	// ═══════════════════════════════════════════════
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
 	void OnInteract(AActor* Interactor);
@@ -34,9 +32,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
 	bool CanInteract(AActor* Interactor) const;
 
-	// ═══════════════════════════════════════════════
 	// INTERACTION TYPE (Which input method to use)
-	// ═══════════════════════════════════════════════
 
 	/**
 	 * Get the interaction type
@@ -45,9 +41,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
 	EInteractionType GetInteractionType() const;
 
-	// ═══════════════════════════════════════════════
 	// FOCUS EVENTS (For highlighting/widget display)
-	// ═══════════════════════════════════════════════
 
 	/**
 	 * Called when player starts looking at this interactable
@@ -63,9 +57,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
 	void OnEndFocus(AActor* Interactor);
 
-	// ═══════════════════════════════════════════════
 	// HIGHLIGHT SUPPORT
-	// ═══════════════════════════════════════════════
 
 	/**
 	 * Default highlight style for this interactable.
@@ -75,9 +67,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction|Highlight")
 	FInteractableHighlightStyle GetHighlightStyle() const;
 
-	// ═══════════════════════════════════════════════
 	// HOLD INTERACTION
-	// ═══════════════════════════════════════════════
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction|Hold")
 	float GetTapHoldThreshold() const;
@@ -100,9 +90,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction|Hold")
 	FText GetHoldInteractionText() const;
 
-	// ═══════════════════════════════════════════════
 	// MASHING INTERACTION
-	// ═══════════════════════════════════════════════
 
 	/** How many presses required to complete */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction|Mash")
@@ -143,9 +131,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction|Continuous")
 	void OnContinuousInteractionEnd(AActor* Interactor);
 
-	// ═══════════════════════════════════════════════
 	// TOOLTIP SUPPORT
-	// ═══════════════════════════════════════════════
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction|Tooltip")
 	bool HasTooltip() const;
@@ -156,9 +142,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction|Tooltip")
 	FVector GetTooltipWorldLocation() const;
 
-	// ═══════════════════════════════════════════════
 	// INTERACTION SUPPORT
-	// ═══════════════════════════════════════════════
 
 	/**
 	 * Get interaction action input asset

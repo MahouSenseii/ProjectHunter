@@ -1,16 +1,19 @@
 #include "Equipment/Helpers/EquipmentMutationHelper.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
+#include "Equipment/Actors/EquippedItemRuntimeActor.h"
 #include "Equipment/Components/EquipmentManager.h"
 #include "Equipment/Components/EquipmentPresentationComponent.h"
+#include "Equipment/Helpers/EquipmentHandSlotMutationHelper.h"
 #include "Equipment/Helpers/EquipmentReplicationHelper.h"
 #include "Equipment/Helpers/EquipmentSlotResolver.h"
-#include "Equipment/Library/EquipmentFunctionLibrary.h"
+#include "Equipment/Library/EquipmentLog.h"
+#include "Equipment/Library/FunctionLibraries/EquipmentFunctionLibrary.h"
 #include "Inventory/Components/InventoryManager.h"
 #include "Item/ItemInstance.h"
-#include "Equipment/Actors/EquippedItemRuntimeActor.h"
 
-UItemInstance* FEquipmentMutationHelper::EquipItem(UEquipmentManager& Manager, UItemInstance* Item, EEquipmentSlot Slot, bool bSwapToBag)
+UItemInstance* FEquipmentMutationHelper::EquipItem(UEquipmentManager& Manager, UItemInstance* Item, EEquipmentSlot Slot,
+	bool bSwapToBag)
 {
 	if (!Item)
 	{
@@ -38,18 +41,17 @@ UItemInstance* FEquipmentMutationHelper::UnequipItem(UEquipmentManager& Manager,
 	UItemInstance* CurrentItem = Manager.GetEquippedItem(Slot);
 	if (!CurrentItem)
 	{
-		UE_LOG(LogEquipmentManager, Verbose, TEXT("EquipmentManager::UnequipItem: Slot %d is already empty."), static_cast<int32>(Slot));
+		UE_LOG(LogEquipmentManager, Verbose, TEXT("EquipmentManager::UnequipItem: Slot %d is already empty."),
+			static_cast<int32>(Slot));
 		return nullptr;
 	}
 
 	FEquipmentReplicationHelper::RemoveEquipment(Manager, Slot);
 
-	if (bMoveToBag && Manager.InventoryManager)
+	if (bMoveToBag && Manager.InventoryManager && !Manager.InventoryManager->AddItem(CurrentItem))
 	{
-		if (!Manager.InventoryManager->AddItem(CurrentItem))
-		{
-			PH_LOG_WARNING(LogEquipmentManager, "UnequipItem failed: Could not return Item=%s to inventory.", *GetNameSafe(CurrentItem));
-		}
+		PH_LOG_WARNING(LogEquipmentManager, "UnequipItem failed: Could not return Item=%s to inventory.",
+			*GetNameSafe(CurrentItem));
 	}
 
 	Manager.OnEquipmentChanged.Broadcast(Slot, nullptr, CurrentItem);
@@ -77,7 +79,8 @@ void FEquipmentMutationHelper::UnequipAll(UEquipmentManager& Manager, bool bMove
 	}
 }
 
-AEquippedItemRuntimeActor* FEquipmentMutationHelper::GetActiveRuntimeItemActor(const UEquipmentManager& Manager, EEquipmentSlot Slot)
+AEquippedItemRuntimeActor* FEquipmentMutationHelper::GetActiveRuntimeItemActor(const UEquipmentManager& Manager,
+	EEquipmentSlot Slot)
 {
 	if (Manager.EquipmentPresentation)
 	{
@@ -87,7 +90,8 @@ AEquippedItemRuntimeActor* FEquipmentMutationHelper::GetActiveRuntimeItemActor(c
 	return nullptr;
 }
 
-UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Manager, UItemInstance* Item, EEquipmentSlot Slot, bool bSwapToBag, bool bUseGroundPickupRules)
+UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Manager, UItemInstance* Item,
+	EEquipmentSlot Slot, bool bSwapToBag, bool bUseGroundPickupRules)
 {
 	if (!Item)
 	{
@@ -97,14 +101,15 @@ UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Ma
 	FItemBase* BaseData = Item->GetBaseData();
 	if (!BaseData)
 	{
-		PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal failed: Item=%s had no base data.", *GetNameSafe(Item));
+		PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal failed: Item=%s had no base data.",
+			*GetNameSafe(Item));
 		return nullptr;
 	}
 
-	
 	if (!BaseData->IsEquippable())
 	{
-		PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal rejected Item=%s because it is not equippable.", *GetNameSafe(Item));
+		PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal rejected Item=%s because it is not equippable.",
+			*GetNameSafe(Item));
 		return nullptr;
 	}
 
@@ -115,7 +120,8 @@ UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Ma
 
 	if (Slot == EEquipmentSlot::ES_None)
 	{
-		PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal failed: Could not determine a slot for Item=%s.", *GetNameSafe(Item));
+		PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal failed: Could not determine a slot for Item=%s.",
+			*GetNameSafe(Item));
 		return nullptr;
 	}
 
@@ -124,45 +130,20 @@ UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Ma
 		: FEquipmentSlotResolver::CanEquipToSlot(Manager, Item, Slot);
 	if (!bCanEquip)
 	{
-		PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal rejected Item=%s for Slot=%d.", *GetNameSafe(Item), static_cast<int32>(Slot));
+		PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal rejected Item=%s for Slot=%d.", *GetNameSafe(Item),
+			static_cast<int32>(Slot));
 		return nullptr;
 	}
 
 	if (Item->bIsTwoHanded() && Slot == EEquipmentSlot::ES_TwoHand)
 	{
-		UItemInstance* OldMainHand = nullptr;
-		UItemInstance* OldOffHand = nullptr;
-		UItemInstance* OldTwoHand = nullptr;
-
-		if (HandleTwoHandedWeapon(Manager, Item, bSwapToBag, OldMainHand, OldOffHand, OldTwoHand))
-		{
-			UE_LOG(LogEquipmentManager, Log, TEXT("EquipmentManager: Equipped two-handed '%s'."), *GetNameSafe(Item));
-			return OldMainHand ? OldMainHand : (OldOffHand ? OldOffHand : OldTwoHand);
-		}
-
-		return nullptr;
+		UItemInstance* DisplacedItem = FEquipmentHandSlotMutationHelper::EquipTwoHandedItem(Manager, Item, bSwapToBag);
+		UE_LOG(LogEquipmentManager, Log, TEXT("EquipmentManager: Equipped two-handed '%s'."), *GetNameSafe(Item));
+		return DisplacedItem;
 	}
 
-	// An equipped two-hander only conflicts with the HAND slots. The old
-	// condition (Slot != ES_TwoHand) displaced the two-hander when equipping
-	// ANYTHING — a helmet or ring would silently unequip your weapon.
-	UItemInstance* OldTwoHandItem = nullptr;
-	const bool bIncomingHandSlot =
-		Slot == EEquipmentSlot::ES_MainHand || Slot == EEquipmentSlot::ES_OffHand;
-	if (bIncomingHandSlot)
-	{
-		OldTwoHandItem = Manager.GetEquippedItem(EEquipmentSlot::ES_TwoHand);
-		if (OldTwoHandItem)
-		{
-			FEquipmentReplicationHelper::RemoveEquipment(Manager, EEquipmentSlot::ES_TwoHand);
-
-			if (bSwapToBag && Manager.InventoryManager && !Manager.InventoryManager->AddItem(OldTwoHandItem))
-			{
-				PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal failed: Could not return displaced two-hand Item=%s to inventory.", *GetNameSafe(OldTwoHandItem));
-			}
-		}
-	}
-
+	UItemInstance* OldTwoHandItem = FEquipmentHandSlotMutationHelper::UnequipConflictingTwoHandedItem(Manager, Slot,
+		bSwapToBag);
 	UItemInstance* OldItem = Manager.GetEquippedItem(Slot);
 
 	FEquipmentReplicationHelper::AddEquipment(Manager, Slot, Item);
@@ -172,12 +153,10 @@ UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Ma
 		Manager.InventoryManager->RemoveItem(Item);
 	}
 
-	if (OldItem && bSwapToBag && Manager.InventoryManager)
+	if (OldItem && bSwapToBag && Manager.InventoryManager && !Manager.InventoryManager->AddItem(OldItem))
 	{
-		if (!Manager.InventoryManager->AddItem(OldItem))
-		{
-			PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal failed: Could not return displaced Item=%s to inventory.", *GetNameSafe(OldItem));
-		}
+		PH_LOG_WARNING(LogEquipmentManager, "EquipItemInternal failed: Could not return displaced Item=%s to inventory.",
+			*GetNameSafe(OldItem));
 	}
 
 	if (OldTwoHandItem)
@@ -190,50 +169,4 @@ UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Ma
 		*GetNameSafe(Item), static_cast<int32>(Slot));
 
 	return OldItem;
-}
-
-bool FEquipmentMutationHelper::HandleTwoHandedWeapon(UEquipmentManager& Manager, UItemInstance* Item, bool bSwapToBag, UItemInstance*& OutOldMainHand, UItemInstance*& OutOldOffHand, UItemInstance*& OutOldTwoHand)
-{
-	OutOldMainHand = Manager.GetEquippedItem(EEquipmentSlot::ES_MainHand);
-	OutOldOffHand = Manager.GetEquippedItem(EEquipmentSlot::ES_OffHand);
-	OutOldTwoHand = Manager.GetEquippedItem(EEquipmentSlot::ES_TwoHand);
-
-	FEquipmentReplicationHelper::RemoveEquipment(Manager, EEquipmentSlot::ES_MainHand);
-	FEquipmentReplicationHelper::RemoveEquipment(Manager, EEquipmentSlot::ES_OffHand);
-	FEquipmentReplicationHelper::RemoveEquipment(Manager, EEquipmentSlot::ES_TwoHand);
-	FEquipmentReplicationHelper::AddEquipment(Manager, EEquipmentSlot::ES_TwoHand, Item);
-
-	if (Manager.InventoryManager)
-	{
-		Manager.InventoryManager->RemoveItem(Item);
-	}
-
-	if (OutOldMainHand && bSwapToBag && Manager.InventoryManager)
-	{
-		Manager.InventoryManager->AddItem(OutOldMainHand);
-	}
-
-	if (OutOldOffHand && bSwapToBag && Manager.InventoryManager)
-	{
-		Manager.InventoryManager->AddItem(OutOldOffHand);
-	}
-
-	if (OutOldTwoHand && bSwapToBag && Manager.InventoryManager)
-	{
-		Manager.InventoryManager->AddItem(OutOldTwoHand);
-	}
-
-	Manager.OnEquipmentChanged.Broadcast(EEquipmentSlot::ES_TwoHand, Item, OutOldTwoHand);
-
-	if (OutOldMainHand)
-	{
-		Manager.OnEquipmentChanged.Broadcast(EEquipmentSlot::ES_MainHand, nullptr, OutOldMainHand);
-	}
-
-	if (OutOldOffHand)
-	{
-		Manager.OnEquipmentChanged.Broadcast(EEquipmentSlot::ES_OffHand, nullptr, OutOldOffHand);
-	}
-
-	return true;
 }

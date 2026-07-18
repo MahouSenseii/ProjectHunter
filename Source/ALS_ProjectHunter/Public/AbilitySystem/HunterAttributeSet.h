@@ -1,4 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -45,11 +44,7 @@ public:
 	static void GetAllAttributes(TArray<FGameplayAttribute>& OutAttributes);
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	/* ============================= */
 	/* === Attribute Utility Functions === */
-	/* ============================= */
-
 	float GetAttributeValue(const FGameplayAttribute& Attribute) const;	
 	void SetIsInitializingStats(bool bInInitializing);
 	bool IsInitializingStats() const;
@@ -74,17 +69,13 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Attribute Maps")
 	TMap<FString, FGameplayAttribute> AllAttributesMap;
- 
-	/* ============================= */
 	/* === Primary Attributes === */
-	/* ============================= */
-
-	/** Determines the character’s strength, increasing max health and physical damage. */
+	/** Determines the character's strength, increasing max health and physical damage. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Strength, Category = "Primary Attribute" , meta = (DisplayName = "Strength"))
 	FGameplayAttributeData Strength;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Strength); // +5 Max Health, +2% Physical Damage
 
-	/** Determines the character’s intelligence, increasing mana and elemental damage. */
+	/** Determines the character's intelligence, increasing mana and elemental damage. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Intelligence, Category = "Primary Attribute", meta = (DisplayName = "Intelligence"))
 	FGameplayAttributeData Intelligence;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Intelligence); // +5 Mana, +1.3% Elemental Damage
@@ -140,11 +131,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_XPPenalty, Category = "Experience", meta = (DisplayName = "XP Penalty"))
 	FGameplayAttributeData XPPenalty;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, XPPenalty);
-	
-	/* ============================= */
 	/* === Secondary Attributes === */
-	/* ============================= */
-
 	/** 
 	 * Increases all forms of damage globally. 
 	 * Applied as a multiplier to all damage types.
@@ -152,11 +139,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_GlobalDamages, Category = "Secondary Attribute | Damage", meta = (DisplayName = "GlobalDamages"))
 	FGameplayAttributeData GlobalDamages;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, GlobalDamages);
-
-	/* ========================= */
 	/* === Damage Attributes === */
-	/* ========================= */
-
 	/** Physical Damage */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MinPhysicalDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Min Physical Damage"))
 	FGameplayAttributeData MinPhysicalDamage;
@@ -307,13 +290,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionMoreDamage, Category = "Secondary Attribute | Damage", meta = (DisplayName = "Corruption More Damage"))
 	FGameplayAttributeData CorruptionMoreDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionMoreDamage);
-
-
-
-	/* ============================= */
 	/* === Other Offensive Stats === */
-	/* ============================= */
-
 	/** Increases area-based damage output. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AreaDamage, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Area Damage"))
 	FGameplayAttributeData AreaDamage;
@@ -324,12 +301,12 @@ public:
 	FGameplayAttributeData AreaOfEffect;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AreaOfEffect);
 
-	/** Increases mêlée and ranged attack reach. */
+	/** Increases melee and ranged attack reach. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AttackRange, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Attack Range"))
 	FGameplayAttributeData AttackRange;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AttackRange);
 
-	/** Increases the speed of physical mêlée attacks. */
+	/** Increases the speed of physical melee attacks. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AttackSpeed, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Attack Speed"))
 	FGameplayAttributeData AttackSpeed;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AttackSpeed);
@@ -359,7 +336,7 @@ public:
 	FGameplayAttributeData ElementalDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ElementalDamage);
 
-	/** Increases mêlée attack damage. */
+	/** Increases melee attack damage. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MeleeDamage, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Melee Damage"))
 	FGameplayAttributeData MeleeDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MeleeDamage);
@@ -406,11 +383,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChainDamage, Category = "Secondary Attribute | Offensive", meta = (DisplayName = "Chain Damage"))
 	FGameplayAttributeData ChainDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChainDamage);
-
-	/* ============================= */
 	/* === Damage Conversion === */
-	/* ============================= */
-
 	/** Physical Damage Conversions */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PhysicalToFire, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Physical To Fire"))
 	FGameplayAttributeData PhysicalToFire;
@@ -536,11 +509,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionToLight, Category = "Secondary Attribute | Conversion", meta = (DisplayName = "Corruption To Light"))
 	FGameplayAttributeData CorruptionToLight;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionToLight);
-
-	/* =================================== */
 	/* === Chance to Apply Ailments === */
-	/* =================================== */
-	
 	/** Increases the chance to apply bleed effects. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToBleed, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Bleed"))
 	FGameplayAttributeData ChanceToBleed;
@@ -585,12 +554,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToStun, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Stun"))
 	FGameplayAttributeData ChanceToStun;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToStun);
-
-
-	/* ============================= */
 	/* === Duration Attributes === */
-	/* ============================= */
-
 	/** Duration of burn effects (fire damage over time). */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BurnDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Burn Duration"))
 	FGameplayAttributeData BurnDuration;
@@ -625,11 +589,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PurifyDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Purify Duration"))
 	FGameplayAttributeData PurifyDuration;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PurifyDuration);
-
-	/* ============================= */
 	/* === Resistance Attributes === */
-	/* ============================= */
-
 	/** Increases all defensive resistances. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_GlobalDefenses, Category = "Secondary Attribute | Resistances", meta = (DisplayName = "Global Defenses"))
 	FGameplayAttributeData GlobalDefenses;
@@ -817,38 +777,33 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ReflectChanceElemental, Category = "Secondary Attribute | Reflection", meta = (DisplayName = "Reflect Chance Elemental"))
 	FGameplayAttributeData ReflectChanceElemental;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ReflectChanceElemental);
-	
-
-	/* ============================= */
 	/* === Piercing Attributes === */
-	/* ============================= */
-
-	/** Ignores a percentage of the target’s armor. */
+	/** Ignores a percentage of the target's armor. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArmourPiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Armour Piercing"))
 	FGameplayAttributeData ArmourPiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ArmourPiercing);
 
-	/** Ignores a percentage of the target’s fire resistance. */
+	/** Ignores a percentage of the target's fire resistance. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FirePiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Fire Piercing"))
 	FGameplayAttributeData FirePiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, FirePiercing);
 
-	/** Ignores a percentage of the target’s light resistance. */
+	/** Ignores a percentage of the target's light resistance. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightPiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Light Piercing"))
 	FGameplayAttributeData LightPiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightPiercing);
 
-	/** Ignores a percentage of the target’s lightning resistance. */
+	/** Ignores a percentage of the target's lightning resistance. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LightningPiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Lightning Piercing"))
 	FGameplayAttributeData LightningPiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LightningPiercing);
 
-	/** Ignores a percentage of the target’s corruption resistance. */
+	/** Ignores a percentage of the target's corruption resistance. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionPiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Corruption Piercing"))
 	FGameplayAttributeData CorruptionPiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionPiercing);
 
-	/** Ignores a percentage of the target’s ice resistance. */
+	/** Ignores a percentage of the target's ice resistance. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_IcePiercing, Category = "Secondary Attribute | Piercing", meta = (DisplayName = "Ice Piercing"))
 	FGameplayAttributeData IcePiercing;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, IcePiercing);
@@ -933,16 +888,8 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AuraRadius, Category = "Vital |  Misc", meta = (DisplayName = "Aura Radius"))
 	FGameplayAttributeData AuraRadius;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AuraRadius);
-	
-
-	/* ============================= */
 	/* === Vitals === */
-	/* ============================= */
-
-	/* ============================= */
 	/* === Health Attributes === */
-	/* ============================= */
-
 /** Current health of the character. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Health, Category = "Vital |  Health", meta = (DisplayName = "Health"))
 	FGameplayAttributeData Health;
@@ -997,11 +944,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PercentageReservedHealth, Category = "Vital |  Health", meta = (DisplayName = "Percentage Reserved Health"))
 	FGameplayAttributeData PercentageReservedHealth;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PercentageReservedHealth);
-	
-		/* ============================= */
 	/* === Stamina Attributes === */
-	/* ============================= */
-
 	/** Current stamina used for sprinting, dodging, and special actions. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Stamina, Category = "Vital | Stamina", meta = (DisplayName = "Stamina"))
 	FGameplayAttributeData Stamina;
@@ -1064,12 +1007,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PercentageReservedStamina, Category = "Vital |Stamina", meta = (DisplayName = "Percentage Reserved Stamina"))
 	FGameplayAttributeData PercentageReservedStamina;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PercentageReservedStamina);
-
-
-	/* ============================= */
 	/* === Mana Attributes === */
-	/* ============================= */
-
 	/** Current mana used for casting spells. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Mana, Category = "Vital |  Mana", meta = (DisplayName = "Mana"))
 	FGameplayAttributeData Mana;
@@ -1124,11 +1062,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PercentageReservedMana, Category = "Vital |  Mana", meta = (DisplayName = "Percentage Reserved Mana"))
 	FGameplayAttributeData PercentageReservedMana;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PercentageReservedMana);
-
-	/* ============================= */
 	/* === Arcane Shield (Energy Shield) Attributes === */
-	/* ============================= */
-
 	/** Current arcane shield value (absorbs damage before health is affected). */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArcaneShield, Category = "Vital |Arcane Shield", meta = (DisplayName = "Arcane Shield"))
 	FGameplayAttributeData ArcaneShield;
@@ -1186,11 +1120,7 @@ public:
 
 
 protected:
-
-	/* ============================= */
 	/* === Health Replication Functions === */
-	/* ============================= */
-
 	/** Called when health value changes. */
 	UFUNCTION()
 	void OnRep_Health(const FGameplayAttributeData& OldHealth) const;
@@ -1234,11 +1164,7 @@ protected:
 	/** Called when percentage reserved health changes. */
 	UFUNCTION()
 	void OnRep_PercentageReservedHealth(const FGameplayAttributeData& OldAmount) const;
-
-	/* ============================= */
 	/* === Stamina Replication Functions === */
-	/* ============================= */
-
 	/** Called when stamina value changes. */
 	UFUNCTION()
 	void OnRep_Stamina(const FGameplayAttributeData& OldStamina) const;
@@ -1286,12 +1212,7 @@ protected:
 	/** Called when percentage reserved stamina changes. */
 	UFUNCTION()
 	void OnRep_PercentageReservedStamina(const FGameplayAttributeData& OldAmount) const;
-
-	
-	/* ============================= */
 	/* === Mana Replication Functions === */
-	/* ============================= */
-
 	/** Called when mana value changes. */
 	UFUNCTION()
 	void OnRep_Mana(const FGameplayAttributeData& OldAmount) const;
@@ -1335,11 +1256,7 @@ protected:
 	/** Called when percentage reserved mana changes. */
 	UFUNCTION()
 	void OnRep_PercentageReservedMana(const FGameplayAttributeData& OldAmount) const;
-
-	/* ============================= */
 	/* === Arcane Shield (Energy Shield) Replication === */
-	/* ============================= */
-
 	/** Called when arcane shield value changes. */
 	UFUNCTION()
 	void OnRep_ArcaneShield(const FGameplayAttributeData& OldAmount) const;
@@ -1383,11 +1300,7 @@ protected:
 	/** Called when percentage reserved arcane shield changes. */
 	UFUNCTION()
 	void OnRep_PercentageReservedArcaneShield(const FGameplayAttributeData& OldAmount) const;
-
-	/* ============================= */
 	/* === Primary Attributes Replication === */
-	/* ============================= */
-
 	/** Called when gems currency changes. */
 	UFUNCTION()
 	void OnRep_Gems(const FGameplayAttributeData& OldAmount) const;
@@ -1423,12 +1336,7 @@ protected:
 	/** Called when the mirrored progression level changes. */
 	UFUNCTION()
 	void OnRep_PlayerLevel(const FGameplayAttributeData& OldAmount) const;
-
-
-	/* ==============================================*/
 	/* ===  EXPERIENCE GAIN MODIFIERS Functions === */
-	/* ============================================ */
-	
 	UFUNCTION()
 	void OnRep_GlobalXPGain(const FGameplayAttributeData& OldValue) const;
 	
@@ -1442,12 +1350,7 @@ protected:
 	
 	UFUNCTION()
 	void OnRep_XPPenalty(const FGameplayAttributeData& OldValue) const;
-
-
-	/* ===================================== */
 	/* === Damage Replication Functions === */
-	/* =================================== */
-
 	/** Called when global damage Damage changes. */
 	UFUNCTION()
 	void OnRep_GlobalDamages(const FGameplayAttributeData& OldAmount) const;
@@ -1523,12 +1426,7 @@ protected:
 	void OnRep_PhysicalFlatDamage(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_PhysicalPercentDamage(const FGameplayAttributeData& OldAmount) const;
-
-
-	/* ============================= */
 /* === Damage Conversion OnRep Functions === */
-/* ============================= */
-
 /** Physical Damage Conversion OnRep Functions */
 UFUNCTION()
 void OnRep_PhysicalToFire(const FGameplayAttributeData& OldAmount) const;
@@ -1624,11 +1522,7 @@ void OnRep_CorruptionToLightning(const FGameplayAttributeData& OldAmount) const;
 
 UFUNCTION()
 void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
-
-	/* ============================= */
 	/* === Offensive Stats Replication Functions === */
-	/* ============================= */
-
 	UFUNCTION()
 	void OnRep_AreaDamage(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
@@ -1687,11 +1581,7 @@ void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 	void OnRep_LightMoreDamage(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_CorruptionMoreDamage(const FGameplayAttributeData& OldAmount) const;
-
-	/* ============================= */
 	/* === Resistance Replication Functions === */
-	/* ============================= */
-
 	/** Called when global defenses change. */
 	UFUNCTION()
 	void OnRep_GlobalDefenses(const FGameplayAttributeData& OldAmount) const;
@@ -1779,12 +1669,7 @@ void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 	void OnRep_LightDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_CorruptionDamageTakenMultiplier(const FGameplayAttributeData& OldAmount) const;
-
-	
-	/* ============================= */
 	/* === Piercing Replication Functions === */
-	/* ============================= */
-
 	UFUNCTION()
 	void OnRep_ArmourPiercing(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
@@ -1797,11 +1682,7 @@ void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 	void OnRep_CorruptionPiercing(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_IcePiercing(const FGameplayAttributeData& OldAmount) const;
-
-	/* ============================= */
 	/* === Miscellaneous Attributes Replication === */
-	/* ============================= */
-
 	UFUNCTION()
 	void OnRep_ComboCounter(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
@@ -1839,11 +1720,7 @@ void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 	void OnRep_AuraEffect(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_AuraRadius(const FGameplayAttributeData& OldAmount) const;
-
-	/* ============================= */
 	/* === Chance To Apply Ailments Replication === */
-	/* ============================= */
-
 	UFUNCTION()
 	void OnRep_ChanceToBleed(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
@@ -1862,11 +1739,7 @@ void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 	void OnRep_ChanceToStun(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_ChanceToPurify(const FGameplayAttributeData& OldAmount) const;
-
-	/* ============================= */
 	/* === Status Effect Duration Replication === */
-	/* ============================= */
-
 	UFUNCTION()
 	void OnRep_BurnDuration(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()

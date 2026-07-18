@@ -1,4 +1,3 @@
-// PHGameMode.h
 
 #pragma once
 
@@ -22,8 +21,7 @@ public:
 
 	virtual void BeginPlay() override;
 
-	// ── Player spawn ─────────────────────────────────────────────────────────
-
+	// Player spawn
 	/**
 	 * Choose the best PlayerStart for a restarting player.
 	 * Override point for spawn-point selection logic (e.g. respawn at checkpoint,
@@ -37,16 +35,14 @@ public:
 	 */
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 
-	// ── Match lifecycle (multiplayer foundation) ─────────────────────────────
-
+	// Match lifecycle (multiplayer foundation)
 	/**
 	 * Can the match start?  In single-player this always returns true.
 	 * Override in a dedicated-server subclass to wait for min player count.
 	 */
 	virtual bool ReadyToStartMatch_Implementation() override;
 
-	// ── Utility ──────────────────────────────────────────────────────────────
-
+	// Utility
 	/**
 	 * Called when a player character dies.
 	 * Handles respawn timer, spectating, or game-over logic.
@@ -56,8 +52,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Game")
 	virtual void OnPlayerDied(AController* DeadPlayer, AController* Killer);
 
-	// ── Configuration ────────────────────────────────────────────────────────
-
+	// Configuration
 	/** Seconds before a dead player is automatically respawned. 0 = instant. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Game|Respawn",
 		meta = (ClampMin = 0.0f))

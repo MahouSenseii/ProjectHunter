@@ -1,25 +1,22 @@
-// Copyright © 2025 MahouSensei
-// Author: Quentin Davis
-
 #include "Menu/Widgets/PHMenuTabBarWidget.h"
-#include "Menu/Widgets/PHMenuTabButtonWidget.h"
+
 #include "Components/PanelWidget.h"
+#include "Menu/Widgets/PHMenuTabButtonWidget.h"
 
 void UPHMenuTabBarWidget::InitializeTabs(const TArray<FMenuEntry>& Entries)
 {
 	if (!TabWidgetClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UPHMenuTabBarWidget::InitializeTabs — TabWidgetClass is not set on %s."), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("UPHMenuTabBarWidget::InitializeTabs - TabWidgetClass is not set on %s."), *GetName());
 		return;
 	}
 
 	if (!TabContainer)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UPHMenuTabBarWidget::InitializeTabs — TabContainer widget is missing on %s. Name it 'TabContainer' in the BP designer."), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("UPHMenuTabBarWidget::InitializeTabs - TabContainer widget is missing on %s. Name it 'TabContainer' in the BP designer."), *GetName());
 		return;
 	}
 
-	// Clear any previously spawned tabs
 	TabContainer->ClearChildren();
 	SpawnedTabs.Empty();
 
@@ -38,7 +35,6 @@ void UPHMenuTabBarWidget::InitializeTabs(const TArray<FMenuEntry>& Entries)
 		SpawnedTabs.Add(Tab);
 	}
 
-	// Auto-select the first tab if available
 	if (SpawnedTabs.Num() > 0 && SpawnedTabs[0])
 	{
 		SelectTab(SpawnedTabs[0]->GetMenuType());

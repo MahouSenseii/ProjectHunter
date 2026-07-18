@@ -1,5 +1,6 @@
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystem/HunterAbilitySystemComponent.h"
+#include "AbilitySystem/Library/FunctionLibraries/PHResourceFunctionLibrary.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
@@ -33,31 +34,6 @@ namespace HunterAttributeSetPrivate
 		}
 	}
 
-	float ClampWithOptionalCap(float Value, float MaxCap)
-	{
-		const float ClampedValue = FMath::Max(Value, 0.0f);
-		return MaxCap > 0.0f ? FMath::Min(ClampedValue, MaxCap) : ClampedValue;
-	}
-
-	float ComputeComponentReservedAmount(float FlatReserved, float PercentageReserved, float RawMaxValue)
-	{
-		return FMath::Max(FlatReserved, 0.0f) + (FMath::Max(PercentageReserved, 0.0f) * 0.01f * FMath::Max(RawMaxValue, 0.0f));
-	}
-
-	float ClampReservedAmount(float ReservedAmount, float RawMaxValue, float MaxReservedValue)
-	{
-		const float EffectiveRawMax = FMath::Max(RawMaxValue, 0.0f);
-		const float ReservedCap = MaxReservedValue > 0.0f
-			? FMath::Min(FMath::Max(MaxReservedValue, 0.0f), EffectiveRawMax)
-			: EffectiveRawMax;
-
-		return FMath::Clamp(ReservedAmount, 0.0f, ReservedCap);
-	}
-
-	float ComputeEffectiveMax(float RawMaxValue, float ReservedAmount)
-	{
-		return FMath::Clamp(FMath::Max(RawMaxValue, 0.0f) - FMath::Max(ReservedAmount, 0.0f), 0.0f, FMath::Max(RawMaxValue, 0.0f));
-	}
 }
 
 
@@ -621,24 +597,23 @@ void UHunterAttributeSet::UpdateDerivedVitalAttributes(const FGameplayAttribute&
 void UHunterAttributeSet::UpdateHealthDerivedAttributes()
 {
 	const float RawMaxHealth = FMath::Max(GetMaxHealth(), 0.0f);
+	const FPHResourceReservationResult Reservation = UPHResourceFunctionLibrary::ResolveResourceReservation(
+		FPHResourceReservationInput(
+			RawMaxHealth,
+			GetFlatReservedHealth(),
+			GetPercentageReservedHealth(),
+			GetReservedHealth(),
+			GetMaxReservedHealth()));
 
-	const float ComponentReservedHealth = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
-		GetFlatReservedHealth(), GetPercentageReservedHealth(), RawMaxHealth);
-	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedHealth, KINDA_SMALL_NUMBER);
-	const float TargetReservedHealth = HunterAttributeSetPrivate::ClampReservedAmount(
-		bUseComponentReservation ? ComponentReservedHealth : GetReservedHealth(),
-		RawMaxHealth, GetMaxReservedHealth());
-	const float TargetMaxEffectiveHealth = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxHealth, TargetReservedHealth);
+	const float TargetHealth = FMath::Clamp(GetHealth(), 0.0f, Reservation.MaxEffectiveValue);
+	const float TargetHealthRegenRate = UPHResourceFunctionLibrary::ClampWithOptionalCap(GetHealthRegenRate(), GetMaxHealthRegenRate());
+	const float TargetHealthRegenAmount = UPHResourceFunctionLibrary::ClampWithOptionalCap(GetHealthRegenAmount(), GetMaxHealthRegenAmount());
 
-	const float TargetHealth = FMath::Clamp(GetHealth(), 0.0f, TargetMaxEffectiveHealth);
-	const float TargetHealthRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetHealthRegenRate(), GetMaxHealthRegenRate());
-	const float TargetHealthRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetHealthRegenAmount(), GetMaxHealthRegenAmount());
-
-	if (bUseComponentReservation)
+	if (Reservation.bUsesComponentReservation)
 	{
-		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedHealth, TargetReservedHealth);
+		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedHealth, Reservation.ReservedValue);
 	}
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveHealth, TargetMaxEffectiveHealth);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveHealth, Reservation.MaxEffectiveValue);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Health, TargetHealth);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(HealthRegenRate, TargetHealthRegenRate);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(HealthRegenAmount, TargetHealthRegenAmount);
@@ -648,8 +623,8 @@ void UHunterAttributeSet::UpdateHealthDerivedAttributes()
 		VeryVerbose,
 		TEXT("UpdateHealthDerivedAttributes: MaxHealth=%.2f ReservedHealth=%.2f EffectiveMaxHealth=%.2f Health=%.2f RegenRate=%.2f RegenAmount=%.2f"),
 		RawMaxHealth,
-		TargetReservedHealth,
-		TargetMaxEffectiveHealth,
+		Reservation.ReservedValue,
+		Reservation.MaxEffectiveValue,
 		TargetHealth,
 		TargetHealthRegenRate,
 		TargetHealthRegenAmount);
@@ -658,24 +633,23 @@ void UHunterAttributeSet::UpdateHealthDerivedAttributes()
 void UHunterAttributeSet::UpdateManaDerivedAttributes()
 {
 	const float RawMaxMana = FMath::Max(GetMaxMana(), 0.0f);
+	const FPHResourceReservationResult Reservation = UPHResourceFunctionLibrary::ResolveResourceReservation(
+		FPHResourceReservationInput(
+			RawMaxMana,
+			GetFlatReservedMana(),
+			GetPercentageReservedMana(),
+			GetReservedMana(),
+			GetMaxReservedMana()));
 
-	const float ComponentReservedMana = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
-		GetFlatReservedMana(), GetPercentageReservedMana(), RawMaxMana);
-	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedMana, KINDA_SMALL_NUMBER);
-	const float TargetReservedMana = HunterAttributeSetPrivate::ClampReservedAmount(
-		bUseComponentReservation ? ComponentReservedMana : GetReservedMana(),
-		RawMaxMana, GetMaxReservedMana());
-	const float TargetMaxEffectiveMana = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxMana, TargetReservedMana);
+	const float TargetMana = FMath::Clamp(GetMana(), 0.0f, Reservation.MaxEffectiveValue);
+	const float TargetManaRegenRate = UPHResourceFunctionLibrary::ClampWithOptionalCap(GetManaRegenRate(), GetMaxManaRegenRate());
+	const float TargetManaRegenAmount = UPHResourceFunctionLibrary::ClampWithOptionalCap(GetManaRegenAmount(), GetMaxManaRegenAmount());
 
-	const float TargetMana = FMath::Clamp(GetMana(), 0.0f, TargetMaxEffectiveMana);
-	const float TargetManaRegenRate   = HunterAttributeSetPrivate::ClampWithOptionalCap(GetManaRegenRate(),   GetMaxManaRegenRate());
-	const float TargetManaRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetManaRegenAmount(), GetMaxManaRegenAmount());
-
-	if (bUseComponentReservation)
+	if (Reservation.bUsesComponentReservation)
 	{
-		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedMana, TargetReservedMana);
+		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedMana, Reservation.ReservedValue);
 	}
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveMana, TargetMaxEffectiveMana);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveMana, Reservation.MaxEffectiveValue);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Mana, TargetMana);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ManaRegenRate, TargetManaRegenRate);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ManaRegenAmount, TargetManaRegenAmount);
@@ -685,8 +659,8 @@ void UHunterAttributeSet::UpdateManaDerivedAttributes()
 		VeryVerbose,
 		TEXT("UpdateManaDerivedAttributes: MaxMana=%.2f ReservedMana=%.2f EffectiveMaxMana=%.2f Mana=%.2f RegenRate=%.2f RegenAmount=%.2f"),
 		RawMaxMana,
-		TargetReservedMana,
-		TargetMaxEffectiveMana,
+		Reservation.ReservedValue,
+		Reservation.MaxEffectiveValue,
 		TargetMana,
 		FMath::Max(GetManaRegenRate(), 0.0f),
 		FMath::Max(GetManaRegenAmount(), 0.0f));
@@ -695,24 +669,23 @@ void UHunterAttributeSet::UpdateManaDerivedAttributes()
 void UHunterAttributeSet::UpdateStaminaDerivedAttributes()
 {
 	const float RawMaxStamina = FMath::Max(GetMaxStamina(), 0.0f);
+	const FPHResourceReservationResult Reservation = UPHResourceFunctionLibrary::ResolveResourceReservation(
+		FPHResourceReservationInput(
+			RawMaxStamina,
+			GetFlatReservedStamina(),
+			GetPercentageReservedStamina(),
+			GetReservedStamina(),
+			GetMaxReservedStamina()));
 
-	const float ComponentReservedStamina = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
-		GetFlatReservedStamina(), GetPercentageReservedStamina(), RawMaxStamina);
-	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedStamina, KINDA_SMALL_NUMBER);
-	const float TargetReservedStamina = HunterAttributeSetPrivate::ClampReservedAmount(
-		bUseComponentReservation ? ComponentReservedStamina : GetReservedStamina(),
-		RawMaxStamina, GetMaxReservedStamina());
-	const float TargetMaxEffectiveStamina = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxStamina, TargetReservedStamina);
+	const float TargetStamina = FMath::Clamp(GetStamina(), 0.0f, Reservation.MaxEffectiveValue);
+	const float TargetStaminaRegenRate = UPHResourceFunctionLibrary::ClampWithOptionalCap(GetStaminaRegenRate(), GetMaxStaminaRegenRate());
+	const float TargetStaminaRegenAmount = UPHResourceFunctionLibrary::ClampWithOptionalCap(GetStaminaRegenAmount(), GetMaxStaminaRegenAmount());
 
-	const float TargetStamina = FMath::Clamp(GetStamina(), 0.0f, TargetMaxEffectiveStamina);
-	const float TargetStaminaRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetStaminaRegenRate(), GetMaxStaminaRegenRate());
-	const float TargetStaminaRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetStaminaRegenAmount(), GetMaxStaminaRegenAmount());
-
-	if (bUseComponentReservation)
+	if (Reservation.bUsesComponentReservation)
 	{
-		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedStamina, TargetReservedStamina);
+		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedStamina, Reservation.ReservedValue);
 	}
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveStamina, TargetMaxEffectiveStamina);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveStamina, Reservation.MaxEffectiveValue);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Stamina, TargetStamina);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(StaminaRegenRate, TargetStaminaRegenRate);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(StaminaRegenAmount, TargetStaminaRegenAmount);
@@ -722,8 +695,8 @@ void UHunterAttributeSet::UpdateStaminaDerivedAttributes()
 		VeryVerbose,
 		TEXT("UpdateStaminaDerivedAttributes: MaxStamina=%.2f ReservedStamina=%.2f EffectiveMaxStamina=%.2f Stamina=%.2f RegenRate=%.2f RegenAmount=%.2f DegenRate=%.2f DegenAmount=%.2f"),
 		RawMaxStamina,
-		TargetReservedStamina,
-		TargetMaxEffectiveStamina,
+		Reservation.ReservedValue,
+		Reservation.MaxEffectiveValue,
 		TargetStamina,
 		TargetStaminaRegenRate,
 		TargetStaminaRegenAmount,
@@ -734,26 +707,23 @@ void UHunterAttributeSet::UpdateStaminaDerivedAttributes()
 void UHunterAttributeSet::UpdateArcaneShieldDerivedAttributes()
 {
 	const float RawMaxArcaneShield = FMath::Max(GetMaxArcaneShield(), 0.0f);
-	const float ComponentReservedArcaneShield = HunterAttributeSetPrivate::ComputeComponentReservedAmount(
-		GetFlatReservedArcaneShield(),
-		GetPercentageReservedArcaneShield(),
-		RawMaxArcaneShield);
-	const bool bUseComponentReservation = !FMath::IsNearlyZero(ComponentReservedArcaneShield, KINDA_SMALL_NUMBER);
-	const float TargetReservedArcaneShield = HunterAttributeSetPrivate::ClampReservedAmount(
-		bUseComponentReservation ? ComponentReservedArcaneShield : GetReservedArcaneShield(),
-		RawMaxArcaneShield,
-		GetMaxReservedArcaneShield());
-	const float TargetMaxEffectiveArcaneShield = HunterAttributeSetPrivate::ComputeEffectiveMax(RawMaxArcaneShield, TargetReservedArcaneShield);
-	const float TargetArcaneShield = FMath::Clamp(GetArcaneShield(), 0.0f, TargetMaxEffectiveArcaneShield);
-	const float TargetArcaneShieldRegenRate = HunterAttributeSetPrivate::ClampWithOptionalCap(GetArcaneShieldRegenRate(), GetMaxArcaneShieldRegenRate());
-	const float TargetArcaneShieldRegenAmount = HunterAttributeSetPrivate::ClampWithOptionalCap(GetArcaneShieldRegenAmount(), GetMaxArcaneShieldRegenAmount());
+	const FPHResourceReservationResult Reservation = UPHResourceFunctionLibrary::ResolveResourceReservation(
+		FPHResourceReservationInput(
+			RawMaxArcaneShield,
+			GetFlatReservedArcaneShield(),
+			GetPercentageReservedArcaneShield(),
+			GetReservedArcaneShield(),
+			GetMaxReservedArcaneShield()));
+	const float TargetArcaneShield = FMath::Clamp(GetArcaneShield(), 0.0f, Reservation.MaxEffectiveValue);
+	const float TargetArcaneShieldRegenRate = UPHResourceFunctionLibrary::ClampWithOptionalCap(GetArcaneShieldRegenRate(), GetMaxArcaneShieldRegenRate());
+	const float TargetArcaneShieldRegenAmount = UPHResourceFunctionLibrary::ClampWithOptionalCap(GetArcaneShieldRegenAmount(), GetMaxArcaneShieldRegenAmount());
 
-	if (bUseComponentReservation)
+	if (Reservation.bUsesComponentReservation)
 	{
-		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedArcaneShield, TargetReservedArcaneShield);
+		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedArcaneShield, Reservation.ReservedValue);
 	}
 
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveArcaneShield, TargetMaxEffectiveArcaneShield);
+	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveArcaneShield, Reservation.MaxEffectiveValue);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ArcaneShield, TargetArcaneShield);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ArcaneShieldRegenRate, TargetArcaneShieldRegenRate);
 	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ArcaneShieldRegenAmount, TargetArcaneShieldRegenAmount);
@@ -763,8 +733,8 @@ void UHunterAttributeSet::UpdateArcaneShieldDerivedAttributes()
 		VeryVerbose,
 		TEXT("UpdateArcaneShieldDerivedAttributes: MaxArcaneShield=%.2f ReservedArcaneShield=%.2f EffectiveMaxArcaneShield=%.2f ArcaneShield=%.2f RegenRate=%.2f RegenAmount=%.2f"),
 		RawMaxArcaneShield,
-		TargetReservedArcaneShield,
-		TargetMaxEffectiveArcaneShield,
+		Reservation.ReservedValue,
+		Reservation.MaxEffectiveValue,
 		TargetArcaneShield,
 		TargetArcaneShieldRegenRate,
 		TargetArcaneShieldRegenAmount);

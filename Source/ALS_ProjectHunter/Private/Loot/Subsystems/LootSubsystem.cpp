@@ -1,5 +1,7 @@
 #include "Loot/Subsystems/LootSubsystem.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
+#include "Loot/Library/FunctionLibraries/LootSettingsFunctionLibrary.h"
+#include "Loot/Library/FunctionLibraries/LootSpawnFunctionLibrary.h"
 #include "Tower/Subsystems/GroundItemSubsystem.h"
 #include "Item/ItemInstance.h"
 #include "Engine/AssetManager.h"
@@ -70,9 +72,9 @@ FLootResultBatch ULootSubsystem::GenerateLoot(const FLootRequest& Request)
 		return Batch;
 	}
 
-	FLootDropSettings FinalSettings = BuildFinalSettings(Source, Request);
-	FinalSettings = ApplyGlobalModifiers(FinalSettings);
-	FinalSettings = ApplyPlayerModifiers(FinalSettings, Request.PlayerLuck, Request.PlayerMagicFind);
+	FLootDropSettings FinalSettings = ULootSettingsFunctionLibrary::BuildSettingsFromRequest(Source, Request);
+	FinalSettings = ULootSettingsFunctionLibrary::ApplyGlobalDropChanceMultiplier(FinalSettings, GlobalDropChanceMultiplier);
+	FinalSettings = ULootSettingsFunctionLibrary::ApplyPlayerDropModifiers(FinalSettings, Request.PlayerLuck, Request.PlayerMagicFind);
 
 	int32 Seed = Request.Seed;
 	if (Seed == 0)
@@ -117,16 +119,7 @@ bool ULootSubsystem::SpawnLootAtLocation(const FLootResultBatch& Batch, FVector 
 			continue;
 		}
 
-		FVector SpawnLocation = Location;
-		if (SpreadRadius > 0.0f)
-		{
-			FVector RandomDir = SpreadRandom.VRand();
-			RandomDir.Z = 0.0f;
-			RandomDir.Normalize();
-
-			float Distance = SpreadRandom.FRandRange(0.0f, SpreadRadius);
-			SpawnLocation += RandomDir * Distance;
-		}
+		const FVector SpawnLocation = ULootSpawnFunctionLibrary::GetCircularScatterLocation(Location, SpreadRadius, SpreadRandom);
 
 		int32 GroundItemID = CachedGroundItemSubsystem->AddItemToGround(Result.Item, SpawnLocation);
 
@@ -161,26 +154,7 @@ bool ULootSubsystem::SpawnLootWithSettings(const FLootResultBatch& Batch, const 
 			continue;
 		}
 
-		FVector SpawnLocation = SpawnSettings.SpawnLocation;
-		SpawnLocation.Z += SpawnSettings.HeightOffset;
-
-		if (SpawnSettings.bUseSpawnBox)
-		{
-			const FVector Extent = SpawnSettings.SpawnBoxExtent;
-			SpawnLocation.X += SpreadRandom.FRandRange(-Extent.X, Extent.X);
-			SpawnLocation.Y += SpreadRandom.FRandRange(-Extent.Y, Extent.Y);
-			if (Extent.Z > 0.f)
-			{
-				SpawnLocation.Z += SpreadRandom.FRandRange(-Extent.Z, Extent.Z);
-			}
-		}
-		else if (SpawnSettings.ScatterRadius > 0.f)
-		{
-			FVector RandomDir = SpreadRandom.VRand();
-			RandomDir.Z = 0.f;
-			RandomDir.Normalize();
-			SpawnLocation += RandomDir * SpreadRandom.FRandRange(0.f, SpawnSettings.ScatterRadius);
-		}
+		const FVector SpawnLocation = ULootSpawnFunctionLibrary::GetSpawnLocationFromSettings(SpawnSettings, SpreadRandom);
 
 		const int32 GroundItemID = CachedGroundItemSubsystem->AddItemToGround(Result.Item, SpawnLocation);
 		if (GroundItemID != INDEX_NONE)
@@ -234,7 +208,7 @@ void ULootSubsystem::OnRegistryLoaded()
 	if (CachedRegistry)
 	{
 		UE_LOG(LogLootSubsystem, Log,
-			TEXT("OnRegistryLoaded: Registry ready – %d sources"),
+			TEXT("OnRegistryLoaded: Registry ready - %d sources"),
 			CachedRegistry->GetRowNames().Num());
 	}
 	else
@@ -323,51 +297,6 @@ bool ULootSubsystem::LoadLootTableAsync(const FLootSourceEntry& Source)
 	return Table != nullptr;
 }
 
-FLootDropSettings ULootSubsystem::BuildFinalSettings(const FLootSourceEntry& Source, const FLootRequest& Request) const
-{
-	FLootDropSettings Settings = Source.DefaultSettings;
-
-	Settings.SourceLevel = Source.BaseLevel;
-	Settings.SourceRarity = Source.SourceRarity;
-
-	if (Request.OverrideSettings.MinDrops > 0)
-	{
-		Settings.MinDrops = Request.OverrideSettings.MinDrops;
-	}
-	if (Request.OverrideSettings.MaxDrops > 0)
-	{
-		Settings.MaxDrops = Request.OverrideSettings.MaxDrops;
-	}
-	if (Request.OverrideSettings.DropChanceMultiplier != 1.0f)
-	{
-		Settings.DropChanceMultiplier = Request.OverrideSettings.DropChanceMultiplier;
-	}
-
-	return Settings;
-}
-
-FLootDropSettings ULootSubsystem::ApplyGlobalModifiers(const FLootDropSettings& Settings) const
-{
-	FLootDropSettings Modified = Settings;
-	Modified.DropChanceMultiplier *= GlobalDropChanceMultiplier;
-	return Modified;
-}
-
-FLootDropSettings ULootSubsystem::ApplyPlayerModifiers(const FLootDropSettings& Settings, float Luck, float MagicFind) const
-{
-	FLootDropSettings Modified = Settings;
-
-	// Luck affects RARITY (quality)
-	Modified.PlayerLuckBonus = Luck;
-	Modified.RarityBonusChance += Luck * 0.005f;
-
-	// Magic Find affects QUANTITY
-	Modified.PlayerMagicFindBonus = MagicFind;
-	Modified.QuantityMultiplier *= (1.0f + MagicFind * 0.01f);
-
-	return Modified;
-}
-
 bool ULootSubsystem::IsSourceRegistered(FName SourceID) const
 {
 	if (!CachedRegistry)
@@ -419,7 +348,7 @@ TArray<FName> ULootSubsystem::GetSourceIDsByCategory(ELootSourceType Category) c
 		return SourceIDs;
 	}
 
-	// GetRowMap() + reinterpret_cast<FLootSourceEntry*> is unsafe — the raw uint8* pointer
+	// GetRowMap() + reinterpret_cast<FLootSourceEntry*> is unsafe; the raw uint8* pointer
 	// skips the struct's vtable / alignment guarantees. GetAllRows<T> is the correct typed DataTable API.
 	TArray<FLootSourceEntry*> AllRows;
 	CachedRegistry->GetAllRows<FLootSourceEntry>(TEXT("GetSourceIDsByCategory"), AllRows);

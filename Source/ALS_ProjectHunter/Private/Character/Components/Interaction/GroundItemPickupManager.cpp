@@ -2,7 +2,7 @@
 #include "Inventory/Components/InventoryManager.h"
 #include "Inventory/Helpers/InventoryGroundDropResolver.h"
 #include "Equipment/Components/EquipmentManager.h"
-#include "Equipment/Library/EquipmentFunctionLibrary.h"
+#include "Equipment/Library/FunctionLibraries/EquipmentFunctionLibrary.h"
 #include "Tower/Subsystems/GroundItemSubsystem.h"
 #include "Item/ItemInstance.h"
 #include "Engine/World.h"
@@ -84,7 +84,7 @@ void FGroundItemPickupManager::Initialize(AActor* Owner, UWorld* World)
 {
 	OwnerActor = Owner;
 	WorldContext = World;
-	
+
 	if (!OwnerActor || !WorldContext)
 	{
 		UE_LOG(LogGroundItemPickupManager, Error, TEXT("GroundItemPickupManager: Invalid initialization parameters"));
@@ -92,7 +92,7 @@ void FGroundItemPickupManager::Initialize(AActor* Owner, UWorld* World)
 	}
 
 	CacheComponents();
-	
+
 	UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Initialized for %s"), *OwnerActor->GetName());
 }
 
@@ -140,7 +140,7 @@ int32 FGroundItemPickupManager::PickupAllNearby(FVector Location)
 	TArray<UItemInstance*> NearbyItems = CachedGroundItemSubsystem->GetItemInstancesInRadius(Location, PickupRadius);
 
 	int32 PickedUpCount = 0;
-	
+
 	for (UItemInstance* Item : NearbyItems)
 	{
 		if (!Item)
@@ -149,10 +149,10 @@ int32 FGroundItemPickupManager::PickupAllNearby(FVector Location)
 		}
 
 		int32 ItemID = CachedGroundItemSubsystem->GetInstanceID(Item);
-		
+
 		if (ItemID == -1)
 		{
-			UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: Could not get ID for item %s"), 
+			UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: Could not get ID for item %s"),
 				*Item->GetDisplayName().ToString());
 			continue;
 		}
@@ -163,7 +163,7 @@ int32 FGroundItemPickupManager::PickupAllNearby(FVector Location)
 		}
 	}
 
-	UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Picked up %d/%d items from area"), 
+	UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Picked up %d/%d items from area"),
 		PickedUpCount, NearbyItems.Num());
 	return PickedUpCount;
 }
@@ -212,11 +212,11 @@ bool FGroundItemPickupManager::PickupToInventoryInternal(int32 ItemID, FVector C
 
 	if (!CachedInventoryManager->CanAddItem(Item))
 	{
-		UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Inventory cannot accept %s — aborting pickup"), *Item->GetDisplayName().ToString());
+		UE_LOG(LogGroundItemPickupManager, Log, TEXT("GroundItemPickupManager: Inventory cannot accept %s - aborting pickup"), *Item->GetDisplayName().ToString());
 		return false;
 	}
 
-	// Capacity confirmed — now remove from ground and add to inventory.
+	// Capacity confirmed - now remove from ground and add to inventory.
 	UItemInstance* RemovedItem = CachedGroundItemSubsystem->RemoveItemFromGround(ItemID);
 	if (!RemovedItem)
 	{
@@ -231,13 +231,13 @@ bool FGroundItemPickupManager::PickupToInventoryInternal(int32 ItemID, FVector C
 		return true;
 	}
 
-	// AddItem failed despite CanAddItem passing — inventory state changed between
+	// AddItem failed despite CanAddItem passing - inventory state changed between
 	// the two calls. Return the item to its original location as a safety net.
 	// Note: the item was already removed from the subsystem, so we fall back to
 	// the client location rather than looking up a now-missing entry.
 	CachedGroundItemSubsystem->AddItemToGround(RemovedItem, ClientLocation);
 
-	UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: AddItem failed after CanAddItem passed for %s — returned item to ground"), *RemovedItem->GetDisplayName().ToString());
+	UE_LOG(LogGroundItemPickupManager, Warning, TEXT("GroundItemPickupManager: AddItem failed after CanAddItem passed for %s - returned item to ground"), *RemovedItem->GetDisplayName().ToString());
 	return false;
 }
 

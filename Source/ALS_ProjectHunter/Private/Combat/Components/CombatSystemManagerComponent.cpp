@@ -1,7 +1,7 @@
 #include "Combat/Components/CombatSystemManagerComponent.h"
 
 #include "Combat/Components/CombatManager.h"
-#include "Combat/Components/CombatStatusManager.h"
+#include "Combat/Components/UCombatStatusEffectApplier.h"
 
 DEFINE_LOG_CATEGORY(LogCombatSystemManager);
 
@@ -45,20 +45,20 @@ bool UCombatSystemManagerComponent::ApplyHit(
 
 void UCombatSystemManagerComponent::CleanseAll(AActor* Target)
 {
-	if (!CombatStatusManager)
+	if (!CombatStatusEffectApplier)
 	{
 		CacheCombatManagers();
 	}
 
-	if (!CombatStatusManager)
+	if (!CombatStatusEffectApplier)
 	{
 		UE_LOG(LogCombatSystemManager, Warning,
-			TEXT("CleanseAll skipped on %s because no CombatStatusManager was found."),
+			TEXT("CleanseAll skipped on %s because no combat status effect applier was found."),
 			*GetNameSafe(GetOwner()));
 		return;
 	}
 
-	CombatStatusManager->CleanseAll(Target);
+	CombatStatusEffectApplier->CleanseAll(Target);
 }
 
 void UCombatSystemManagerComponent::CacheCombatManagers()
@@ -67,10 +67,15 @@ void UCombatSystemManagerComponent::CacheCombatManagers()
 	if (!Owner)
 	{
 		CombatManager = nullptr;
-		CombatStatusManager = nullptr;
+		CombatStatusEffectApplier = nullptr;
 		return;
 	}
 
 	CombatManager = Owner->FindComponentByClass<UCombatManager>();
-	CombatStatusManager = Owner->FindComponentByClass<UCombatStatusManager>();
+	CombatStatusEffectApplier = CombatManager ? CombatManager->GetCombatStatusManager() : nullptr;
+	if (!CombatStatusEffectApplier)
+	{
+		// Legacy fallback for Blueprints that still carry a sibling status component.
+		CombatStatusEffectApplier = Owner->FindComponentByClass<UCombatStatusEffectApplier>();
+	}
 }

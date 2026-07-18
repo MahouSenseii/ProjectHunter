@@ -1,7 +1,8 @@
 #include "Player/PHPlayerState.h"
-#include "Net/UnrealNetwork.h"
+
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "Net/UnrealNetwork.h"
 #include "Tower/Subsystems/RunSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogPHPlayerState);
@@ -35,10 +36,6 @@ URunSubsystem* APHPlayerState::GetRunSubsystem() const
 
 void APHPlayerState::AdvanceFloor()
 {
-	// URunSubsystem owns the run; this PlayerState is the replicated mirror so
-	// clients/UI can read the floor. The two counters used to be independent
-	// and could silently diverge — now the subsystem advances first and the
-	// mirrored value is read back from it.
 	if (URunSubsystem* Run = GetRunSubsystem(); Run && Run->IsRunActive())
 	{
 		Run->AdvanceFloor();
@@ -46,7 +43,6 @@ void APHPlayerState::AdvanceFloor()
 	}
 	else
 	{
-		// No active run (or no subsystem): preserve standalone behavior.
 		++CurrentFloor;
 	}
 
@@ -55,8 +51,6 @@ void APHPlayerState::AdvanceFloor()
 
 void APHPlayerState::RecordKill()
 {
-	// Per-player counter (replicated) AND run-wide counter (subsystem) — these
-	// are different stats in co-op, so both increment.
 	++RunKillCount;
 
 	if (URunSubsystem* Run = GetRunSubsystem())

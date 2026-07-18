@@ -35,14 +35,14 @@ void APortalActor::BeginPlay()
 	Super::BeginPlay();
 
 	// If a direct actor reference is set, derive the destination ID from it so
-	// you only need to drag the other portal into the Details slot — no manual
+	// you only need to drag the other portal into the Details slot - no manual
 	// name matching required.
 	if (LinkedPortal)
 	{
 		DestinationPortalID = LinkedPortal->PortalID;
 
 		// Wire the return link automatically if the other portal hasn't been
-		// linked yet, so connecting A→B also connects B→A.
+		// linked yet, so connecting A->B also connects B->A.
 		if (LinkedPortal->LinkedPortal == nullptr && LinkedPortal->DestinationPortalID == NAME_None)
 		{
 			LinkedPortal->LinkedPortal        = this;
@@ -76,7 +76,7 @@ void APortalActor::BeginPlay()
 			UE_LOG(LogPortalActor, Warning,
 				TEXT("PortalActor '%s': InteractableManager.Config.InputAction is not set. "
 				     "Select the InteractableManager component in the Blueprint and set "
-				     "Config → Input Action in the Details panel."),
+				     "Config -> Input Action in the Details panel."),
 				*GetName());
 		}
 	}

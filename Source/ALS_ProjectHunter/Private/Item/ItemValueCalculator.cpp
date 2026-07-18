@@ -1,6 +1,7 @@
 #include "Item/ItemValueCalculator.h"
 
 #include "Item/ItemInstance.h"
+#include "Item/Library/FunctionLibraries/ItemCalculationFunctionLibrary.h"
 
 int32 FItemValueCalculator::GetCalculatedValue(const UItemInstance& Item)
 {
@@ -20,19 +21,7 @@ int32 FItemValueCalculator::GetCalculatedValue(const UItemInstance& Item)
 	if (Item.IsEquipment())
 	{
 		Value += Item.Stats.GetTotalAffixValue() * 10.0f;
-
-		switch (Item.Rarity)
-		{
-		case EItemRarity::IR_GradeF: Value *= 1.0f; break;
-		case EItemRarity::IR_GradeE: Value *= 1.5f; break;
-		case EItemRarity::IR_GradeD: Value *= 2.5f; break;
-		case EItemRarity::IR_GradeC: Value *= 5.0f; break;
-		case EItemRarity::IR_GradeB: Value *= 10.0f; break;
-		case EItemRarity::IR_GradeA: Value *= 25.0f; break;
-		case EItemRarity::IR_GradeS: Value *= 100.0f; break;
-		case EItemRarity::IR_GradeSS: Value *= 1000.0f; break;
-		default: break;
-		}
+		Value *= UItemCalculationFunctionLibrary::GetRarityValueMultiplier(Item.Rarity);
 
 		if (Item.bHasCorruptedAffixes)
 		{

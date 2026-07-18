@@ -1,6 +1,7 @@
 #include "AbilitySystem/ModMagnitude/HunterMMC_ArcaneShieldRegen.h"
 
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystem/Library/FunctionLibraries/PHResourceFunctionLibrary.h"
 #include "GameplayEffectExtension.h"
 
 namespace HunterMMCArcaneShieldRegenPrivate
@@ -48,5 +49,5 @@ float UHunterMMC_ArcaneShieldRegen::CalculateBaseMagnitude_Implementation(const 
 	GetCapturedAttributeMagnitude(Defs.RegenAmountDef, Spec, EvaluationParameters, Amount);
 
 	// Per-second value. The GE coefficient scales this by its tick period.
-	return FMath::Max(Rate, 0.f) * FMath::Max(Amount, 0.f);
+	return UPHResourceFunctionLibrary::CalculateResourceFlowAmount(Rate, Amount);
 }

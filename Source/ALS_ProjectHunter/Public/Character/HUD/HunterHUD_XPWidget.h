@@ -1,4 +1,3 @@
-// Copyright © 2025 MahouSensei
 // Author: Quentin Davis
 
 #pragma once
@@ -19,9 +18,7 @@ class ALS_PROJECTHUNTER_API UHunterHUD_XPWidget : public UHunterHUDBaseWidget
 	GENERATED_BODY()
 
 public:
-	// ─────────────────────────────────────────────────────────────────────────
-	// Accessors — safe to poll from Blueprint at any time
-	// ─────────────────────────────────────────────────────────────────────────
+	// Accessors - safe to poll from Blueprint at any time
 
 	/** Current character level (1-based). */
 	UFUNCTION(BlueprintPure, Category = "HUD|XP")
@@ -36,37 +33,33 @@ public:
 	int64 GetXPToNextLevel() const { return CachedXPToNextLevel; }
 
 	/**
-	 * XP fill fraction (0–1) suitable for driving a progress bar.
+	 * XP fill fraction (0-1) suitable for driving a progress bar.
 	 * Returns 1.0 if at max level.
 	 */
 	UFUNCTION(BlueprintPure, Category = "HUD|XP")
 	float GetXPFillPercent() const;
 
 protected:
-	// ─────────────────────────────────────────────────────────────────────────
 	// HunterHUDBaseWidget overrides
-	// ─────────────────────────────────────────────────────────────────────────
 
 	virtual void NativeInitializeForCharacter(APHBaseCharacter* Character) override;
 	virtual void NativeReleaseCharacter() override;
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// Blueprint events — implement visuals in BP
-	// ─────────────────────────────────────────────────────────────────────────
+	// Blueprint events - implement visuals in BP
 
 	/**
 	 * Fired whenever XP changes (after gains and after a level-up snapshot).
 	 *
 	 * @param CurrentXP      Raw current XP value
 	 * @param XPToNextLevel  XP threshold for the next level
-	 * @param FillPercent    CurrentXP / XPToNextLevel  (0–1); use this for the bar
+	 * @param FillPercent    CurrentXP / XPToNextLevel  (0-1); use this for the bar
 	 * @param Level          Current level at the time of the update
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "HUD|XP")
 	void OnXPBarUpdated(int64 CurrentXP, int64 XPToNextLevel, float FillPercent, int32 Level);
 
 	/**
-	 * Fired when the player levels up — trigger your level-up VFX / sound here.
+	 * Fired when the player levels up - trigger your level-up VFX / sound here.
 	 *
 	 * @param NewLevel           The new level just reached
 	 * @param StatPointsAwarded  Stat points granted this level
@@ -76,9 +69,7 @@ protected:
 	void OnLevelUpEffect(int32 NewLevel, int32 StatPointsAwarded, int32 SkillPointsAwarded);
 
 private:
-	// ─────────────────────────────────────────────────────────────────────────
 	// ProgressionManager delegate callbacks
-	// ─────────────────────────────────────────────────────────────────────────
 
 	UFUNCTION()
 	void HandleXPGained(int64 FinalXP, int64 BaseXP, float TotalMultiplier);
@@ -89,14 +80,12 @@ private:
 	/** Snapshots the current state from the manager and broadcasts OnXPBarUpdated. */
 	void BroadcastXPState();
 
-	// ─────────────────────────────────────────────────────────────────────────
 	// State
-	// ─────────────────────────────────────────────────────────────────────────
 
 	int32 CachedLevel         = 1;
 	int64 CachedCurrentXP     = 0;
 	int64 CachedXPToNextLevel = 100;  // sane default; overwritten on init
 
-	/** Weak reference to the bound manager — cleared in NativeReleaseCharacter. */
+	/** Weak reference to the bound manager - cleared in NativeReleaseCharacter. */
 	TWeakObjectPtr<UCharacterProgressionManager> BoundProgressionManager;
 };

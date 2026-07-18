@@ -3,7 +3,7 @@
 #include "DetailWidgetRow.h"
 #include "IDetailChildrenBuilder.h"
 #include "IPropertyTypeCustomization.h"
-#include "Item/Library/ItemEnums.h"
+#include "Item/Library/Enums/ItemEnums.h"
 #include "Types/SlateEnums.h"
 #include "Widgets/SWidget.h"
 

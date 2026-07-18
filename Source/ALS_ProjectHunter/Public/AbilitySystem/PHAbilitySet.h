@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystem/Library/Structs/PHAbilitySetStructs.h"
 #include "Engine/DataAsset.h"
-#include "AbilitySystem/Library/AbilitySetStructs.h"
 #include "PHAbilitySet.generated.h"
 
 class UHunterAbilitySystemComponent;

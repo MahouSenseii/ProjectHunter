@@ -1,19 +1,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/Library/Enums/BaseStatsEnumLibrary.h"
+#include "Data/Library/Structs/StatsStructs.h"
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
-#include "Data/Library/BaseStatsEnumLibrary.h"
-#include "Data/Library/StatsStructs.h"
 #include "BaseStatsData.generated.h"
 
 class UGameplayEffect;
 class UAttributeSet;
 struct FGameplayAttribute;
 struct FPropertyChangedEvent;
-
-// FParsedStatCategory and FStatInitializationEntry have been moved to
-// Data/Library/StatsStructs.h — included above.
 
 UCLASS(BlueprintType)
 class ALS_PROJECTHUNTER_API UBaseStatsData : public UPrimaryDataAsset

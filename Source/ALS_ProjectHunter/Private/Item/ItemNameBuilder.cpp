@@ -1,7 +1,7 @@
 #include "Item/ItemNameBuilder.h"
 
 #include "Item/ItemInstance.h"
-#include "Item/Library/ItemFunctionLibrary.h"
+#include "Item/Library/FunctionLibraries/ItemNameFunctionLibrary.h"
 
 FText FItemNameBuilder::GetDisplayName(UItemInstance& Item)
 {
@@ -48,26 +48,18 @@ FText FItemNameBuilder::GetDisplayName(UItemInstance& Item)
 		NamePrefix = TEXT("Corrupted ");
 	}
 
-	if (!Item.bIdentified)
+	FItemBase NameBase = *Base;
+	if (Item.HasUnidentifiedAffixes())
 	{
-		Item.DisplayName = FText::Format(
-			FText::FromString("Unidentified {0}{1}"),
-			FText::FromString(NamePrefix),
+		NameBase.ItemName = FText::Format(
+			FText::FromString("Unidentified {0}"),
 			Base->ItemName);
 	}
-	else
-	{
-		// Route through the affix-aware composer (it was fully implemented but
-		// previously had no callers):
-		//   F/E        → base name
-		//   D/C/B      → "<BestPrefix> <Base> <BestSuffix>" from rolled AffixNames
-		//   A/S/SS     → "[Base]"
-		// Falls back to the plain base name when no affix has an AffixName.
-		Item.DisplayName = FText::Format(
-			FText::FromString("{0}{1}"),
-			FText::FromString(NamePrefix),
-			UItemFunctionLibrary::GenerateItemName(Item.Stats, *Base, Item.Rarity));
-	}
+
+	Item.DisplayName = FText::Format(
+		FText::FromString("{0}{1}"),
+		FText::FromString(NamePrefix),
+		UItemNameFunctionLibrary::GenerateItemName(Item.Stats, NameBase, Item.Rarity));
 
 	Item.bHasNameBeenGenerated = true;
 	Item.bCacheDirty = false;

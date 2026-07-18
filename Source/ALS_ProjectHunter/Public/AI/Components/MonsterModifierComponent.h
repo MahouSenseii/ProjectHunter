@@ -1,11 +1,10 @@
-// AI/Components/MonsterModifierComponent.h
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "AI/Library/MobEnumLibrary.h"
-#include "AI/Library/MobStructs.h"
+#include "AI/Library/Enums/MobEnumLibrary.h"
+#include "AI/Library/Structs/MobStructs.h"
 #include "Data/MonsterModifierData.h"
 #include "GameplayAbilitySpec.h"
 #include "GameplayEffectTypes.h"
@@ -18,9 +17,7 @@ class UAbilitySystemComponent;
 class UMonsterSpawnConfig;
 class UDataTable;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Delegate — broadcast after all mods are applied so UI can refresh the name
-// ─────────────────────────────────────────────────────────────────────────────
+// Delegate - broadcast after all mods are applied so UI can refresh the name
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMonsterModsApplied,
 	EMonsterTier, Tier, const FText&, FullDisplayName);
 
@@ -28,7 +25,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMonsterModsApplied,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMonsterBaseStatVariationRolled,
 	const FMonsterStatVariation&, Variation);
 
-// ─────────────────────────────────────────────────────────────────────────────
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UMonsterModifierComponent : public UActorComponent
 {
@@ -39,7 +35,6 @@ public:
 
 	virtual void BeginPlay() override;
 
-	// ── Configuration ─────────────────────────────────────────────────────────
 
 	/**
 	 * Reference to the global spawn config.
@@ -66,42 +61,40 @@ public:
 	float NearbyPlayerMagicFind = 0.0f;
 
 	/**
-	 * Force a specific tier — if set to anything other than MT_Normal, skips the
+	 * Force a specific tier - if set to anything other than MT_Normal, skips the
 	 * random roll.  Useful for scripted encounters and bosses.
 	 * MT_Normal = use random roll.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
 	EMonsterTier ForcedTier = EMonsterTier::MT_Normal;
 
-	// ── Per-instance base-stat variation ─────────────────────────────────────
-	// Every mob — even Normal-tier — rolls a small random variation on base stats
+	// Every mob - even Normal-tier - rolls a small random variation on base stats
 	// so no two mobs are ever mechanically identical. Set variances to 0 to disable.
 
 	/** Master toggle for per-instance variation. Turn off for cinematic / fixed encounters. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variation")
 	bool bEnableBaseStatVariation = true;
 
-	/** Max symmetric HP variance fraction. 0.15 = ±15% HP. */
+	/** Max symmetric HP variance fraction. 0.15 = +/-15% HP. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variation",
 		meta = (EditCondition = "bEnableBaseStatVariation", ClampMin = 0.0f, ClampMax = 1.0f))
 	float HPVariancePct = 0.15f;
 
-	/** Max symmetric damage variance fraction. 0.10 = ±10% damage. */
+	/** Max symmetric damage variance fraction. 0.10 = +/-10% damage. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variation",
 		meta = (EditCondition = "bEnableBaseStatVariation", ClampMin = 0.0f, ClampMax = 1.0f))
 	float DamageVariancePct = 0.10f;
 
-	/** Max symmetric move speed variance fraction. 0.08 = ±8% walk speed. */
+	/** Max symmetric move speed variance fraction. 0.08 = +/-8% walk speed. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variation",
 		meta = (EditCondition = "bEnableBaseStatVariation", ClampMin = 0.0f, ClampMax = 1.0f))
 	float MoveSpeedVariancePct = 0.08f;
 
-	/** Max symmetric additive resist bonus in percent. 5.0 = ±5% flat resist. */
+	/** Max symmetric additive resist bonus in percent. 5.0 = +/-5% flat resist. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variation",
 		meta = (EditCondition = "bEnableBaseStatVariation", ClampMin = 0.0f, ClampMax = 25.0f))
 	float ResistVariancePct = 5.0f;
 
-	// ── Runtime state ─────────────────────────────────────────────────────────
 
 	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
 	EMonsterTier AssignedTier = EMonsterTier::MT_Normal;
@@ -117,11 +110,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
 	FText FullDisplayName;
 
-	// ── Public API ────────────────────────────────────────────────────────────
 
 	/**
 	 * Roll tier and mods, then apply them to the owning character's ASC.
-	 * Idempotent — safe to call once from BeginPlay.
+	 * Idempotent - safe to call once from BeginPlay.
 	 * Server-only (authority validated internally).
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Modifier")
@@ -138,14 +130,14 @@ public:
 	/**
 	 * Remove any previously applied mods and re-roll from scratch.
 	 * Used by MobManagerActor to apply its AreaLevel AFTER HiddenSpawn
-	 * (which triggers BeginPlay → RollAndApplyMods with the wrong defaults).
+	 * (which triggers BeginPlay -> RollAndApplyMods with the wrong defaults).
 	 * Safe to call multiple times.
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Modifier")
 	void RerollMods();
 
 	/**
-	 * Roll the per-instance base-stat variation struct. Idempotent — only rolls
+	 * Roll the per-instance base-stat variation struct. Idempotent - only rolls
 	 * the first time it's called; subsequent calls are no-ops unless the struct
 	 * has been reset (e.g. via RerollMods).
 	 * Called automatically at the top of RollAndApplyMods, so designers usually
@@ -162,7 +154,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Modifier")
 	float GetCombinedDamageMultiplier() const;
 
-	// ── Events ────────────────────────────────────────────────────────────────
 
 	UPROPERTY(BlueprintAssignable, Category = "Modifier|Events")
 	FOnMonsterModsApplied OnMonsterModsApplied;
@@ -192,7 +183,7 @@ protected:
 	/** Build the full display name from the base name + prefix/suffix labels. */
 	FText BuildDisplayName(const TArray<FMonsterModRow>& Mods) const;
 
-	/** Handles for GEs applied by mods — kept so we could remove them if needed */
+	/** Handles for GEs applied by mods - kept so we could remove them if needed */
 	UPROPERTY(Transient)
 	TArray<FActiveGameplayEffectHandle> AppliedGEHandles;
 
