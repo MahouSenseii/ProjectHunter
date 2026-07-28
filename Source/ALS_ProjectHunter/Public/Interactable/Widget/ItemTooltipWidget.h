@@ -7,6 +7,12 @@
 #include "Item/Library/Structs/ItemTooltipStructs.h"
 #include "ItemTooltipWidget.generated.h"
 
+class UBorder;
+class UImage;
+class UItemTooltipSectionWidget;
+class UTextBlock;
+class UVerticalBox;
+
 UCLASS()
 class UItemTooltipWidget : public UUserWidget
 {
@@ -40,34 +46,22 @@ protected:
 	FItemTooltipData TooltipData;
 
 	UPROPERTY(meta = (BindWidget))
-	class UBorder* HeaderBorder;
+	TObjectPtr<UBorder> HeaderBorder;
 
 	UPROPERTY(meta = (BindWidget))
-	class UImage* ItemIconImage;
+	TObjectPtr<UImage> ItemIconImage;
 
 	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* ItemNameText;
+	TObjectPtr<UTextBlock> ItemNameText;
 
 	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* ItemTypeText;
+	TObjectPtr<UTextBlock> ItemTypeText;
 
 	UPROPERTY(meta = (BindWidget))
-	class UBorder* BaseStatsBox;
+	TObjectPtr<UVerticalBox> SectionsContainer;
 
-	UPROPERTY(meta = (BindWidget))
-	class UVerticalBox* BaseStatsContainer;
-
-	UPROPERTY(meta = (BindWidget))
-	class UBorder* AffixesBox;
-
-	UPROPERTY(meta = (BindWidget))
-	class UVerticalBox* AffixesContainer;
-
-	UPROPERTY(meta = (BindWidget))
-	class UBorder* LoreBox;
-
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* LoreText;
+	UPROPERTY(EditDefaultsOnly, Category = "Tooltip|Widgets")
+	TSubclassOf<UItemTooltipSectionWidget> SectionWidgetClass;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
 	FLinearColor Color_GradeF = FLinearColor(0.5f, 0.5f, 0.5f, 1.0f);
@@ -99,20 +93,13 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
 	FLinearColor Color_GradeCorrupted = FLinearColor(0.5f, 0.0f, 0.3f, 1.0f);
 
-	UPROPERTY(EditDefaultsOnly, Category = "Colors")
-	FLinearColor AffixColor = FLinearColor(0.5f, 0.8f, 1.0f);
-
-	UPROPERTY(EditDefaultsOnly, Category = "Colors")
-	FLinearColor BaseStatColor = FLinearColor(0.9f, 0.9f, 0.9f);
-
-	UPROPERTY(EditDefaultsOnly, Category = "Colors")
-	FLinearColor LoreColor = FLinearColor(0.9f, 0.6f, 0.3f);
-
 private:
 	void SetGradeVisuals(EItemRarity Grade);
 	FLinearColor GetGradeColor(EItemRarity Grade) const;
-	void PopulateBaseStats(UItemInstance* Item);
-	void PopulateAffixes(UItemInstance* Item);
-	void PopulateLore(UItemInstance* Item);
-	UTextBlock* CreateStatTextBlock(const FString& Text, FLinearColor Color);
+	void PopulateSections();
+	void AddFallbackSection(const FItemTooltipSection& Section);
+	UTextBlock* CreateFallbackTextBlock(
+		const FText& Text,
+		FLinearColor Color,
+		ETextJustify::Type Justification);
 };

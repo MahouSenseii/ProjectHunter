@@ -46,7 +46,7 @@ void UPHMenuRootWidget::OpenMenu(EMenuType MenuType)
 	if (TabBar)
 	{
 		TabBar->SelectTab(MenuType);
-
+ 
 		if (ActiveMenuType != MenuType || GetActivePage() == nullptr)
 		{
 			ShowPage(MenuType, ActiveMenuType);

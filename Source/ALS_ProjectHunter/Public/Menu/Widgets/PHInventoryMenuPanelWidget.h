@@ -9,12 +9,15 @@ class APHBaseCharacter;
 class UEquipmentManager;
 class UInventoryManager;
 class UItemInstance;
+class UPanelWidget;
+class UPHInventorySlotWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryMenuDataRefreshed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnInventoryMenuSelectionChanged,
 	UItemInstance*, SelectedItem, int32, SlotIndex, EEquipmentSlot, SuggestedEquipmentSlot);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventoryMenuCarryWeightChanged,
 	float, CurrentWeight, float, MaxWeight);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryMenuSlotWidgetsRebuilt);
 
 UCLASS(BlueprintType, Blueprintable)
 class ALS_PROJECTHUNTER_API UPHInventoryMenuPanelWidget : public UHunterHUDBaseWidget
@@ -29,6 +32,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory Menu")
 	void SetEquipmentSlotOrder(const TArray<EEquipmentSlot>& NewEquipmentSlotOrder);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory Menu")
+	void RebuildInventorySlotWidgets();
 
 	UFUNCTION(BlueprintPure, Category = "Inventory Menu")
 	TArray<FEquipmentMenuInventorySlotViewData> GetInventorySlots() const { return InventorySlots; }
@@ -87,7 +93,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Inventory Menu|Events")
 	FOnInventoryMenuCarryWeightChanged InventoryCarryWeightChanged;
 
+	UPROPERTY(BlueprintAssignable, Category = "Inventory Menu|Events")
+	FOnInventoryMenuSlotWidgetsRebuilt InventorySlotWidgetsRebuilt;
+
 protected:
+	virtual void NativeConstruct() override;
 	virtual void NativeInitializeForCharacter(APHBaseCharacter* Character) override;
 	virtual void NativeReleaseCharacter() override;
 
@@ -97,8 +107,23 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory Menu|Config")
 	bool bIncludeEmptyInventorySlots = true;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory Menu|Config")
+	TSubclassOf<UPHInventorySlotWidget> InventorySlotWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory Menu|Config")
+	bool bAutoBuildInventorySlotWidgets = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory Menu|Config", meta = (ClampMin = "1"))
+	int32 GridColumns = 8;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Inventory Menu")
+	TObjectPtr<UPanelWidget> InventorySlotContainer;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Inventory Menu")
 	TArray<FEquipmentMenuInventorySlotViewData> InventorySlots;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Inventory Menu")
+	TArray<TObjectPtr<UPHInventorySlotWidget>> InventorySlotWidgets;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Inventory Menu|Selection")
 	TObjectPtr<UItemInstance> SelectedItem = nullptr;
@@ -123,6 +148,9 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Inventory Menu|Events")
 	void OnInventoryDataRefreshed();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Inventory Menu|Events")
+	void OnInventorySlotWidgetsRebuilt();
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Inventory Menu|Events")
 	void OnInventorySelectionChanged(UItemInstance* NewSelectedItem, int32 NewInventorySlotIndex, EEquipmentSlot SuggestedEquipmentSlot);

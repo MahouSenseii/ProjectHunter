@@ -6,6 +6,7 @@
 #include "Inventory/Components/InventoryManager.h"
 #include "Item/ItemInstance.h"
 #include "Menu/Library/FunctionLibraries/MenuFunctionLibrary.h"
+#include "Menu/Widgets/PHEquipmentMenuPanelWidget.h"
 #include "Menu/Widgets/PHEquipmentSlotWidget.h"
 #include "Menu/Widgets/PHInventoryMenuPanelWidget.h"
 
@@ -238,6 +239,17 @@ void UPHEquipmentMenuPageWidget::CacheChildWidgets()
 
 	for (UWidget* ChildWidget : ChildWidgets)
 	{
+		if (!EquipmentPanel)
+		{
+			EquipmentPanel = Cast<UPHEquipmentMenuPanelWidget>(ChildWidget);
+			if (EquipmentPanel)
+			{
+				EquipmentPanel->SetOwningEquipmentPage(this);
+				EquipmentPanel->SetEquipmentSlotOrder(EquipmentSlotOrder);
+				continue;
+			}
+		}
+
 		if (UPHEquipmentSlotWidget* EquipmentSlotWidget = Cast<UPHEquipmentSlotWidget>(ChildWidget))
 		{
 			EquipmentSlotWidget->SetOwningEquipmentPage(this);
@@ -278,6 +290,13 @@ void UPHEquipmentMenuPageWidget::UnbindInventoryPanelDelegates()
 
 void UPHEquipmentMenuPageWidget::RefreshEquipmentSlotWidgets()
 {
+	if (EquipmentPanel)
+	{
+		EquipmentPanel->SetOwningEquipmentPage(this);
+		EquipmentPanel->SetEquipmentSlotOrder(EquipmentSlotOrder);
+		EquipmentPanel->RefreshEquipmentSlotWidgets();
+	}
+
 	for (UPHEquipmentSlotWidget* EquipmentSlotWidget : EquipmentSlotWidgets)
 	{
 		if (!EquipmentSlotWidget)

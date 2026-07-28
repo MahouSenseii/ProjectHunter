@@ -6,6 +6,7 @@
 #include "PHEquipmentMenuPageWidget.generated.h"
 
 class UItemInstance;
+class UPHEquipmentMenuPanelWidget;
 class UPHEquipmentSlotWidget;
 class UPHInventoryMenuPanelWidget;
 
@@ -109,6 +110,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu|Equipment")
 	TArray<TObjectPtr<UPHEquipmentSlotWidget>> EquipmentSlotWidgets;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Equipment Menu|Equipment")
+	TObjectPtr<UPHEquipmentMenuPanelWidget> EquipmentPanel;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Equipment Menu|Inventory")
 	TObjectPtr<UPHInventoryMenuPanelWidget> InventoryPanel;

@@ -1,23 +1,72 @@
 #include "Menu/Widgets/PHInventoryMenuPanelWidget.h"
 
 #include "Character/PHBaseCharacter.h"
+#include "Components/PanelSlot.h"
+#include "Components/PanelWidget.h"
+#include "Components/UniformGridSlot.h"
 #include "Equipment/Components/EquipmentManager.h"
 #include "Inventory/Components/InventoryManager.h"
 #include "Item/ItemInstance.h"
 #include "Menu/Library/FunctionLibraries/MenuFunctionLibrary.h"
+#include "Menu/Widgets/PHInventorySlotWidget.h"
 
 UPHInventoryMenuPanelWidget::UPHInventoryMenuPanelWidget()
 {
 	EquipmentSlotOrder = UMenuFunctionLibrary::GetDefaultEquipmentSlotOrder();
 }
 
+void UPHInventoryMenuPanelWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	RebuildInventorySlotWidgets();
+}
+
 void UPHInventoryMenuPanelWidget::RefreshInventoryData()
 {
 	RebuildInventorySlots();
 	UpdateInventorySummary();
+	RebuildInventorySlotWidgets();
 
 	OnInventoryDataRefreshed();
 	InventoryDataRefreshed.Broadcast();
+}
+
+void UPHInventoryMenuPanelWidget::RebuildInventorySlotWidgets()
+{
+	InventorySlotWidgets.Reset();
+
+	if (!bAutoBuildInventorySlotWidgets || !InventorySlotContainer || !InventorySlotWidgetClass)
+	{
+		return;
+	}
+
+	InventorySlotContainer->ClearChildren();
+
+	for (int32 VisualIndex = 0; VisualIndex < InventorySlots.Num(); ++VisualIndex)
+	{
+		UPHInventorySlotWidget* SlotWidget = CreateWidget<UPHInventorySlotWidget>(this, InventorySlotWidgetClass);
+		if (!SlotWidget)
+		{
+			continue;
+		}
+
+		SlotWidget->InitializeInventorySlot(this, InventorySlots[VisualIndex]);
+		InventorySlotWidgets.Add(SlotWidget);
+
+		if (UPanelSlot* PanelSlot = InventorySlotContainer->AddChild(SlotWidget))
+		{
+			if (UUniformGridSlot* GridSlot = Cast<UUniformGridSlot>(PanelSlot))
+			{
+				const int32 SafeColumnCount = FMath::Max(1, GridColumns);
+				GridSlot->SetRow(VisualIndex / SafeColumnCount);
+				GridSlot->SetColumn(VisualIndex % SafeColumnCount);
+			}
+		}
+	}
+
+	OnInventorySlotWidgetsRebuilt();
+	InventorySlotWidgetsRebuilt.Broadcast();
 }
 
 void UPHInventoryMenuPanelWidget::SetEquipmentSlotOrder(const TArray<EEquipmentSlot>& NewEquipmentSlotOrder)
@@ -124,6 +173,7 @@ void UPHInventoryMenuPanelWidget::NativeReleaseCharacter()
 	EquipmentManager = nullptr;
 	InventoryManager = nullptr;
 	InventorySlots.Reset();
+	InventorySlotWidgets.Reset();
 	CurrentCarryWeight = 0.0f;
 	MaxCarryWeight = 0.0f;
 	OccupiedInventorySlots = 0;

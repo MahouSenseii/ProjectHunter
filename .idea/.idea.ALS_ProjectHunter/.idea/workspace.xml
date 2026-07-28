@@ -24,314 +24,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Library/FunctionLibraries/PHAbilitySystemFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Library/FunctionLibraries/PHResourceFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Library/Structs/PHAbilityRuntimeStructs.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Library/Structs/PHAbilitySetStructs.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Library/Structs/PHResourceStructs.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Calculators/CombatOutgoingDamageCalculator.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Library/FunctionLibraries/CombatFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Resolvers/CombatIncomingDamageResolver.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Helpers/EquipmentDebugItemFactory.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Helpers/EquipmentGroundPickupEquipHelper.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Helpers/EquipmentHandSlotMutationHelper.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Library/FunctionLibraries/EquipmentFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Helpers/InteractableWidgetPresentationHelper.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Library/FunctionLibraries/InteractionFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Inventory/Library/FunctionLibraries/InventoryFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemAffixFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemBaseFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemCalculationFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemComparisonFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemEnumFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemNameFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemRequirementFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemTooltipFunctionLibrary.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Library/Enums/HunterResourceEnums.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Library/Enums/PHAbilityEnums.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Library/FunctionLibraries/PHAbilitySystemFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Library/FunctionLibraries/PHResourceFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Library/Structs/PHAbilityRuntimeStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Library/Structs/PHAbilitySetStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Library/Structs/PHResourceStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Calculators/CombatOutgoingDamageCalculator.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Components/UCombatStatusEffectApplier.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/Enums/CombatEnums.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/FunctionLibraries/CombatFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/Structs/CombatStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Resolvers/CombatIncomingDamageResolver.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Helpers/EquipmentDebugItemFactory.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Helpers/EquipmentGroundPickupEquipHelper.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Helpers/EquipmentHandSlotMutationHelper.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Library/Enums/EquipmentEnums.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Library/FunctionLibraries/EquipmentFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Library/Structs/EquipmentStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Helpers/InteractableWidgetPresentationHelper.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Library/Enums/InteractionEnums.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Library/FunctionLibraries/InteractionFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Library/Structs/InteractionStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Inventory/Library/Enums/InventoryEnums.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Inventory/Library/FunctionLibraries/InventoryFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Enums/AffixEnums.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Enums/ItemEnums.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Enums/ItemTooltipEnums.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/FunctionLibraries/ItemAffixFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/FunctionLibraries/ItemBaseFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/FunctionLibraries/ItemCalculationFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/FunctionLibraries/ItemComparisonFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/FunctionLibraries/ItemEnumFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/FunctionLibraries/ItemFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/FunctionLibraries/ItemNameFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/FunctionLibraries/ItemRequirementFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/FunctionLibraries/ItemTooltipFunctionLibrary.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/AffixStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemAttachmentStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemAttributeStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemBaseStatStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemCalculationStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemConsumableStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemDurabilityStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemRequirementStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemRuneStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemStatsStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemTooltipStructs.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/ProjectHunterSinglePurposeArchitecture.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/ToolTips/WBP_ItemTooltip.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/ItemTooltipLineWidget.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/ItemTooltipSectionWidget.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHEquipmentMenuPanelWidget.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHInventorySlotWidget.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/ItemTooltipLineWidget.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/ItemTooltipSectionWidget.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHEquipmentMenuPanelWidget.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHInventorySlotWidget.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" beforeDir="false" afterPath="$PROJECT_DIR$/ALS_ProjectHunter.sln.DotSettings.user" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Config/DefaultEngine.ini" beforeDir="false" afterPath="$PROJECT_DIR$/Config/DefaultEngine.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Data/Stats/DA_BaseStats.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/Data/Stats/DA_BaseStats.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Components/MonsterModifierComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Components/MonsterModifierComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Library/MobStructs.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Mob/MobManagerActor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Mob/MobManagerActor.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Mob/MobPoolSubsystem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Mob/MobPoolSubsystem.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AI/Mob/MobSpawnConditionEvaluator.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Abilities/PHGameplayAbility.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/Abilities/PHGameplayAbility.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAbilitySystemComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAbilitySystemComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAttributeSet.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/HunterAttributeSet.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMCResourceShared.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMCResourceShared.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_ArcaneShieldRegen.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_ArcaneShieldRegen.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_EffectiveResource.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_EffectiveResource.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_EnduranceMaxStamina.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_EnduranceMaxStamina.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_HealthRegen.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_HealthRegen.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_ManaRegen.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_ManaRegen.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_ReservedResource.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_ReservedResource.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_StaminaDegen.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_StaminaDegen.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_StaminaRegen.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_StaminaRegen.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_StrengthMaxHealth.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/ModMagnitude/HunterMMC_StrengthMaxHealth.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/PHAbilitySet.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/AbilitySystem/PHAbilitySet.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/CharacterSystemCoordinatorComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/CharacterSystemCoordinatorComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/GroundItemPickupManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/GroundItemPickupManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionDebugManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionDebugManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionTraceManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionTraceManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionValidatorManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionValidatorManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionWidgetPresenter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionWidgetPresenter.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/PHCharacterMovementComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/PHCharacterMovementComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Controller/HunterController.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Controller/HunterController.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterDamagePopupWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterDamagePopupWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUD.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUD.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUDBaseWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUDBaseWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUDResourceWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUDResourceWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterMainHUDWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterMainHUDWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/StatusEffect/StatusEffectHUDWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/StatusEffect/StatusEffectHUDWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Library/FunctionLibraries/PHWallTraversalFunctionLibrary.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Library/FunctionLibraries/PHWallTraversalFunctionLibrary.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/PHBaseCharacter.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Components/CombatManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Components/CombatManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Components/CombatStatusManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Components/UCombatStatusEffectApplier.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Components/CombatSystemManagerComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Components/CombatSystemManagerComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Combat/Library/CombatFunctionLibrary.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Data/BaseStatsData.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Data/BaseStatsData.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Components/EquipmentManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Components/EquipmentManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Components/EquipmentPresentationComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Components/EquipmentPresentationComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Helpers/EquipmentMutationHelper.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Helpers/EquipmentMutationHelper.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Helpers/EquipmentReplicationHelper.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Helpers/EquipmentReplicationHelper.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Helpers/EquipmentSlotResolver.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Helpers/EquipmentSlotResolver.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Equipment/Library/EquipmentFunctionLibrary.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/GameModes/PHGameState.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/GameModes/PHGameState.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Actors/LootChest/LootChest.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Actors/LootChest/LootChest.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Actors/Portal/PortalActor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Actors/Portal/PortalActor.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Components/InteractableManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Components/InteractableManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/InteractableWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/InteractableWidget.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/ItemTooltipWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/ItemTooltipWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/ProgressWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/ProgressWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Inventory/Components/InventoryManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Inventory/Components/InventoryManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Inventory/Helpers/InventoryAdder.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Inventory/Helpers/InventoryAdder.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Inventory/Helpers/InventoryStackHandler.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Inventory/Helpers/InventoryValidator.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Inventory/Helpers/InventoryValidator.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Inventory/Library/InventoryFunctionLibrary.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Generation/AffixGenerator.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Generation/AffixGenerator.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemInitializationHandler.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemInstance.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemInstance.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemNameBuilder.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemNameBuilder.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemStackingHandler.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemUsageHandler.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemValueCalculator.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/ItemValueCalculator.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/ItemFunctionLibrary.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/ItemStructs.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/ItemStructs.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/ItemTooltipFunctionLibrary.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/WeaponPlacementActor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/WeaponPlacementActor.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Loot/Generation/LootGenerator.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Loot/Generation/LootGenerator.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Loot/Library/LootFunctionLibrary.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Loot/Subsystems/LootSubsystem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Loot/Subsystems/LootSubsystem.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHEquipmentMenuPageWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHEquipmentMenuPageWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHMenuPageWidgetBase.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHMenuPageWidgetBase.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHInventoryMenuPanelWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHInventoryMenuPanelWidget.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHMenuRootWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHMenuRootWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHMenuTabBarWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHMenuTabBarWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHMenuTabButtonWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHMenuTabButtonWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/PHGameplayTags.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Player/PHPlayerState.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Player/PHPlayerState.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Progression/Components/CharacterProgressionManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Progression/Components/CharacterProgressionManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Stats/Components/StatsManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Stats/Components/StatsManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Stats/Debug/StatsDebugManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Stats/Debug/StatsDebugManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Stats/EquipmentStatsApplier.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Stats/StatsAttributeResolver.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Stats/StatsInitializer.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Stats/StatsModifierMath.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/System/Cheats/HunterCheatComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/System/Cheats/HunterCheatComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/System/Cheats/HunterCheatManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/System/Cheats/HunterCheatManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/System/PHAssetManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/System/PHAssetManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tags/Components/TagManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tags/Components/TagManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tags/Debug/TagDebugManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tags/Debug/TagDebugManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Actors/ISMContainerActor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Actors/ISMContainerActor.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Library/RunFunctionLibrary.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Subsystems/GroundItemSubsystem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Subsystems/GroundItemSubsystem.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Subsystems/PortalSubsystem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Subsystems/PortalSubsystem.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Subsystems/RunSubsystem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Subsystems/RunSubsystem.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Subsystems/StashSubsystem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Subsystems/StashSubsystem.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Components/MonsterModifierComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Components/MonsterModifierComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Library/MobEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Library/MobEnumLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Library/MobStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Library/MobStructs.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobManagerActor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobManagerActor.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobPoolSubsystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobPoolSubsystem.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobSpawnConditionEvaluator.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobSpawnConditionEvaluator.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobSpawnRules.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobSpawnRules.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobSpawnTypes.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobSpawnTypes.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobWanderInterface.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/MobWanderInterface.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/PlayerLocationCacheSubsystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AI/Mob/PlayerLocationCacheSubsystem.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Abilities/PHGameplayAbility.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Abilities/PHGameplayAbility.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAbilitySystemComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAbilitySystemComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAttributeSet.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/HunterAttributeSet.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Library/AbilitySetStructs.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Library/MMCEnumLibrary.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/Library/PHAbilityEnumLibrary.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_EffectiveResource.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_EffectiveResource.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_ReservedResource.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/ModMagnitude/HunterMMC_ReservedResource.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/PHAbilitySet.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/AbilitySystem/PHAbilitySet.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/CharacterSystemCoordinatorComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/CharacterSystemCoordinatorComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/GroundItemPickupManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/GroundItemPickupManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionDebugManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionDebugManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionTraceManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionTraceManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionValidatorManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionValidatorManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionWidgetPresenter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionWidgetPresenter.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Library/InteractionDebugEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Library/InteractionDebugEnumLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Library/InventoryEnum.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Library/InventoryEnum.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/PHCharacterMovementComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/PHCharacterMovementComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Controller/HunterController.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Controller/HunterController.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterDamagePopupWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterDamagePopupWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUD.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUD.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUDBaseWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUDBaseWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUDResourceWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUDResourceWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUD_XPWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUD_XPWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterMainHUDWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterMainHUDWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/StatusEffect/StatusEffectHUDWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/StatusEffect/StatusEffectHUDWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/StatusEffect/StatusEffectIconWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/StatusEffect/StatusEffectIconWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Library/Enums/PHMovementEnums.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Library/Enums/PHMovementEnums.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Library/FunctionLibraries/PHWallTraversalFunctionLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Library/FunctionLibraries/PHWallTraversalFunctionLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/PHBaseCharacter.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Components/CombatManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Components/CombatManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Components/CombatStatusManager.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Components/CombatSystemManagerComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Components/CombatSystemManagerComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Components/HunterDamagePopupPresentationComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Components/HunterDamagePopupPresentationComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatEnumLibrary.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatFunctionLibrary.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Combat/Library/CombatStructs.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/BaseStatsData.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/BaseStatsData.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/Library/BaseStatsEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/Library/BaseStatsEnumLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/Library/StatsEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/Library/StatsEnumLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/Library/StatsStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/Library/StatsStructs.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/MonsterModifierData.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Data/MonsterModifierData.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Actors/EquippedItemRuntimeActor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Actors/EquippedItemRuntimeActor.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Components/EquipmentManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Components/EquipmentManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Components/EquipmentPresentationComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Components/EquipmentPresentationComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Helpers/EquipmentMutationHelper.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Helpers/EquipmentMutationHelper.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Library/EquipmentEnums.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Library/EquipmentFunctionLibrary.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Equipment/Library/EquipmentStructs.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/GameModes/Library/GameModeEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/GameModes/Library/GameModeEnumLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/GameModes/PHGameMode.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/GameModes/PHGameMode.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/GameModes/PHGameState.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/GameModes/PHGameState.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Actors/LootChest/LootChest.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Actors/LootChest/LootChest.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Actors/Portal/PortalActor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Actors/Portal/PortalActor.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Components/InteractableManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Components/InteractableManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Interface/Interactable.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Interface/Interactable.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Library/InteractionChannels.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Library/InteractionChannels.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Library/InteractionEnumLibrary.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Library/InteractionStructLibrary.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/InteractableWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/InteractableWidget.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/ItemTooltipWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/ItemTooltipWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/ProgressWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/ProgressWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Inventory/Components/InventoryManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Inventory/Components/InventoryManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Inventory/Helpers/InventoryStackHandler.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Inventory/Library/InventoryEnums.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Inventory/Library/InventoryFunctionLibrary.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Generation/AffixGenerator.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Generation/AffixGenerator.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemInitializationHandler.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemInstance.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemInstance.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemStackingHandler.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/ItemUsageHandler.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/AffixEnums.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/AffixStructs.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/ItemEnums.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/ItemFunctionLibrary.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/ItemStructs.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/ItemTooltipFunctionLibrary.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/ItemTooltipStructs.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/WeaponPlacementActor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/WeaponPlacementActor.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Components/LootComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Components/LootComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Generation/LootGenerator.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Generation/LootGenerator.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Library/LootEnum.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Library/LootEnum.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Library/LootFunctionLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Library/LootFunctionLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Library/LootStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Library/LootStructs.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Subsystems/LootSubsystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Loot/Subsystems/LootSubsystem.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Library/MenuEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Library/MenuEnumLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Library/MenuStructLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Library/MenuStructLibrary.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHEquipmentMenuPageWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHEquipmentMenuPageWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHMenuPageWidgetBase.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHMenuPageWidgetBase.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHMenuRootWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHMenuRootWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHMenuTabBarWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHMenuTabBarWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHMenuTabButtonWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHMenuTabButtonWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/PHGameplayTags.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/PHGameplayTags.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Player/PHPlayerState.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Player/PHPlayerState.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Progression/Components/CharacterProgressionManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Progression/Components/CharacterProgressionManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Progression/Library/ProgressionStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Progression/Library/ProgressionStructs.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/Components/StatsManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/Components/StatsManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/Debug/StatsDebugManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/Debug/StatsDebugManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/EquipmentStatsApplier.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/EquipmentStatsApplier.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/StatsAttributeResolver.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/StatsAttributeResolver.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/StatsEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/StatsEnumLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/StatsInitializer.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/StatsInitializer.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/StatsModifierMath.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Stats/StatsModifierMath.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/System/Cheats/HunterCheatComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/System/Cheats/HunterCheatComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/System/Cheats/HunterCheatManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/System/Cheats/HunterCheatManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/System/PHAssetManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/System/PHAssetManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tags/Components/TagManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tags/Components/TagManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tags/Debug/TagDebugManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tags/Debug/TagDebugManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Actors/ISMContainerActor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Actors/ISMContainerActor.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/RunEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/RunEnumLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/RunFunctionLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/RunFunctionLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/RunStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/RunStructs.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/StashEnumLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/StashEnumLibrary.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/StashStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Library/StashStructs.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystems/GroundItemSubsystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystems/GroundItemSubsystem.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystems/PortalSubsystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystems/PortalSubsystem.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystems/RunSubsystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystems/RunSubsystem.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystems/StashSaveGame.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystems/StashSaveGame.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystems/StashSubsystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Subsystems/StashSubsystem.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/Item/ItemBaseCustomization.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/Item/ItemBaseCustomization.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/Item/ItemBaseCustomization.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunterEditor/Private/Item/ItemBaseCustomization.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHInventoryMenuPanelWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHInventoryMenuPanelWidget.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -342,13 +51,14 @@
     <option name="firstShow" value="false" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="44" />
+    <option name="cachedIndexableFilesCount" value="42" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
+    <setting file="cidr-memory-view://1" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Programs/Shared/EpicGames.Horde/HordeHttpClient.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Concepts/DerivedFrom.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Delegates/DelegateInstancesImpl.h" root0="FORCE_HIGHLIGHTING" />
@@ -392,22 +102,22 @@
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
       <entry key="MS100" value="1.0" />
-      <entry key="MS500" value="1.000125850624853" />
-      <entry key="S2" value="1.1059165543682647" />
-      <entry key="S5" value="1.4073667119140363" />
-      <entry key="S10" value="1.638252858915678" />
-      <entry key="S30" value="1.8609889735582974" />
-      <entry key="S60" value="1.9278949151484222" />
-      <entry key="M2" value="1.9632730221221926" />
-      <entry key="M5" value="1.985144096034789" />
-      <entry key="M10" value="1.9925446888738692" />
-      <entry key="M15" value="1.9950956309144883" />
-      <entry key="M30" value="2.0095356260514263" />
-      <entry key="H1" value="2.153847510070697" />
-      <entry key="H2" value="2.5563218131101655" />
-      <entry key="H4" value="3.0550983451039464" />
-      <entry key="D1" value="3.7978328769301486" />
-      <entry key="W1" value="3.9697840966738878" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0000380713464108" />
+      <entry key="S5" value="1.0229656568094985" />
+      <entry key="S10" value="1.254394903541543" />
+      <entry key="S30" value="2.957880621189413" />
+      <entry key="S60" value="5.032355266034757" />
+      <entry key="M2" value="7.346660985229472" />
+      <entry key="M5" value="9.711028303058917" />
+      <entry key="M10" value="10.7658782862814" />
+      <entry key="M15" value="11.1557228035087" />
+      <entry key="M30" value="11.577727107714276" />
+      <entry key="H1" value="11.92969819718073" />
+      <entry key="H2" value="12.435917681351313" />
+      <entry key="H4" value="12.989971325403022" />
+      <entry key="D1" value="13.785770858947037" />
+      <entry key="W1" value="13.968021148025155" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -415,37 +125,37 @@
       <entry key="S2" value="0.0" />
       <entry key="S5" value="0.0" />
       <entry key="S10" value="0.0" />
-      <entry key="S30" value="2.834259257058992E-133" />
-      <entry key="S60" value="7.238925078893581E-67" />
-      <entry key="M2" value="1.1906176114084518E-33" />
-      <entry key="M5" value="1.0228368330572162E-13" />
-      <entry key="M10" value="4.5209588829574186E-7" />
-      <entry key="M15" value="7.420878379451858E-5" />
-      <entry key="M30" value="0.012182089600900989" />
-      <entry key="H1" value="0.15608841686659053" />
-      <entry key="H2" value="0.5587261930077442" />
-      <entry key="H4" value="1.0570954110707314" />
-      <entry key="D1" value="1.7983628219345642" />
-      <entry key="W1" value="1.9698663186140408" />
+      <entry key="S30" value="2.961020723823188E-135" />
+      <entry key="S60" value="7.399033921910692E-68" />
+      <entry key="M2" value="3.8064731486561333E-34" />
+      <entry key="M5" value="6.481962977796269E-14" />
+      <entry key="M10" value="3.598990090867635E-7" />
+      <entry key="M15" value="6.374146533297899E-5" />
+      <entry key="M30" value="0.011290291475586382" />
+      <entry key="H1" value="0.15026656473804972" />
+      <entry key="H2" value="0.5482073735637419" />
+      <entry key="H4" value="1.0470974648082307" />
+      <entry key="D1" value="1.7955167838744623" />
+      <entry key="W1" value="1.9694206655986664" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="5.439585284559356E-7" />
-      <entry key="MS500" value="0.055875594145155014" />
-      <entry key="S2" value="0.5473515118508351" />
-      <entry key="S5" value="1.076495074491788" />
-      <entry key="S10" value="1.4376024016628324" />
-      <entry key="S30" value="1.7831234667296012" />
-      <entry key="S60" value="1.8873262443327896" />
-      <entry key="M2" value="1.9425568530916366" />
-      <entry key="M5" value="1.976750915879647" />
-      <entry key="M10" value="1.9883304982349355" />
-      <entry key="M15" value="1.992355525450138" />
-      <entry key="M30" value="2.0202658061233625" />
-      <entry key="H1" value="2.308955918245632" />
-      <entry key="H2" value="3.1142034882393106" />
-      <entry key="H4" value="4.11155225070884" />
-      <entry key="D1" value="5.5960344520157435" />
-      <entry key="W1" value="5.939625584659691" />
+      <entry key="MS100" value="1.4355151628599792E-6" />
+      <entry key="MS500" value="0.06782683574261295" />
+      <entry key="S2" value="0.5103381380836988" />
+      <entry key="S5" value="0.7769133300971236" />
+      <entry key="S10" value="1.0658922207438308" />
+      <entry key="S30" value="2.758585578843366" />
+      <entry key="S60" value="4.858277060231551" />
+      <entry key="M2" value="7.2203582726445585" />
+      <entry key="M5" value="9.644964407057028" />
+      <entry key="M10" value="10.729433510496463" />
+      <entry key="M15" value="11.13065302383919" />
+      <entry key="M30" value="11.575971381299173" />
+      <entry key="H1" value="12.07308274702692" />
+      <entry key="H2" value="12.980304708093866" />
+      <entry key="H4" value="14.034931830295042" />
+      <entry key="D1" value="15.580875607847407" />
+      <entry key="W1" value="15.937381105893055" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -1471,6 +1181,9 @@
       <workItem from="1783359369928" duration="1540000" />
       <workItem from="1783437396865" duration="3143000" />
       <workItem from="1783732164460" duration="1018000" />
+      <workItem from="1785061244974" duration="6306000" />
+      <workItem from="1785204287407" duration="5731000" />
+      <workItem from="1785233695713" duration="4085000" />
     </task>
     <servers />
   </component>
