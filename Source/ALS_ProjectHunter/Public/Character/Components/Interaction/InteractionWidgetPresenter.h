@@ -232,6 +232,9 @@ private:
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> OutlineMID;
 
+	/** Prevents the same item tooltip from rebuilding on every focus timer pass. */
+	int32 PresentedGroundItemID = INDEX_NONE;
+
 	// CACHED CONTEXT (raw pointers - valid for lifetime of owner component)
 
 	UActorComponent* OwnerComponent = nullptr;

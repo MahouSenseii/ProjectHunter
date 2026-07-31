@@ -238,7 +238,23 @@ void AHunterHUD::ShowItemTooltip(UItemInstance* Item, FVector2D ScreenPosition)
 	if (ItemTooltipWidget && Item)
 	{
 		ItemTooltipWidget->UpdateTooltip(Item);
-		ItemTooltipWidget->SetPositionInViewport(ScreenPosition);
+
+		if (bPinItemTooltipToBottomRight)
+		{
+			// SetPositionInViewport resets viewport anchors, so apply the offset
+			// before anchoring and aligning the tooltip to the bottom-right corner.
+			ItemTooltipWidget->SetPositionInViewport(
+				FVector2D(-ItemTooltipScreenPadding, -ItemTooltipScreenPadding),
+				/*bRemoveDPIScale=*/false);
+			ItemTooltipWidget->SetAnchorsInViewport(FAnchors(1.0f, 1.0f));
+			ItemTooltipWidget->SetAlignmentInViewport(FVector2D(1.0f, 1.0f));
+		}
+		else
+		{
+			ItemTooltipWidget->SetPositionInViewport(ScreenPosition);
+			ItemTooltipWidget->SetAlignmentInViewport(FVector2D::ZeroVector);
+		}
+
 		ItemTooltipWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
 	}
 }

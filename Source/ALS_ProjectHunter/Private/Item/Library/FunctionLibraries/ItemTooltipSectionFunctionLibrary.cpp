@@ -53,6 +53,23 @@ namespace ItemTooltipSection
 				bCorrupted));
 		}
 	}
+
+	void AddDurabilityLine(FItemTooltipSection& Section, const FItemDurability& Durability)
+	{
+		if (Durability.MaxDurability <= 0.0f)
+		{
+			return;
+		}
+
+		UItemTooltipLineFunctionLibrary::AddTooltipValueLine(
+			Section.Lines,
+			TEXT("Durability"),
+			FText::FromString(FString::Printf(
+				TEXT("%s / %s"),
+				*UItemTooltipLineFunctionLibrary::FormatTooltipNumber(Durability.CurrentDurability),
+				*UItemTooltipLineFunctionLibrary::FormatTooltipNumber(Durability.MaxDurability))),
+			UItemTooltipLineFunctionLibrary::GetMutedTextColor());
+	}
 }
 
 FItemTooltipSection UItemTooltipSectionFunctionLibrary::MakeTooltipSection(
@@ -86,7 +103,10 @@ void UItemTooltipSectionFunctionLibrary::AddAffixSection(
 	AddSectionIfAny(TooltipData, Section);
 }
 
-void UItemTooltipSectionFunctionLibrary::AddWeaponStatsSection(FItemTooltipData& TooltipData, const FBaseWeaponStats& Stats)
+void UItemTooltipSectionFunctionLibrary::AddWeaponStatsSection(
+	FItemTooltipData& TooltipData,
+	const FBaseWeaponStats& Stats,
+	const FItemDurability& Durability)
 {
 	FItemTooltipSection Section = MakeTooltipSection(EItemTooltipSectionType::BaseStats, FText::FromString(TEXT("Weapon Stats")));
 
@@ -180,10 +200,14 @@ void UItemTooltipSectionFunctionLibrary::AddWeaponStatsSection(FItemTooltipData&
 			EItemTooltipLineStyle::Stat);
 	}
 
+	ItemTooltipSection::AddDurabilityLine(Section, Durability);
 	AddSectionIfAny(TooltipData, Section);
 }
 
-void UItemTooltipSectionFunctionLibrary::AddArmorStatsSection(FItemTooltipData& TooltipData, const FBaseArmorStats& Stats)
+void UItemTooltipSectionFunctionLibrary::AddArmorStatsSection(
+	FItemTooltipData& TooltipData,
+	const FBaseArmorStats& Stats,
+	const FItemDurability& Durability)
 {
 	FItemTooltipSection Section = MakeTooltipSection(EItemTooltipSectionType::BaseStats, FText::FromString(TEXT("Armor Stats")));
 
@@ -194,6 +218,7 @@ void UItemTooltipSectionFunctionLibrary::AddArmorStatsSection(FItemTooltipData& 
 	UItemTooltipLineFunctionLibrary::AddTooltipNonZeroLine(Section.Lines, TEXT("Light Resistance"), Stats.LightResistance, true);
 	UItemTooltipLineFunctionLibrary::AddTooltipNonZeroLine(Section.Lines, TEXT("Corruption Resistance"), Stats.CorruptionResistance, true, UItemTooltipLineFunctionLibrary::GetCorruptedTextColor());
 
+	ItemTooltipSection::AddDurabilityLine(Section, Durability);
 	AddSectionIfAny(TooltipData, Section);
 }
 
@@ -209,26 +234,6 @@ void UItemTooltipSectionFunctionLibrary::AddRequirementsSection(FItemTooltipData
 	UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Affliction"), Requirements.RequiredAffliction);
 	UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Luck"), Requirements.RequiredLuck);
 	UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Covenant"), Requirements.RequiredCovenant);
-
-	AddSectionIfAny(TooltipData, Section);
-}
-
-void UItemTooltipSectionFunctionLibrary::AddDurabilitySection(FItemTooltipData& TooltipData, const FItemDurability& Durability)
-{
-	if (Durability.MaxDurability <= 0.0f)
-	{
-		return;
-	}
-
-	FItemTooltipSection Section = MakeTooltipSection(EItemTooltipSectionType::Durability, FText::FromString(TEXT("Durability")));
-	UItemTooltipLineFunctionLibrary::AddTooltipValueLine(
-		Section.Lines,
-		TEXT("Durability"),
-		FText::FromString(FString::Printf(
-			TEXT("%s / %s"),
-			*UItemTooltipLineFunctionLibrary::FormatTooltipNumber(Durability.CurrentDurability),
-			*UItemTooltipLineFunctionLibrary::FormatTooltipNumber(Durability.MaxDurability))),
-		UItemTooltipLineFunctionLibrary::GetMutedTextColor());
 
 	AddSectionIfAny(TooltipData, Section);
 }
@@ -317,17 +322,9 @@ void UItemTooltipSectionFunctionLibrary::AddDetailsSection(FItemTooltipData& Too
 		return;
 	}
 
-	FItemTooltipSection Section = MakeTooltipSection(EItemTooltipSectionType::Details, FText::FromString(TEXT("Item")), false);
-
-	if (!TooltipData.ItemTypeName.IsEmpty())
-	{
-		UItemTooltipLineFunctionLibrary::AddTooltipValueLine(Section.Lines, TEXT("Type"), TooltipData.ItemTypeName, UItemTooltipLineFunctionLibrary::GetMutedTextColor());
-	}
-
-	if (!TooltipData.ItemSubTypeName.IsEmpty() && TooltipData.ItemSubTypeName.ToString() != TEXT("None"))
-	{
-		UItemTooltipLineFunctionLibrary::AddTooltipValueLine(Section.Lines, TEXT("Subtype"), TooltipData.ItemSubTypeName, UItemTooltipLineFunctionLibrary::GetMutedTextColor());
-	}
+	FItemTooltipSection Section = MakeTooltipSection(
+		EItemTooltipSectionType::Details,
+		FText::FromString(TEXT("Item Details")));
 
 	if (TooltipData.ItemLevel > 0)
 	{

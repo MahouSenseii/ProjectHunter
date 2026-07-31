@@ -1,4 +1,5 @@
 #include "Character/Components/Interaction/InteractionDebugManager.h"
+#include "Character/Components/Interaction/InteractionTraceManager.h"
 #include "Interactable/Components/InteractableManager.h"
 #include "Components/ALSDebugComponent.h"
 #include "DrawDebugHelpers.h"
@@ -267,32 +268,18 @@ void FInteractionDebugManager::DrawAimCandidate(FVector Location, float Dot, boo
 	}
 }
 
-void FInteractionDebugManager::DrawGroundItemAimWindow(
-	FVector Origin, FVector Forward, float MinDistance, float MaxDistance, float Radius, bool bLimitedByTraceHit)
+void FInteractionDebugManager::DrawGroundItemSearchVolume(FVector Center, float Radius)
 {
-	if (!ShouldShowDebugTraces() || !bDrawGroundItemAimWindow || !WorldContext
-		|| MaxDistance <= MinDistance || Radius <= 0.0f)
+	if (!ShouldShowDebugTraces() || !bDrawGroundItemAimWindow || !WorldContext || Radius <= 0.0f)
 	{
 		return;
 	}
 
-	const FVector SafeForward = Forward.GetSafeNormal();
-	if (SafeForward.IsNearlyZero())
-	{
-		return;
-	}
+	const FColor WindowColor(210, 210, 210);
 
-	const float WindowLength = MaxDistance - MinDistance;
-	const FVector Start = Origin + SafeForward * MinDistance;
-	const FVector End = Origin + SafeForward * MaxDistance;
-	const FColor WindowColor = bLimitedByTraceHit
-		? FColor(0, 220, 255)
-		: FColor(0, 120, 255);
-
-	DrawDebugCylinder(
+	DrawDebugSphere(
 		WorldContext,
-		Start,
-		End,
+		Center,
 		Radius,
 		16,
 		WindowColor,
@@ -306,18 +293,231 @@ void FInteractionDebugManager::DrawGroundItemAimWindow(
 	{
 		DrawDebugString(
 			WorldContext,
-			Start + SafeForward * (WindowLength * 0.5f) + FVector(0, 0, Radius + 25.0f),
+			Center + FVector(0, 0, Radius + 25.0f),
 			FString::Printf(
-				TEXT("ground aim r %.0f depth %.0f-%.0f%s"),
-				Radius,
-				MinDistance,
-				MaxDistance,
-				bLimitedByTraceHit ? TEXT(" hit-limited") : TEXT(" full")),
+				TEXT("PLAYER INTERACTION RADIUS %.0f cm"),
+				Radius),
 			nullptr,
 			WindowColor,
 			DrawDuration <= 0.0f ? 0.05f : DrawDuration,
 			true
 		);
+	}
+}
+
+void FInteractionDebugManager::DrawSelectionDirections(
+	FVector PlayerCenter,
+	FVector PlayerForward,
+	FVector CameraOrigin,
+	FVector CameraForward,
+	float Length)
+{
+	if (!ShouldShowDebugTraces() || !WorldContext || Length <= 0.0f)
+	{
+		return;
+	}
+
+	const FVector SafePlayerForward = PlayerForward.GetSafeNormal();
+	const FVector SafeCameraForward = CameraForward.GetSafeNormal();
+	const FColor PlayerColor(80, 255, 120);
+	const FColor CameraColor(60, 160, 255);
+
+	DrawDebugDirectionalArrow(
+		WorldContext,
+		PlayerCenter,
+		PlayerCenter + SafePlayerForward * Length,
+		18.0f,
+		PlayerColor,
+		false,
+		DrawDuration,
+		0,
+		DrawThickness);
+
+	DrawDebugDirectionalArrow(
+		WorldContext,
+		CameraOrigin,
+		CameraOrigin + SafeCameraForward * Length,
+		18.0f,
+		CameraColor,
+		false,
+		DrawDuration,
+		0,
+		DrawThickness);
+
+	if (DebugMode == EInteractionDebugMode::Detailed || DebugMode == EInteractionDebugMode::Full)
+	{
+		DrawDebugString(
+			WorldContext,
+			PlayerCenter + SafePlayerForward * Length,
+			TEXT("PLAYER FORWARD"),
+			nullptr,
+			PlayerColor,
+			DrawDuration,
+			true);
+		DrawDebugString(
+			WorldContext,
+			CameraOrigin + SafeCameraForward * Length,
+			TEXT("CAMERA FORWARD"),
+			nullptr,
+			CameraColor,
+			DrawDuration,
+			true);
+	}
+}
+
+void FInteractionDebugManager::DrawRejectedGroundItemCandidate(
+	FVector Location, int32 ItemID, float PlayerForwardDot)
+{
+	if (!ShouldShowDebugTraces() || !bDrawAimCandidates || !WorldContext)
+	{
+		return;
+	}
+
+	DrawDebugSphere(
+		WorldContext,
+		Location,
+		14.0f,
+		8,
+		RejectedCandidateColor,
+		false,
+		DrawDuration,
+		0,
+		DrawThickness * 0.75f);
+
+	if (DebugMode == EInteractionDebugMode::Detailed || DebugMode == EInteractionDebugMode::Full)
+	{
+		DrawDebugString(
+			WorldContext,
+			Location + FVector(0, 0, 35.0f),
+			FString::Printf(
+				TEXT("REJECTED ID %d | player dot %.3f"),
+				ItemID,
+				PlayerForwardDot),
+			nullptr,
+			RejectedCandidateColor,
+			DrawDuration,
+			true);
+	}
+}
+
+void FInteractionDebugManager::DrawGroundItemCandidateStack(
+	FVector TraceOrigin,
+	const TArray<FGroundItemInteractionCandidate>& Candidates,
+	int32 SelectedItemID,
+	int32 AutomaticItemID,
+	bool bManualSelectionLocked,
+	float ManualLockRemaining)
+{
+	if (!ShouldShowDebugTraces() || !bDrawGroundItemCandidateStack || !WorldContext)
+	{
+		return;
+	}
+
+	const FGroundItemInteractionCandidate* SelectedCandidate = Candidates.FindByPredicate(
+		[SelectedItemID](const FGroundItemInteractionCandidate& Candidate)
+		{
+			return Candidate.ItemID == SelectedItemID;
+		});
+	if (!SelectedCandidate)
+	{
+		return;
+	}
+
+	const FGroundItemInteractionCandidate* RunnerUpCandidate = Candidates.FindByPredicate(
+		[SelectedItemID, AutomaticItemID](const FGroundItemInteractionCandidate& Candidate)
+		{
+			return Candidate.ItemID == AutomaticItemID && Candidate.ItemID != SelectedItemID;
+		});
+	if (!RunnerUpCandidate)
+	{
+		RunnerUpCandidate = Candidates.FindByPredicate(
+			[SelectedItemID](const FGroundItemInteractionCandidate& Candidate)
+			{
+				return Candidate.ItemID != SelectedItemID;
+			});
+	}
+
+	const FColor SelectedColor = bManualSelectionLocked ? ManualCandidateColor : TraceHitColor;
+	DrawDebugSphere(
+		WorldContext,
+		SelectedCandidate->WorldLocation,
+		30.0f,
+		10,
+		SelectedColor,
+		false,
+		DrawDuration,
+		0,
+		DrawThickness);
+	DrawDebugLine(
+		WorldContext,
+		TraceOrigin,
+		SelectedCandidate->WorldLocation,
+		SelectedColor,
+		false,
+		DrawDuration,
+		0,
+		DrawThickness);
+
+	if (RunnerUpCandidate)
+	{
+		const FColor RunnerColor(120, 120, 120);
+		DrawDebugSphere(
+			WorldContext,
+			RunnerUpCandidate->WorldLocation,
+			16.0f,
+			8,
+			RunnerColor,
+			false,
+			DrawDuration,
+			0,
+			DrawThickness * 0.5f);
+		DrawDebugLine(
+			WorldContext,
+			TraceOrigin,
+			RunnerUpCandidate->WorldLocation,
+			RunnerColor,
+			false,
+			DrawDuration,
+			0,
+			DrawThickness * 0.35f);
+	}
+
+	if (DebugMode == EInteractionDebugMode::Detailed || DebugMode == EInteractionDebugMode::Full)
+	{
+		const FString SelectionState = bManualSelectionLocked
+			? FString::Printf(TEXT("MANUAL %.2fs"), ManualLockRemaining)
+			: TEXT("AUTOMATIC");
+		DrawDebugString(
+			WorldContext,
+			SelectedCandidate->WorldLocation + FVector(0, 0, 55.0f),
+			FString::Printf(
+				TEXT("SELECTED ID %d | %s\nscore %.3f | camera %.3f, player gate %.3f, range %.0f cm (gate only), focus +%.3f"),
+				SelectedCandidate->ItemID,
+				*SelectionState,
+				SelectedCandidate->Score,
+				SelectedCandidate->CameraForwardDot,
+				SelectedCandidate->PlayerForwardDot,
+				SelectedCandidate->Distance,
+				SelectedCandidate->FocusBonus),
+			nullptr,
+			SelectedColor,
+			DrawDuration,
+			true);
+
+		if (RunnerUpCandidate)
+		{
+			DrawDebugString(
+				WorldContext,
+				RunnerUpCandidate->WorldLocation + FVector(0, 0, 35.0f),
+				FString::Printf(
+					TEXT("RUNNER-UP ID %d | score %.3f"),
+					RunnerUpCandidate->ItemID,
+					RunnerUpCandidate->Score),
+				nullptr,
+				FColor(160, 160, 160),
+				DrawDuration,
+				true);
+		}
 	}
 }
 
@@ -354,7 +554,8 @@ void FInteractionDebugManager::DrawGroundItem(FVector ItemLocation, int32 ItemID
 	}
 }
 
-void FInteractionDebugManager::DrawInteractableInfo(UInteractableManager* Interactable, float Distance)
+void FInteractionDebugManager::DrawInteractableInfo(
+	UInteractableManager* Interactable, float Distance, FVector TraceOrigin)
 {
 	if (!ShouldShowDebugTraces() || !Interactable || !WorldContext)
 	{
@@ -380,6 +581,15 @@ void FInteractionDebugManager::DrawInteractableInfo(UInteractableManager* Intera
 		0,
 		DrawThickness
 	);
+	DrawDebugLine(
+		WorldContext,
+		TraceOrigin,
+		ActorLocation,
+		InteractableColor,
+		false,
+		DrawDuration,
+		0,
+		DrawThickness);
 
 	if (DebugMode == EInteractionDebugMode::Detailed || DebugMode == EInteractionDebugMode::Full)
 	{
@@ -389,16 +599,6 @@ void FInteractionDebugManager::DrawInteractableInfo(UInteractableManager* Intera
 			Distance,
 			*UEnum::GetValueAsString(Interactable->Config.InteractionType)
 		);
-
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(
-				-1,
-				2.0f,
-				FColor::Green,
-				DebugInfo
-			);
-		}
 
 		DrawDebugString(
 			WorldContext,
@@ -411,7 +611,18 @@ void FInteractionDebugManager::DrawInteractableInfo(UInteractableManager* Intera
 	}
 }
 
-void FInteractionDebugManager::DisplayInteractionState(UInteractableManager* Interactable, float Distance, int32 GroundItemID)
+void FInteractionDebugManager::DisplayInteractionState(
+	UInteractableManager* Interactable,
+	float Distance,
+	int32 GroundItemID,
+	int32 SelectionNumber,
+	int32 CandidateCount,
+	int32 AutomaticItemID,
+	const FGroundItemInteractionCandidate* SelectedCandidate,
+	bool bHasProximityCandidates,
+	float EvaluationInterval,
+	bool bManualSelectionLocked,
+	float ManualLockRemaining)
 {
 	if (!bShowDebugText || !ShouldShowDebugTraces())
 	{
@@ -424,11 +635,15 @@ void FInteractionDebugManager::DisplayInteractionState(UInteractableManager* Int
 	{
 		AActor* TargetActor = Interactable->GetOwner();
 		DebugText = FString::Printf(
-			TEXT("INTERACTION DEBUG\n")
+			TEXT("INTERACTION DECISION\n")
+			TEXT("Sphere: %s | Loop: %s (%.0f Hz)\n")
 			TEXT("Target: %s\n")
 			TEXT("Distance: %.1f\n")
 			TEXT("Type: %s\n")
 			TEXT("Can Interact: %s"),
+			bHasProximityCandidates ? TEXT("OCCUPIED") : TEXT("EMPTY"),
+			bHasProximityCandidates ? TEXT("ACTIVE") : TEXT("IDLE DISCOVERY"),
+			EvaluationInterval > KINDA_SMALL_NUMBER ? 1.0f / EvaluationInterval : 0.0f,
 			TargetActor ? *TargetActor->GetName() : TEXT("NULL"),
 			Distance,
 			*UEnum::GetValueAsString(Interactable->Config.InteractionType),
@@ -437,23 +652,72 @@ void FInteractionDebugManager::DisplayInteractionState(UInteractableManager* Int
 	}
 	else if (GroundItemID != -1)
 	{
-		DebugText = FString::Printf(
-			TEXT("INTERACTION DEBUG\n")
-			TEXT("Ground Item ID: %d"),
-			GroundItemID
-		);
+		if (SelectedCandidate)
+		{
+			DebugText = FString::Printf(
+				TEXT("INTERACTION DECISION\n")
+				TEXT("Sphere: OCCUPIED | Loop: ACTIVE (%.0f Hz)\n")
+				TEXT("Selected Item: %d  (%d / %d)\n")
+				TEXT("Mode: %s\n")
+				TEXT("Final Score: %.3f\n")
+				TEXT("Camera Dot: %.3f\n")
+				TEXT("Player Gate Dot: %.3f (must be >= 0)\n")
+				TEXT("Range: %.0f cm (gate only)\n")
+				TEXT("Current Focus Bonus: +%.3f\n")
+				TEXT("Automatic Best: %d%s"),
+				EvaluationInterval > KINDA_SMALL_NUMBER ? 1.0f / EvaluationInterval : 0.0f,
+				GroundItemID,
+				SelectionNumber,
+				CandidateCount,
+				bManualSelectionLocked ? TEXT("MANUAL LOCK") : TEXT("AUTOMATIC"),
+				SelectedCandidate->Score,
+				SelectedCandidate->CameraForwardDot,
+				SelectedCandidate->PlayerForwardDot,
+				SelectedCandidate->Distance,
+				SelectedCandidate->FocusBonus,
+				AutomaticItemID,
+				bManualSelectionLocked
+					? *FString::Printf(TEXT("\nLock Remaining: %.2fs"), ManualLockRemaining)
+					: TEXT(""));
+		}
+		else
+		{
+			DebugText = FString::Printf(
+				TEXT("INTERACTION DECISION\n")
+				TEXT("Sphere: %s | Loop: %s (%.0f Hz)\n")
+				TEXT("Ground Item ID: %d\nEligible Candidates: %d"),
+				bHasProximityCandidates ? TEXT("OCCUPIED") : TEXT("EMPTY"),
+				bHasProximityCandidates ? TEXT("ACTIVE") : TEXT("IDLE DISCOVERY"),
+				EvaluationInterval > KINDA_SMALL_NUMBER ? 1.0f / EvaluationInterval : 0.0f,
+				GroundItemID,
+				CandidateCount);
+		}
 	}
 	else
 	{
-		DebugText = TEXT("INTERACTION DEBUG\nNo Target");
+		DebugText = FString::Printf(
+			TEXT("INTERACTION DECISION\n")
+			TEXT("Sphere: %s | Loop: %s (%.0f Hz)\n")
+			TEXT("Eligible Ground Items: %d\n")
+			TEXT("%s"),
+			bHasProximityCandidates ? TEXT("OCCUPIED") : TEXT("EMPTY"),
+			bHasProximityCandidates ? TEXT("ACTIVE") : TEXT("IDLE DISCOVERY"),
+			EvaluationInterval > KINDA_SMALL_NUMBER ? 1.0f / EvaluationInterval : 0.0f,
+			CandidateCount,
+			bHasProximityCandidates
+				? TEXT("No target passed the facing gates")
+				: TEXT("No interactables in player radius"));
 	}
 
 	if (GEngine)
 	{
+		const uint64 MessageKey = OwnerActor
+			? (static_cast<uint64>(OwnerActor->GetUniqueID()) << 1) | 1ULL
+			: 739001ULL;
 		GEngine->AddOnScreenDebugMessage(
-			-1,
-			0.0f,
-			InteractableColor,
+			MessageKey,
+			FMath::Max(DrawDuration * 1.5f, 0.1f),
+			bManualSelectionLocked ? ManualCandidateColor : InteractableColor,
 			DebugText
 		);
 	}

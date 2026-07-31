@@ -2,14 +2,14 @@
 
 namespace ItemTooltipLineColors
 {
-	const FLinearColor MutedText(0.72f, 0.72f, 0.72f, 1.0f);
-	const FLinearColor StatText(0.78f, 0.90f, 1.0f, 1.0f);
-	const FLinearColor AffixText(0.72f, 0.88f, 1.0f, 1.0f);
+	const FLinearColor MutedText = FLinearColor::White;
+	const FLinearColor StatText = FLinearColor::White;
+	const FLinearColor AffixText = FLinearColor::White;
 	const FLinearColor PositiveText(0.42f, 0.95f, 0.48f, 1.0f);
 	const FLinearColor NegativeText(1.0f, 0.28f, 0.25f, 1.0f);
 	const FLinearColor WarningText(1.0f, 0.78f, 0.28f, 1.0f);
 	const FLinearColor CorruptedText(0.78f, 0.20f, 1.0f, 1.0f);
-	const FLinearColor DescriptionText(0.82f, 0.82f, 0.82f, 1.0f);
+	const FLinearColor DescriptionText = FLinearColor::White;
 }
 
 FString UItemTooltipLineFunctionLibrary::FormatTooltipNumber(const float Value, const int32 MaxDecimals)

@@ -1,28 +1,62 @@
 #include "Tower/Actors/ISMContainerActor.h"
 #include "Components/SceneComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
 
 AISMContainerActor::AISMContainerActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.bStartWithTickEnabled = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
+	PrimaryActorTick.TickInterval = 1.0f / AnimationUpdatesPerSecond;
 	bReplicates = false;
 
 	RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
 	SetRootComponent(RootSceneComponent);
 }
 
+void AISMContainerActor::BeginPlay()
+{
+	Super::BeginPlay();
+
+	SetActorTickInterval(1.0f / FMath::Max(AnimationUpdatesPerSecond, 1.0f));
+	RefreshAnimationTickState();
+}
+
 void AISMContainerActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (AnimationStates.Num() == 0)
+	if (AnimationStates.IsEmpty() || GetNetMode() == NM_DedicatedServer)
 	{
+		RefreshAnimationTickState();
 		return;
 	}
 
 	AnimationTime += DeltaTime;
 
+	TArray<FVector, TInlineAllocator<4>> LocalViewLocations;
+	if (RenderCullEndDistance > 0.0f)
+	{
+		if (const UWorld* World = GetWorld())
+		{
+			for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+			{
+				const APlayerController* PlayerController = It->Get();
+				if (!PlayerController || !PlayerController->IsLocalController())
+				{
+					continue;
+				}
+
+				FVector ViewLocation;
+				FRotator ViewRotation;
+				PlayerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
+				LocalViewLocations.Add(ViewLocation);
+			}
+		}
+	}
+
+	const float RenderCullEndDistanceSq = FMath::Square(RenderCullEndDistance);
 	TSet<UInstancedStaticMeshComponent*> DirtyISMs;
 
 	for (auto& Pair : AnimationStates)
@@ -31,6 +65,30 @@ void AISMContainerActor::Tick(float DeltaTime)
 		if (!State.IsValid())
 		{
 			continue;
+		}
+
+		if (bSkipRecentlyUnrenderedMeshes &&
+			!State.ISMComponent->WasRecentlyRendered(RecentlyRenderedTolerance))
+		{
+			continue;
+		}
+
+		if (RenderCullEndDistance > 0.0f && !LocalViewLocations.IsEmpty())
+		{
+			bool bWithinAnimationDistance = false;
+			for (const FVector& ViewLocation : LocalViewLocations)
+			{
+				if (FVector::DistSquared(ViewLocation, State.BaseLocation) <= RenderCullEndDistanceSq)
+				{
+					bWithinAnimationDistance = true;
+					break;
+				}
+			}
+
+			if (!bWithinAnimationDistance)
+			{
+				continue;
+			}
 		}
 
 		const float T = AnimationTime;
@@ -73,6 +131,11 @@ void AISMContainerActor::RegisterItemForAnimation(
 		return;
 	}
 
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+
 	FGroundItemAnimState State;
 	State.ISMComponent  = ISM;
 	State.InstanceIndex = InstanceIndex;
@@ -86,11 +149,17 @@ void AISMContainerActor::RegisterItemForAnimation(
 	State.PhaseOffset = FMath::Fmod(static_cast<float>(ItemID) * GoldenAngleRad, TWO_PI);
 
 	AnimationStates.Add(ItemID, State);
+	RefreshAnimationTickState();
 }
 
 void AISMContainerActor::UnregisterItemFromAnimation(int32 ItemID)
 {
 	AnimationStates.Remove(ItemID);
+	if (AnimationStates.IsEmpty())
+	{
+		AnimationTime = 0.0f;
+	}
+	RefreshAnimationTickState();
 }
 
 void AISMContainerActor::UpdateItemAnimationIndex(int32 ItemID, int32 NewInstanceIndex)
@@ -105,4 +174,27 @@ void AISMContainerActor::ClearAllAnimationState()
 {
 	AnimationStates.Empty();
 	AnimationTime = 0.0f;
+	RefreshAnimationTickState();
+}
+
+void AISMContainerActor::ConfigureISMComponent(UInstancedStaticMeshComponent* ISM) const
+{
+	if (!ISM)
+	{
+		return;
+	}
+
+	const int32 EndDistance = FMath::Max(FMath::RoundToInt(RenderCullEndDistance), 0);
+	const int32 StartDistance = EndDistance > 0
+		? FMath::Clamp(FMath::RoundToInt(RenderCullStartDistance), 0, EndDistance)
+		: 0;
+	ISM->SetCullDistances(StartDistance, EndDistance);
+}
+
+void AISMContainerActor::RefreshAnimationTickState()
+{
+	const bool bShouldTick =
+		GetNetMode() != NM_DedicatedServer &&
+		!AnimationStates.IsEmpty();
+	SetActorTickEnabled(bShouldTick);
 }

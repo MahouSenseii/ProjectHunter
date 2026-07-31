@@ -16,6 +16,26 @@ namespace InteractionManagerPrivate
 {
 	constexpr float MaxClientLocationErrorSq = 800.f * 800.f;
 
+	bool HasSameCandidateOrder(
+		const TArray<FGroundItemInteractionCandidate>& A,
+		const TArray<FGroundItemInteractionCandidate>& B)
+	{
+		if (A.Num() != B.Num())
+		{
+			return false;
+		}
+
+		for (int32 Index = 0; Index < A.Num(); ++Index)
+		{
+			if (A[Index].ItemID != B[Index].ItemID)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	bool ValidateServerGroundItemPickup(const UInteractionManager* Manager, int32 ItemID,
 		const FVector& ClientLocation, const TCHAR* Context)
 	{
@@ -122,16 +142,12 @@ void UInteractionManager::Initialize()
 
 	if (bInteractionEnabled)
 	{
-		World->GetTimerManager().SetTimer(
-			InteractionCheckTimer,
-			this,
-			&UInteractionManager::CheckForInteractables,
-			TraceManager.CheckFrequency,
-			true);
+		CurrentInteractionCheckInterval = -1.0f;
+		UpdateInteractionCheckRate(false);
 
 		UE_LOG(LogInteractionManager, Log,
-			TEXT("InteractionManager: Manually initialized on %s (Frequency: %.2fs)"),
-			*GetOwner()->GetName(), TraceManager.CheckFrequency);
+			TEXT("InteractionManager: Manually initialized on %s (Idle: %.2fs | Active: %.2fs)"),
+			*GetOwner()->GetName(), TraceManager.IdleCheckFrequency, TraceManager.CheckFrequency);
 	}
 }
 
@@ -165,6 +181,7 @@ void UInteractionManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		World->GetTimerManager().ClearTimer(InteractionCheckTimer);
 	}
+	CurrentInteractionCheckInterval = -1.0f;
 
 	if (UObject* CurrentInteractableTarget = GetCurrentInteractableObject())
 	{
@@ -174,6 +191,10 @@ void UInteractionManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	CurrentInteractable = nullptr;
 	CurrentInteractableObject.Reset();
 	CurrentGroundItemID = INDEX_NONE;
+	GroundItemCandidates.Reset();
+	SelectedGroundItemCandidateIndex = INDEX_NONE;
+	AutomaticGroundItemID = INDEX_NONE;
+	ManualGroundItemSelectionLockEndTime = -1.0f;
 
 	WidgetPresenter.Shutdown();
 
@@ -342,16 +363,24 @@ void UInteractionManager::CheckForInteractables()
 	// the visualisation matches where the trace really fires from.
 	const FVector TraceOrigin = TraceManager.GetTraceStart();
 
-	if (bDebugEnabled)
-	{
-		DebugManager.DrawInteractionRange(TraceOrigin, TraceManager.InteractionDistance);
-	}
-
-	// Focus uses one camera trace first. The hit type decides whether actor or
-	// ground-item gates can run, so debug and selection stay in the same flow.
+	// One player-centered proximity query gathers both actor interactables and
+	// saved ground-item locations, then scores them with the same math.
 	TScriptInterface<IInteractable> NewInteractable;
 	int32 NewGroundItemID = INDEX_NONE;
-	TraceManager.FindBestInteractionTarget(CurrentInteractable, CurrentGroundItemID, NewInteractable, NewGroundItemID);
+	TArray<FGroundItemInteractionCandidate> NewGroundItemCandidates;
+	bool bHasProximityCandidates = false;
+	TraceManager.FindBestInteractionTarget(
+		CurrentInteractable,
+		CurrentGroundItemID,
+		NewInteractable,
+		NewGroundItemID,
+		NewGroundItemCandidates,
+		bHasProximityCandidates);
+
+	// The fast evaluation loop only runs while something overlaps the logical
+	// player sphere (or an interaction is still active). Empty-space discovery
+	// uses the slower idle rate because ISM ground items do not emit overlaps.
+	UpdateInteractionCheckRate(bHasProximityCandidates || HasActiveInteraction());
 
 	// Don't shift focus while an interaction is in progress - the outline and
 	// ground-item widget must stay on the active target until it completes.
@@ -362,9 +391,13 @@ void UInteractionManager::CheckForInteractables()
 			UpdateFocusState(NewInteractable);
 		}
 
-		if (NewGroundItemID != CurrentGroundItemID)
+		if (NewInteractable.GetObject())
 		{
-			UpdateGroundItemFocus(NewGroundItemID);
+			ApplyGroundItemCandidates({}, INDEX_NONE);
+		}
+		else
+		{
+			ApplyGroundItemCandidates(NewGroundItemCandidates, NewGroundItemID);
 		}
 	}
 
@@ -373,7 +406,7 @@ void UInteractionManager::CheckForInteractables()
 		RefreshFocusedWidget();
 	}
 
-	if (bDebugEnabled)
+	if (DebugManager.ShouldShowDebugTraces())
 	{
 		UInteractableManager* InteractableComp = GetCurrentInteractable();
 		float Distance = 0.0f;
@@ -381,23 +414,67 @@ void UInteractionManager::CheckForInteractables()
 		if (InteractableComp)
 		{
 			Distance = FVector::Distance(TraceOrigin, InteractableComp->GetOwner()->GetActorLocation());
-			DebugManager.DrawInteractableInfo(InteractableComp, Distance);
+			DebugManager.DrawInteractableInfo(InteractableComp, Distance, TraceOrigin);
 		}
 
-		if (CurrentGroundItemID != INDEX_NONE)
-		{
-			if (UGroundItemSubsystem* Subsystem = GetWorld()->GetSubsystem<UGroundItemSubsystem>())
-			{
-				const TMap<int32, FVector>& Locations = Subsystem->GetInstanceLocations();
-				if (const FVector* LocationPtr = Locations.Find(CurrentGroundItemID))
+		const bool bManualSelectionLocked = IsManualGroundItemSelectionLocked();
+		const float ManualLockRemaining = GetManualGroundItemSelectionLockRemaining();
+		const FGroundItemInteractionCandidate* SelectedCandidate =
+			GroundItemCandidates.FindByPredicate(
+				[this](const FGroundItemInteractionCandidate& Candidate)
 				{
-					DebugManager.DrawGroundItem(*LocationPtr, CurrentGroundItemID);
-				}
-			}
-		}
+					return Candidate.ItemID == CurrentGroundItemID;
+				});
+		DebugManager.DrawGroundItemCandidateStack(
+			TraceOrigin,
+			GroundItemCandidates,
+			CurrentGroundItemID,
+			AutomaticGroundItemID,
+			bManualSelectionLocked,
+			ManualLockRemaining);
 
-		DebugManager.DisplayInteractionState(InteractableComp, Distance, CurrentGroundItemID);
+		DebugManager.DisplayInteractionState(
+			InteractableComp,
+			Distance,
+			CurrentGroundItemID,
+			GetGroundItemSelectionNumber(),
+			GroundItemCandidates.Num(),
+			AutomaticGroundItemID,
+			SelectedCandidate,
+			bHasProximityCandidates,
+			bHasProximityCandidates
+				? TraceManager.CheckFrequency
+				: TraceManager.IdleCheckFrequency,
+			bManualSelectionLocked,
+			ManualLockRemaining);
 	}
+}
+
+void UInteractionManager::CycleGroundItemFocus(int32 Direction)
+{
+	if (!bInteractionEnabled || HasActiveInteraction() || Direction == 0)
+	{
+		return;
+	}
+
+	if (GroundItemCandidates.IsEmpty())
+	{
+		CheckForInteractables();
+	}
+
+	if (GroundItemCandidates.IsEmpty())
+	{
+		return;
+	}
+
+	const int32 Step = Direction > 0 ? 1 : -1;
+	const int32 StartingIndex = GroundItemCandidates.IsValidIndex(SelectedGroundItemCandidateIndex)
+		? SelectedGroundItemCandidateIndex
+		: (Step > 0 ? -1 : 0);
+	const int32 NewIndex = (StartingIndex + Step + GroundItemCandidates.Num())
+		% GroundItemCandidates.Num();
+
+	SelectGroundItemCandidateIndex(NewIndex, true);
 }
 
 UInteractableManager* UInteractionManager::GetCurrentInteractable() const
@@ -438,17 +515,12 @@ void UInteractionManager::InitializeInteractionSystem()
 
 	if (bInteractionEnabled)
 	{
-		GetWorld()->GetTimerManager().ClearTimer(InteractionCheckTimer);
-		GetWorld()->GetTimerManager().SetTimer(
-			InteractionCheckTimer,
-			this,
-			&UInteractionManager::CheckForInteractables,
-			TraceManager.CheckFrequency,
-			true);
+		CurrentInteractionCheckInterval = -1.0f;
+		UpdateInteractionCheckRate(false);
 
 		UE_LOG(LogInteractionManager, Log,
-			TEXT("InteractionManager: Initialized on %s (Frequency: %.2fs)"),
-			*GetOwner()->GetName(), TraceManager.CheckFrequency);
+			TEXT("InteractionManager: Initialized on %s (Idle: %.2fs | Active: %.2fs)"),
+			*GetOwner()->GetName(), TraceManager.IdleCheckFrequency, TraceManager.CheckFrequency);
 	}
 
 	bSystemInitialized = true;
@@ -486,9 +558,37 @@ void UInteractionManager::ApplyQuickSettings()
 		? EInteractionDebugMode::Full
 		: EInteractionDebugMode::None;
 
-	// Keep debug shapes alive until the next timer tick so they don't flicker
-	// at 60 fps when the check only fires at 20 Hz.
-	DebugManager.DrawDuration = bDebugEnabled ? TraceManager.CheckFrequency : 0.0f;
+	// Keep debug shapes alive until the next timer tick so neither the quick
+	// setting nor ALS's Show Traces toggle produces a flickering snapshot.
+	DebugManager.DrawDuration = TraceManager.CheckFrequency;
+}
+
+void UInteractionManager::UpdateInteractionCheckRate(bool bHasProximityCandidates)
+{
+	UWorld* World = GetWorld();
+	if (!World || !bInteractionEnabled)
+	{
+		return;
+	}
+
+	const float ActiveInterval = FMath::Max(TraceManager.CheckFrequency, 0.01f);
+	const float IdleInterval = FMath::Max(TraceManager.IdleCheckFrequency, ActiveInterval);
+	const float DesiredInterval = bHasProximityCandidates ? ActiveInterval : IdleInterval;
+	DebugManager.DrawDuration = DesiredInterval;
+
+	if (World->GetTimerManager().IsTimerActive(InteractionCheckTimer)
+		&& FMath::IsNearlyEqual(CurrentInteractionCheckInterval, DesiredInterval))
+	{
+		return;
+	}
+
+	World->GetTimerManager().SetTimer(
+		InteractionCheckTimer,
+		this,
+		&UInteractionManager::CheckForInteractables,
+		DesiredInterval,
+		true);
+	CurrentInteractionCheckInterval = DesiredInterval;
 }
 
 void UInteractionManager::UpdateFocusState(TScriptInterface<IInteractable> NewInteractable)
@@ -534,6 +634,167 @@ void UInteractionManager::UpdateGroundItemFocus(int32 NewGroundItemID)
 	{
 		OnGroundItemFocusChanged.Broadcast(NewGroundItemID);
 	}
+}
+
+void UInteractionManager::ApplyGroundItemCandidates(
+	const TArray<FGroundItemInteractionCandidate>& NewCandidates,
+	int32 NewAutomaticGroundItemID)
+{
+	const bool bCandidateOrderChanged =
+		!InteractionManagerPrivate::HasSameCandidateOrder(GroundItemCandidates, NewCandidates);
+	const int32 OldSelectionIndex = SelectedGroundItemCandidateIndex;
+	const int32 OldGroundItemID = CurrentGroundItemID;
+
+	int32 DesiredGroundItemID = NewAutomaticGroundItemID;
+	if (IsManualGroundItemSelectionLocked() && CurrentGroundItemID != INDEX_NONE)
+	{
+		const bool bCurrentItemStillValid = NewCandidates.ContainsByPredicate(
+			[this](const FGroundItemInteractionCandidate& Candidate)
+			{
+				return Candidate.ItemID == CurrentGroundItemID;
+			});
+
+		if (bCurrentItemStillValid)
+		{
+			DesiredGroundItemID = CurrentGroundItemID;
+		}
+		else
+		{
+			ManualGroundItemSelectionLockEndTime = -1.0f;
+		}
+	}
+
+	GroundItemCandidates = NewCandidates;
+	AutomaticGroundItemID = FindGroundItemCandidateIndex(NewAutomaticGroundItemID) != INDEX_NONE
+		? NewAutomaticGroundItemID
+		: INDEX_NONE;
+	SelectedGroundItemCandidateIndex = FindGroundItemCandidateIndex(DesiredGroundItemID);
+
+	if (!GroundItemCandidates.IsEmpty() && SelectedGroundItemCandidateIndex == INDEX_NONE)
+	{
+		SelectedGroundItemCandidateIndex = 0;
+		DesiredGroundItemID = GroundItemCandidates[0].ItemID;
+	}
+	else if (GroundItemCandidates.IsEmpty())
+	{
+		DesiredGroundItemID = INDEX_NONE;
+		AutomaticGroundItemID = INDEX_NONE;
+		ManualGroundItemSelectionLockEndTime = -1.0f;
+	}
+
+	UpdateGroundItemFocus(DesiredGroundItemID);
+
+	if (bCandidateOrderChanged
+		|| OldSelectionIndex != SelectedGroundItemCandidateIndex
+		|| OldGroundItemID != CurrentGroundItemID)
+	{
+		BroadcastGroundItemSelectionChanged();
+	}
+}
+
+void UInteractionManager::SelectGroundItemCandidateIndex(int32 NewIndex, bool bManualSelection)
+{
+	if (!GroundItemCandidates.IsValidIndex(NewIndex))
+	{
+		return;
+	}
+
+	if (bManualSelection)
+	{
+		const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+		ManualGroundItemSelectionLockEndTime =
+			CurrentTime + FMath::Max(0.0f, ManualGroundItemSelectionLockDuration);
+	}
+
+	if (HasValidCurrentInteractable())
+	{
+		UpdateFocusState(TScriptInterface<IInteractable>());
+	}
+
+	SelectedGroundItemCandidateIndex = NewIndex;
+	UpdateGroundItemFocus(GroundItemCandidates[NewIndex].ItemID);
+	BroadcastGroundItemSelectionChanged();
+
+	if (ShouldUpdatePromptWidgetFromFocus())
+	{
+		RefreshFocusedWidget();
+	}
+}
+
+void UInteractionManager::AdvanceGroundItemFocusAfterPickup(int32 PickedUpItemID)
+{
+	const int32 RemovedIndex = FindGroundItemCandidateIndex(PickedUpItemID);
+	if (RemovedIndex == INDEX_NONE)
+	{
+		if (CurrentGroundItemID == PickedUpItemID)
+		{
+			SelectedGroundItemCandidateIndex = INDEX_NONE;
+			UpdateGroundItemFocus(INDEX_NONE);
+			BroadcastGroundItemSelectionChanged();
+		}
+		return;
+	}
+
+	GroundItemCandidates.RemoveAt(RemovedIndex, 1, EAllowShrinking::No);
+
+	if (GroundItemCandidates.IsEmpty())
+	{
+		SelectedGroundItemCandidateIndex = INDEX_NONE;
+		AutomaticGroundItemID = INDEX_NONE;
+		ManualGroundItemSelectionLockEndTime = -1.0f;
+		UpdateGroundItemFocus(INDEX_NONE);
+		BroadcastGroundItemSelectionChanged();
+		return;
+	}
+
+	SelectedGroundItemCandidateIndex = FMath::Min(RemovedIndex, GroundItemCandidates.Num() - 1);
+	if (FindGroundItemCandidateIndex(AutomaticGroundItemID) == INDEX_NONE)
+	{
+		AutomaticGroundItemID = GroundItemCandidates[0].ItemID;
+	}
+	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	ManualGroundItemSelectionLockEndTime =
+		CurrentTime + FMath::Max(0.0f, ManualGroundItemSelectionLockDuration);
+	UpdateGroundItemFocus(GroundItemCandidates[SelectedGroundItemCandidateIndex].ItemID);
+	BroadcastGroundItemSelectionChanged();
+}
+
+void UInteractionManager::BroadcastGroundItemSelectionChanged()
+{
+	OnGroundItemSelectionChanged.Broadcast(
+		CurrentGroundItemID,
+		GetGroundItemSelectionNumber(),
+		GroundItemCandidates.Num());
+}
+
+int32 UInteractionManager::FindGroundItemCandidateIndex(int32 ItemID) const
+{
+	if (ItemID == INDEX_NONE)
+	{
+		return INDEX_NONE;
+	}
+
+	return GroundItemCandidates.IndexOfByPredicate(
+		[ItemID](const FGroundItemInteractionCandidate& Candidate)
+		{
+			return Candidate.ItemID == ItemID;
+		});
+}
+
+bool UInteractionManager::IsManualGroundItemSelectionLocked() const
+{
+	const UWorld* World = GetWorld();
+	return World
+		&& ManualGroundItemSelectionLockEndTime >= 0.0f
+		&& World->GetTimeSeconds() < ManualGroundItemSelectionLockEndTime;
+}
+
+float UInteractionManager::GetManualGroundItemSelectionLockRemaining() const
+{
+	const UWorld* World = GetWorld();
+	return World
+		? FMath::Max(ManualGroundItemSelectionLockEndTime - World->GetTimeSeconds(), 0.0f)
+		: 0.0f;
 }
 
 bool UInteractionManager::InteractWithActor(AActor* TargetActor)
@@ -604,10 +865,7 @@ bool UInteractionManager::PickupGroundItemToInventory(int32 ItemID)
 	if (const AActor* Owner = GetOwner(); Owner && !Owner->HasAuthority())
 	{
 		Server_PickupToInventory(ItemID, Owner->GetActorLocation());
-		if (CurrentGroundItemID == ItemID)
-		{
-			UpdateGroundItemFocus(INDEX_NONE);
-		}
+		AdvanceGroundItemFocusAfterPickup(ItemID);
 		return true;
 	}
 
@@ -618,9 +876,9 @@ bool UInteractionManager::PickupGroundItemToInventory(int32 ItemID)
 		DebugManager.LogGroundItemPickup(ItemID, true, bSuccess);
 	}
 
-	if (bSuccess && CurrentGroundItemID == ItemID)
+	if (bSuccess)
 	{
-		UpdateGroundItemFocus(INDEX_NONE);
+		AdvanceGroundItemFocusAfterPickup(ItemID);
 	}
 
 	return bSuccess;
@@ -637,10 +895,7 @@ bool UInteractionManager::PickupGroundItemAndEquip(int32 ItemID)
 	if (Owner && !Owner->HasAuthority())
 	{
 		Server_PickupAndEquip(ItemID, Owner->GetActorLocation());
-		if (CurrentGroundItemID == ItemID)
-		{
-			UpdateGroundItemFocus(INDEX_NONE);
-		}
+		AdvanceGroundItemFocusAfterPickup(ItemID);
 		return true;
 	}
 
@@ -651,9 +906,9 @@ bool UInteractionManager::PickupGroundItemAndEquip(int32 ItemID)
 		DebugManager.LogGroundItemPickup(ItemID, false, bSuccess);
 	}
 
-	if (bSuccess && CurrentGroundItemID == ItemID)
+	if (bSuccess)
 	{
-		UpdateGroundItemFocus(INDEX_NONE);
+		AdvanceGroundItemFocusAfterPickup(ItemID);
 	}
 
 	return bSuccess;
@@ -1115,10 +1370,9 @@ void UInteractionManager::UpdateActiveInteraction(float DeltaTime)
 
 void UInteractionManager::RefreshFocusedWidget()
 {
-	WidgetPresenter.HideGroundItemWorldWidget();
-
 	if (HasValidCurrentInteractable())
 	{
+		WidgetPresenter.HideGroundItemWorldWidget();
 		WidgetPresenter.UpdateForActorInteractable(GetCurrentInteractableInterface());
 	}
 	else if (CurrentGroundItemID != INDEX_NONE)

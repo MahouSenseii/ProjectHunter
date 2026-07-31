@@ -51,6 +51,7 @@ public:
 
 private:
 	TArray<FPHAttributeData> RollAffixesWithCorruption(
+		const TArray<FPHAttributeData*>& SourceAffixes,
 		EAffixes AffixType,
 		int32 Count,
 		int32 ItemLevel,

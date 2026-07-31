@@ -94,6 +94,8 @@ protected:
 	FLinearColor Color_GradeCorrupted = FLinearColor(0.5f, 0.0f, 0.3f, 1.0f);
 
 private:
+	TWeakObjectPtr<UItemInstance> DisplayedItem;
+
 	void SetGradeVisuals(EItemRarity Grade);
 	FLinearColor GetGradeColor(EItemRarity Grade) const;
 	void PopulateSections();

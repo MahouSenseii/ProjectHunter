@@ -24,23 +24,51 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c5d1b5a1-adc7-4dec-b206-2e05b086c11a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/ToolTips/WBP_ItemTooltip.uasset" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/ItemTooltipLineWidget.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/ItemTooltipSectionWidget.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHEquipmentMenuPanelWidget.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHInventorySlotWidget.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/ItemTooltipLineWidget.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/ItemTooltipSectionWidget.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHEquipmentMenuPanelWidget.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHInventorySlotWidget.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Fonts/Rajdhani/Rajdhani-Bold.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Fonts/Rajdhani/Rajdhani-Medium.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Fonts/Rajdhani/Rajdhani-Regular.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Fonts/Rajdhani/Rajdhani-SemiBold.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Fonts/Rajdhani/Rajdhani.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/ToolTips/WBP_ItemTooltipLine.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/ToolTips/WBP_ItemTooltipSection.uasset" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ThirdParty/Fonts/Rajdhani/OFL.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ThirdParty/Fonts/Rajdhani/Rajdhani-Bold.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ThirdParty/Fonts/Rajdhani/Rajdhani-Medium.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ThirdParty/Fonts/Rajdhani/Rajdhani-Regular.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ThirdParty/Fonts/Rajdhani/Rajdhani-SemiBold.ttf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ALS_ProjectHunter/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Item/DT_ItemBase.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/Item/DT_ItemBase.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/Materials/M_SquarFlicker.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/Materials/M_SquarFlicker.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/BP_HunterHUD.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/BP_HunterHUD.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/WBP_HunterHUD.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/HUD/WBP_HunterHUD.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/ToolTips/WBP_ItemTooltip.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/UI/Widgets/ToolTips/WBP_ItemTooltip.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ProjectHunter/World/Portal/BP_Portal.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ProjectHunter/World/Portal/BP_Portal.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionDebugManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionDebugManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionTraceManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionTraceManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionWidgetPresenter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Components/Interaction/InteractionWidgetPresenter.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Controller/HunterController.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/Controller/HunterController.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUD.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Character/HUD/HunterHUD.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/ItemTooltipWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Interactable/Widget/ItemTooltipWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHEquipmentMenuPageWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHEquipmentMenuPageWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHInventoryMenuPanelWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHInventoryMenuPanelWidget.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHMenuRootWidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Menu/Widgets/PHMenuRootWidget.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Generation/AffixGenerator.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Generation/AffixGenerator.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemTooltipFunctionLibrary.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemTooltipFunctionLibrary.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemTooltipLineFunctionLibrary.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemTooltipLineFunctionLibrary.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemTooltipSectionFunctionLibrary.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Item/Library/FunctionLibraries/ItemTooltipSectionFunctionLibrary.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Actors/ISMContainerActor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Actors/ISMContainerActor.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Subsystems/GroundItemSubsystem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Private/Tower/Subsystems/GroundItemSubsystem.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionDebugManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionDebugManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionTraceManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionTraceManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionWidgetPresenter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Components/Interaction/InteractionWidgetPresenter.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Controller/HunterController.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/Controller/HunterController.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUD.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Character/HUD/HunterHUD.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/ItemTooltipWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Interactable/Widget/ItemTooltipWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHEquipmentMenuPageWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHEquipmentMenuPageWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHInventoryMenuPanelWidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Menu/Widgets/PHInventoryMenuPanelWidget.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Generation/AffixGenerator.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Generation/AffixGenerator.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/FunctionLibraries/ItemTooltipSectionFunctionLibrary.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/FunctionLibraries/ItemTooltipSectionFunctionLibrary.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Item/Library/Structs/ItemStructs.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Actors/ISMContainerActor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/ALS_ProjectHunter/Public/Tower/Actors/ISMContainerActor.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -58,7 +86,7 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="cidr-memory-view://1" root0="FORCE_HIGHLIGHTING" />
+    <setting file="cidr-memory-view://18" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Programs/Shared/EpicGames.Horde/HordeHttpClient.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Concepts/DerivedFrom.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../../../../Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/Core/Public/Delegates/DelegateInstancesImpl.h" root0="FORCE_HIGHLIGHTING" />
@@ -103,21 +131,21 @@
     <decayedCancelled>
       <entry key="MS100" value="1.0" />
       <entry key="MS500" value="1.0" />
-      <entry key="S2" value="1.0000380713464108" />
-      <entry key="S5" value="1.0229656568094985" />
-      <entry key="S10" value="1.254394903541543" />
-      <entry key="S30" value="2.957880621189413" />
-      <entry key="S60" value="5.032355266034757" />
-      <entry key="M2" value="7.346660985229472" />
-      <entry key="M5" value="9.711028303058917" />
-      <entry key="M10" value="10.7658782862814" />
-      <entry key="M15" value="11.1557228035087" />
-      <entry key="M30" value="11.577727107714276" />
-      <entry key="H1" value="11.92969819718073" />
-      <entry key="H2" value="12.435917681351313" />
-      <entry key="H4" value="12.989971325403022" />
-      <entry key="D1" value="13.785770858947037" />
-      <entry key="W1" value="13.968021148025155" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0" />
+      <entry key="S10" value="1.0" />
+      <entry key="S30" value="1.0" />
+      <entry key="S60" value="1.0" />
+      <entry key="M2" value="1.0" />
+      <entry key="M5" value="1.0" />
+      <entry key="M10" value="1.0" />
+      <entry key="M15" value="1.0" />
+      <entry key="M30" value="1.0" />
+      <entry key="H1" value="1.0000000000006317" />
+      <entry key="H2" value="1.0000028615814907" />
+      <entry key="H4" value="1.0062312092009684" />
+      <entry key="D1" value="4.857077917246572" />
+      <entry key="W1" value="12.64421513025193" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -125,37 +153,37 @@
       <entry key="S2" value="0.0" />
       <entry key="S5" value="0.0" />
       <entry key="S10" value="0.0" />
-      <entry key="S30" value="2.961020723823188E-135" />
-      <entry key="S60" value="7.399033921910692E-68" />
-      <entry key="M2" value="3.8064731486561333E-34" />
-      <entry key="M5" value="6.481962977796269E-14" />
-      <entry key="M10" value="3.598990090867635E-7" />
-      <entry key="M15" value="6.374146533297899E-5" />
-      <entry key="M30" value="0.011290291475586382" />
-      <entry key="H1" value="0.15026656473804972" />
-      <entry key="H2" value="0.5482073735637419" />
-      <entry key="H4" value="1.0470974648082307" />
-      <entry key="D1" value="1.7955167838744623" />
-      <entry key="W1" value="1.9694206655986664" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="3.1476414264891624E-173" />
+      <entry key="M10" value="7.930854896140242E-87" />
+      <entry key="M15" value="5.0101217366136746E-58" />
+      <entry key="M30" value="3.1653247366984027E-29" />
+      <entry key="H1" value="7.956442287036548E-15" />
+      <entry key="H2" value="1.2614590361535262E-7" />
+      <entry key="H4" value="5.022862016842391E-4" />
+      <entry key="D1" value="0.502362052001838" />
+      <entry key="W1" value="1.6417757153408283" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.4355151628599792E-6" />
-      <entry key="MS500" value="0.06782683574261295" />
-      <entry key="S2" value="0.5103381380836988" />
-      <entry key="S5" value="0.7769133300971236" />
-      <entry key="S10" value="1.0658922207438308" />
-      <entry key="S30" value="2.758585578843366" />
-      <entry key="S60" value="4.858277060231551" />
-      <entry key="M2" value="7.2203582726445585" />
-      <entry key="M5" value="9.644964407057028" />
-      <entry key="M10" value="10.729433510496463" />
-      <entry key="M15" value="11.13065302383919" />
-      <entry key="M30" value="11.575971381299173" />
-      <entry key="H1" value="12.07308274702692" />
-      <entry key="H2" value="12.980304708093866" />
-      <entry key="H4" value="14.034931830295042" />
-      <entry key="D1" value="15.580875607847407" />
-      <entry key="W1" value="15.937381105893055" />
+      <entry key="MS100" value="0.0060034186769062975" />
+      <entry key="MS500" value="0.35948413321173933" />
+      <entry key="S2" value="0.7743190278532205" />
+      <entry key="S5" value="0.9027509884882493" />
+      <entry key="S10" value="0.9501320900213029" />
+      <entry key="S30" value="0.9830931320554231" />
+      <entry key="S60" value="0.9915105304813576" />
+      <entry key="M2" value="0.9957462179096427" />
+      <entry key="M5" value="0.998296310864618" />
+      <entry key="M10" value="0.9991477923033298" />
+      <entry key="M15" value="0.9994317808096452" />
+      <entry key="M30" value="0.9997158500342211" />
+      <entry key="H1" value="0.9998579149236652" />
+      <entry key="H2" value="0.9999319417861213" />
+      <entry key="H4" value="1.0066969471541076" />
+      <entry key="D1" value="5.359318766650922" />
+      <entry key="W1" value="14.285939391769702" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -1183,7 +1211,7 @@
       <workItem from="1783732164460" duration="1018000" />
       <workItem from="1785061244974" duration="6306000" />
       <workItem from="1785204287407" duration="5731000" />
-      <workItem from="1785233695713" duration="4085000" />
+      <workItem from="1785233695713" duration="34785000" />
     </task>
     <servers />
   </component>

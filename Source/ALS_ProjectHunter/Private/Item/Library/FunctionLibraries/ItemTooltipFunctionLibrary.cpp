@@ -43,17 +43,22 @@ bool UItemTooltipFunctionLibrary::BuildItemTooltipData(UItemInstance* Item, FIte
 
 	if (Base->ItemType == EItemType::IT_Weapon)
 	{
-		UItemTooltipSectionFunctionLibrary::AddWeaponStatsSection(OutTooltipData, Base->WeaponStats);
+		UItemTooltipSectionFunctionLibrary::AddWeaponStatsSection(
+			OutTooltipData,
+			Base->WeaponStats,
+			Item->Durability);
 	}
 	else if (Base->ItemType == EItemType::IT_Armor)
 	{
-		UItemTooltipSectionFunctionLibrary::AddArmorStatsSection(OutTooltipData, Base->ArmorStats);
+		UItemTooltipSectionFunctionLibrary::AddArmorStatsSection(
+			OutTooltipData,
+			Base->ArmorStats,
+			Item->Durability);
 	}
 
 	if (Item->IsEquipment())
 	{
 		UItemTooltipSectionFunctionLibrary::AddRequirementsSection(OutTooltipData, Base->StatRequirements);
-		UItemTooltipSectionFunctionLibrary::AddDurabilitySection(OutTooltipData, Item->Durability);
 		UItemTooltipSectionFunctionLibrary::AddRunesSection(OutTooltipData, Item, *Base);
 	}
 

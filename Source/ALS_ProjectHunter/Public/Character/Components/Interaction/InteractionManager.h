@@ -18,6 +18,11 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInteractionManager, Log, All);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurrentInteractableChanged, UInteractableManager*, NewInteractable);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGroundItemFocusChanged, int32, GroundItemID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+	FOnGroundItemSelectionChanged,
+	int32, GroundItemID,
+	int32, SelectionNumber,
+	int32, CandidateCount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHoldProgressChanged, float, Progress);
 
 // EManagedInteractionMode and FActiveInteraction are shared interaction data types.
@@ -71,11 +76,35 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Interaction|State")
 	int32 CurrentGroundItemID = INDEX_NONE;
 
+	/** Ranked ground items currently inside the aim bubble. */
+	UPROPERTY(BlueprintReadOnly, Category = "Interaction|Ground Items")
+	TArray<FGroundItemInteractionCandidate> GroundItemCandidates;
+
+	/** Zero-based index into GroundItemCandidates, or INDEX_NONE. */
+	UPROPERTY(BlueprintReadOnly, Category = "Interaction|Ground Items")
+	int32 SelectedGroundItemCandidateIndex = INDEX_NONE;
+
+	/** Item the latest aim-scoring pass would select without a manual lock. */
+	UPROPERTY(BlueprintReadOnly, Category = "Interaction|Ground Items")
+	int32 AutomaticGroundItemID = INDEX_NONE;
+
+	/**
+	 * How long a manually cycled item remains selected while it is still valid.
+	 * After this expires, normal aim scoring may select a better item again.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Ground Items",
+		meta = (ClampMin = "0.0", ClampMax = "5.0"))
+	float ManualGroundItemSelectionLockDuration = 0.75f;
+
 	UPROPERTY(BlueprintAssignable, Category = "Interaction|Events")
 	FOnCurrentInteractableChanged OnCurrentInteractableChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Interaction|Events")
 	FOnGroundItemFocusChanged OnGroundItemFocusChanged;
+
+	/** Supplies the selected item plus a one-based position suitable for a "2 / 5" UI label. */
+	UPROPERTY(BlueprintAssignable, Category = "Interaction|Events")
+	FOnGroundItemSelectionChanged OnGroundItemSelectionChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Interaction|Events")
 	FOnHoldProgressChanged OnHoldProgressChanged;
@@ -88,6 +117,22 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void CheckForInteractables();
+
+	/** Select the next (positive) or previous (negative) ranked ground item. */
+	UFUNCTION(BlueprintCallable, Category = "Interaction|Ground Items")
+	void CycleGroundItemFocus(int32 Direction);
+
+	UFUNCTION(BlueprintPure, Category = "Interaction|Ground Items")
+	int32 GetGroundItemCandidateCount() const { return GroundItemCandidates.Num(); }
+
+	/** One-based selected position for UI, or zero when nothing is selected. */
+	UFUNCTION(BlueprintPure, Category = "Interaction|Ground Items")
+	int32 GetGroundItemSelectionNumber() const
+	{
+		return GroundItemCandidates.IsValidIndex(SelectedGroundItemCandidateIndex)
+			? SelectedGroundItemCandidateIndex + 1
+			: 0;
+	}
 
 	UFUNCTION(BlueprintPure, Category = "Interaction|Widget")
 	UInteractableWidget* GetInteractionWidget() const { return WidgetPresenter.GetHUDWidget(); }
@@ -131,9 +176,19 @@ protected:
 	void InitializeSubManagers();
 	void InitializeWidget();
 	void ApplyQuickSettings();
+	void UpdateInteractionCheckRate(bool bHasProximityCandidates);
 
 	void UpdateFocusState(TScriptInterface<IInteractable> NewInteractable);
 	void UpdateGroundItemFocus(int32 NewGroundItemID);
+	void ApplyGroundItemCandidates(
+		const TArray<FGroundItemInteractionCandidate>& NewCandidates,
+		int32 NewAutomaticGroundItemID);
+	void SelectGroundItemCandidateIndex(int32 NewIndex, bool bManualSelection);
+	void AdvanceGroundItemFocusAfterPickup(int32 PickedUpItemID);
+	void BroadcastGroundItemSelectionChanged();
+	int32 FindGroundItemCandidateIndex(int32 ItemID) const;
+	bool IsManualGroundItemSelectionLocked() const;
+	float GetManualGroundItemSelectionLockRemaining() const;
 
 	bool InteractWithActor(AActor* TargetActor);
 	bool PickupGroundItemToInventory(int32 ItemID);
@@ -218,6 +273,8 @@ private:
 	TWeakObjectPtr<UObject> CurrentInteractableObject;
 
 	float LastInteractionCheckTimeSeconds = -1.0f;
+	float ManualGroundItemSelectionLockEndTime = -1.0f;
+	float CurrentInteractionCheckInterval = -1.0f;
 
 	// All per-interaction transient data lives in ActiveInteraction.
 	// Call ActiveInteraction.Reset() to clear every field at once.

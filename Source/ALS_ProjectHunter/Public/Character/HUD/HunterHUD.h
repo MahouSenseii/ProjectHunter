@@ -103,6 +103,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UItemTooltipWidget> ItemTooltipWidgetClass;
 
+	/** Pin item tooltips to the viewport corner instead of positioning them beside the focused item. */
+	UPROPERTY(EditDefaultsOnly, Category = "UI|Item Tooltip")
+	bool bPinItemTooltipToBottomRight = true;
+
+	/** Distance between the item tooltip and the bottom-right edge of the viewport. */
+	UPROPERTY(EditDefaultsOnly, Category = "UI|Item Tooltip", meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float ItemTooltipScreenPadding = 30.0f;
+
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TObjectPtr<UItemTooltipWidget> ItemTooltipWidget;
 

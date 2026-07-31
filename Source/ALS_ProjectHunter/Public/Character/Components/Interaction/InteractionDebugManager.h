@@ -7,6 +7,7 @@ class UInteractableManager;
 class AActor;
 class UWorld;
 class UALSDebugComponent;
+struct FGroundItemInteractionCandidate;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInteractionDebugManager, Log, All);
 
@@ -52,9 +53,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Visualization")
 	bool bDrawAimCandidates = true;
 
-	/** Draw the ground-item camera-ray window: aim radius and trace-depth limit. */
+	/** Draw the exact ground-item sphere search volume at the trace stop point. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Visualization")
 	bool bDrawGroundItemAimWindow = true;
+
+	/** Draw every ranked ground-item candidate, its order, score, and selection state. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Visualization")
+	bool bDrawGroundItemCandidateStack = true;
 
 	/** Show on-screen debug text */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Visualization")
@@ -76,6 +81,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Colors")
 	FColor GroundItemColor = FColor::Yellow;
 
+	/** Color for the item selected automatically by aim scoring. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Colors")
+	FColor AutomaticCandidateColor = FColor::Cyan;
+
+	/** Color for the currently selected item while manual cycling is locked. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Colors")
+	FColor ManualCandidateColor = FColor(255, 80, 255);
+
+	/** Color for items rejected by the player-forward gate. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Colors")
+	FColor RejectedCandidateColor = FColor::Orange;
+
 	/** How long to display debug shapes (0 = single frame) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Display")
 	float DrawDuration = 0.0f;
@@ -95,7 +112,7 @@ public:
 	void DrawHitPoint(FVector HitLocation, FVector HitNormal, float Radius = 12.0f);
 	void DrawInteractionRange(FVector Center, float Radius);
 	void DrawGroundItem(FVector ItemLocation, int32 ItemID);
-	void DrawInteractableInfo(UInteractableManager* Interactable, float Distance);
+	void DrawInteractableInfo(UInteractableManager* Interactable, float Distance, FVector TraceOrigin);
 
 	/**
 	 * Visualize the look-at gate: a cone from the view origin along camera
@@ -113,13 +130,46 @@ public:
 	 */
 	void DrawAimCandidate(FVector Location, float Dot, bool bPassedGate, bool bWinner);
 
-	/** Visualize the ground-item candidate volume used before dot-product scoring. */
-	void DrawGroundItemAimWindow(
-		FVector Origin, FVector Forward, float MinDistance, float MaxDistance, float Radius, bool bLimitedByTraceHit);
+	/** Visualize the player-centered sphere used to gather all candidates. */
+	void DrawGroundItemSearchVolume(FVector Center, float Radius);
+
+	/** Draw only the player-forward and camera-forward directions used by scoring. */
+	void DrawSelectionDirections(
+		FVector PlayerCenter,
+		FVector PlayerForward,
+		FVector CameraOrigin,
+		FVector CameraForward,
+		float Length);
+
+	/** Visualize an item discarded by the player-forward gate. */
+	void DrawRejectedGroundItemCandidate(FVector Location, int32 ItemID, float PlayerForwardDot);
+
+	/**
+	 * Draw the ranked candidate snapshot owned by UInteractionManager.
+	 * Labels are vertically staggered so fully overlapping items stay readable.
+	 */
+	void DrawGroundItemCandidateStack(
+		FVector TraceOrigin,
+		const TArray<FGroundItemInteractionCandidate>& Candidates,
+		int32 SelectedItemID,
+		int32 AutomaticItemID,
+		bool bManualSelectionLocked,
+		float ManualLockRemaining);
 
 	// DEBUG TEXT
 
-	void DisplayInteractionState(UInteractableManager* Interactable, float Distance, int32 GroundItemID);
+	void DisplayInteractionState(
+		UInteractableManager* Interactable,
+		float Distance,
+		int32 GroundItemID,
+		int32 SelectionNumber,
+		int32 CandidateCount,
+		int32 AutomaticItemID,
+		const FGroundItemInteractionCandidate* SelectedCandidate,
+		bool bHasProximityCandidates,
+		float EvaluationInterval,
+		bool bManualSelectionLocked,
+		float ManualLockRemaining);
 	void DisplayPerformanceMetrics(float TraceTime, float ValidationTime);
 
 	// LOGGING

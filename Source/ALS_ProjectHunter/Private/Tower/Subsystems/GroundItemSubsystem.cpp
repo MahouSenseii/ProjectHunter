@@ -108,6 +108,7 @@ UInstancedStaticMeshComponent* UGroundItemSubsystem::GetOrCreateISMComponent(USt
 	NewISM->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	NewISM->RegisterComponent();
 	NewISM->AttachToComponent(ISMContainerActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+	ISMContainerActor->ConfigureISMComponent(NewISM);
 
 	MeshToISM.Add(Mesh, NewISM);
 

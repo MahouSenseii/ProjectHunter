@@ -69,6 +69,23 @@ void AHunterController::Interact_Canceled(const FInputActionValue& Value)
 	InteractionManager->OnInteractReleased();
 }
 
+void AHunterController::CycleGroundItem(const FInputActionValue& Value)
+{
+	const float Direction = Value.Get<float>();
+	if (!FMath::IsNearlyZero(Direction))
+	{
+		CycleGroundItemDirection(Direction > 0.0f ? 1 : -1);
+	}
+}
+
+void AHunterController::CycleGroundItemDirection(int32 Direction)
+{
+	if (InteractionManager && Direction != 0)
+	{
+		InteractionManager->CycleGroundItemFocus(Direction);
+	}
+}
+
 void AHunterController::Menu(const FInputActionValue& Value)
 {
 	if (!Value.Get<bool>())

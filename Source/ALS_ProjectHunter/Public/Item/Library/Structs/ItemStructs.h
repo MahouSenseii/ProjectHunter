@@ -221,6 +221,21 @@ struct FItemBase : public FTableRowBase
 		meta = (EditCondition = "ItemType == EItemType::IT_Weapon || ItemType == EItemType::IT_Armor || ItemType == EItemType::IT_Accessory", EditConditionHides))
 	TArray<FPHAttributeData> ImplicitMods;
 
+	/** Prefix definitions this base item can roll. Uses the generator's shared prefix table when unset. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Affixes",
+		meta = (EditCondition = "ItemType == EItemType::IT_Weapon || ItemType == EItemType::IT_Armor || ItemType == EItemType::IT_Accessory", EditConditionHides))
+	TObjectPtr<UDataTable> PrefixAffixTable = nullptr;
+
+	/** Suffix definitions this base item can roll. Uses the generator's shared suffix table when unset. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Affixes",
+		meta = (EditCondition = "ItemType == EItemType::IT_Weapon || ItemType == EItemType::IT_Armor || ItemType == EItemType::IT_Accessory", EditConditionHides))
+	TObjectPtr<UDataTable> SuffixAffixTable = nullptr;
+
+	/** Enchant definitions allowed on this base item. Uses the generator's shared enchant table when unset. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Affixes",
+		meta = (EditCondition = "ItemType == EItemType::IT_Weapon || ItemType == EItemType::IT_Armor || ItemType == EItemType::IT_Accessory", EditConditionHides))
+	TObjectPtr<UDataTable> EnchantAffixTable = nullptr;
+
 
 	/** Fixed affixes for unique items (not randomly generated) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Unique",

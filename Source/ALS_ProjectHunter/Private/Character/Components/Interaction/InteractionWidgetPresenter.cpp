@@ -146,9 +146,17 @@ void FInteractionWidgetPresenter::UpdateForGroundItem(int32 GroundItemID)
 {
 	if (GroundItemID == INDEX_NONE)
 	{
-		HideItemTooltip();
+		HideGroundItemWorldWidget();
 		return;
 	}
+
+	if (PresentedGroundItemID == GroundItemID)
+	{
+		PositionWidgetAtGroundItem(GroundItemID);
+		return;
+	}
+
+	PresentedGroundItemID = GroundItemID;
 
 	FText Description = GroundItemDefaultText;
 	UItemInstance* Item = GetGroundItemInstance(GroundItemID);
@@ -263,6 +271,8 @@ void FInteractionWidgetPresenter::ShowGroundItemWorldWidget(int32 GroundItemID)
 
 void FInteractionWidgetPresenter::HideGroundItemWorldWidget()
 {
+	PresentedGroundItemID = INDEX_NONE;
+
 	if (GroundItemWorldWidget)
 	{
 		GroundItemWorldWidget->SetVisibility(false);
@@ -328,7 +338,6 @@ void FInteractionWidgetPresenter::HideAll()
 	}
 
 	HideGroundItemWorldWidget();
-	HideItemTooltip();
 }
 
 void FInteractionWidgetPresenter::SetWidgetVisible(bool bVisible)

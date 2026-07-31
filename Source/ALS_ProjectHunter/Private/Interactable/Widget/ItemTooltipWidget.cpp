@@ -10,6 +10,8 @@
 
 namespace ItemTooltipWidgetPrivate
 {
+	const FSlateColor PureWhiteText(FLinearColor::White);
+
 	FText MakeFallbackLineText(const FItemTooltipLine& Line)
 	{
 		if (Line.bUseValueColumn && !Line.Value.IsEmpty())
@@ -32,11 +34,18 @@ void UItemTooltipWidget::UpdateTooltip(UItemInstance* Item)
 		return;
 	}
 
+	if (DisplayedItem.Get() == Item && TooltipData.bHasItem)
+	{
+		return;
+	}
+
 	if (!UItemTooltipFunctionLibrary::BuildItemTooltipData(Item, TooltipData))
 	{
 		ClearTooltip();
 		return;
 	}
+
+	DisplayedItem = Item;
 
 	if (ItemNameText)
 	{
@@ -49,6 +58,7 @@ void UItemTooltipWidget::UpdateTooltip(UItemInstance* Item)
 			FText::FromString(TEXT("{0} - {1}")),
 			TooltipData.RarityName,
 			TooltipData.ItemSubTypeName.IsEmpty() ? TooltipData.ItemTypeName : TooltipData.ItemSubTypeName));
+		ItemTypeText->SetColorAndOpacity(ItemTooltipWidgetPrivate::PureWhiteText);
 	}
 
 	if (ItemIconImage && TooltipData.IconMaterial)
@@ -64,6 +74,7 @@ void UItemTooltipWidget::UpdateTooltip(UItemInstance* Item)
 
 void UItemTooltipWidget::ClearTooltip()
 {
+	DisplayedItem.Reset();
 	TooltipData = FItemTooltipData();
 
 	if (SectionsContainer)
@@ -95,7 +106,7 @@ void UItemTooltipWidget::SetGradeVisuals(const EItemRarity Grade)
 
 	if (ItemNameText)
 	{
-		ItemNameText->SetColorAndOpacity(FSlateColor(GradeColor));
+		ItemNameText->SetColorAndOpacity(ItemTooltipWidgetPrivate::PureWhiteText);
 	}
 }
 
@@ -138,7 +149,7 @@ void UItemTooltipWidget::PopulateSections()
 			if (UItemTooltipSectionWidget* SectionWidget =
 				CreateWidget<UItemTooltipSectionWidget>(GetWorld(), SectionWidgetClass))
 			{
-				SectionWidget->SetSectionData(Section, TooltipData.HeaderColor);
+				SectionWidget->SetSectionData(Section, FLinearColor::White);
 				SectionsContainer->AddChildToVerticalBox(SectionWidget);
 				continue;
 			}
@@ -158,7 +169,7 @@ void UItemTooltipWidget::AddFallbackSection(const FItemTooltipSection& Section)
 	if (Section.bShowHeading && !Section.Heading.IsEmpty())
 	{
 		if (UTextBlock* HeadingBlock =
-			CreateFallbackTextBlock(Section.Heading, TooltipData.HeaderColor, ETextJustify::Center))
+			CreateFallbackTextBlock(Section.Heading, FLinearColor::White, ETextJustify::Center))
 		{
 			SectionsContainer->AddChildToVerticalBox(HeadingBlock);
 		}

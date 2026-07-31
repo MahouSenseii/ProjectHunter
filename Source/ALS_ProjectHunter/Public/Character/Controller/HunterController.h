@@ -40,6 +40,17 @@ public:
 	void Interact_Canceled(const FInputActionValue& Value);
 
 	/**
+	 * Enhanced Input handler for an Axis1D action. Bind its Started event so
+	 * positive values select next and negative values select previous.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void CycleGroundItem(const FInputActionValue& Value);
+
+	/** Blueprint-friendly alternative for separate Next and Previous actions. */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void CycleGroundItemDirection(int32 Direction);
+
+	/**
 	 * Menu input handler - toggles the tabbed menu on AHunterHUD.
 	 * BlueprintCallable so the BP controller's EnhancedInputAction event can
 	 * route here with a single node (pass the action's bool value).

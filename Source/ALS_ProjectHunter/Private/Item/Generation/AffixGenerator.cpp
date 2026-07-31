@@ -4,6 +4,57 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogAffixGenerator, Log, All);
 
+namespace
+{
+	bool IsAffixCompatibleWithPool(EAffixes ActualType, EAffixes PoolType)
+	{
+		if (ActualType == PoolType)
+		{
+			return true;
+		}
+
+		const bool bIsRandomAffixPool =
+			PoolType == EAffixes::AF_Prefix || PoolType == EAffixes::AF_Suffix;
+		return bIsRandomAffixPool && ActualType == EAffixes::AF_Corrupted;
+	}
+
+	TArray<FPHAttributeData*> ResolveConfiguredAffixTable(
+		UDataTable* ConfiguredTable,
+		EAffixes ExpectedType,
+		const FName ItemID)
+	{
+		TArray<FPHAttributeData*> TableRows;
+		ConfiguredTable->GetAllRows<FPHAttributeData>(
+			TEXT("FAffixGenerator::ResolveConfiguredAffixTable"), TableRows);
+
+		TArray<FPHAttributeData*> ResolvedRows;
+		ResolvedRows.Reserve(TableRows.Num());
+
+		for (FPHAttributeData* Affix : TableRows)
+		{
+			if (!Affix)
+			{
+				continue;
+			}
+
+			if (!IsAffixCompatibleWithPool(Affix->AffixType, ExpectedType))
+			{
+				UE_LOG(LogAffixGenerator, Warning,
+					TEXT("AffixGenerator: Item '%s' uses table '%s' for pool %d, but it contains affix type %d."),
+					*ItemID.ToString(),
+					*GetNameSafe(ConfiguredTable),
+					static_cast<int32>(ExpectedType),
+					static_cast<int32>(Affix->AffixType));
+				continue;
+			}
+
+			ResolvedRows.Add(Affix);
+		}
+
+		return ResolvedRows;
+	}
+}
+
 FPHItemStats FAffixGenerator::GenerateAffixes(
 	const FItemBase& BaseItem,
 	int32 ItemLevel,
@@ -42,7 +93,32 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 
 	bool bHasRolledCorrupted = false;
 
+	TArray<FPHAttributeData*> PrefixSource;
+	if (BaseItem.PrefixAffixTable)
+	{
+		PrefixSource = ResolveConfiguredAffixTable(
+			BaseItem.PrefixAffixTable, EAffixes::AF_Prefix, BaseItem.ItemID);
+	}
+	else
+	{
+		LoadPrefixDataTable();
+		PrefixSource = CachedPrefixRows;
+	}
+
+	TArray<FPHAttributeData*> SuffixSource;
+	if (BaseItem.SuffixAffixTable)
+	{
+		SuffixSource = ResolveConfiguredAffixTable(
+			BaseItem.SuffixAffixTable, EAffixes::AF_Suffix, BaseItem.ItemID);
+	}
+	else
+	{
+		LoadSuffixDataTable();
+		SuffixSource = CachedSuffixRows;
+	}
+
 	Stats.Prefixes = RollAffixesWithCorruption(
+		PrefixSource,
 		EAffixes::AF_Prefix,
 		NumPrefixes,
 		ItemLevel,
@@ -55,6 +131,7 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 	);
 
 	Stats.Suffixes = RollAffixesWithCorruption(
+		SuffixSource,
 		EAffixes::AF_Suffix,
 		NumSuffixes,
 		ItemLevel,
@@ -128,17 +205,29 @@ bool FAffixGenerator::ApplyEnchant(
 	int32 Seed,
 	FPHItemStats& OutStats) const
 {
-	LoadEnchantDataTable();
-	if (CachedEnchantRows.Num() == 0)
+	TArray<FPHAttributeData*> EnchantSource;
+	if (BaseItem.EnchantAffixTable)
 	{
-		UE_LOG(LogAffixGenerator, Warning, TEXT("AffixGenerator::ApplyEnchant: No enchants loaded."));
+		EnchantSource = ResolveConfiguredAffixTable(
+			BaseItem.EnchantAffixTable, EAffixes::AF_Enchant, BaseItem.ItemID);
+	}
+	else
+	{
+		LoadEnchantDataTable();
+		EnchantSource = CachedEnchantRows;
+	}
+
+	if (EnchantSource.Num() == 0)
+	{
+		UE_LOG(LogAffixGenerator, Warning,
+			TEXT("AffixGenerator::ApplyEnchant: No enchant candidates configured or loaded."));
 		return false;
 	}
 
 	const TSet<FName> EmptyExcludedAffixes;
 	const TSet<FName> EmptyExcludedGroups;
 	TArray<FPHAttributeData*> Pool = UItemAffixSelectionFunctionLibrary::BuildAffixPoolByCorruption(
-		CachedEnchantRows,
+		EnchantSource,
 		BaseItem.ItemType,
 		BaseItem.ItemSubType,
 		ItemLevel,
@@ -237,6 +326,7 @@ UDataTable* FAffixGenerator::LoadSuffixDataTable() const
 }
 
 TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
+	const TArray<FPHAttributeData*>& SourceAffixes,
 	EAffixes AffixType,
 	int32 Count,
 	int32 ItemLevel,
@@ -261,10 +351,6 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 	{
 		const bool bShouldBeCorrupted = bMustRollOneCorrupted
 			|| (CorruptionChance > 0.0f && RandStream.FRand() < CorruptionChance);
-
-		GetAffixDataTable(AffixType);
-		const TArray<FPHAttributeData*>& SourceAffixes =
-			(AffixType == EAffixes::AF_Prefix) ? CachedPrefixRows : CachedSuffixRows;
 
 		TArray<FPHAttributeData*> AvailableAffixes = UItemAffixSelectionFunctionLibrary::BuildAffixPoolByCorruption(
 			SourceAffixes, ItemType, ItemSubType, ItemLevel,

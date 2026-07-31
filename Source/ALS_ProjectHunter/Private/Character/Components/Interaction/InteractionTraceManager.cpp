@@ -18,10 +18,13 @@ FInteractionTraceManager::FInteractionTraceManager()
 	  // 20Hz focus updates - 0.1 (10Hz) read as visibly steppy when sweeping
 	  // the camera across interactables. Still timer-driven, still cheap.
 	  , CheckFrequency(0.05f)
+	  , IdleCheckFrequency(0.20f)
 	  , InteractionTraceChannel(ECC_Visibility)
 	  , OverlapRadius(75.0f)
+	  , MinCameraForwardDot(0.25f)
 	  , MinPlayerForwardDot(0.0f)
-	  , CurrentFocusDotBonus(0.02f)
+	  , CurrentFocusDotBonus(0.015f)
+	  , MaxGroundItemCandidates(16)
 	  , bUseALSCameraOrigin(true)
 	  , OffsetForward(0.0f)
 	  , OffsetRight(0.0f)
@@ -60,7 +63,15 @@ TScriptInterface<IInteractable> FInteractionTraceManager::TraceForActorInteracta
 {
 	TScriptInterface<IInteractable> Result;
 	int32 IgnoredItemID = INDEX_NONE;
-	FindBestInteractionTarget(TScriptInterface<IInteractable>(), INDEX_NONE, Result, IgnoredItemID);
+	TArray<FGroundItemInteractionCandidate> IgnoredGroundItemCandidates;
+	bool bIgnoredHasProximityCandidates = false;
+	FindBestInteractionTarget(
+		TScriptInterface<IInteractable>(),
+		INDEX_NONE,
+		Result,
+		IgnoredItemID,
+		IgnoredGroundItemCandidates,
+		bIgnoredHasProximityCandidates);
 	return Result;
 }
 
@@ -68,10 +79,14 @@ void FInteractionTraceManager::FindBestInteractionTarget(
 	const TScriptInterface<IInteractable>& CurrentInteractable,
 	int32 CurrentItemID,
 	TScriptInterface<IInteractable>& OutInteractable,
-	int32& OutGroundItemID)
+	int32& OutGroundItemID,
+	TArray<FGroundItemInteractionCandidate>& OutGroundItemCandidates,
+	bool& bOutHasProximityCandidates)
 {
 	OutInteractable = TScriptInterface<IInteractable>();
 	OutGroundItemID = INDEX_NONE;
+	OutGroundItemCandidates.Reset();
+	bOutHasProximityCandidates = false;
 
 	if (!WorldContext) return;
 
@@ -83,38 +98,79 @@ void FInteractionTraceManager::FindBestInteractionTarget(
 	const FVector CameraForward = CameraRotation.Vector().GetSafeNormal();
 	if (CameraForward.IsNearlyZero()) return;
 
-	const FVector TraceEnd = TraceStart + CameraForward * InteractionDistance;
-
-	// 1. Line trace
-	FHitResult LineHit;
-	const bool bHit = PerformLineTrace(TraceStart, TraceEnd, LineHit);
-	const FVector SearchCenter = bHit ? LineHit.ImpactPoint : TraceEnd;
+	const FVector PlayerCenter = OwnerActor ? OwnerActor->GetActorLocation() : TraceStart;
+	const FVector PlayerForward = OwnerActor
+		? OwnerActor->GetActorForwardVector().GetSafeNormal()
+		: CameraForward;
 
 	if (DebugManager)
 	{
-		DebugManager->DrawTraceResult(TraceStart, TraceEnd, LineHit, bHit, 0.0f);
-		if (bHit) DebugManager->DrawHitPoint(LineHit.Location, LineHit.Normal, 0.0f);
-		// Overlap sphere - shows exactly what radius is active and where candidates are searched.
-		DebugManager->DrawInteractionRange(SearchCenter, OverlapRadius);
+		DebugManager->DrawGroundItemSearchVolume(PlayerCenter, InteractionDistance);
+		DebugManager->DrawSelectionDirections(
+			PlayerCenter,
+			PlayerForward,
+			TraceStart,
+			CameraForward,
+			FMath::Min(InteractionDistance, 180.0f));
 	}
 
-	// 2. Sphere overlap at hit point
+	const float SafeInteractionDistance = FMath::Max(InteractionDistance, 1.0f);
+	auto CalculateScore =
+		[&](const FVector& TargetLocation, bool bIsCurrent,
+			float& OutCameraDot, float& OutPlayerDot, float& OutDistance,
+			float& OutScore)
+		{
+			const FVector PlayerToTarget = TargetLocation - PlayerCenter;
+			OutDistance = PlayerToTarget.Size();
+			if (OutDistance > SafeInteractionDistance)
+			{
+				return false;
+			}
+
+			const FVector PlayerDirection = OutDistance > KINDA_SMALL_NUMBER
+				? PlayerToTarget / OutDistance
+				: PlayerForward;
+			OutPlayerDot = FVector::DotProduct(PlayerForward, PlayerDirection);
+			if (OutPlayerDot < MinPlayerForwardDot)
+			{
+				return false;
+			}
+
+			const FVector CameraDirection = (TargetLocation - TraceStart).GetSafeNormal();
+			OutCameraDot = CameraDirection.IsNearlyZero()
+				? 1.0f
+				: FVector::DotProduct(CameraForward, CameraDirection);
+			if (OutCameraDot < MinCameraForwardDot)
+			{
+				return false;
+			}
+
+			// Player direction is only a front/back gate. Camera alignment
+			// exclusively ranks every candidate that passes that gate.
+			OutScore = OutCameraDot;
+
+			if (bIsCurrent)
+			{
+				OutScore += CurrentFocusDotBonus;
+			}
+
+			return true;
+		};
+
+	// Actor interactables use one player-centered physics overlap.
 	TArray<FOverlapResult> Overlaps;
 	FCollisionQueryParams OverlapParams;
 	OverlapParams.AddIgnoredActor(OwnerActor);
 
 	WorldContext->OverlapMultiByChannel(
 		Overlaps,
-		SearchCenter,
+		PlayerCenter,
 		FQuat::Identity,
 		InteractionTraceChannel,
-		FCollisionShape::MakeSphere(OverlapRadius),
+		FCollisionShape::MakeSphere(SafeInteractionDistance),
 		OverlapParams
 	);
 
-	// 3. Dot-product scoring - best dot wins, no rejection threshold
-	// Resolve the actor that owns the currently focused interactable so we can
-	// apply the same hysteresis bonus that ground items already receive.
 	AActor* CurrentFocusActor = nullptr;
 	if (UObject* CurrentObj = CurrentInteractable.GetObject())
 	{
@@ -128,86 +184,116 @@ void FInteractionTraceManager::FindBestInteractionTarget(
 		}
 	}
 
-	float BestDot = -1.0f;
+	float BestScore = -BIG_NUMBER;
 	AActor* BestActor = nullptr;
-	int32 BestItemID = INDEX_NONE;
+	TSet<AActor*> ScoredActors;
 
-	// Actor interactables
 	for (const FOverlapResult& Overlap : Overlaps)
 	{
 		AActor* OverlapActor = Overlap.GetActor();
-		if (!IsActorInteractable(OverlapActor)) continue;
+		if (!IsActorInteractable(OverlapActor) || ScoredActors.Contains(OverlapActor)) continue;
+		ScoredActors.Add(OverlapActor);
+		bOutHasProximityCandidates = true;
 
-		float PlayerDot = 0.0f;
-		if (!PassesPlayerForwardGate(OverlapActor->GetActorLocation(), PlayerDot)) continue;
-
-		const FVector ToTarget = (OverlapActor->GetActorLocation() - TraceStart).GetSafeNormal();
-		float Dot = FVector::DotProduct(CameraForward, ToTarget);
-
-		// Hysteresis: current actor needs a worse dot to lose focus, matching
-		// the same behaviour already applied to ground items below.
-		if (OverlapActor == CurrentFocusActor) Dot += CurrentFocusDotBonus;
-
-		if (Dot > BestDot)
+		float CameraDot = -1.0f;
+		float PlayerDot = -1.0f;
+		float Distance = 0.0f;
+		float Score = -BIG_NUMBER;
+		if (!CalculateScore(
+			OverlapActor->GetActorLocation(),
+			OverlapActor == CurrentFocusActor,
+			CameraDot,
+			PlayerDot,
+			Distance,
+			Score))
 		{
-			BestDot = Dot;
+			continue;
+		}
+
+		if (Score > BestScore)
+		{
+			BestScore = Score;
 			BestActor = OverlapActor;
-			BestItemID = INDEX_NONE;
 		}
 	}
 
-	// Ground items - scan registered locations within OverlapRadius of the hit
+	// Ground items already have IDs and saved locations, so they need no
+	// collision components or per-item actors.
 	if (CachedGroundItemSubsystem)
 	{
-		const float RadiusSq = FMath::Square(OverlapRadius);
-		for (const TPair<int32, FVector>& Pair : CachedGroundItemSubsystem->GetInstanceLocations())
+		TArray<int32> NearbyItemIDs;
+		CachedGroundItemSubsystem->GetItemsInRadius(
+			PlayerCenter,
+			SafeInteractionDistance,
+			NearbyItemIDs);
+		bOutHasProximityCandidates |= !NearbyItemIDs.IsEmpty();
+
+		const TMap<int32, FVector>& Locations = CachedGroundItemSubsystem->GetInstanceLocations();
+		for (int32 ItemID : NearbyItemIDs)
 		{
-			if (FVector::DistSquared(Pair.Value, SearchCenter) > RadiusSq) continue;
-
-			float PlayerDot = 0.0f;
-			if (!PassesPlayerForwardGate(Pair.Value, PlayerDot)) continue;
-
-			const FVector ToItem = (Pair.Value - TraceStart).GetSafeNormal();
-			float Dot = FVector::DotProduct(CameraForward, ToItem);
-
-			// Hysteresis: current item needs a worse dot to lose focus.
-			if (Pair.Key == CurrentItemID) Dot += CurrentFocusDotBonus;
-
-			if (Dot > BestDot)
+			const FVector* ItemLocation = Locations.Find(ItemID);
+			if (!ItemLocation)
 			{
-				BestDot = Dot;
-				BestActor = nullptr;
-				BestItemID = Pair.Key;
+				continue;
 			}
+
+			float CameraDot = -1.0f;
+			float PlayerDot = -1.0f;
+			float Distance = 0.0f;
+			float Score = -BIG_NUMBER;
+			if (!CalculateScore(
+				*ItemLocation,
+				ItemID == CurrentItemID,
+				CameraDot,
+				PlayerDot,
+				Distance,
+				Score))
+			{
+				continue;
+			}
+
+			FGroundItemInteractionCandidate& Candidate = OutGroundItemCandidates.AddDefaulted_GetRef();
+			Candidate.ItemID = ItemID;
+			Candidate.Score = Score;
+			Candidate.Distance = Distance;
+			Candidate.WorldLocation = *ItemLocation;
+			Candidate.CameraForwardDot = CameraDot;
+			Candidate.PlayerForwardDot = PlayerDot;
+			Candidate.FocusBonus = ItemID == CurrentItemID ? CurrentFocusDotBonus : 0.0f;
+		}
+
+		OutGroundItemCandidates.Sort(
+			[](const FGroundItemInteractionCandidate& A, const FGroundItemInteractionCandidate& B)
+			{
+				if (!FMath::IsNearlyEqual(A.Score, B.Score))
+				{
+					return A.Score > B.Score;
+				}
+				return A.ItemID < B.ItemID;
+			});
+
+		if (OutGroundItemCandidates.Num() > MaxGroundItemCandidates)
+		{
+			OutGroundItemCandidates.SetNum(MaxGroundItemCandidates, EAllowShrinking::No);
 		}
 	}
 
-	// 4. Debug - single dot at winner
-	if (DebugManager)
+	int32 BestItemID = INDEX_NONE;
+	if (!OutGroundItemCandidates.IsEmpty() && OutGroundItemCandidates[0].Score > BestScore)
 	{
-		if (BestActor)
-		{
-			DebugManager->DrawAimCandidate(BestActor->GetActorLocation(), BestDot, true, true);
-		}
-		else if (BestItemID != INDEX_NONE && CachedGroundItemSubsystem)
-		{
-			if (const FVector* WinnerLoc =
-				CachedGroundItemSubsystem->GetInstanceLocations().Find(BestItemID))
-			{
-				DebugManager->DrawAimCandidate(*WinnerLoc, BestDot, true, true);
-			}
-		}
+		const FGroundItemInteractionCandidate& BestItem = OutGroundItemCandidates[0];
+		BestScore = BestItem.Score;
+		BestActor = nullptr;
+		BestItemID = BestItem.ItemID;
 	}
 
-	// 5. Output
+	LastTraceResult = FHitResult();
 	if (BestActor)
 	{
-		LastTraceResult = LineHit;
 		OutInteractable = MakeInteractableInterface(BestActor);
 	}
 	else if (BestItemID != INDEX_NONE)
 	{
-		LastTraceResult = LineHit;
 		OutGroundItemID = BestItemID;
 	}
 }
