@@ -3,7 +3,7 @@
 #include "Components/PanelWidget.h"
 #include "Menu/Widgets/PHMenuTabButtonWidget.h"
 
-void UPHMenuTabBarWidget::InitializeTabs(const TArray<FMenuEntry>& Entries)
+void UPHMenuTabBarWidget::InitializeTabs(const TArray<FMenuEntry>& Entries, const EMenuType InitialMenuType)
 {
 	if (!TabWidgetClass)
 	{
@@ -22,6 +22,11 @@ void UPHMenuTabBarWidget::InitializeTabs(const TArray<FMenuEntry>& Entries)
 
 	for (const FMenuEntry& Entry : Entries)
 	{
+		if (Entry.MenuType == EMenuType::MT_None)
+		{
+			continue;
+		}
+
 		UPHMenuTabButtonWidget* Tab = CreateWidget<UPHMenuTabButtonWidget>(this, TabWidgetClass);
 		if (!Tab)
 		{
@@ -35,9 +40,24 @@ void UPHMenuTabBarWidget::InitializeTabs(const TArray<FMenuEntry>& Entries)
 		SpawnedTabs.Add(Tab);
 	}
 
-	if (SpawnedTabs.Num() > 0 && SpawnedTabs[0])
+	UPHMenuTabButtonWidget* InitialTab = nullptr;
+	for (UPHMenuTabButtonWidget* Tab : SpawnedTabs)
 	{
-		SelectTab(SpawnedTabs[0]->GetMenuType());
+		if (Tab && Tab->GetMenuType() == InitialMenuType)
+		{
+			InitialTab = Tab;
+			break;
+		}
+	}
+
+	if (!InitialTab && SpawnedTabs.Num() > 0)
+	{
+		InitialTab = SpawnedTabs[0];
+	}
+
+	if (InitialTab)
+	{
+		SelectTab(InitialTab->GetMenuType());
 	}
 }
 

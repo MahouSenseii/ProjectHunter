@@ -61,10 +61,10 @@ public:
 
 	/**
 	 * Open the menu on a specific page.
-	 * MT_None restores the last page (or the first configured one).
+	 * MT_None opens the root widget's configured default page (Equipment by default).
 	 */
 	UFUNCTION(BlueprintCallable, Category = "HUD|Menu")
-	void OpenMenu(EMenuType MenuType = EMenuType::MT_None);
+	void OpenMenu(EMenuType MenuType = EMenuType::MT_Equipment);
 
 	/** Hide the menu and restore game-only input. */
 	UFUNCTION(BlueprintCallable, Category = "HUD|Menu")
@@ -72,6 +72,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "HUD|Menu")
 	bool IsMenuOpen() const;
+
+	/** Configures the full-screen menu Blueprint used by ToggleMenu/OpenMenu. */
+	UFUNCTION(BlueprintCallable, Category = "HUD|Menu|Config")
+	void SetMenuRootWidgetClass(TSubclassOf<UPHMenuRootWidget> InMenuRootWidgetClass)
+	{
+		MenuRootWidgetClass = InMenuRootWidgetClass;
+	}
 
 	/** Live menu root (null until first opened). */
 	UFUNCTION(BlueprintPure, Category = "HUD|Menu")

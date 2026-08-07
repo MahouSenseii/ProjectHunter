@@ -7,12 +7,15 @@
 #include "Character/Components/Interaction/InteractionManager.h"
 #include "Character/HUD/HunterHUD.h"
 #include "GameFramework/Pawn.h"
+#include "InputCoreTypes.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHunterController, Log, All);
 
 AHunterController::AHunterController(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	FallbackMenuKeys = { EKeys::Tab, EKeys::Gamepad_Special_Right };
+
 #if !UE_BUILD_SHIPPING
 	CheatClass = UHunterCheatManager::StaticClass();
 	CheatComponent = CreateDefaultSubobject<UHunterCheatComponent>(TEXT("CheatComponent"));
@@ -69,6 +72,28 @@ void AHunterController::Interact_Canceled(const FInputActionValue& Value)
 	InteractionManager->OnInteractReleased();
 }
 
+void AHunterController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	if (!InputComponent || !bBindFallbackMenuKeys || HasNamedMenuInputAction())
+	{
+		return;
+	}
+
+	for (const FKey& MenuKey : FallbackMenuKeys)
+	{
+		if (MenuKey.IsValid())
+		{
+			InputComponent->BindKey(MenuKey, IE_Pressed, this, &AHunterController::ToggleMenuFromFallbackInput);
+		}
+	}
+
+	UE_LOG(LogHunterController, Log,
+		TEXT("SetupInputComponent: no InputAction named 'Menu' was found; bound %d fallback menu key(s)."),
+		FallbackMenuKeys.Num());
+}
+
 void AHunterController::CycleGroundItem(const FInputActionValue& Value)
 {
 	const float Direction = Value.Get<float>();
@@ -102,6 +127,32 @@ void AHunterController::Menu(const FInputActionValue& Value)
 		UE_LOG(LogHunterController, Warning,
 			TEXT("Menu: HUD is not an AHunterHUD (current: %s) - set HUD Class in your GameMode."),
 			*GetNameSafe(GetHUD()));
+	}
+}
+
+bool AHunterController::HasNamedMenuInputAction() const
+{
+	if (!DefaultInputMappingContext)
+	{
+		return false;
+	}
+
+	for (const FEnhancedActionKeyMapping& Mapping : DefaultInputMappingContext->GetMappings())
+	{
+		if (Mapping.Action && Mapping.Action->GetFName() == GET_FUNCTION_NAME_CHECKED(AHunterController, Menu))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void AHunterController::ToggleMenuFromFallbackInput()
+{
+	if (AHunterHUD* HunterHUD = Cast<AHunterHUD>(GetHUD()))
+	{
+		HunterHUD->ToggleMenu();
 	}
 }
 

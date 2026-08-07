@@ -118,7 +118,7 @@ void AHunterHUD::ToggleMenu()
 	}
 	else
 	{
-		OpenMenu(EMenuType::MT_None);
+		OpenMenu(EMenuType::MT_Equipment);
 	}
 }
 
@@ -172,7 +172,7 @@ bool AHunterHUD::EnsureMenuRootWidget()
 	{
 		PH_LOG_WARNING(LogHunterHUD,
 			"EnsureMenuRootWidget: MenuRootWidgetClass is not set on %s. "
-			"Assign your WBP_MenuContainer in the HUD Blueprint defaults.",
+			"Assign a UPHMenuRootWidget Blueprint (for example WBP_SystemMenuRoot) in the HUD Blueprint defaults.",
 			*GetNameSafe(this));
 		return false;
 	}

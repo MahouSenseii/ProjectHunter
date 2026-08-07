@@ -2,12 +2,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/PlayerController.h"
-
 #include "InputActionValue.h"
 #include "Character/ALSPlayerController.h"
 #include "Character/Library/Structs/HunterControllerStructs.h"
-#include "Interactable/Library/Enums/InteractionEnums.h"
 #include "HunterController.generated.h"
 
 class UInteractionManager;
@@ -26,6 +23,7 @@ public:
 	AHunterController(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	virtual void OnPossess(APawn* NewPawn) override;
+	virtual void SetupInputComponent() override;
 
 	UFUNCTION()
 	void Interact(const FInputActionValue& Value);
@@ -58,6 +56,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	void Menu(const FInputActionValue& Value);
 
+	/**
+	 * Used only when the active mapping context has no InputAction named Menu.
+	 * This keeps the system menu reachable while the project input asset is being configured.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Menu")
+	bool bBindFallbackMenuKeys = true;
+
+	/** Default fallback is Tab on keyboard and the gamepad Menu/Start button. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Menu")
+	TArray<FKey> FallbackMenuKeys;
+
 	UFUNCTION(BlueprintCallable)
 	const UInputAction* GetInputActionByName(const FString& InString) const;
 
@@ -79,4 +88,8 @@ protected:
 
 	/** Cache component references on possess */
 	void CacheComponents();
+
+private:
+	bool HasNamedMenuInputAction() const;
+	void ToggleMenuFromFallbackInput();
 };

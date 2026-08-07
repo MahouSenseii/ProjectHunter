@@ -6,6 +6,9 @@
 #include "PHInventorySlotWidget.generated.h"
 
 class UPHInventoryMenuPanelWidget;
+class UButton;
+class UImage;
+class UTextBlock;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FOnInventorySlotWidgetDataRefreshed,
@@ -50,6 +53,22 @@ public:
 	FOnInventorySlotWidgetDataRefreshed SlotDataRefreshed;
 
 protected:
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
+
+	/** Optional named children make the generated grid cells data-driven. */
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Inventory Slot|Widgets")
+	TObjectPtr<UButton> SlotButton;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Inventory Slot|Widgets")
+	TObjectPtr<UImage> ItemIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Inventory Slot|Widgets")
+	TObjectPtr<UTextBlock> ItemNameText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Inventory Slot|Widgets")
+	TObjectPtr<UTextBlock> SlotIndexText;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Inventory Slot")
 	FEquipmentMenuInventorySlotViewData SlotData;
 
@@ -58,4 +77,10 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Inventory Slot|Events")
 	void OnSlotDataRefreshed(FEquipmentMenuInventorySlotViewData NewSlotData);
+
+private:
+	void RefreshVisuals();
+
+	UFUNCTION()
+	void HandleSlotClicked();
 };

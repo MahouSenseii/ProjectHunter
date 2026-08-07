@@ -35,6 +35,7 @@ public:
 
 protected:
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Tab|Events")
 	void OnTabHovered();
@@ -63,7 +64,24 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Tab")
 	bool bIsSelected = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab|Style")
+	FLinearColor NormalColor = FLinearColor(0.02f, 0.12f, 0.16f, 0.88f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab|Style")
+	FLinearColor HoveredColor = FLinearColor(0.10f, 0.55f, 0.65f, 0.90f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab|Style")
+	FLinearColor SelectedColor = FLinearColor(0.12f, 0.78f, 0.88f, 0.95f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab|Style")
+	FLinearColor NormalTextColor = FLinearColor(0.78f, 0.93f, 0.96f, 1.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab|Style")
+	FLinearColor SelectedTextColor = FLinearColor::White;
+
 private:
+	void ApplySelectionStyle();
+
 	UFUNCTION()
 	void HandleButtonClicked();
 

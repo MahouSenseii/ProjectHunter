@@ -34,6 +34,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Equipment Panel")
 	void SetEquipmentSlotOrder(const TArray<EEquipmentSlot>& NewEquipmentSlotOrder);
 
+	UFUNCTION(BlueprintCallable, Category = "Equipment Panel|Config")
+	void SetEquipmentSlotWidgetClass(TSubclassOf<UPHEquipmentSlotWidget> InSlotWidgetClass)
+	{
+		EquipmentSlotWidgetClass = InSlotWidgetClass;
+	}
+
 	void SetOwningEquipmentPage(UPHEquipmentMenuPageWidget* EquipmentPage);
 
 	UPROPERTY(BlueprintAssignable, Category = "Equipment Panel|Events")

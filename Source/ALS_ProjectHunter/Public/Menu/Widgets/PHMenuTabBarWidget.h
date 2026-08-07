@@ -18,13 +18,19 @@ class ALS_PROJECTHUNTER_API UPHMenuTabBarWidget : public UUserWidget
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "TabBar")
-	void InitializeTabs(const TArray<FMenuEntry>& Entries);
+	void InitializeTabs(const TArray<FMenuEntry>& Entries, EMenuType InitialMenuType = EMenuType::MT_None);
 
 	UFUNCTION(BlueprintCallable, Category = "TabBar")
 	void SelectTab(EMenuType MenuType);
 
 	UFUNCTION(BlueprintPure, Category = "TabBar")
 	EMenuType GetActiveMenuType() const { return ActiveMenuType; }
+
+	UFUNCTION(BlueprintCallable, Category = "TabBar|Config")
+	void SetTabWidgetClass(TSubclassOf<UPHMenuTabButtonWidget> InTabWidgetClass)
+	{
+		TabWidgetClass = InTabWidgetClass;
+	}
 
 	UPROPERTY(BlueprintAssignable, Category = "TabBar|Events")
 	FOnMenuTabSelected OnMenuTabSelected;

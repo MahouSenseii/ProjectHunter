@@ -1,6 +1,9 @@
 #include "Menu/Widgets/PHEquipmentSlotWidget.h"
 
 #include "Character/PHBaseCharacter.h"
+#include "Components/Button.h"
+#include "Components/Image.h"
+#include "Components/TextBlock.h"
 #include "Equipment/Components/EquipmentManager.h"
 #include "Item/ItemInstance.h"
 #include "Menu/Library/FunctionLibraries/MenuFunctionLibrary.h"
@@ -34,6 +37,7 @@ void UPHEquipmentSlotWidget::RefreshSlot()
 		? EquipmentManager->GetEquippedItem(ConnectedEquipmentSlot)
 		: nullptr;
 	SlotData = UMenuFunctionLibrary::MakeEquipmentSlotViewData(ConnectedEquipmentSlot, Item);
+	RefreshVisuals();
 
 	OnSlotDataRefreshed(SlotData);
 	SlotDataRefreshed.Broadcast(SlotData);
@@ -92,6 +96,28 @@ FText UPHEquipmentSlotWidget::GetEquipmentSlotDisplayName(EEquipmentSlot Equipme
 	return UMenuFunctionLibrary::GetEquipmentSlotDisplayName(EquipmentSlot);
 }
 
+void UPHEquipmentSlotWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	if (SlotButton)
+	{
+		SlotButton->OnClicked.AddUniqueDynamic(this, &UPHEquipmentSlotWidget::HandleSlotClicked);
+	}
+
+	RefreshVisuals();
+}
+
+void UPHEquipmentSlotWidget::NativeDestruct()
+{
+	if (SlotButton)
+	{
+		SlotButton->OnClicked.RemoveDynamic(this, &UPHEquipmentSlotWidget::HandleSlotClicked);
+	}
+
+	Super::NativeDestruct();
+}
+
 void UPHEquipmentSlotWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
 {
 	Super::NativeInitializeForCharacter(Character);
@@ -106,8 +132,41 @@ void UPHEquipmentSlotWidget::NativeReleaseCharacter()
 	UnbindManagerDelegates();
 	EquipmentManager = nullptr;
 	SlotData = UMenuFunctionLibrary::MakeEquipmentSlotViewData(ConnectedEquipmentSlot, nullptr);
+	RefreshVisuals();
 
 	Super::NativeReleaseCharacter();
+}
+
+void UPHEquipmentSlotWidget::RefreshVisuals()
+{
+	if (SlotNameText)
+	{
+		SlotNameText->SetText(SlotData.DisplayName);
+	}
+
+	UItemInstance* Item = SlotData.Item;
+	if (ItemNameText)
+	{
+		ItemNameText->SetText(Item ? Item->GetDisplayName() : FText::GetEmpty());
+	}
+
+	if (ItemIcon)
+	{
+		if (Item && Item->GetInventoryIcon())
+		{
+			ItemIcon->SetBrushFromMaterial(Item->GetInventoryIcon());
+			ItemIcon->SetVisibility(ESlateVisibility::HitTestInvisible);
+		}
+		else
+		{
+			ItemIcon->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
+}
+
+void UPHEquipmentSlotWidget::HandleSlotClicked()
+{
+	SelectSlot();
 }
 
 void UPHEquipmentSlotWidget::BindManagerDelegates()

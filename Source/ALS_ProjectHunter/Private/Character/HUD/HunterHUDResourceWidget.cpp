@@ -4,6 +4,7 @@
 #include "Character/PHBaseCharacter.h"
 #include "Components/ProgressBar.h"
 #include "Components/SizeBox.h"
+#include "Components/TextBlock.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 
@@ -71,6 +72,12 @@ void UHunterHUDResourceWidget::ResolveAttributesFromResourceType()
 		if (!MaxAttribute.IsValid())      MaxAttribute      = UHunterAttributeSet::GetMaxEffectiveManaAttribute();
 		if (!ReservedAttribute.IsValid()) ReservedAttribute = UHunterAttributeSet::GetReservedManaAttribute();
 		break;
+
+	case EHunterResourceType::ArcaneShield:
+		if (!CurrentAttribute.IsValid())  CurrentAttribute  = UHunterAttributeSet::GetArcaneShieldAttribute();
+		if (!MaxAttribute.IsValid())      MaxAttribute      = UHunterAttributeSet::GetMaxEffectiveArcaneShieldAttribute();
+		if (!ReservedAttribute.IsValid()) ReservedAttribute = UHunterAttributeSet::GetReservedArcaneShieldAttribute();
+		break;
 	}
 }
 
@@ -79,6 +86,7 @@ void UHunterHUDResourceWidget::NativePreConstruct()
 	Super::NativePreConstruct();
 
 	ApplyConfiguredBarAppearance();
+	UpdateResourceText();
 
 	if (IsDesignTime() && bShowDesignerPreview)
 	{
@@ -274,6 +282,19 @@ float UHunterHUDResourceWidget::GetReservedPercent() const
 	return (CachedMax > 0.f) ? FMath::Clamp(CachedReserved / CachedMax, 0.f, 1.f) : 0.f;
 }
 
+FText UHunterHUDResourceWidget::GetResourceDisplayName() const
+{
+	const UEnum* ResourceEnum = StaticEnum<EHunterResourceType>();
+	return ResourceEnum
+		? ResourceEnum->GetDisplayNameTextByValue(static_cast<int64>(ResourceType))
+		: FText::GetEmpty();
+}
+
+FText UHunterHUDResourceWidget::GetFormattedResourceValue() const
+{
+	return BuildFormattedResourceValue(CachedCurrent, CachedMax, CachedReserved);
+}
+
 float UHunterHUDResourceWidget::DamageLag()
 {
 	const UWorld* World = GetWorld();
@@ -388,6 +409,7 @@ void UHunterHUDResourceWidget::HandleReservedChanged(const FOnAttributeChangeDat
 
 void UHunterHUDResourceWidget::BroadcastResourceState()
 {
+	UpdateResourceText();
 	OnResourceUpdated(CachedCurrent, CachedMax, CachedReserved,
 	                  GetFillPercent(), GetReservedPercent());
 }
@@ -432,6 +454,19 @@ void UHunterHUDResourceWidget::ApplyDesignerPreview()
 
 	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	ApplyBarPercents();
+
+	if (ResourceNameText)
+	{
+		ResourceNameText->SetText(GetResourceDisplayName());
+	}
+
+	if (ResourceValueText)
+	{
+		ResourceValueText->SetText(BuildFormattedResourceValue(
+			DesignerPreviewFillPercent * 100.0f,
+			100.0f,
+			DesignerPreviewReservedPercent * 100.0f));
+	}
 }
 
 void UHunterHUDResourceWidget::ApplyBarPercents() const
@@ -439,6 +474,47 @@ void UHunterHUDResourceWidget::ApplyBarPercents() const
 	SetProgressBarPercent(Bar_DamageLag, DamageLagPercent);
 	SetProgressBarPercent(Bar_Current, DisplayFillPercent);
 	SetProgressBarPercent(Bar_Reserved, DisplayReservedPercent);
+}
+
+void UHunterHUDResourceWidget::UpdateResourceText() const
+{
+	if (ResourceNameText)
+	{
+		ResourceNameText->SetText(GetResourceDisplayName());
+	}
+
+	if (ResourceValueText)
+	{
+		ResourceValueText->SetText(GetFormattedResourceValue());
+	}
+}
+
+FText UHunterHUDResourceWidget::BuildFormattedResourceValue(
+	const float Current,
+	const float Max,
+	const float Reserved) const
+{
+	if (Reserved > KINDA_SMALL_NUMBER)
+	{
+		return FText::Format(
+			NSLOCTEXT("ProjectHunterResource", "ValueWithReserved", "{0} / {1} ({2} Reserved)"),
+			FormatResourceNumber(Current),
+			FormatResourceNumber(Max),
+			FormatResourceNumber(Reserved));
+	}
+
+	return FText::Format(
+		NSLOCTEXT("ProjectHunterResource", "Value", "{0} / {1}"),
+		FormatResourceNumber(Current),
+		FormatResourceNumber(Max));
+}
+
+FText UHunterHUDResourceWidget::FormatResourceNumber(const float Value) const
+{
+	FNumberFormattingOptions FormattingOptions;
+	FormattingOptions.MinimumFractionalDigits = ResourceValueDecimalPlaces;
+	FormattingOptions.MaximumFractionalDigits = ResourceValueDecimalPlaces;
+	return FText::AsNumber(Value, &FormattingOptions);
 }
 
 float UHunterHUDResourceWidget::UpdateDamageLagPercent(const float InDeltaTime, const float TargetFill)

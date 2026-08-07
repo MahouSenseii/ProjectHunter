@@ -36,6 +36,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory Menu")
 	void RebuildInventorySlotWidgets();
 
+	UFUNCTION(BlueprintCallable, Category = "Inventory Menu|Config")
+	void SetInventorySlotWidgetClass(TSubclassOf<UPHInventorySlotWidget> InSlotWidgetClass)
+	{
+		InventorySlotWidgetClass = InSlotWidgetClass;
+	}
+
 	UFUNCTION(BlueprintPure, Category = "Inventory Menu")
 	TArray<FEquipmentMenuInventorySlotViewData> GetInventorySlots() const { return InventorySlots; }
 

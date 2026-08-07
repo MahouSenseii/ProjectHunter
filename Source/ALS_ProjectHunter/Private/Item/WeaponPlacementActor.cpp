@@ -4,6 +4,7 @@
 #include "Tower/Subsystems/GroundItemSubsystem.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
+#include "TimerManager.h"
 
 #if WITH_EDITORONLY_DATA
 #include "Components/BillboardComponent.h"
@@ -33,7 +34,17 @@ void AWeaponPlacementActor::BeginPlay()
 
 	if (bSpawnOnBeginPlay)
 	{
-		SpawnIntoWorld();
+		// Actor BeginPlay is dispatched before UWorld::HasBegunPlay becomes true.
+		// The ground-item subsystem intentionally waits for that state before it
+		// creates its runtime ISM container, so submit the placement next tick.
+		GetWorldTimerManager().SetTimerForNextTick(
+			FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				if (bSpawnOnBeginPlay)
+				{
+					SpawnIntoWorld();
+				}
+			}));
 	}
 }
 

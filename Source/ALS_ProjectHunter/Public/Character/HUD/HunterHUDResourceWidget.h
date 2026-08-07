@@ -14,6 +14,7 @@
 
 class UProgressBar;
 class USizeBox;
+class UTextBlock;
 class UAbilitySystemComponent;
 
 /**
@@ -142,6 +143,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
 	float GetReservedValue() const { return CachedReserved; }
 
+	/** Localized resource label generated from ResourceType. */
+	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
+	FText GetResourceDisplayName() const;
+
+	/** Current / Max, with the reserved amount appended only when it is non-zero. */
+	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
+	FText GetFormattedResourceValue() const;
+
 	/** Current / Max.  Drives the filled portion of the bar (0-1). */
 	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
 	float GetFillPercent() const;
@@ -207,6 +216,18 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "HUD|Resource|Widgets", meta = (BindWidget))
 	TObjectPtr<USizeBox> BarSize;
 
+	/** Optional name label for menu-style vital bars. */
+	UPROPERTY(BlueprintReadOnly, Category = "HUD|Resource|Widgets", meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> ResourceNameText;
+
+	/** Optional numeric label: Current / Max (Reserved when non-zero). */
+	UPROPERTY(BlueprintReadOnly, Category = "HUD|Resource|Widgets", meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> ResourceValueText;
+
+	/** Number of decimal places shown by ResourceValueText. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HUD|Resource|Text", meta = (ClampMin = "0", ClampMax = "3"))
+	int32 ResourceValueDecimalPlaces = 0;
+
 	// Blueprint events - implement the bar visuals in BP
 
 	/**
@@ -257,6 +278,9 @@ private:
 	void ApplyProgressBarImages(const FProgressBarStyle& InProgressBarStyle);
 	void ApplyDesignerPreview();
 	void ApplyBarPercents() const;
+	void UpdateResourceText() const;
+	FText BuildFormattedResourceValue(float Current, float Max, float Reserved) const;
+	FText FormatResourceNumber(float Value) const;
 	float UpdateDamageLagPercent(float InDeltaTime, float TargetFill);
 
 	/** Applies the visibility policy; called on init and on each Current-value change. */

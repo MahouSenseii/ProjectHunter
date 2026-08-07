@@ -7,18 +7,24 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogPHMenuRootWidget, Log, All);
 
+UPHMenuRootWidget::UPHMenuRootWidget()
+{
+	DefaultPageWidgetClass = UPHMenuPageWidgetBase::StaticClass();
+}
+
 void UPHMenuRootWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	BuildMenuEntriesFromEnum();
 
 	if (TabBar)
 	{
 		TabBar->OnMenuTabSelected.AddUniqueDynamic(this, &UPHMenuRootWidget::HandleTabSelected);
-		TabBar->InitializeTabs(MenuEntries);
+		TabBar->InitializeTabs(MenuEntries, ResolveDefaultMenuType());
 	}
 	else if (MenuEntries.Num() > 0)
 	{
-		ShowPage(GetFirstValidMenuType(), EMenuType::MT_None);
+		ShowPage(ResolveDefaultMenuType(), EMenuType::MT_None);
 	}
 
 	if (MenuEntries.Num() == 0)
@@ -33,9 +39,12 @@ void UPHMenuRootWidget::OpenMenu(EMenuType MenuType)
 {
 	if (MenuType == EMenuType::MT_None)
 	{
-		MenuType = ActiveMenuType != EMenuType::MT_None
-			? ActiveMenuType
-			: GetFirstValidMenuType();
+		MenuType = ResolveDefaultMenuType();
+	}
+
+	if (!FindEntry(MenuType))
+	{
+		MenuType = GetFirstValidMenuType();
 	}
 
 	if (MenuType == EMenuType::MT_None)
@@ -69,6 +78,28 @@ UPHMenuPageWidgetBase* UPHMenuRootWidget::GetPageForMenu(EMenuType MenuType) con
 {
 	const FMenuEntry* Entry = FindEntry(MenuType);
 	return Entry ? Entry->CachedInstance.Get() : nullptr;
+}
+
+void UPHMenuRootWidget::SetMenuPageWidgetClass(
+	const EMenuType MenuType,
+	TSubclassOf<UPHMenuPageWidgetBase> WidgetClass)
+{
+	if (MenuType == EMenuType::MT_None)
+	{
+		return;
+	}
+
+	FMenuEntry* Entry = FindEntry(MenuType);
+	if (!Entry)
+	{
+		FMenuEntry NewEntry;
+		NewEntry.MenuType = MenuType;
+		MenuEntries.Add(MoveTemp(NewEntry));
+		Entry = &MenuEntries.Last();
+	}
+
+	Entry->WidgetClass = WidgetClass;
+	Entry->CachedInstance = nullptr;
 }
 
 void UPHMenuRootWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
@@ -210,4 +241,81 @@ EMenuType UPHMenuRootWidget::GetFirstValidMenuType() const
 	}
 
 	return EMenuType::MT_None;
+}
+
+EMenuType UPHMenuRootWidget::ResolveDefaultMenuType() const
+{
+	const FMenuEntry* DefaultEntry = FindEntry(DefaultMenuType);
+	return DefaultEntry && DefaultEntry->WidgetClass
+		? DefaultMenuType
+		: GetFirstValidMenuType();
+}
+
+void UPHMenuRootWidget::BuildMenuEntriesFromEnum()
+{
+	const UEnum* MenuEnum = StaticEnum<EMenuType>();
+	if (!MenuEnum)
+	{
+		return;
+	}
+
+	auto CompleteEntry = [this, MenuEnum](FMenuEntry& Entry)
+	{
+		if (Entry.DisplayName.IsEmpty())
+		{
+			Entry.DisplayName = MenuEnum->GetDisplayNameTextByValue(static_cast<int64>(Entry.MenuType));
+		}
+
+		if (!Entry.WidgetClass)
+		{
+			Entry.WidgetClass = DefaultPageWidgetClass;
+		}
+	};
+
+	if (!bBuildHeaderFromMenuEnum)
+	{
+		for (FMenuEntry& Entry : MenuEntries)
+		{
+			CompleteEntry(Entry);
+		}
+		return;
+	}
+
+	TArray<FMenuEntry> OrderedEntries;
+	OrderedEntries.Reserve(MenuEnum->NumEnums());
+
+	for (int32 EnumIndex = 0; EnumIndex < MenuEnum->NumEnums(); ++EnumIndex)
+	{
+		if (MenuEnum->HasMetaData(TEXT("Hidden"), EnumIndex))
+		{
+			continue;
+		}
+
+		const int64 EnumValue = MenuEnum->GetValueByIndex(EnumIndex);
+		if (EnumValue == INDEX_NONE)
+		{
+			continue;
+		}
+
+		const EMenuType MenuType = static_cast<EMenuType>(EnumValue);
+		if (MenuType == EMenuType::MT_None)
+		{
+			continue;
+		}
+
+		FMenuEntry Entry;
+		if (const FMenuEntry* ExistingEntry = FindEntry(MenuType))
+		{
+			Entry = *ExistingEntry;
+		}
+		else
+		{
+			Entry.MenuType = MenuType;
+		}
+
+		CompleteEntry(Entry);
+		OrderedEntries.Add(MoveTemp(Entry));
+	}
+
+	MenuEntries = MoveTemp(OrderedEntries);
 }

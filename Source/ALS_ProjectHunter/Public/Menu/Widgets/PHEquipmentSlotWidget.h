@@ -6,8 +6,11 @@
 #include "PHEquipmentSlotWidget.generated.h"
 
 class APHBaseCharacter;
+class UButton;
 class UEquipmentManager;
+class UImage;
 class UItemInstance;
+class UTextBlock;
 class UPHEquipmentMenuPageWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEquipmentSlotWidgetDataRefreshed, FEquipmentMenuSlotViewData, SlotData);
@@ -68,8 +71,23 @@ public:
 	FOnEquipmentSlotWidgetChanged EquipmentSlotChanged;
 
 protected:
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 	virtual void NativeInitializeForCharacter(APHBaseCharacter* Character) override;
 	virtual void NativeReleaseCharacter() override;
+
+	/** Optional named children let one WBP render every EEquipmentSlot. */
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Equipment Slot|Widgets")
+	TObjectPtr<UButton> SlotButton;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Equipment Slot|Widgets")
+	TObjectPtr<UImage> ItemIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Equipment Slot|Widgets")
+	TObjectPtr<UTextBlock> SlotNameText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Equipment Slot|Widgets")
+	TObjectPtr<UTextBlock> ItemNameText;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment Slot|Config")
 	EEquipmentSlot ConnectedEquipmentSlot = EEquipmentSlot::ES_None;
@@ -92,6 +110,10 @@ protected:
 private:
 	void BindManagerDelegates();
 	void UnbindManagerDelegates();
+	void RefreshVisuals();
+
+	UFUNCTION()
+	void HandleSlotClicked();
 
 	UFUNCTION()
 	void HandleEquipmentChanged(EEquipmentSlot EquipmentSlot, UItemInstance* NewItem, UItemInstance* OldItem);

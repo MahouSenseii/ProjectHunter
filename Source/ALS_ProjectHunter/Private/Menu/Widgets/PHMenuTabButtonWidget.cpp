@@ -11,10 +11,24 @@ void UPHMenuTabButtonWidget::NativeConstruct()
 
 	if (TabButton)
 	{
-		TabButton->OnClicked.AddDynamic(this, &UPHMenuTabButtonWidget::HandleButtonClicked);
-		TabButton->OnHovered.AddDynamic(this, &UPHMenuTabButtonWidget::HandleButtonHovered);
-		TabButton->OnUnhovered.AddDynamic(this, &UPHMenuTabButtonWidget::HandleButtonUnhovered);
+		TabButton->OnClicked.AddUniqueDynamic(this, &UPHMenuTabButtonWidget::HandleButtonClicked);
+		TabButton->OnHovered.AddUniqueDynamic(this, &UPHMenuTabButtonWidget::HandleButtonHovered);
+		TabButton->OnUnhovered.AddUniqueDynamic(this, &UPHMenuTabButtonWidget::HandleButtonUnhovered);
 	}
+
+	ApplySelectionStyle();
+}
+
+void UPHMenuTabButtonWidget::NativeDestruct()
+{
+	if (TabButton)
+	{
+		TabButton->OnClicked.RemoveDynamic(this, &UPHMenuTabButtonWidget::HandleButtonClicked);
+		TabButton->OnHovered.RemoveDynamic(this, &UPHMenuTabButtonWidget::HandleButtonHovered);
+		TabButton->OnUnhovered.RemoveDynamic(this, &UPHMenuTabButtonWidget::HandleButtonUnhovered);
+	}
+
+	Super::NativeDestruct();
 }
 
 void UPHMenuTabButtonWidget::SetTabData(const FMenuEntry& Entry)
@@ -26,9 +40,17 @@ void UPHMenuTabButtonWidget::SetTabData(const FMenuEntry& Entry)
 		TabLabel->SetText(Entry.DisplayName);
 	}
 
-	if (TabIcon && Entry.Icon)
+	if (TabIcon)
 	{
-		TabIcon->SetBrushFromTexture(Entry.Icon);
+		if (Entry.Icon)
+		{
+			TabIcon->SetBrushFromTexture(Entry.Icon);
+			TabIcon->SetVisibility(ESlateVisibility::HitTestInvisible);
+		}
+		else
+		{
+			TabIcon->SetVisibility(ESlateVisibility::Collapsed);
+		}
 	}
 }
 
@@ -40,6 +62,7 @@ void UPHMenuTabButtonWidget::SetSelected(bool bInSelected)
 	}
 
 	bIsSelected = bInSelected;
+	ApplySelectionStyle();
 
 	if (bIsSelected)
 	{
@@ -58,10 +81,29 @@ void UPHMenuTabButtonWidget::HandleButtonClicked()
 
 void UPHMenuTabButtonWidget::HandleButtonHovered()
 {
+	if (TabButton && !bIsSelected)
+	{
+		TabButton->SetBackgroundColor(HoveredColor);
+	}
+
 	OnTabHovered();
 }
 
 void UPHMenuTabButtonWidget::HandleButtonUnhovered()
 {
+	ApplySelectionStyle();
 	OnTabUnhovered();
+}
+
+void UPHMenuTabButtonWidget::ApplySelectionStyle()
+{
+	if (TabButton)
+	{
+		TabButton->SetBackgroundColor(bIsSelected ? SelectedColor : NormalColor);
+	}
+
+	if (TabLabel)
+	{
+		TabLabel->SetColorAndOpacity(bIsSelected ? SelectedTextColor : NormalTextColor);
+	}
 }

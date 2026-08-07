@@ -1,12 +1,28 @@
 #include "Interactable/Widget/ItemTooltipSectionWidget.h"
 
 #include "Blueprint/WidgetTree.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Interactable/Widget/ItemTooltipLineWidget.h"
 
 namespace ItemTooltipSectionWidgetPrivate
 {
+	const FSlateColor PureWhiteText(FLinearColor::White);
+	const FName HeadingBackgroundName(TEXT("Image"));
+	const FName HeadingDividerName(TEXT("Image_HeadingDivider"));
+
+	void SetImageColor(UWidgetTree* WidgetTree, const FName WidgetName, const FLinearColor& Color)
+	{
+		if (WidgetTree)
+		{
+			if (UImage* Image = WidgetTree->FindWidget<UImage>(WidgetName))
+			{
+				Image->SetColorAndOpacity(Color);
+			}
+		}
+	}
+
 	FText MakeFallbackLineText(const FItemTooltipLine& Line)
 	{
 		if (Line.bUseValueColumn && !Line.Value.IsEmpty())
@@ -32,11 +48,20 @@ void UItemTooltipSectionWidget::SetSectionData(
 	{
 		const bool bShowHeading = SectionData.bShowHeading && !SectionData.Heading.IsEmpty();
 		HeadingText->SetText(SectionData.Heading);
-		HeadingText->SetColorAndOpacity(FSlateColor(HeadingColor));
+		HeadingText->SetColorAndOpacity(ItemTooltipSectionWidgetPrivate::PureWhiteText);
 		HeadingText->SetVisibility(bShowHeading
 			? ESlateVisibility::HitTestInvisible
 			: ESlateVisibility::Collapsed);
 	}
+
+	ItemTooltipSectionWidgetPrivate::SetImageColor(
+		WidgetTree,
+		ItemTooltipSectionWidgetPrivate::HeadingBackgroundName,
+		HeadingColor);
+	ItemTooltipSectionWidgetPrivate::SetImageColor(
+		WidgetTree,
+		ItemTooltipSectionWidgetPrivate::HeadingDividerName,
+		HeadingColor);
 
 	PopulateLines();
 	OnSectionDataUpdated(SectionData);

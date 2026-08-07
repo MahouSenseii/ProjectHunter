@@ -7,10 +7,41 @@
 #include "Components/VerticalBox.h"
 #include "Interactable/Widget/ItemTooltipSectionWidget.h"
 #include "Item/Library/FunctionLibraries/ItemTooltipFunctionLibrary.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 namespace ItemTooltipWidgetPrivate
 {
 	const FSlateColor PureWhiteText(FLinearColor::White);
+	const FName SquareFlickerWidgetName(TEXT("Image_SquareFlicker"));
+	const FName BackgroundWidgetName(TEXT("Image_Background"));
+	const FName SquareTintParameterName(TEXT("SquareTint"));
+	const FName ImageTintParameterName(TEXT("ImageTint"));
+
+	void ApplyMaterialTint(
+		UWidgetTree* WidgetTree,
+		const FName WidgetName,
+		const FName ParameterName,
+		const FLinearColor& Color)
+	{
+		if (!WidgetTree)
+		{
+			return;
+		}
+
+		UImage* Image = WidgetTree->FindWidget<UImage>(WidgetName);
+		if (!Image)
+		{
+			return;
+		}
+
+		// Keep the brush tint neutral so the material parameter supplies the exact grade color.
+		Image->SetColorAndOpacity(FLinearColor::White);
+
+		if (UMaterialInstanceDynamic* DynamicMaterial = Image->GetDynamicMaterial())
+		{
+			DynamicMaterial->SetVectorParameterValue(ParameterName, Color);
+		}
+	}
 
 	FText MakeFallbackLineText(const FItemTooltipLine& Line)
 	{
@@ -104,6 +135,17 @@ void UItemTooltipWidget::SetGradeVisuals(const EItemRarity Grade)
 		HeaderBorder->SetBrushColor(GradeColor);
 	}
 
+	ItemTooltipWidgetPrivate::ApplyMaterialTint(
+		WidgetTree,
+		ItemTooltipWidgetPrivate::SquareFlickerWidgetName,
+		ItemTooltipWidgetPrivate::SquareTintParameterName,
+		GradeColor);
+	ItemTooltipWidgetPrivate::ApplyMaterialTint(
+		WidgetTree,
+		ItemTooltipWidgetPrivate::BackgroundWidgetName,
+		ItemTooltipWidgetPrivate::ImageTintParameterName,
+		GradeColor);
+
 	if (ItemNameText)
 	{
 		ItemNameText->SetColorAndOpacity(ItemTooltipWidgetPrivate::PureWhiteText);
@@ -136,6 +178,7 @@ void UItemTooltipWidget::PopulateSections()
 	}
 
 	SectionsContainer->ClearChildren();
+	const FLinearColor GradeColor = GetGradeColor(TooltipData.Rarity);
 
 	for (const FItemTooltipSection& Section : TooltipData.Sections)
 	{
@@ -149,7 +192,7 @@ void UItemTooltipWidget::PopulateSections()
 			if (UItemTooltipSectionWidget* SectionWidget =
 				CreateWidget<UItemTooltipSectionWidget>(GetWorld(), SectionWidgetClass))
 			{
-				SectionWidget->SetSectionData(Section, FLinearColor::White);
+				SectionWidget->SetSectionData(Section, GradeColor);
 				SectionsContainer->AddChildToVerticalBox(SectionWidget);
 				continue;
 			}
