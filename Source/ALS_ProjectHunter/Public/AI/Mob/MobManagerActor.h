@@ -4,7 +4,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "AI/Library/Structs/MobStructs.h"
-#include "Data/MonsterModifierData.h"
+#include "AI/Data/MonsterModifierData.h"
 #include "MobManagerActor.generated.h"
 
 class UBoxComponent;

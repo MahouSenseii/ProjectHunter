@@ -10,7 +10,7 @@
 #include "Character/PHBaseCharacter.h"
 #include "Engine/Engine.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "PHGameplayTags.h"
+#include "Tags/PHGameplayTags.h"
 
 namespace HunterAbilitySystemComponentPrivate
 {

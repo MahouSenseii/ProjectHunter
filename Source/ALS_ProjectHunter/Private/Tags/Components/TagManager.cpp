@@ -5,7 +5,7 @@
 #include "AbilitySystemInterface.h"
 #include "Character/PHBaseCharacter.h"
 #include "GameFramework/Character.h"
-#include "PHGameplayTags.h"
+#include "Tags/PHGameplayTags.h"
 #include "Tags/Debug/TagDebugManager.h"
 
 DEFINE_LOG_CATEGORY(LogTagManager);

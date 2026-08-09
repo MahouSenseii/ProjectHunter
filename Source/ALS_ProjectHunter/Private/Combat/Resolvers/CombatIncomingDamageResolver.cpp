@@ -4,7 +4,7 @@
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "GameFramework/Actor.h"
-#include "PHGameplayTags.h"
+#include "Tags/PHGameplayTags.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogCombatIncomingDamageResolver, Log, All);
 

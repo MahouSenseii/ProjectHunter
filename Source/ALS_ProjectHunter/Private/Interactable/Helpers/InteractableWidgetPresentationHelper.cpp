@@ -1,6 +1,6 @@
 #include "Interactable/Helpers/InteractableWidgetPresentationHelper.h"
 
-#include "Interactable/Widget/InteractableWidget.h"
+#include "UI/Interaction/InteractableWidget.h"
 
 void FInteractableWidgetPresentationHelper::SetIdle(UInteractableWidget& Widget, bool bResetProgress)
 {

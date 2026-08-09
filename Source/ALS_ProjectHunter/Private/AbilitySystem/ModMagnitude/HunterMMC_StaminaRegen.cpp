@@ -3,7 +3,7 @@
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystem/Library/FunctionLibraries/PHResourceFunctionLibrary.h"
 #include "GameplayEffectExtension.h"
-#include "PHGameplayTags.h"
+#include "Tags/PHGameplayTags.h"
 
 namespace HunterMMCStaminaRegenPrivate
 {

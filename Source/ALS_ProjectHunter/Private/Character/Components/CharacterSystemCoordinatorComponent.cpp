@@ -1,7 +1,7 @@
 #include "Character/Components/CharacterSystemCoordinatorComponent.h"
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
-#include "Character/HUD/HunterHUDBaseWidget.h"
+#include "UI/HUD/HunterHUDBaseWidget.h"
 #include "Character/PHBaseCharacter.h"
 #include "Components/WidgetComponent.h"
 #include "Equipment/Components/EquipmentManager.h"

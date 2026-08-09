@@ -9,7 +9,7 @@
 #include "Combat/Library/FunctionLibraries/CombatFunctionLibrary.h"
 #include "GameFramework/Actor.h"
 #include "GameplayEffect.h"
-#include "PHGameplayTags.h"
+#include "Tags/PHGameplayTags.h"
 
 DEFINE_LOG_CATEGORY(LogCombatManager);
 

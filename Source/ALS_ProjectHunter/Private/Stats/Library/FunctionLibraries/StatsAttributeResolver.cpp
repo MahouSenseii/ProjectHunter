@@ -3,7 +3,7 @@
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
-#include "Data/BaseStatsData.h"
+#include "Stats/Data/BaseStatsData.h"
 #include "Stats/Components/StatsManager.h"
 
 UHunterAttributeSet* FStatsAttributeResolver::GetAttributeSet(const UStatsManager& Manager)

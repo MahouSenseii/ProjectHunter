@@ -2,7 +2,7 @@
 
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
-#include "Character/HUD/HunterHUD.h"
+#include "UI/HUD/HunterHUD.h"
 #include "Components/ActorComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Engine/PostProcessVolume.h"
@@ -11,7 +11,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "Interactable/Interface/Interactable.h"
-#include "Interactable/Widget/InteractableWidget.h"
+#include "UI/Interaction/InteractableWidget.h"
 #include "Interactable/Library/Structs/InteractionStructs.h"
 #include "Item/ItemInstance.h"
 #include "Tower/Subsystems/GroundItemSubsystem.h"

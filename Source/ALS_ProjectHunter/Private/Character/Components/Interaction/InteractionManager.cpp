@@ -3,7 +3,7 @@
 #include "EngineUtils.h"
 #include "Interactable/Interface/Interactable.h"
 #include "Interactable/Components/InteractableManager.h"
-#include "Interactable/Widget/InteractableWidget.h"
+#include "UI/Interaction/InteractableWidget.h"
 #include "Tower/Subsystems/GroundItemSubsystem.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"

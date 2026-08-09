@@ -1,7 +1,7 @@
 #include "Combat/Components/HunterDamagePopupPresentationComponent.h"
 
 #include "Camera/PlayerCameraManager.h"
-#include "Character/HUD/HunterDamagePopupWidget.h"
+#include "UI/HUD/HunterDamagePopupWidget.h"
 #include "Combat/Components/CombatManager.h"
 #include "Components/WidgetComponent.h"
 #include "Engine/World.h"

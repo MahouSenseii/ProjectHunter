@@ -1,7 +1,7 @@
 #include "Data/BaseStatsDataCustomization.h"
 
 #include "AttributeSet.h"
-#include "Data/BaseStatsData.h"
+#include "Stats/Data/BaseStatsData.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"

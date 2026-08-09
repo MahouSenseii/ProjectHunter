@@ -20,7 +20,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
-#include "PHGameplayTags.h"
+#include "Tags/PHGameplayTags.h"
 
 DEFINE_LOG_CATEGORY(LogPHBaseCharacter);
 

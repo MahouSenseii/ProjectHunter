@@ -1,6 +1,6 @@
 #include "Interactable/Components/InteractableManager.h"
 
-#include "Interactable/Widget/InteractableWidget.h"
+#include "UI/Interaction/InteractableWidget.h"
 #include "Interactable/Helpers/InteractableWidgetPresentationHelper.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/SkeletalMeshComponent.h"

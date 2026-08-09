@@ -3,7 +3,7 @@
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
-#include "Data/BaseStatsData.h"
+#include "Stats/Data/BaseStatsData.h"
 #include "GameplayEffect.h"
 #include "Stats/Components/StatsManager.h"
 #include "Stats/Library/FunctionLibraries/StatsAttributeResolver.h"

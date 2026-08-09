@@ -5,7 +5,7 @@
 #include "Components/ActorComponent.h"
 #include "AI/Library/Enums/MobEnumLibrary.h"
 #include "AI/Library/Structs/MobStructs.h"
-#include "Data/MonsterModifierData.h"
+#include "AI/Data/MonsterModifierData.h"
 #include "GameplayAbilitySpec.h"
 #include "GameplayEffectTypes.h"
 #include "MonsterModifierComponent.generated.h"

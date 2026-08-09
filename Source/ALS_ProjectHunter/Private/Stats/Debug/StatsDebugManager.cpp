@@ -4,7 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "Stats/Components/StatsManager.h"
-#include "Data/BaseStatsData.h"
+#include "Stats/Data/BaseStatsData.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"

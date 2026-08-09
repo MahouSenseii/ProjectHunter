@@ -1,7 +1,7 @@
 #include "Tags/Debug/TagDebugManager.h"
 #include "Tags/Components/TagManager.h"
 #include "Engine/Engine.h"
-#include "PHGameplayTags.h"
+#include "Tags/PHGameplayTags.h"
 
 #include <initializer_list>
 
