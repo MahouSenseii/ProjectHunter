@@ -255,7 +255,7 @@ void AHunterHUD::ShowItemTooltip(UItemInstance* Item, FVector2D ScreenPosition)
 			ItemTooltipWidget->SetAlignmentInViewport(FVector2D::ZeroVector);
 		}
 
-		ItemTooltipWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
+		ItemTooltipWidget->ShowAnimated();
 	}
 }
 
@@ -263,7 +263,7 @@ void AHunterHUD::HideItemTooltip()
 {
 	if (ItemTooltipWidget)
 	{
-		ItemTooltipWidget->SetVisibility(ESlateVisibility::Collapsed);
+		ItemTooltipWidget->HideAnimated();
 	}
 }
 

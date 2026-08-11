@@ -12,6 +12,7 @@ class UImage;
 class UItemTooltipSectionWidget;
 class UTextBlock;
 class UVerticalBox;
+class UWidgetAnimation;
 
 UCLASS()
 class UItemTooltipWidget : public UUserWidget
@@ -21,6 +22,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void UpdateTooltip(UItemInstance* Item);
 
+	/** Make the tooltip visible and play its optional entrance animation. */
+	UFUNCTION(BlueprintCallable, Category = "Tooltip|Animation")
+	void ShowAnimated();
+
+	/** Play the optional exit animation, then collapse the tooltip. */
+	UFUNCTION(BlueprintCallable, Category = "Tooltip|Animation")
+	void HideAnimated();
+
 	UFUNCTION(BlueprintCallable, Category = "Tooltip")
 	void ClearTooltip();
 
@@ -28,6 +37,9 @@ public:
 	FItemTooltipData GetTooltipData() const { return TooltipData; }
 
 protected:
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
+
 	/**
 	 * Fired after the C++ population pass so a Blueprint child can extend the
 	 * tooltip without replacing the base logic.
@@ -63,6 +75,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Tooltip|Widgets")
 	TSubclassOf<UItemTooltipSectionWidget> SectionWidgetClass;
 
+	/** Optional UMG animation named exactly OpenCloseAnimation in WBP_ItemTooltip. */
+	UPROPERTY(Transient, meta = (BindWidgetAnimOptional))
+	TObjectPtr<UWidgetAnimation> OpenCloseAnimation;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
 	FLinearColor Color_GradeF = FLinearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
@@ -95,6 +111,10 @@ protected:
 
 private:
 	TWeakObjectPtr<UItemInstance> DisplayedItem;
+	bool bCloseRequested = false;
+
+	UFUNCTION()
+	void HandleCloseAnimationFinished();
 
 	void SetGradeVisuals(EItemRarity Grade);
 	FLinearColor GetGradeColor(EItemRarity Grade) const;

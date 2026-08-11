@@ -1,5 +1,6 @@
 #include "UI/Interaction/ItemTooltipWidget.h"
 
+#include "Animation/WidgetAnimation.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/Image.h"
@@ -57,6 +58,31 @@ namespace ItemTooltipWidgetPrivate
 	}
 }
 
+void UItemTooltipWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	if (OpenCloseAnimation)
+	{
+		UnbindAllFromAnimationFinished(OpenCloseAnimation);
+
+		FWidgetAnimationDynamicEvent FinishedEvent;
+		FinishedEvent.BindDynamic(this, &UItemTooltipWidget::HandleCloseAnimationFinished);
+		BindToAnimationFinished(OpenCloseAnimation, FinishedEvent);
+	}
+}
+
+void UItemTooltipWidget::NativeDestruct()
+{
+	if (OpenCloseAnimation)
+	{
+		UnbindAllFromAnimationFinished(OpenCloseAnimation);
+	}
+
+	bCloseRequested = false;
+	Super::NativeDestruct();
+}
+
 void UItemTooltipWidget::UpdateTooltip(UItemInstance* Item)
 {
 	if (!Item)
@@ -101,6 +127,51 @@ void UItemTooltipWidget::UpdateTooltip(UItemInstance* Item)
 	PopulateSections();
 	OnTooltipDataUpdated(TooltipData);
 	OnTooltipUpdated(Item);
+}
+
+void UItemTooltipWidget::ShowAnimated()
+{
+	const bool bWasHidden = GetVisibility() == ESlateVisibility::Collapsed
+		|| GetVisibility() == ESlateVisibility::Hidden;
+	const bool bWasClosing = bCloseRequested;
+
+	bCloseRequested = false;
+
+	SetVisibility(ESlateVisibility::HitTestInvisible);
+
+	if ((bWasHidden || bWasClosing) && OpenCloseAnimation)
+	{
+		PlayAnimationForward(OpenCloseAnimation);
+	}
+}
+
+void UItemTooltipWidget::HideAnimated()
+{
+	if (GetVisibility() == ESlateVisibility::Collapsed || bCloseRequested)
+	{
+		return;
+	}
+
+	bCloseRequested = true;
+
+	if (OpenCloseAnimation)
+	{
+		PlayAnimationReverse(OpenCloseAnimation);
+		return;
+	}
+
+	HandleCloseAnimationFinished();
+}
+
+void UItemTooltipWidget::HandleCloseAnimationFinished()
+{
+	if (!bCloseRequested)
+	{
+		return;
+	}
+
+	bCloseRequested = false;
+	SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void UItemTooltipWidget::ClearTooltip()
