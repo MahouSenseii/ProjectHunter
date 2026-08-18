@@ -117,12 +117,20 @@ bool UInventoryManager::RemoveQuantity(UItemInstance* Item, int32 Quantity)
 
 bool UInventoryManager::SwapItems(int32 SlotA, int32 SlotB)
 {
-	if (!HasInventoryWriteAuthority(TEXT("SwapItems")))
+	if (!HasInventoryAuthority())
 	{
+		// UI runs on the client - forward instead of failing. The result comes
+		// back through OnRep_Items, so there is nothing meaningful to return here.
+		ServerSwapItems(SlotA, SlotB);
 		return false;
 	}
 
 	return FInventorySwapper::SwapItems(*this, SlotA, SlotB);
+}
+
+void UInventoryManager::ServerSwapItems_Implementation(int32 SlotA, int32 SlotB)
+{
+	SwapItems(SlotA, SlotB);
 }
 
 void UInventoryManager::DropItem(UItemInstance* Item, FVector DropLocation)
@@ -143,6 +151,43 @@ void UInventoryManager::DropItemAtSlot(int32 SlotIndex, FVector DropLocation)
 	}
 
 	FInventoryRemover::DropItemAtSlot(*this, SlotIndex, DropLocation);
+}
+
+void UInventoryManager::DropItemAtSlotToGround(int32 SlotIndex)
+{
+	if (!HasInventoryAuthority())
+	{
+		ServerDropItemAtSlotToGround(SlotIndex);
+		return;
+	}
+
+	FInventoryRemover::DropItemAtSlot(*this, SlotIndex, GetGroundDropLocation());
+}
+
+void UInventoryManager::ServerDropItemAtSlotToGround_Implementation(int32 SlotIndex)
+{
+	DropItemAtSlotToGround(SlotIndex);
+}
+
+void UInventoryManager::DropItemToGround(UItemInstance* Item)
+{
+	if (!Item)
+	{
+		return;
+	}
+
+	if (!HasInventoryAuthority())
+	{
+		ServerDropItemToGround(Item);
+		return;
+	}
+
+	FInventoryRemover::DropItem(*this, Item, GetGroundDropLocation());
+}
+
+void UInventoryManager::ServerDropItemToGround_Implementation(UItemInstance* Item)
+{
+	DropItemToGround(Item);
 }
 
 bool UInventoryManager::TryStackItem(UItemInstance* Item)
@@ -353,6 +398,24 @@ void UInventoryManager::BroadcastInventoryChanged()
 UItemInstance* UInventoryManager::FindStackableItem(UItemInstance* Item) const
 {
 	return UInventoryFunctionLibrary::FindStackableItem(Items, Item);
+}
+
+bool UInventoryManager::HasInventoryAuthority() const
+{
+	const AActor* OwnerActor = GetOwner();
+	return OwnerActor && OwnerActor->HasAuthority();
+}
+
+FVector UInventoryManager::GetGroundDropLocation() const
+{
+	const AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return FVector::ZeroVector;
+	}
+
+	return OwnerActor->GetActorLocation()
+		+ OwnerActor->GetActorForwardVector() * GroundDropForwardDistance;
 }
 
 bool UInventoryManager::HasInventoryWriteAuthority(const TCHAR* FunctionName) const

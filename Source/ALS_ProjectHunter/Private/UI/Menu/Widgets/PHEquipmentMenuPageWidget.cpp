@@ -5,7 +5,12 @@
 #include "Equipment/Components/EquipmentManager.h"
 #include "Inventory/Components/InventoryManager.h"
 #include "Item/ItemInstance.h"
+#include "Core/Logging/ProjectHunterLogMacros.h"
+#include "UI/Menu/DragDrop/PHItemDragDropOperation.h"
+#include "UI/Menu/Helpers/MenuInventoryGridBuilder.h"
 #include "UI/Menu/Library/FunctionLibraries/MenuFunctionLibrary.h"
+#include "UI/Menu/Library/MenuLog.h"
+#include "UI/Menu/Widgets/PHInventorySlotWidget.h"
 #include "UI/Menu/Widgets/PHEquipmentMenuPanelWidget.h"
 #include "UI/Menu/Widgets/PHEquipmentSlotWidget.h"
 #include "UI/Menu/Widgets/PHInventoryMenuPanelWidget.h"
@@ -36,6 +41,17 @@ void UPHEquipmentMenuPageWidget::NativeInitializeForCharacter(APHBaseCharacter* 
 	Super::NativeInitializeForCharacter(Character);
 
 	CacheChildWidgets();
+
+	// The panel resolves its own InventoryManager inside InitializeForCharacter,
+	// which the base class only runs AFTER this function returns. Without this,
+	// the RefreshMenuData() below drives the panel while its manager is still
+	// null - it builds zero cells and clears the grid container.
+	// InitializeForCharacter is idempotent, so the later child pass is a no-op.
+	if (InventoryPanel)
+	{
+		InventoryPanel->InitializeForCharacter(Character);
+	}
+
 	BindInventoryPanelDelegates();
 	BindManagerDelegates();
 	RefreshMenuData();
@@ -71,8 +87,11 @@ void UPHEquipmentMenuPageWidget::RefreshMenuData()
 	}
 	else
 	{
+		// No dedicated panel: this page owns the inventory grid itself. Before,
+		// this path built the slot data and then rendered nothing at all.
 		RebuildInventorySlots();
 		UpdateInventorySummary();
+		RebuildInventorySlotWidgets();
 	}
 
 	OnMenuDataRefreshed();
@@ -225,6 +244,110 @@ FText UPHEquipmentMenuPageWidget::GetEquipmentSlotDisplayName(EEquipmentSlot Equ
 	return UMenuFunctionLibrary::GetEquipmentSlotDisplayName(EquipmentSlot);
 }
 
+void UPHEquipmentMenuPageWidget::RebuildInventorySlotWidgets()
+{
+	// The panel owns its own cells when one exists.
+	if (InventoryPanel || !bAutoBuildInventorySlotWidgets)
+	{
+		return;
+	}
+
+	FMenuInventoryGridBuilder::Rebuild(
+		*this,
+		TScriptInterface<IPHInventorySlotHost>(this),
+		InventorySlotContainer,
+		InventorySlotWidgetClass,
+		GridColumns,
+		InventoryCellSize,
+		InventorySlots,
+		InventorySlotWidgets);
+}
+
+bool UPHEquipmentMenuPageWidget::CanAcceptDroppedItem(
+	UPHItemDragDropOperation* Operation,
+	int32 TargetSlotIndex) const
+{
+	if (!Operation || !Operation->IsValidDrag() || TargetSlotIndex == INDEX_NONE)
+	{
+		return false;
+	}
+
+	if (Operation->IsFromInventory())
+	{
+		return InventoryManager != nullptr && !Operation->IsSameInventorySlot(TargetSlotIndex);
+	}
+
+	if (Operation->IsFromEquipment())
+	{
+		return EquipmentManager != nullptr
+			&& Operation->SourceEquipmentSlot != EEquipmentSlot::ES_None;
+	}
+
+	return false;
+}
+
+bool UPHEquipmentMenuPageWidget::HandleItemDroppedOnSlot(
+	UPHItemDragDropOperation* Operation,
+	int32 TargetSlotIndex)
+{
+	if (!CanAcceptDroppedItem(Operation, TargetSlotIndex))
+	{
+		return false;
+	}
+
+	if (Operation->IsFromInventory())
+	{
+		return RequestMoveInventoryItem(Operation->SourceInventorySlotIndex, TargetSlotIndex);
+	}
+
+	return RequestUnequipToInventory(Operation->SourceEquipmentSlot);
+}
+
+bool UPHEquipmentMenuPageWidget::RequestMoveInventoryItem(int32 FromSlotIndex, int32 ToSlotIndex)
+{
+	if (!InventoryManager
+		|| FromSlotIndex == INDEX_NONE
+		|| ToSlotIndex == INDEX_NONE
+		|| FromSlotIndex == ToSlotIndex)
+	{
+		return false;
+	}
+
+	// SwapItems covers both cases: an occupied target swaps, an empty one moves.
+	InventoryManager->SwapItems(FromSlotIndex, ToSlotIndex);
+	return true;
+}
+
+bool UPHEquipmentMenuPageWidget::RequestUnequipToInventory(EEquipmentSlot EquipmentSlot)
+{
+	if (!EquipmentManager
+		|| EquipmentSlot == EEquipmentSlot::ES_None
+		|| !EquipmentManager->IsSlotOccupied(EquipmentSlot))
+	{
+		return false;
+	}
+
+	EquipmentManager->UnequipItem(EquipmentSlot, /*bMoveToBag=*/true);
+	return true;
+}
+
+bool UPHEquipmentMenuPageWidget::RequestDropInventorySlotToGround(int32 SlotIndex)
+{
+	if (!InventoryManager || SlotIndex == INDEX_NONE || !GetInventoryItem(SlotIndex))
+	{
+		return false;
+	}
+
+	InventoryManager->DropItemAtSlotToGround(SlotIndex);
+
+	if (SelectedInventorySlotIndex == SlotIndex)
+	{
+		ClearSelection();
+	}
+
+	return true;
+}
+
 void UPHEquipmentMenuPageWidget::CacheChildWidgets()
 {
 	EquipmentSlotWidgets.Reset();
@@ -261,6 +384,26 @@ void UPHEquipmentMenuPageWidget::CacheChildWidgets()
 		{
 			InventoryPanel = Cast<UPHInventoryMenuPanelWidget>(ChildWidget);
 		}
+	}
+
+	// A blank inventory grid is otherwise silent, so state which mode we are in.
+	if (InventoryPanel)
+	{
+		UE_LOG(LogPHMenu, Log, TEXT("%s: inventory grid owned by panel '%s'."),
+			*GetName(), *InventoryPanel->GetName());
+	}
+	else if (InventorySlotContainer)
+	{
+		UE_LOG(LogPHMenu, Log, TEXT("%s: no InventoryPanel - hosting the grid directly."),
+			*GetName());
+	}
+	else
+	{
+		PH_LOG_WARNING(LogPHMenu,
+			"%s: no inventory grid will render. Add either a UPHInventoryMenuPanelWidget "
+			"child, or a panel named 'InventorySlotContainer' plus an "
+			"InventorySlotWidgetClass in this page's Blueprint defaults.",
+			*GetName());
 	}
 }
 

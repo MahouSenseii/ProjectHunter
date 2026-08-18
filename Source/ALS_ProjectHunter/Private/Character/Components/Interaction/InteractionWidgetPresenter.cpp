@@ -287,7 +287,8 @@ void FInteractionWidgetPresenter::HideItemTooltip()
 	{
 		if (AHunterHUD* HunterHUD = Cast<AHunterHUD>(PC->GetHUD()))
 		{
-			HunterHUD->HideItemTooltip();
+			// Interaction-scoped: this must never close a tooltip the menu opened.
+			HunterHUD->HideItemTooltip(EItemTooltipSource::ITS_Interaction);
 		}
 	}
 }
@@ -622,5 +623,6 @@ void FInteractionWidgetPresenter::ShowItemTooltipForGroundItem(int32 GroundItemI
 		ScreenPos /= DPIScale;
 	}
 
-	HunterHUD->ShowItemTooltip(Item, ScreenPos + ItemTooltipScreenOffset);
+	HunterHUD->ShowItemTooltip(
+		Item, ScreenPos + ItemTooltipScreenOffset, EItemTooltipSource::ITS_Interaction);
 }

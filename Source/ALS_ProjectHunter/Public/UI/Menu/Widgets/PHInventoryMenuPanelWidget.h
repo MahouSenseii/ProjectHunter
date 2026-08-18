@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UI/HUD/HunterHUDBaseWidget.h"
+#include "UI/Menu/Interfaces/PHInventorySlotHost.h"
 #include "UI/Menu/Library/Structs/MenuStructs.h"
 #include "PHInventoryMenuPanelWidget.generated.h"
 
@@ -11,6 +12,7 @@ class UInventoryManager;
 class UItemInstance;
 class UPanelWidget;
 class UPHInventorySlotWidget;
+class UPHItemDragDropOperation;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryMenuDataRefreshed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnInventoryMenuSelectionChanged,
@@ -20,7 +22,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventoryMenuCarryWeightChanged,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryMenuSlotWidgetsRebuilt);
 
 UCLASS(BlueprintType, Blueprintable)
-class ALS_PROJECTHUNTER_API UPHInventoryMenuPanelWidget : public UHunterHUDBaseWidget
+class ALS_PROJECTHUNTER_API UPHInventoryMenuPanelWidget
+	: public UHunterHUDBaseWidget
+	, public IPHInventorySlotHost
 {
 	GENERATED_BODY()
 
@@ -52,13 +56,13 @@ public:
 	UItemInstance* GetInventoryItem(int32 SlotIndex) const;
 
 	UFUNCTION(BlueprintPure, Category = "Inventory Menu")
-	bool CanEquipInventorySlotToSlot(int32 SlotIndex, EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None) const;
+	virtual bool CanEquipInventorySlotToSlot(int32 SlotIndex, EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None) const override;
 
 	UFUNCTION(BlueprintPure, Category = "Inventory Menu")
 	bool CanEquipItemToSlot(UItemInstance* Item, EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory Menu|Selection")
-	void SelectInventorySlot(int32 SlotIndex);
+	virtual void SelectInventorySlot(int32 SlotIndex) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory Menu|Selection")
 	void ClearSelection();
@@ -73,10 +77,35 @@ public:
 	EEquipmentSlot GetSelectedSuggestedEquipmentSlot() const { return SelectedSuggestedEquipmentSlot; }
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory Menu|Actions")
-	bool RequestEquipInventorySlot(int32 SlotIndex, EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None);
+	virtual bool RequestEquipInventorySlot(int32 SlotIndex, EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory Menu|Actions")
 	bool RequestEquipSelectedItem(EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None);
+
+	// DRAG AND DROP
+
+	/** True when Operation may be dropped onto TargetSlotIndex. */
+	UFUNCTION(BlueprintPure, Category = "Inventory Menu|Drag Drop")
+	virtual bool CanAcceptDroppedItem(UPHItemDragDropOperation* Operation, int32 TargetSlotIndex) const override;
+
+	/**
+	 * Applies a drop onto an inventory slot.
+	 * Inventory source -> move/swap. Equipment source -> unequip into the bag.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory Menu|Drag Drop")
+	virtual bool HandleItemDroppedOnSlot(UPHItemDragDropOperation* Operation, int32 TargetSlotIndex) override;
+
+	/** Move or swap two inventory slots. Empty targets are handled by the swap. */
+	UFUNCTION(BlueprintCallable, Category = "Inventory Menu|Actions")
+	bool RequestMoveInventoryItem(int32 FromSlotIndex, int32 ToSlotIndex);
+
+	/** Unequip into the bag. The item lands in the first free slot. */
+	UFUNCTION(BlueprintCallable, Category = "Inventory Menu|Actions")
+	bool RequestUnequipToInventory(EEquipmentSlot EquipmentSlot);
+
+	/** Drop an inventory slot on the ground in front of the character. */
+	UFUNCTION(BlueprintCallable, Category = "Inventory Menu|Actions")
+	virtual bool RequestDropInventorySlotToGround(int32 SlotIndex) override;
 
 	UFUNCTION(BlueprintPure, Category = "Inventory Menu|Summary")
 	float GetCurrentCarryWeight() const { return CurrentCarryWeight; }
@@ -120,7 +149,19 @@ protected:
 	bool bAutoBuildInventorySlotWidgets = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory Menu|Config", meta = (ClampMin = "1"))
-	int32 GridColumns = 8;
+	int32 GridColumns = 4;
+
+	/**
+	 * Size forced on every grid cell.
+	 *
+	 * Set to (0,0) to let the cell widget size itself - only safe when the cell's
+	 * root is something with a real desired size (SizeBox, Overlay, VerticalBox).
+	 * A CanvasPanel root reports zero, which collapses every cell in a
+	 * UniformGridPanel and renders the grid as nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Menu|Config")
+	FVector2D InventoryCellSize = FVector2D(128.0f, 144.0f);
+
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Inventory Menu")
 	TObjectPtr<UPanelWidget> InventorySlotContainer;

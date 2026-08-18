@@ -57,6 +57,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Config")
 	bool bAutoSort = false;
 
+	/** Distance in front of the owner used by DropItemAtSlotToGround. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Config", meta = (ClampMin = "0.0"))
+	float GroundDropForwardDistance = 150.0f;
+
 	/** All items in inventory (slot-based array).
 	 *  OnRep_Items keeps the client UI consistent after server-authoritative changes.
 	 *  COND_OwnerOnly: only the owning client receives the full inventory.
@@ -91,7 +95,14 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	bool RemoveQuantity(UItemInstance* Item, int32 Quantity);
 
-	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
+	/**
+	 * Move/swap two slots.
+	 *
+	 * Safe to call from client UI: when the caller has no authority this
+	 * forwards to the server and returns false (the change arrives via
+	 * OnRep_Items). Mirrors how UEquipmentManager::EquipItem behaves.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool SwapItems(int32 SlotA, int32 SlotB);
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
@@ -99,6 +110,24 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	void DropItemAtSlot(int32 SlotIndex, FVector DropLocation);
+
+	/**
+	 * Drop a slot to the ground in front of the owner.
+	 *
+	 * Client-safe entry point for the menu: the drop location is always
+	 * computed on the server, so a client can't choose where the item lands.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void DropItemAtSlotToGround(int32 SlotIndex);
+
+	/**
+	 * Drop a specific item to the ground in front of the owner.
+	 *
+	 * Client-safe. Use when the slot index is not known locally - e.g. an item
+	 * just unequipped into the bag by a server RPC.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void DropItemToGround(UItemInstance* Item);
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory|Stacking")
 	bool TryStackItem(UItemInstance* Item);
@@ -204,6 +233,21 @@ private:
 	UItemInstance* FindStackableItem(UItemInstance* Item) const;
 
 	bool HasInventoryWriteAuthority(const TCHAR* FunctionName) const;
+
+	/** True when this instance may mutate the inventory directly. */
+	bool HasInventoryAuthority() const;
+
+	/** Server-side drop location derived from the owner's transform. */
+	FVector GetGroundDropLocation() const;
+
+	UFUNCTION(Server, Reliable)
+	void ServerSwapItems(int32 SlotA, int32 SlotB);
+
+	UFUNCTION(Server, Reliable)
+	void ServerDropItemAtSlotToGround(int32 SlotIndex);
+
+	UFUNCTION(Server, Reliable)
+	void ServerDropItemToGround(UItemInstance* Item);
 
 	/** Called on owning client when Items array replicates from server.
 	 *  Rebroadcasts OnInventoryChanged and OnWeightChanged so UI stays in sync. */

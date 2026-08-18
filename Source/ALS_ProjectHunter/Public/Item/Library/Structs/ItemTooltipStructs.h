@@ -5,7 +5,7 @@
 #include "Item/Library/Enums/ItemTooltipEnums.h"
 #include "ItemTooltipStructs.generated.h"
 
-class UMaterialInstance;
+class UTexture2D;
 
 USTRUCT(BlueprintType)
 struct FItemTooltipLine
@@ -90,7 +90,7 @@ struct FItemTooltipData
 	FLinearColor HeaderColor = FLinearColor::White;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Tooltip")
-	TObjectPtr<UMaterialInstance> IconMaterial = nullptr;
+	TObjectPtr<UTexture2D> Icon = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Tooltip")
 	int32 ItemLevel = 1;

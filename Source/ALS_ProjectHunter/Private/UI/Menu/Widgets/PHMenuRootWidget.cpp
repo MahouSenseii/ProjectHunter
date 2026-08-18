@@ -2,6 +2,10 @@
 
 #include "Components/WidgetSwitcher.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
+#include "Character/PHBaseCharacter.h"
+#include "Equipment/Components/EquipmentManager.h"
+#include "Inventory/Components/InventoryManager.h"
+#include "UI/Menu/DragDrop/PHItemDragDropOperation.h"
 #include "UI/Menu/Widgets/PHMenuPageWidgetBase.h"
 #include "UI/Menu/Widgets/PHMenuTabBarWidget.h"
 
@@ -15,6 +19,15 @@ UPHMenuRootWidget::UPHMenuRootWidget()
 void UPHMenuRootWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	if (bDropItemsToWorldOnMissedDrop)
+	{
+		// A UserWidget root is SelfHitTestInvisible by default, which keeps it out
+		// of the hit path entirely - drops on the menu background would never
+		// reach NativeOnDrop. Children still receive events first and bubble up.
+		SetVisibility(ESlateVisibility::Visible);
+	}
+
 	BuildMenuEntriesFromEnum();
 
 	if (TabBar)
@@ -33,6 +46,63 @@ void UPHMenuRootWidget::NativeConstruct()
 			"NativeConstruct: %s has no MenuEntries configured. Fill 'Menu Entries' in the Blueprint class defaults.",
 			*GetName());
 	}
+}
+
+bool UPHMenuRootWidget::NativeOnDrop(
+	const FGeometry& InGeometry,
+	const FDragDropEvent& InDragDropEvent,
+	UDragDropOperation* InOperation)
+{
+	UPHItemDragDropOperation* ItemOperation = Cast<UPHItemDragDropOperation>(InOperation);
+	if (!bDropItemsToWorldOnMissedDrop || !ItemOperation || !ItemOperation->IsValidDrag())
+	{
+		return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
+	}
+
+	// Nothing else claimed this drop, so the player released over the menu
+	// background - treat it as "throw it away".
+	DropOperationToWorld(ItemOperation);
+	return true;
+}
+
+bool UPHMenuRootWidget::DropOperationToWorld(UPHItemDragDropOperation* Operation)
+{
+	if (!Operation || !Operation->IsValidDrag())
+	{
+		return false;
+	}
+
+	APHBaseCharacter* Character = GetBoundCharacter();
+	UInventoryManager* InventoryManager =
+		Character ? Character->FindComponentByClass<UInventoryManager>() : nullptr;
+	if (!InventoryManager)
+	{
+		return false;
+	}
+
+	if (Operation->IsFromInventory())
+	{
+		InventoryManager->DropItemAtSlotToGround(Operation->SourceInventorySlotIndex);
+		return true;
+	}
+
+	if (Operation->IsFromEquipment())
+	{
+		UEquipmentManager* EquipmentManager = Character->GetEquipmentManager();
+		if (!EquipmentManager || !EquipmentManager->IsSlotOccupied(Operation->SourceEquipmentSlot))
+		{
+			return false;
+		}
+
+		// Unequip into the bag first, then drop that item. Both calls are reliable
+		// and ordered, so on a client the drop resolves after the unequip - and if
+		// the drop somehow fails the item is in the bag rather than nowhere.
+		EquipmentManager->UnequipItem(Operation->SourceEquipmentSlot, /*bMoveToBag=*/true);
+		InventoryManager->DropItemToGround(Operation->Item);
+		return true;
+	}
+
+	return false;
 }
 
 void UPHMenuRootWidget::OpenMenu(EMenuType MenuType)

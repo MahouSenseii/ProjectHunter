@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "UI/Menu/Widgets/PHMenuRootWidget.h"
 #include "TimerManager.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 #include "UI/Interaction/ItemTooltipWidget.h"
 
 DEFINE_LOG_CATEGORY(LogHunterHUD);
@@ -147,6 +148,9 @@ void AHunterHUD::CloseMenu()
 	MenuRootWidget->SetVisibility(ESlateVisibility::Collapsed);
 	ApplyMenuInputMode(false);
 
+	// A slot may have been hovered at the moment the menu closed.
+	HideItemTooltip(EItemTooltipSource::ITS_None);
+
 	UE_LOG(LogHunterHUD, Log, TEXT("CloseMenu: menu closed."));
 }
 
@@ -233,10 +237,17 @@ void AHunterHUD::ApplyMenuInputMode(const bool bMenuOpen) const
 	}
 }
 
-void AHunterHUD::ShowItemTooltip(UItemInstance* Item, FVector2D ScreenPosition)
+void AHunterHUD::ShowItemTooltip(UItemInstance* Item, FVector2D ScreenPosition, const EItemTooltipSource Source)
 {
+	if (!CanShowItemTooltipFrom(Source))
+	{
+		return;
+	}
+
 	if (ItemTooltipWidget && Item)
 	{
+		ActiveItemTooltipSource = Source;
+
 		ItemTooltipWidget->UpdateTooltip(Item);
 
 		if (bPinItemTooltipToBottomRight)
@@ -259,12 +270,118 @@ void AHunterHUD::ShowItemTooltip(UItemInstance* Item, FVector2D ScreenPosition)
 	}
 }
 
-void AHunterHUD::HideItemTooltip()
+void AHunterHUD::ShowItemTooltipAtViewportPosition(
+	UItemInstance* Item,
+	const FVector2D ViewportPosition,
+	const EItemTooltipSource Source)
 {
+	if (!ItemTooltipWidget || !Item || !CanShowItemTooltipFrom(Source))
+	{
+		return;
+	}
+
+	ActiveItemTooltipSource = Source;
+	ItemTooltipWidget->UpdateTooltip(Item);
+
+	// Anchor top-left so the clamp math below matches what the player sees.
+	ItemTooltipWidget->SetAnchorsInViewport(FAnchors(0.0f, 0.0f));
+	ItemTooltipWidget->SetAlignmentInViewport(FVector2D::ZeroVector);
+	ItemTooltipWidget->SetPositionInViewport(
+		ClampTooltipToViewport(ViewportPosition),
+		/*bRemoveDPIScale=*/false);
+
+	ItemTooltipWidget->ShowAnimated();
+}
+
+void AHunterHUD::UpdateItemTooltipPosition(const FVector2D ViewportPosition, const EItemTooltipSource Source)
+{
+	if (!ItemTooltipWidget
+		|| !ItemTooltipWidget->IsVisible()
+		|| ActiveItemTooltipSource != Source)
+	{
+		return;
+	}
+
+	ItemTooltipWidget->SetPositionInViewport(
+		ClampTooltipToViewport(ViewportPosition),
+		/*bRemoveDPIScale=*/false);
+}
+
+FVector2D AHunterHUD::ClampTooltipToViewport(const FVector2D DesiredPosition) const
+{
+	if (!ItemTooltipWidget)
+	{
+		return DesiredPosition;
+	}
+
+	FVector2D Position = DesiredPosition + ItemTooltipCursorOffset;
+
+	const float DPIScale = UWidgetLayoutLibrary::GetViewportScale(GetWorld());
+	if (DPIScale <= 0.0f)
+	{
+		return Position;
+	}
+
+	// Both values are converted into the DPI-independent space the position uses.
+	const FVector2D ViewportSize = UWidgetLayoutLibrary::GetViewportSize(GetWorld()) / DPIScale;
+
+	// Desired size is zero until the widget has been laid out once.
+	ItemTooltipWidget->ForceLayoutPrepass();
+	const FVector2D TooltipSize = ItemTooltipWidget->GetDesiredSize();
+	if (TooltipSize.IsNearlyZero())
+	{
+		return Position;
+	}
+
+	// Flip to the other side of the cursor before clamping, so the tooltip never
+	// sits under the pointer near the right/bottom edges.
+	if (Position.X + TooltipSize.X > ViewportSize.X)
+	{
+		Position.X = DesiredPosition.X - ItemTooltipCursorOffset.X - TooltipSize.X;
+	}
+
+	if (Position.Y + TooltipSize.Y > ViewportSize.Y)
+	{
+		Position.Y = DesiredPosition.Y - ItemTooltipCursorOffset.Y - TooltipSize.Y;
+	}
+
+	// Literals stay double: FVector2D components are doubles in UE5 and mixing in
+	// float literals breaks FMath::Clamp/Max template deduction.
+	Position.X = FMath::Clamp(Position.X, 0.0, FMath::Max(0.0, ViewportSize.X - TooltipSize.X));
+	Position.Y = FMath::Clamp(Position.Y, 0.0, FMath::Max(0.0, ViewportSize.Y - TooltipSize.Y));
+
+	return Position;
+}
+
+void AHunterHUD::HideItemTooltip(const EItemTooltipSource Source)
+{
+	// ITS_None is the force-hide. Otherwise a system may only close its own
+	// tooltip - the interaction poll must not close the menu's.
+	if (Source != EItemTooltipSource::ITS_None
+		&& ActiveItemTooltipSource != EItemTooltipSource::ITS_None
+		&& Source != ActiveItemTooltipSource)
+	{
+		return;
+	}
+
+	ActiveItemTooltipSource = EItemTooltipSource::ITS_None;
+
 	if (ItemTooltipWidget)
 	{
 		ItemTooltipWidget->HideAnimated();
 	}
+}
+
+bool AHunterHUD::CanShowItemTooltipFrom(const EItemTooltipSource Source) const
+{
+	// The menu owns the tooltip while it is open. The interaction system polls
+	// on a timer and would otherwise stomp a slot tooltip the frame after it opens.
+	if (Source == EItemTooltipSource::ITS_Interaction && IsMenuOpen())
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void AHunterHUD::ShowMashProgressWidget(const FText& Text, int32 RequiredCount)

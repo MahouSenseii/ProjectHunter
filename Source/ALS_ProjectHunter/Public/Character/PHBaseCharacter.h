@@ -19,6 +19,7 @@ class UHunterAbilitySystemComponent;
 class UCharacterProgressionManager;
 class UCombatManager;
 class UEquipmentManager;
+class UInventoryManager;
 class UEquipmentPresentationComponent;
 class UHunterDamagePopupPresentationComponent;
 class UCharacterSystemCoordinatorComponent;
@@ -142,6 +143,15 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UEquipmentManager> EquipmentManager;
 
+	/**
+	 * Inventory Component - the carried bag.
+	 *
+	 * Every system reaches this through FindComponentByClass<UInventoryManager>(),
+	 * so it has to exist on the character or the whole inventory silently no-ops.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInventoryManager> InventoryManager;
+
 	/** Stats Manager - All stat queries and calculations */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStatsManager> StatsManager;
@@ -218,6 +228,12 @@ public:
 	UEquipmentManager* GetEquipmentManager() const
 	{
 		return EquipmentManager;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	UInventoryManager* GetInventoryManager() const
+	{
+		return InventoryManager;
 	}
 
 

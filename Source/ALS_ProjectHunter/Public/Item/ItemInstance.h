@@ -10,7 +10,7 @@
 class UAbilitySystemComponent;
 class UStaticMesh;
 class USkeletalMesh;
-class UMaterialInstance;
+class UTexture2D;
 
 /**
  * Runtime Item Instance
@@ -246,7 +246,7 @@ public:
 
 	/** Get inventory icon */
 	UFUNCTION(BlueprintPure, Category = "Item|Visuals")
-	UMaterialInstance* GetInventoryIcon() const;
+	UTexture2D* GetInventoryIcon() const;
 
 	/** Get rarity color (Grade F-SS colors) */
 	UFUNCTION(BlueprintPure, Category = "Item|Visuals")

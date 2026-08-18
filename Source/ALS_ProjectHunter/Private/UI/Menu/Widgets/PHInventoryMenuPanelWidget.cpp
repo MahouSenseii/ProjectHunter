@@ -7,6 +7,10 @@
 #include "Equipment/Components/EquipmentManager.h"
 #include "Inventory/Components/InventoryManager.h"
 #include "Item/ItemInstance.h"
+#include "UI/Menu/DragDrop/PHItemDragDropOperation.h"
+#include "UI/Menu/Helpers/MenuInventoryGridBuilder.h"
+#include "Core/Logging/ProjectHunterLogMacros.h"
+#include "UI/Menu/Library/MenuLog.h"
 #include "UI/Menu/Library/FunctionLibraries/MenuFunctionLibrary.h"
 #include "UI/Menu/Widgets/PHInventorySlotWidget.h"
 
@@ -34,39 +38,27 @@ void UPHInventoryMenuPanelWidget::RefreshInventoryData()
 
 void UPHInventoryMenuPanelWidget::RebuildInventorySlotWidgets()
 {
-	InventorySlotWidgets.Reset();
-
-	if (!bAutoBuildInventorySlotWidgets || !InventorySlotContainer || !InventorySlotWidgetClass)
+	if (!bAutoBuildInventorySlotWidgets)
 	{
 		return;
 	}
 
-	InventorySlotContainer->ClearChildren();
+	const bool bRecreated = FMenuInventoryGridBuilder::Rebuild(
+		*this,
+		TScriptInterface<IPHInventorySlotHost>(this),
+		InventorySlotContainer,
+		InventorySlotWidgetClass,
+		GridColumns,
+		InventoryCellSize,
+		InventorySlots,
+		InventorySlotWidgets);
 
-	for (int32 VisualIndex = 0; VisualIndex < InventorySlots.Num(); ++VisualIndex)
+	// Only announce a genuine rebuild - an in-place refresh keeps the same widgets.
+	if (bRecreated)
 	{
-		UPHInventorySlotWidget* SlotWidget = CreateWidget<UPHInventorySlotWidget>(this, InventorySlotWidgetClass);
-		if (!SlotWidget)
-		{
-			continue;
-		}
-
-		SlotWidget->InitializeInventorySlot(this, InventorySlots[VisualIndex]);
-		InventorySlotWidgets.Add(SlotWidget);
-
-		if (UPanelSlot* PanelSlot = InventorySlotContainer->AddChild(SlotWidget))
-		{
-			if (UUniformGridSlot* GridSlot = Cast<UUniformGridSlot>(PanelSlot))
-			{
-				const int32 SafeColumnCount = FMath::Max(1, GridColumns);
-				GridSlot->SetRow(VisualIndex / SafeColumnCount);
-				GridSlot->SetColumn(VisualIndex % SafeColumnCount);
-			}
-		}
+		OnInventorySlotWidgetsRebuilt();
+		InventorySlotWidgetsRebuilt.Broadcast();
 	}
-
-	OnInventorySlotWidgetsRebuilt();
-	InventorySlotWidgetsRebuilt.Broadcast();
 }
 
 void UPHInventoryMenuPanelWidget::SetEquipmentSlotOrder(const TArray<EEquipmentSlot>& NewEquipmentSlotOrder)
@@ -154,6 +146,93 @@ bool UPHInventoryMenuPanelWidget::RequestEquipSelectedItem(EEquipmentSlot Target
 	return true;
 }
 
+bool UPHInventoryMenuPanelWidget::CanAcceptDroppedItem(UPHItemDragDropOperation* Operation, int32 TargetSlotIndex) const
+{
+	if (!Operation || !Operation->IsValidDrag() || TargetSlotIndex == INDEX_NONE)
+	{
+		return false;
+	}
+
+	if (Operation->IsFromInventory())
+	{
+		// Dropping a slot back onto itself is a no-op, not a valid target.
+		return InventoryManager != nullptr && !Operation->IsSameInventorySlot(TargetSlotIndex);
+	}
+
+	if (Operation->IsFromEquipment())
+	{
+		return EquipmentManager != nullptr
+			&& Operation->SourceEquipmentSlot != EEquipmentSlot::ES_None;
+	}
+
+	return false;
+}
+
+bool UPHInventoryMenuPanelWidget::HandleItemDroppedOnSlot(UPHItemDragDropOperation* Operation, int32 TargetSlotIndex)
+{
+	if (!CanAcceptDroppedItem(Operation, TargetSlotIndex))
+	{
+		return false;
+	}
+
+	if (Operation->IsFromInventory())
+	{
+		return RequestMoveInventoryItem(Operation->SourceInventorySlotIndex, TargetSlotIndex);
+	}
+
+	return RequestUnequipToInventory(Operation->SourceEquipmentSlot);
+}
+
+bool UPHInventoryMenuPanelWidget::RequestMoveInventoryItem(int32 FromSlotIndex, int32 ToSlotIndex)
+{
+	if (!InventoryManager
+		|| FromSlotIndex == INDEX_NONE
+		|| ToSlotIndex == INDEX_NONE
+		|| FromSlotIndex == ToSlotIndex)
+	{
+		return false;
+	}
+
+	// SwapItems covers both cases: an occupied target swaps, an empty one moves.
+	// On a client this forwards to the server and returns false, so the return
+	// value only tells us the request was issued.
+	InventoryManager->SwapItems(FromSlotIndex, ToSlotIndex);
+	return true;
+}
+
+bool UPHInventoryMenuPanelWidget::RequestUnequipToInventory(EEquipmentSlot EquipmentSlot)
+{
+	if (!EquipmentManager
+		|| EquipmentSlot == EEquipmentSlot::ES_None
+		|| !EquipmentManager->IsSlotOccupied(EquipmentSlot))
+	{
+		return false;
+	}
+
+	// The item goes to the first free slot rather than the exact slot dropped on:
+	// placing it precisely would need a dedicated server path, and landing in the
+	// bag at all is what matters here.
+	EquipmentManager->UnequipItem(EquipmentSlot, /*bMoveToBag=*/true);
+	return true;
+}
+
+bool UPHInventoryMenuPanelWidget::RequestDropInventorySlotToGround(int32 SlotIndex)
+{
+	if (!InventoryManager || SlotIndex == INDEX_NONE || !GetInventoryItem(SlotIndex))
+	{
+		return false;
+	}
+
+	InventoryManager->DropItemAtSlotToGround(SlotIndex);
+
+	if (SelectedInventorySlotIndex == SlotIndex)
+	{
+		ClearSelection();
+	}
+
+	return true;
+}
+
 void UPHInventoryMenuPanelWidget::NativeInitializeForCharacter(APHBaseCharacter* Character)
 {
 	Super::NativeInitializeForCharacter(Character);
@@ -216,10 +295,18 @@ void UPHInventoryMenuPanelWidget::RebuildInventorySlots()
 
 	if (!InventoryManager)
 	{
+		// Either the panel has not been initialised for a character yet, or the
+		// character genuinely has no UInventoryManager component.
+		PH_LOG_WARNING(LogPHMenu,
+			"%s: no UInventoryManager on the bound character - the inventory grid "
+			"will stay empty. APHBaseCharacter creates one as 'InventoryComponent'; "
+			"check it was not removed in the character Blueprint.",
+			*GetName());
 		return;
 	}
 
 	const int32 SlotCount = InventoryManager->GetSlotCount();
+	UE_LOG(LogPHMenu, Log, TEXT("%s: building %d inventory slots."), *GetName(), SlotCount);
 	for (int32 SlotIndex = 0; SlotIndex < SlotCount; ++SlotIndex)
 	{
 		UItemInstance* Item = InventoryManager->GetItemAtSlot(SlotIndex);

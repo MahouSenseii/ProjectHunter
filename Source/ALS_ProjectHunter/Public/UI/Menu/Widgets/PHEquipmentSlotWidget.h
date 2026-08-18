@@ -7,16 +7,27 @@
 
 class APHBaseCharacter;
 class UButton;
+class UDragDropOperation;
 class UEquipmentManager;
 class UImage;
 class UItemInstance;
 class UTextBlock;
 class UPHEquipmentMenuPageWidget;
+class UPHItemDragDropOperation;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEquipmentSlotWidgetDataRefreshed, FEquipmentMenuSlotViewData, SlotData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnEquipmentSlotWidgetChanged,
 	EEquipmentSlot, EquipmentSlot, UItemInstance*, NewItem, UItemInstance*, OldItem);
 
+/**
+ * One equipment slot in the menu.
+ *
+ * Mouse behaviour handled here (no Blueprint graph required):
+ * - hover shows the shared item tooltip and follows the cursor
+ * - press-and-drag starts an item drag carrying this equipment slot
+ * - dropping an inventory item here equips it, another equipment slot re-slots
+ * - releasing outside the menu unequips into the bag
+ */
 UCLASS(BlueprintType, Blueprintable)
 class ALS_PROJECTHUNTER_API UPHEquipmentSlotWidget : public UHunterHUDBaseWidget
 {
@@ -64,6 +75,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equipment Slot")
 	static FText GetEquipmentSlotDisplayName(EEquipmentSlot EquipmentSlot);
 
+	// DRAG AND DROP
+
+	/** True when Operation may be dropped on this slot. */
+	UFUNCTION(BlueprintPure, Category = "Equipment Slot|Drag Drop")
+	bool CanAcceptDroppedItem(UPHItemDragDropOperation* Operation) const;
+
+	/** Applies a drop: equip from the bag, or re-slot from another equipment slot. */
+	UFUNCTION(BlueprintCallable, Category = "Equipment Slot|Drag Drop")
+	bool HandleItemDropped(UPHItemDragDropOperation* Operation);
+
 	UPROPERTY(BlueprintAssignable, Category = "Equipment Slot|Events")
 	FOnEquipmentSlotWidgetDataRefreshed SlotDataRefreshed;
 
@@ -75,6 +96,17 @@ protected:
 	virtual void NativeDestruct() override;
 	virtual void NativeInitializeForCharacter(APHBaseCharacter* Character) override;
 	virtual void NativeReleaseCharacter() override;
+
+	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
+	virtual FReply NativeOnMouseMove(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+
+	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
+	virtual void NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+	virtual void NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
 	/** Optional named children let one WBP render every EEquipmentSlot. */
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Equipment Slot|Widgets")
@@ -92,11 +124,57 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment Slot|Config")
 	EEquipmentSlot ConnectedEquipmentSlot = EEquipmentSlot::ES_None;
 
+	// CONFIG
+
+	/** The equipped item is identified by icon; its name lives in the tooltip. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment Slot|Config")
+	bool bShowItemNameInSlot = false;
+
+	/** Keep the slot label ("Helmet", "Main Hand") visible when the slot is empty. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment Slot|Config")
+	bool bHideSlotNameWhenOccupied = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment Slot|Config")
+	bool bShowTooltipOnHover = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment Slot|Config")
+	bool bTooltipFollowsMouse = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment Slot|Config")
+	bool bEnableDragAndDrop = true;
+
+	/**
+	 * Releasing a drag outside any slot unequips the item and drops it into the
+	 * world, matching what the inventory cells do. Only reached when the menu
+	 * root did not handle the drop first.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment Slot|Config")
+	bool bDropToWorldWhenDraggedOutOfMenu = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment Slot|Config")
+	TSubclassOf<UUserWidget> DragVisualWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment Slot|Config")
+	FVector2D DragVisualSize = FVector2D(64.0f, 64.0f);
+
+	// STATE
+
 	UPROPERTY(BlueprintReadOnly, Category = "Equipment Slot")
 	FEquipmentMenuSlotViewData SlotData;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Equipment Slot")
 	TObjectPtr<UPHEquipmentMenuPageWidget> OwningEquipmentPage = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Equipment Slot|State")
+	bool bSlotHovered = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Equipment Slot|State")
+	bool bDragOver = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Equipment Slot|State")
+	bool bValidDropTarget = false;
+
+	// BLUEPRINT EVENTS
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Equipment Slot|Events")
 	void OnSlotDataRefreshed(FEquipmentMenuSlotViewData NewSlotData);
@@ -107,16 +185,31 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Equipment Slot|Events")
 	void OnConnectedEquipmentSlotChanged(EEquipmentSlot NewSlot);
 
+	/** Drive hover visuals here - the slot button is not used for hit-testing. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Equipment Slot|Events")
+	void OnSlotHoverChanged(bool bHovered);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Equipment Slot|Events")
+	void OnSlotDragOverChanged(bool bIsDragOver, bool bIsValidTarget);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Equipment Slot|Events")
+	void OnSlotDragStarted(UPHItemDragDropOperation* Operation);
+
 private:
 	void BindManagerDelegates();
 	void UnbindManagerDelegates();
 	void RefreshVisuals();
+	void SetHovered(bool bNewHovered);
+	void SetDragOverState(bool bNewDragOver, bool bNewValidTarget);
 
 	UFUNCTION()
 	void HandleSlotClicked();
 
 	UFUNCTION()
 	void HandleEquipmentChanged(EEquipmentSlot EquipmentSlot, UItemInstance* NewItem, UItemInstance* OldItem);
+
+	UFUNCTION()
+	void HandleDragCancelled(UDragDropOperation* Operation);
 
 	UPROPERTY(Transient)
 	TObjectPtr<UEquipmentManager> EquipmentManager = nullptr;

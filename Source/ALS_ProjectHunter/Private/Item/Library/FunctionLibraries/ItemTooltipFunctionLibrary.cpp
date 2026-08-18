@@ -30,7 +30,7 @@ bool UItemTooltipFunctionLibrary::BuildItemTooltipData(UItemInstance* Item, FIte
 	OutTooltipData.RarityColor = Item->GetRarityColor();
 	OutTooltipData.BorderColor = OutTooltipData.RarityColor;
 	OutTooltipData.HeaderColor = OutTooltipData.RarityColor;
-	OutTooltipData.IconMaterial = Item->GetInventoryIcon();
+	OutTooltipData.Icon = Item->GetInventoryIcon();
 	OutTooltipData.ItemLevel = Item->ItemLevel;
 	OutTooltipData.Quantity = Item->Quantity;
 	OutTooltipData.ItemValue = Item->GetCalculatedValue();

@@ -19,7 +19,7 @@
 class AActor;
 class UStaticMesh;
 class USkeletalMesh;
-class UMaterialInstance;
+class UTexture2D;
 
 
 /**
@@ -82,8 +82,9 @@ struct FItemBase : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Visual")
 	TObjectPtr<USkeletalMesh> SkeletalMesh = nullptr;
 
+	/** Inventory / menu icon. Texture, not a material - the slots draw it directly. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Visual")
-	UMaterialInstance* ItemImage = nullptr;
+	TObjectPtr<UTexture2D> ItemImage = nullptr;
 
 	/** Spawn a runtime actor for active/special equipment instead of using only a mesh representation. Weapons always use a runtime actor. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Visual",

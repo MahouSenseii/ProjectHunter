@@ -1,14 +1,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "UI/Menu/Interfaces/PHInventorySlotHost.h"
 #include "UI/Menu/Library/Structs/MenuStructs.h"
 #include "UI/Menu/Widgets/PHMenuPageWidgetBase.h"
 #include "PHEquipmentMenuPageWidget.generated.h"
 
 class UItemInstance;
 class UPHEquipmentMenuPanelWidget;
+class UPanelWidget;
 class UPHEquipmentSlotWidget;
 class UPHInventoryMenuPanelWidget;
+class UPHInventorySlotWidget;
+class UPHItemDragDropOperation;
 
 /**
  * C++ base for the equipment menu page.
@@ -20,7 +24,9 @@ class UPHInventoryMenuPanelWidget;
  * - equip/unequip request helpers
  */
 UCLASS(BlueprintType, Blueprintable)
-class ALS_PROJECTHUNTER_API UPHEquipmentMenuPageWidget : public UPHMenuPageWidgetBase
+class ALS_PROJECTHUNTER_API UPHEquipmentMenuPageWidget
+	: public UPHMenuPageWidgetBase
+	, public IPHInventorySlotHost
 {
 	GENERATED_BODY()
 
@@ -49,13 +55,13 @@ public:
 	UItemInstance* GetInventoryItem(int32 SlotIndex) const;
 
 	UFUNCTION(BlueprintPure, Category = "Equipment Menu")
-	bool CanEquipInventorySlotToSlot(int32 SlotIndex, EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None) const;
+	virtual bool CanEquipInventorySlotToSlot(int32 SlotIndex, EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None) const override;
 
 	UFUNCTION(BlueprintPure, Category = "Equipment Menu")
 	bool CanEquipItemToSlot(UItemInstance* Item, EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Equipment Menu|Selection")
-	void SelectInventorySlot(int32 SlotIndex);
+	virtual void SelectInventorySlot(int32 SlotIndex) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Equipment Menu|Selection")
 	void SelectEquipmentSlot(EEquipmentSlot EquipmentSlot);
@@ -73,7 +79,32 @@ public:
 	EEquipmentSlot GetSelectedEquipmentSlot() const { return SelectedEquipmentSlot; }
 
 	UFUNCTION(BlueprintCallable, Category = "Equipment Menu|Actions")
-	bool RequestEquipInventorySlot(int32 SlotIndex, EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None);
+	virtual bool RequestEquipInventorySlot(int32 SlotIndex, EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None) override;
+
+	// INVENTORY GRID HOSTING
+	//
+	// Used only when this page has no InventoryPanel child and renders the
+	// inventory grid itself.
+
+	UFUNCTION(BlueprintPure, Category = "Equipment Menu|Drag Drop")
+	virtual bool CanAcceptDroppedItem(UPHItemDragDropOperation* Operation, int32 TargetSlotIndex) const override;
+
+	UFUNCTION(BlueprintCallable, Category = "Equipment Menu|Drag Drop")
+	virtual bool HandleItemDroppedOnSlot(UPHItemDragDropOperation* Operation, int32 TargetSlotIndex) override;
+
+	UFUNCTION(BlueprintCallable, Category = "Equipment Menu|Actions")
+	virtual bool RequestDropInventorySlotToGround(int32 SlotIndex) override;
+
+	/** Move or swap two inventory slots. */
+	UFUNCTION(BlueprintCallable, Category = "Equipment Menu|Actions")
+	bool RequestMoveInventoryItem(int32 FromSlotIndex, int32 ToSlotIndex);
+
+	/** Unequip into the bag. The item lands in the first free slot. */
+	UFUNCTION(BlueprintCallable, Category = "Equipment Menu|Actions")
+	bool RequestUnequipToInventory(EEquipmentSlot EquipmentSlot);
+
+	UFUNCTION(BlueprintCallable, Category = "Equipment Menu|Inventory")
+	void RebuildInventorySlotWidgets();
 
 	UFUNCTION(BlueprintCallable, Category = "Equipment Menu|Actions")
 	bool RequestEquipItem(UItemInstance* Item, EEquipmentSlot TargetSlot = EEquipmentSlot::ES_None);
@@ -101,6 +132,38 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment Menu|Config")
 	bool bIncludeEmptyInventorySlots = true;
+
+	/**
+	 * Inventory cell WBP. Only needed when this page renders the inventory grid
+	 * itself - leave unset if an InventoryPanel child owns the grid.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment Menu|Inventory")
+	TSubclassOf<UPHInventorySlotWidget> InventorySlotWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment Menu|Inventory")
+	bool bAutoBuildInventorySlotWidgets = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment Menu|Inventory", meta = (ClampMin = "1"))
+	int32 GridColumns = 8;
+
+	/**
+	 * Size forced on every grid cell.
+	 *
+	 * Set to (0,0) to let the cell widget size itself - only safe when the cell's
+	 * root is something with a real desired size (SizeBox, Overlay, VerticalBox).
+	 * A CanvasPanel root reports zero, which collapses every cell in a
+	 * UniformGridPanel and renders the grid as nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment Menu|Inventory")
+	FVector2D InventoryCellSize = FVector2D(128.0f, 144.0f);
+
+
+	/** Optional grid host on this page, used when there is no InventoryPanel. */
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Equipment Menu|Inventory")
+	TObjectPtr<UPanelWidget> InventorySlotContainer;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu|Inventory")
+	TArray<TObjectPtr<UPHInventorySlotWidget>> InventorySlotWidgets;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Equipment Menu")
 	TArray<FEquipmentMenuSlotViewData> EquipmentSlots;

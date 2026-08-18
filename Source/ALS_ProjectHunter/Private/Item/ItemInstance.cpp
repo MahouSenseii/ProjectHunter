@@ -1,5 +1,6 @@
 #include "Item/ItemInstance.h"
 
+#include "Engine/Texture2D.h"
 #include "Item/Helpers/ItemInitializationHelper.h"
 #include "Item/ItemNameBuilder.h"
 #include "Item/Helpers/ItemStackingHelper.h"
@@ -111,7 +112,7 @@ USkeletalMesh* UItemInstance::GetEquippedMesh() const
 	return Base ? Base->SkeletalMesh.Get() : nullptr;
 }
 
-UMaterialInstance* UItemInstance::GetInventoryIcon() const
+UTexture2D* UItemInstance::GetInventoryIcon() const
 {
 	FItemBase* Base = GetBaseData();
 	return Base ? Base->ItemImage : nullptr;

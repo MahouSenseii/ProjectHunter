@@ -13,6 +13,7 @@
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "Equipment/Components/EquipmentManager.h"
+#include "Inventory/Components/InventoryManager.h"
 #include "Equipment/Components/EquipmentPresentationComponent.h"
 #include "Character/Components/PHCharacterMovementComponent.h"
 #include "Character/Components/CharacterSystemCoordinatorComponent.h"
@@ -56,6 +57,10 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer)
 	ProgressionManager = CreateDefaultSubobject<UCharacterProgressionManager>(TEXT("ProgressionManager"));
 
 	EquipmentManager = CreateDefaultSubobject<UEquipmentManager>(TEXT("EquipmentComponent"));
+
+	// The bag. EquipmentManager, the pickup manager, the menu and the ground-drop
+	// path all resolve this with FindComponentByClass, so it must exist here.
+	InventoryManager = CreateDefaultSubobject<UInventoryManager>(TEXT("InventoryComponent"));
 
 	StatsManager = CreateDefaultSubobject<UStatsManager>(TEXT("Stats Manager"));
 

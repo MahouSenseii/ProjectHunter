@@ -17,6 +17,23 @@ class UPHMenuRootWidget;
 DECLARE_LOG_CATEGORY_EXTERN(LogHunterHUD, Log, All);
 
 /**
+ * Who asked for the shared item tooltip.
+ *
+ * The HUD owns exactly one tooltip widget and two unrelated systems drive it:
+ * the interaction system (ground-item prompts, polled on a timer) and the menu
+ * (slot hover). Without an owner, the interaction poll hides a slot tooltip a
+ * fraction of a second after it opens.
+ */
+UENUM(BlueprintType)
+enum class EItemTooltipSource : uint8
+{
+	/** Passed to HideItemTooltip to force a hide regardless of owner. */
+	ITS_None			UMETA(DisplayName = "None"),
+	ITS_Interaction		UMETA(DisplayName = "Interaction"),
+	ITS_Menu			UMETA(DisplayName = "Menu")
+};
+
+/**
  * Root HUD actor for the player.
  *
  * Creates the top-level HUD widget. The widget Blueprint owns the resource,
@@ -29,10 +46,35 @@ class ALS_PROJECTHUNTER_API AHunterHUD : public AHUD
 
 public:
 	UFUNCTION(BlueprintCallable)
-	void ShowItemTooltip(UItemInstance* Item, FVector2D ScreenPosition);
+	void ShowItemTooltip(
+		UItemInstance* Item,
+		FVector2D ScreenPosition,
+		EItemTooltipSource Source = EItemTooltipSource::ITS_Interaction);
 
+	/**
+	 * Shows the item tooltip beside the cursor, ignoring
+	 * bPinItemTooltipToBottomRight. Used by the menu slots on hover.
+	 * ViewportPosition is DPI-independent viewport space (the space
+	 * UWidgetLayoutLibrary::GetMousePositionOnViewport returns).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "HUD|Item Tooltip")
+	void ShowItemTooltipAtViewportPosition(
+		UItemInstance* Item,
+		FVector2D ViewportPosition,
+		EItemTooltipSource Source = EItemTooltipSource::ITS_Menu);
+
+	/** Repositions an already-visible tooltip. No-op when it is hidden or owned by someone else. */
+	UFUNCTION(BlueprintCallable, Category = "HUD|Item Tooltip")
+	void UpdateItemTooltipPosition(
+		FVector2D ViewportPosition,
+		EItemTooltipSource Source = EItemTooltipSource::ITS_Menu);
+
+	/**
+	 * Hides the tooltip. A source only closes a tooltip it owns; pass ITS_None
+	 * to force a hide (menu closing, HUD teardown).
+	 */
 	UFUNCTION(BlueprintCallable)
-	void HideItemTooltip();
+	void HideItemTooltip(EItemTooltipSource Source = EItemTooltipSource::ITS_None);
 
 	/**
 	 * Mash-progress HUD hooks. The C++ side only routes to the Blueprint
@@ -118,10 +160,23 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "UI|Item Tooltip", meta = (ClampMin = "0.0", UIMin = "0.0"))
 	float ItemTooltipScreenPadding = 30.0f;
 
+	/** Offset from the cursor for tooltips shown by ShowItemTooltipAtViewportPosition. */
+	UPROPERTY(EditDefaultsOnly, Category = "UI|Item Tooltip")
+	FVector2D ItemTooltipCursorOffset = FVector2D(20.0f, 20.0f);
+
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TObjectPtr<UItemTooltipWidget> ItemTooltipWidget;
 
 private:
+	/** Clamps a cursor-anchored tooltip so it never leaves the viewport. */
+	FVector2D ClampTooltipToViewport(FVector2D DesiredPosition) const;
+
+	/** False when a higher-priority system currently owns the tooltip. */
+	bool CanShowItemTooltipFrom(EItemTooltipSource Source) const;
+
+	/** Whoever the visible tooltip belongs to right now. */
+	EItemTooltipSource ActiveItemTooltipSource = EItemTooltipSource::ITS_None;
+
 	UPROPERTY()
 	TObjectPtr<UHunterMainHUDWidget> MainHUDWidget;
 

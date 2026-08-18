@@ -7,6 +7,8 @@
 #include "PHMenuRootWidget.generated.h"
 
 class APHBaseCharacter;
+class UDragDropOperation;
+class UPHItemDragDropOperation;
 class UPHMenuPageWidgetBase;
 class UPHMenuTabBarWidget;
 class UWidgetSwitcher;
@@ -40,8 +42,23 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Menu|Events")
 	FOnMenuPageChanged OnMenuPageChanged;
 
+	/** True when the drag payload was consumed (dropped into the world). */
+	UFUNCTION(BlueprintCallable, Category = "Menu|Drag Drop")
+	bool DropOperationToWorld(UPHItemDragDropOperation* Operation);
+
 protected:
 	virtual void NativeConstruct() override;
+	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+
+	/**
+	 * Releasing a dragged item over the menu background (anywhere that is not a
+	 * slot) drops it into the world.
+	 *
+	 * Requires the root widget to be hit-testable, so NativeConstruct sets
+	 * Visible when this is on. Turn it off to restore SelfHitTestInvisible.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu|Drag Drop")
+	bool bDropItemsToWorldOnMissedDrop = true;
 	virtual void NativeInitializeForCharacter(APHBaseCharacter* Character) override;
 	virtual void NativeReleaseCharacter() override;
 

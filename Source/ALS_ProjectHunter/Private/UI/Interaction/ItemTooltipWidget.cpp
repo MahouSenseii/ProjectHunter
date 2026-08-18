@@ -8,6 +8,7 @@
 #include "Components/VerticalBox.h"
 #include "UI/Interaction/ItemTooltipSectionWidget.h"
 #include "Item/Library/FunctionLibraries/ItemTooltipFunctionLibrary.h"
+#include "Engine/Texture2D.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
 namespace ItemTooltipWidgetPrivate
@@ -118,9 +119,10 @@ void UItemTooltipWidget::UpdateTooltip(UItemInstance* Item)
 		ItemTypeText->SetColorAndOpacity(ItemTooltipWidgetPrivate::PureWhiteText);
 	}
 
-	if (ItemIconImage && TooltipData.IconMaterial)
+	if (ItemIconImage && TooltipData.Icon)
 	{
-		ItemIconImage->SetBrushFromMaterial(TooltipData.IconMaterial);
+		// bMatchSize=false: the WBP controls the icon box, not the source texture.
+		ItemIconImage->SetBrushFromTexture(TooltipData.Icon, /*bMatchSize=*/false);
 	}
 
 	SetGradeVisuals(TooltipData.Rarity);
