@@ -6,6 +6,41 @@ DEFINE_LOG_CATEGORY_STATIC(LogAffixGenerator, Log, All);
 
 namespace
 {
+	TArray<EItemType> GearTypes()
+	{
+		return { EItemType::IT_Weapon, EItemType::IT_Armor, EItemType::IT_Accessory };
+	}
+
+	FPHAttributeData MakeFallbackAffix(
+		const EAffixes AffixType,
+		const TCHAR* Name,
+		const TCHAR* Group,
+		const TCHAR* Attribute,
+		const EModifyType ModifyType,
+		const float MinValue,
+		const float MaxValue,
+		TArray<EItemType> AllowedTypes = {})
+	{
+		FPHAttributeData Result;
+		Result.AffixType = AffixType;
+		Result.AffixName = FText::FromString(Name);
+		Result.AffixGroup = FName(Group);
+		Result.AttributeName = FName(Attribute);
+		Result.ModifyType = ModifyType;
+		Result.ModifiedLocation = EAffixScope::AS_Global;
+		Result.MinValue = MinValue;
+		Result.MaxValue = MaxValue;
+		Result.AllowedItemTypes = MoveTemp(AllowedTypes);
+		Result.DisplayFormat = ModifyType == EModifyType::MT_Increased
+			? EAttributeDisplayFormat::ADF_Increase
+			: ModifyType == EModifyType::MT_More
+				? EAttributeDisplayFormat::ADF_More
+				: ModifyType == EModifyType::MT_Less
+					? EAttributeDisplayFormat::ADF_Less
+					: EAttributeDisplayFormat::ADF_Additive;
+		return Result;
+	}
+
 	bool IsAffixCompatibleWithPool(EAffixes ActualType, EAffixes PoolType)
 	{
 		if (ActualType == PoolType)
@@ -71,16 +106,16 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 	for (FPHAttributeData& Implicit : Stats.Implicits)
 	{
 		Implicit.RollValue(RandStream);
-		Implicit.GenerateUID();
+		Implicit.GenerateUID(RandStream);
 	}
 
-	if (Rarity == EItemRarity::IR_GradeSS || BaseItem.bIsUnique)
+	if (BaseItem.bIsUnique)
 	{
 		Stats.Prefixes = BaseItem.UniqueAffixes;
 		for (FPHAttributeData& Affix : Stats.Prefixes)
 		{
 			Affix.RollValue(RandStream);
-			Affix.GenerateUID();
+			Affix.GenerateUID(RandStream);
 		}
 		Stats.bAffixesGenerated = true;
 		return Stats;
@@ -276,8 +311,9 @@ UDataTable* FAffixGenerator::LoadPrefixDataTable() const
 
 	if (!CachedPrefixTable)
 	{
-		UE_LOG(LogAffixGenerator, Error, TEXT("AffixGenerator: Failed to load PREFIX DataTable from '%s'"),
-			*PrefixDataTablePath.ToString());
+		BuildFallbackRows(EAffixes::AF_Prefix);
+		UE_LOG(LogAffixGenerator, Warning, TEXT("AffixGenerator: Failed to load PREFIX DataTable from '%s'; using %d native starter affixes."),
+			*PrefixDataTablePath.ToString(), CachedPrefixRows.Num());
 	}
 	else
 	{
@@ -309,8 +345,9 @@ UDataTable* FAffixGenerator::LoadSuffixDataTable() const
 
 	if (!CachedSuffixTable)
 	{
-		UE_LOG(LogAffixGenerator, Error, TEXT("AffixGenerator: Failed to load SUFFIX DataTable from '%s'"),
-			*SuffixDataTablePath.ToString());
+		BuildFallbackRows(EAffixes::AF_Suffix);
+		UE_LOG(LogAffixGenerator, Warning, TEXT("AffixGenerator: Failed to load SUFFIX DataTable from '%s'; using %d native starter affixes."),
+			*SuffixDataTablePath.ToString(), CachedSuffixRows.Num());
 	}
 	else
 	{
@@ -323,6 +360,68 @@ UDataTable* FAffixGenerator::LoadSuffixDataTable() const
 	}
 
 	return CachedSuffixTable;
+}
+
+void FAffixGenerator::BuildFallbackRows(const EAffixes AffixType) const
+{
+	if (AffixType == EAffixes::AF_Prefix)
+	{
+		if (!FallbackPrefixRows.IsEmpty())
+		{
+			return;
+		}
+
+		FallbackPrefixRows.Reserve(6);
+		FallbackPrefixRows.Add(MakeFallbackAffix(EAffixes::AF_Prefix, TEXT("Stalwart"), TEXT("Life"),
+			TEXT("MaxHealth"), EModifyType::MT_Add, 15.f, 50.f, GearTypes()));
+		FallbackPrefixRows.Add(MakeFallbackAffix(EAffixes::AF_Prefix, TEXT("Tempered"), TEXT("Armour"),
+			TEXT("ArmourFlatBonus"), EModifyType::MT_Add, 20.f, 80.f, { EItemType::IT_Armor }));
+		FallbackPrefixRows.Add(MakeFallbackAffix(EAffixes::AF_Prefix, TEXT("Jagged"), TEXT("PhysicalDamage"),
+			TEXT("PhysicalPercentDamage"), EModifyType::MT_Increased, 8.f, 18.f, { EItemType::IT_Weapon }));
+		FallbackPrefixRows.Add(MakeFallbackAffix(EAffixes::AF_Prefix, TEXT("Ember-touched"), TEXT("FireDamage"),
+			TEXT("FireFlatDamage"), EModifyType::MT_Add, 3.f, 12.f, { EItemType::IT_Weapon }));
+		FallbackPrefixRows.Add(MakeFallbackAffix(EAffixes::AF_Prefix, TEXT("Mighty"), TEXT("Strength"),
+			TEXT("Strength"), EModifyType::MT_Add, 2.f, 8.f, GearTypes()));
+		FallbackPrefixRows.Add(MakeFallbackAffix(EAffixes::AF_Corrupted, TEXT("Brittle"), TEXT("CorruptedDamage"),
+			TEXT("GlobalMoreDamage"), EModifyType::MT_Less, 5.f, 12.f, GearTypes()));
+
+		CachedPrefixRows.Reset(FallbackPrefixRows.Num());
+		for (FPHAttributeData& Row : FallbackPrefixRows)
+		{
+			CachedPrefixRows.Add(&Row);
+		}
+		return;
+	}
+
+	if (AffixType == EAffixes::AF_Suffix)
+	{
+		if (!FallbackSuffixRows.IsEmpty())
+		{
+			return;
+		}
+
+		FallbackSuffixRows.Reserve(6);
+		FallbackSuffixRows.Add(MakeFallbackAffix(EAffixes::AF_Suffix, TEXT("of Cinders"), TEXT("FireResistance"),
+			TEXT("FireResistanceFlatBonus"), EModifyType::MT_Add, 5.f, 18.f, GearTypes()));
+		FallbackSuffixRows.Add(MakeFallbackAffix(EAffixes::AF_Suffix, TEXT("of Rime"), TEXT("IceResistance"),
+			TEXT("IceResistanceFlatBonus"), EModifyType::MT_Add, 5.f, 18.f, GearTypes()));
+		FallbackSuffixRows.Add(MakeFallbackAffix(EAffixes::AF_Suffix, TEXT("of Precision"), TEXT("CriticalChance"),
+			TEXT("CritChance"), EModifyType::MT_Add, 1.f, 5.f,
+			{ EItemType::IT_Weapon, EItemType::IT_Accessory }));
+		FallbackSuffixRows.Add(MakeFallbackAffix(EAffixes::AF_Suffix, TEXT("of Haste"), TEXT("AttackSpeed"),
+			TEXT("AttackSpeed"), EModifyType::MT_More, 4.f, 12.f, { EItemType::IT_Weapon }));
+		FallbackSuffixRows.Add(MakeFallbackAffix(EAffixes::AF_Suffix, TEXT("of Momentum"), TEXT("MovementSpeed"),
+			TEXT("MovementSpeed"), EModifyType::MT_More, 3.f, 8.f,
+			{ EItemType::IT_Armor, EItemType::IT_Accessory }));
+		FallbackSuffixRows.Add(MakeFallbackAffix(EAffixes::AF_Corrupted, TEXT("of Agony"), TEXT("CorruptedDefense"),
+			TEXT("GlobalDamageTakenMultiplier"), EModifyType::MT_More, 5.f, 12.f, GearTypes()));
+
+		CachedSuffixRows.Reset(FallbackSuffixRows.Num());
+		for (FPHAttributeData& Row : FallbackSuffixRows)
+		{
+			CachedSuffixRows.Add(&Row);
+		}
+	}
 }
 
 TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
@@ -359,7 +458,7 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 
 		if (AvailableAffixes.Num() == 0)
 		{
-			if (bShouldBeCorrupted)
+			if (bShouldBeCorrupted && !bMustRollOneCorrupted)
 			{
 				AvailableAffixes = UItemAffixSelectionFunctionLibrary::BuildAffixPoolByCorruption(
 					SourceAffixes, ItemType, ItemSubType, ItemLevel,
@@ -369,8 +468,18 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 
 			if (AvailableAffixes.Num() == 0)
 			{
-				UE_LOG(LogAffixGenerator, Warning, TEXT("AffixGenerator: No available affixes for type %d at level %d"),
-					static_cast<int32>(AffixType), ItemLevel);
+				if (bMustRollOneCorrupted)
+				{
+					UE_LOG(LogAffixGenerator, Error,
+						TEXT("AffixGenerator: No required corrupted affixes for type %d at level %d"),
+						static_cast<int32>(AffixType), ItemLevel);
+				}
+				else
+				{
+					UE_LOG(LogAffixGenerator, Warning,
+						TEXT("AffixGenerator: No compatible affixes for type %d at level %d"),
+						static_cast<int32>(AffixType), ItemLevel);
+				}
 				continue;
 			}
 		}

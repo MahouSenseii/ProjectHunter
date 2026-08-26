@@ -2032,7 +2032,9 @@ void UHunterAttributeSet::ClampPercentageAttributes(const FGameplayAttribute& At
              Attribute == GetCorruptionResistancePercentBonusAttribute() ||
              Attribute == GetArmourPercentBonusAttribute())
     {
-        NewValue = FMath::Clamp(NewValue, 0.0f, 90.0f);
+        // Increased/reduced scaling is distinct from resistance points and may
+        // be negative. The final resistance is capped by the combat resolver.
+        NewValue = FMath::Clamp(NewValue, -100.0f, 1000.0f);
     }
     else if (Attribute == GetPhysicalPercentDamageAttribute() ||
              Attribute == GetFirePercentDamageAttribute() ||
@@ -2150,12 +2152,17 @@ void UHunterAttributeSet::ClampDamageAttributes(const FGameplayAttribute& Attrib
 void UHunterAttributeSet::ClampResistanceAttributes(const FGameplayAttribute& Attribute, float& NewValue) const
 {
     if (Attribute == GetArmourAttribute() || Attribute == GetArmourFlatBonusAttribute() ||
-        Attribute == GetFireResistanceFlatBonusAttribute() || Attribute == GetIceResistanceFlatBonusAttribute() ||
-        Attribute == GetLightResistanceFlatBonusAttribute() || Attribute == GetLightningResistanceFlatBonusAttribute() ||
-        Attribute == GetCorruptionResistanceFlatBonusAttribute() ||
         Attribute == GetFlatBlockAmountAttribute() || Attribute == GetGuardBreakThresholdAttribute())
     {
         NewValue = FMath::Max(NewValue, 0.0f);
+    }
+    else if (Attribute == GetFireResistanceFlatBonusAttribute() || Attribute == GetIceResistanceFlatBonusAttribute() ||
+             Attribute == GetLightResistanceFlatBonusAttribute() || Attribute == GetLightningResistanceFlatBonusAttribute() ||
+             Attribute == GetCorruptionResistanceFlatBonusAttribute())
+    {
+        // Resistance points can be cursed below zero; mitigation still clamps
+        // the effective result to the global minimum/cap.
+        NewValue = FMath::Clamp(NewValue, -1000.0f, 1000.0f);
     }
     else if (Attribute == GetMaxFireResistanceAttribute() || Attribute == GetMaxIceResistanceAttribute() ||
              Attribute == GetMaxLightResistanceAttribute() || Attribute == GetMaxLightningResistanceAttribute() ||

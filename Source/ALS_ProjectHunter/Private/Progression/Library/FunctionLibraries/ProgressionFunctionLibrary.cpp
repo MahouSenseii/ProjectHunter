@@ -41,7 +41,10 @@ float UProgressionFunctionLibrary::CalculateXPMultiplier(
 	const float LevelPenalty)
 {
 	const float IncreasedMultiplier = 1.0f + (GlobalXP + LocalXP) / 100.0f;
-	return IncreasedMultiplier * FMath::Max(MoreXP, 1.0f) * Penalty * LevelPenalty;
+	return FMath::Max(0.f, IncreasedMultiplier)
+		* FMath::Max(MoreXP, 0.01f)
+		* FMath::Max(Penalty, 0.f)
+		* FMath::Max(LevelPenalty, 0.f);
 }
 
 int64 UProgressionFunctionLibrary::CalculateFinalXP(const int64 BaseXP, const float FinalMultiplier)

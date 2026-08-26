@@ -46,12 +46,9 @@ bool FStatsModifierMath::ResolveGameplayModifier(const EModifyType ModifyType, c
 		return true;
 
 	case EModifyType::MT_GrantSkill:
-		// Actual ability grants belong to the moveset/ability owner. If a designer
-		// points this stat at a numeric rank attribute, still let it add that value.
-		OutModifier.ModOp = EGameplayModOp::Additive;
-		OutModifier.Magnitude = FMath::IsNearlyZero(RolledValue) ? 1.f : RolledValue;
-		OutModifier.bCreatesGameplayModifier = true;
-		return true;
+		// Ability grants require an authored GameplayEffect/ability component and
+		// must never silently turn into an unrelated numeric attribute modifier.
+		return false;
 
 	default:
 		return false;

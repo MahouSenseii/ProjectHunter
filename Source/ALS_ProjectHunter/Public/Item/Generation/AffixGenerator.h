@@ -13,14 +13,14 @@ struct ALS_PROJECTHUNTER_API FAffixGenerator
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix Generator")
-	FSoftObjectPath PrefixDataTablePath = FSoftObjectPath(TEXT("/Game/Data/Items/DT_Prefixes"));
+	FSoftObjectPath PrefixDataTablePath = FSoftObjectPath(TEXT("/Game/ProjectHunter/Item/Affixes/DT_Prefixes.DT_Prefixes"));
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix Generator")
-	FSoftObjectPath SuffixDataTablePath = FSoftObjectPath(TEXT("/Game/Data/Items/DT_Suffixes"));
+	FSoftObjectPath SuffixDataTablePath = FSoftObjectPath(TEXT("/Game/ProjectHunter/Item/Affixes/DT_Suffixes.DT_Suffixes"));
 
 	// Enchants are applied after normal generation and stored separately in FPHItemStats::Enchants.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix Generator")
-	FSoftObjectPath EnchantDataTablePath = FSoftObjectPath(TEXT("/Game/Data/Items/DT_Enchants"));
+	FSoftObjectPath EnchantDataTablePath = FSoftObjectPath(TEXT("/Game/ProjectHunter/Item/Affixes/DT_Enchants.DT_Enchants"));
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix Generator")
 	int32 DefaultAffixWeight = 100;
@@ -73,6 +73,10 @@ private:
 	mutable TArray<FPHAttributeData*> CachedSuffixRows;
 	mutable TArray<FPHAttributeData*> CachedEnchantRows;
 
+	// Minimal native pools keep loot functional before designers author DataTables.
+	mutable TArray<FPHAttributeData> FallbackPrefixRows;
+	mutable TArray<FPHAttributeData> FallbackSuffixRows;
+
 	mutable bool bPrefixLoadAttempted = false;
 
 	mutable bool bSuffixLoadAttempted = false;
@@ -84,4 +88,6 @@ private:
 	UDataTable* LoadSuffixDataTable() const;
 
 	UDataTable* LoadEnchantDataTable() const;
+
+	void BuildFallbackRows(EAffixes AffixType) const;
 };

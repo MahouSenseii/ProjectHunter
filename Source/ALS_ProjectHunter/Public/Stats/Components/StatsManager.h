@@ -193,8 +193,12 @@ protected:
 	bool bHasInitializedConfiguredStats = false;
 	mutable TSet<FString> EmittedWarningKeys;
 
-	UPROPERTY()
-	TMap<FGuid, FActiveGameplayEffectHandle> ActiveEquipmentEffects;
+	// One aggregate numeric effect plus any authored complex/conditional effects.
+	// This is transient runtime state; it intentionally is not serialized.
+	TMap<FGuid, TArray<FActiveGameplayEffectHandle>> ActiveEquipmentEffects;
+
+	/** One consolidated effect preserves true product ordering for all equipment More/Less modifiers. */
+	FActiveGameplayEffectHandle ActiveEquipmentProductEffect;
 
 	UPROPERTY()
 	TMap<FGuid, TObjectPtr<UItemInstance>> ActiveEquipmentItems;

@@ -18,4 +18,5 @@ public:
 	static void HandleEquipmentChanged(UStatsManager& Manager, UItemInstance* NewItem, UItemInstance* OldItem);
 	static FGameplayEffectSpecHandle CreateEquipmentEffect(UStatsManager& Manager, UItemInstance* Item, const TArray<FPHAttributeData>& Stats);
 	static bool ApplyStatModifier(UGameplayEffect* Effect, const FPHAttributeData& Stat, const FGameplayAttribute& Attribute);
+	static void RebuildEquipmentProductEffect(UStatsManager& Manager);
 };

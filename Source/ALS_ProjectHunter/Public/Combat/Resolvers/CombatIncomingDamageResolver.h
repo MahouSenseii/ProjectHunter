@@ -56,15 +56,16 @@ public:
 		FCombatResolveResult& InOutResult);
 	static void ApplyStaminaBlockCost(const UHunterAttributeSet* DefenderAttributes, FCombatResolveResult& InOutResult);
 
-	// Sets bShouldStagger when the hit depletes stamina and the defender is not
-	// protected by the State_Self_ExecutingSkill gameplay tag.
+	// Sets bShouldStagger on guard break or when effective per-hit poise damage
+	// meets the defender's Poise threshold. Executing-skill hyper-armour blocks
+	// ordinary poise stagger, but not a guard break.
 	static void EvaluateStagger(
 		AActor* DefenderActor,
 		const UHunterAttributeSet* DefenderAttributes,
+		const FAnimationDamageInfo& DamageInfo,
 		FCombatResolveResult& InOutResult);
 
-	// Parry zeroes routed damage but keeps per-type taken values so ailments
-	// still roll with real magnitudes. Invincible zeroes everything.
+	// Parry and Invincible negate damage, ailments, and poise effects.
 	static void ApplyHitResponse(EHitResponse HitResponse, bool bCanApplyAilments, FCombatResolveResult& InOutResult);
 
 	// Debug/log formatting shared with UCombatManager's own ApplyHit logging.

@@ -27,16 +27,19 @@ class UHunterAttributeSet;
 class ALS_PROJECTHUNTER_API FCombatOutgoingDamageCalculator
 {
 public:
-	static float RollDamageRange(float MinDamage, float MaxDamage);
+	static float RollDamageRange(float MinDamage, float MaxDamage, FRandomStream& RandomStream);
 
 	static FCombatDamagePacket BuildOutgoingDamagePacket(
 		const UHunterAttributeSet* AttackerAttributes,
-		const FAnimationDamageInfo& DamageInfo);
+		const FAnimationDamageInfo& DamageInfo,
+		FRandomStream& RandomStream);
 
 	// Weapon roll + flat added damage for one type, before any scaling.
 	static float CalculateBaseDamageForType(
 		EHunterDamageType DamageType,
-		const UHunterAttributeSet* AttackerAttributes);
+		const UHunterAttributeSet* AttackerAttributes,
+		const FAnimationDamageInfo& DamageInfo,
+		FRandomStream& RandomStream);
 
 	// One-pass attribute conversion. Runs on unscaled base damage so converted
 	// damage scales only with modifiers of its final type.
@@ -60,7 +63,8 @@ public:
 	static void ResolveCriticalStrike(
 		FCombatDamagePacket& Packet,
 		const UHunterAttributeSet* AttackerAttributes,
-		const FAnimationDamageInfo& DamageInfo);
+		const FAnimationDamageInfo& DamageInfo,
+		FRandomStream& RandomStream);
 
 	// Debug/log formatting shared with UCombatManager's own ApplyHit logging.
 	static FString FormatPacket(const FCombatDamagePacket& Packet);

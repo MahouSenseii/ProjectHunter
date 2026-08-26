@@ -93,11 +93,13 @@ private:
 
 	bool FindFreeGridPosition(const FStashTabData& Tab, FIntPoint& OutPos) const;
 
-	void SaveTab(int32 TabIndex);
+	bool SaveTab(int32 TabIndex);
 
-	void SaveHandles();
+	bool SaveHandles();
 
 	bool LoadTab(int32 TabIndex);
 
 	bool IsValidTabIndex(int32 TabIndex) const;
+
+	bool bHandlesDirty = false;
 };

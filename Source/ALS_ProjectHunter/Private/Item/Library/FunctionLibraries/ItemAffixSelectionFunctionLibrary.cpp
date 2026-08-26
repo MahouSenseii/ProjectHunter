@@ -107,6 +107,6 @@ FPHAttributeData UItemAffixSelectionFunctionLibrary::CreateRolledAffix(
 {
 	FPHAttributeData RolledAffix = TemplateAffix;
 	RolledAffix.RollValue(RandStream);
-	RolledAffix.GenerateUID();
+	RolledAffix.GenerateUID(RandStream);
 	return RolledAffix;
 }

@@ -92,6 +92,20 @@ namespace CombatOutgoingDamageCalculatorPrivate
 			Packet.Lightning + Packet.Light + Packet.Corruption;
 	}
 
+	float GetSkillBaseDamage(const FAnimationSkillBaseDamage& BaseDamage, const EHunterDamageType DamageType)
+	{
+		switch (DamageType)
+		{
+		case EHunterDamageType::Physical:   return BaseDamage.Physical;
+		case EHunterDamageType::Fire:       return BaseDamage.Fire;
+		case EHunterDamageType::Ice:        return BaseDamage.Ice;
+		case EHunterDamageType::Lightning:  return BaseDamage.Lightning;
+		case EHunterDamageType::Light:      return BaseDamage.Light;
+		case EHunterDamageType::Corruption: return BaseDamage.Corruption;
+		default:                            return 0.f;
+		}
+	}
+
 	/**
 	 * Attribute conversion percent from one damage type to another.
 	 * Same-type and unknown pairs return 0.
@@ -174,16 +188,20 @@ namespace CombatOutgoingDamageCalculatorPrivate
 	}
 }
 
-float FCombatOutgoingDamageCalculator::RollDamageRange(const float MinDamage, const float MaxDamage)
+float FCombatOutgoingDamageCalculator::RollDamageRange(
+	const float MinDamage,
+	const float MaxDamage,
+	FRandomStream& RandomStream)
 {
 	const float Low = FMath::Max(0.f, FMath::Min(MinDamage, MaxDamage));
 	const float High = FMath::Max(0.f, FMath::Max(MinDamage, MaxDamage));
-	return High > Low ? FMath::FRandRange(Low, High) : High;
+	return High > Low ? RandomStream.FRandRange(Low, High) : High;
 }
 
 FCombatDamagePacket FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
 	const UHunterAttributeSet* AttackerAttributes,
-	const FAnimationDamageInfo& DamageInfo)
+	const FAnimationDamageInfo& DamageInfo,
+	FRandomStream& RandomStream)
 {
 	FCombatDamagePacket Packet;
 	if (!AttackerAttributes)
@@ -196,7 +214,8 @@ FCombatDamagePacket FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
 	for (const EHunterDamageType DamageType : CombatOutgoingDamageCalculatorPrivate::AllDamageTypes)
 	{
 		CombatOutgoingDamageCalculatorPrivate::SetPacketDamage(
-			Packet, DamageType, CalculateBaseDamageForType(DamageType, AttackerAttributes));
+			Packet, DamageType, CalculateBaseDamageForType(
+				DamageType, AttackerAttributes, DamageInfo, RandomStream));
 	}
 
 	if (bDebugLog)
@@ -249,7 +268,7 @@ FCombatDamagePacket FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
 			Packet, DamageType, FMath::Max(0.f, AfterIncreased * MoreMultiplier));
 	}
 
-	ResolveCriticalStrike(Packet, AttackerAttributes, DamageInfo);
+	ResolveCriticalStrike(Packet, AttackerAttributes, DamageInfo, RandomStream);
 
 	if (bDebugLog)
 	{
@@ -262,7 +281,9 @@ FCombatDamagePacket FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
 
 float FCombatOutgoingDamageCalculator::CalculateBaseDamageForType(
 	const EHunterDamageType DamageType,
-	const UHunterAttributeSet* AttackerAttributes)
+	const UHunterAttributeSet* AttackerAttributes,
+	const FAnimationDamageInfo& DamageInfo,
+	FRandomStream& RandomStream)
 {
 	if (!AttackerAttributes)
 	{
@@ -309,7 +330,14 @@ float FCombatOutgoingDamageCalculator::CalculateBaseDamageForType(
 		return 0.f;
 	}
 
-	return FMath::Max(0.f, RollDamageRange(WeaponMin, WeaponMax) + FlatDamage);
+	const float WeaponEffectiveness = FMath::Max(0.f, DamageInfo.WeaponDamageEffectivenessPercent) / 100.f;
+	const float AddedEffectiveness = FMath::Max(0.f, DamageInfo.AddedDamageEffectivenessPercent) / 100.f;
+	const float WeaponDamage = RollDamageRange(WeaponMin, WeaponMax, RandomStream) * WeaponEffectiveness;
+	const float AddedDamage = FlatDamage * AddedEffectiveness;
+	const float SkillBaseDamage = CombatOutgoingDamageCalculatorPrivate::GetSkillBaseDamage(
+		DamageInfo.SkillBaseDamage, DamageType);
+
+	return FMath::Max(0.f, WeaponDamage + AddedDamage + SkillBaseDamage);
 }
 
 FCombatDamagePacket FCombatOutgoingDamageCalculator::ApplyDamageConversion(
@@ -515,7 +543,8 @@ float FCombatOutgoingDamageCalculator::GetMoreDamageMultiplier(
 void FCombatOutgoingDamageCalculator::ResolveCriticalStrike(
 	FCombatDamagePacket& Packet,
 	const UHunterAttributeSet* AttackerAttributes,
-	const FAnimationDamageInfo& DamageInfo)
+	const FAnimationDamageInfo& DamageInfo,
+	FRandomStream& RandomStream)
 {
 	Packet.bCrit = false;
 	Packet.CritMultiplierApplied = 1.f;
@@ -536,7 +565,7 @@ void FCombatOutgoingDamageCalculator::ResolveCriticalStrike(
 	CritChance = FMath::Clamp(CritChance, 0.f, 100.f);
 
 	const bool bCritSucceeded = DamageInfo.Crit.bForceCrit
-		|| (CritChance > 0.f && FMath::FRandRange(0.f, 100.f) < CritChance);
+		|| (CritChance > 0.f && RandomStream.FRandRange(0.f, 100.f) < CritChance);
 	if (!bCritSucceeded)
 	{
 		CombatOutgoingDamageCalculatorPrivate::UpdatePacketTotal(Packet);

@@ -122,7 +122,7 @@ void FItemInitializationHelper::InitializeWithCorruption(UItemInstance& Item, FD
 				for (FPHAttributeData& Implicit : Item.Stats.Implicits)
 				{
 					Implicit.RollValue(ImplicitStream);
-					Implicit.GenerateUID();
+					Implicit.GenerateUID(ImplicitStream);
 				}
 			}
 

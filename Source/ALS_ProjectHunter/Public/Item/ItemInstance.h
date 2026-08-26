@@ -335,6 +335,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void SetSeed(const int32 InSeed) { Seed = InSeed; }
 
+	/** Sets both the generation seed and a reproducible per-item identity. */
+	void SetDeterministicSeedAndIdentity(const int32 InSeed)
+	{
+		Seed = InSeed != 0 ? InSeed : 1;
+		FRandomStream IdentityStream(Seed ^ 0x4D595DF4);
+		UniqueID = FGuid(
+			static_cast<uint32>(IdentityStream.RandHelper(MAX_int32)),
+			static_cast<uint32>(IdentityStream.RandHelper(MAX_int32)),
+			static_cast<uint32>(IdentityStream.RandHelper(MAX_int32)),
+			static_cast<uint32>(IdentityStream.RandHelper(MAX_int32)));
+	}
+
 	/**
 	 * Set quantity (for stackable items)
 	 * @param InQuantity - Stack count

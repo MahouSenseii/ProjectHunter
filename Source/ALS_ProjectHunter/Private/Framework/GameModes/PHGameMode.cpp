@@ -6,6 +6,8 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerStart.h"
 #include "TimerManager.h"
+#include "Tower/Subsystems/RunSubsystem.h"
+#include "Engine/GameInstance.h"
 
 DEFINE_LOG_CATEGORY(LogPHGameMode);
 
@@ -18,6 +20,13 @@ APHGameMode::APHGameMode()
 void APHGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (URunSubsystem* RunSubsystem = GameInstance->GetSubsystem<URunSubsystem>())
+		{
+			RunSubsystem->SyncToGameState();
+		}
+	}
 }
 
 AActor* APHGameMode::ChoosePlayerStart_Implementation(AController* Player)

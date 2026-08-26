@@ -22,8 +22,8 @@ enum class EHunterDamageType : uint8
 
 /**
  * How an incoming hit was resolved by the target.
- * Parry keeps ailment rolls alive, Invincible negates everything, and Blocked
- * absorbs damage through a resource while still allowing contact effects.
+ * Parry and Invincible negate damage/status application. Blocked uses the
+ * defender's guard profile and may still permit configured contact effects.
  */
 UENUM(BlueprintType)
 enum class EHitResponse : uint8

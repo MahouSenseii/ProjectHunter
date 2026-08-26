@@ -11,6 +11,7 @@ class APHBaseCharacter;
 class FProgressionAbilityHelper;
 class FProgressionStatPointHelper;
 class UAbilitySystemComponent;
+class UCurveFloat;
 class UHunterAttributeSet;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCharacterProgressionManager, Log, All);
@@ -18,6 +19,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCharacterProgressionManager, Log, All);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnXPGained, int64, FinalXP, int64, BaseXP, float, TotalMultiplier);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnLevelUp, int32, NewLevel, int32, StatPointsAwarded, int32, SkillPointsAwarded);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStatPointSpent, FName, AttributeName, int32, RemainingPoints);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnProgressionChanged);
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UCharacterProgressionManager : public UActorComponent
@@ -50,6 +52,10 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression|XP Curve")
 	float XPScalingExponent = 1.3f;
+
+	/** Optional XP cost curve keyed by target level. Overrides the formula when assigned. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression|XP Curve")
+	TObjectPtr<UCurveFloat> XPRequirementCurve = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "Progression|Stats")
 	int32 UnspentStatPoints = 0;
@@ -85,7 +91,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Progression")
 	float CalculateLevelPenalty(int32 LevelDifference) const;
 
-	UFUNCTION(BlueprintCallable, Category = "Progression", BlueprintAuthorityOnly)
+	UFUNCTION(BlueprintCallable, Category = "Progression|Debug", BlueprintAuthorityOnly,
+		meta = (DevelopmentOnly, DisplayName = "Debug Grant Level"))
 	void LevelUp();
 
 	UFUNCTION(BlueprintCallable, Category = "Progression", BlueprintAuthorityOnly)
@@ -106,6 +113,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Progression", BlueprintAuthorityOnly)
 	bool ResetStatPoints(int32 Cost = 0);
 
+	/** Override in Blueprint to atomically spend the requested respec currency. Default only permits free respecs. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintAuthorityOnly, Category = "Progression|Respec")
+	bool SpendRespecCurrency(int32 Cost);
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Progression|Skills")
+	bool SpendSkillPoints(int32 Amount = 1);
+
 	UFUNCTION(BlueprintPure, Category = "Progression")
 	int32 GetStatPointsSpentOn(FName AttributeName) const;
 
@@ -117,6 +131,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Progression|Events")
 	FOnStatPointSpent OnStatPointSpent;
+
+	/** UI-friendly notification fired on server mutations and replicated client updates. */
+	UPROPERTY(BlueprintAssignable, Category = "Progression|Events")
+	FOnProgressionChanged OnProgressionChanged;
 
 protected:
 	void OnLevelUpInternal();

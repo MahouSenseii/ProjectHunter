@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "ActiveGameplayEffectHandle.h"
+#include "GameplayTagContainer.h"
 #include "Combat/Library/Enums/CombatEnums.h"
 #include "CombatStructs.generated.h"
 
@@ -33,6 +34,35 @@ struct ALS_PROJECTHUNTER_API FAnimationBaseDamageMulti
 	float Light = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation")
+	float Corruption = 0.f;
+};
+
+/**
+ * Skill-authored base damage before attacker modifiers. Attack skills normally
+ * leave this at zero and scale weapon damage; spells can set weapon
+ * effectiveness to zero and author their base damage here.
+ */
+USTRUCT(BlueprintType)
+struct ALS_PROJECTHUNTER_API FAnimationSkillBaseDamage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation", meta = (ClampMin = "0.0"))
+	float Physical = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation", meta = (ClampMin = "0.0"))
+	float Fire = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation", meta = (ClampMin = "0.0"))
+	float Ice = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation", meta = (ClampMin = "0.0"))
+	float Lightning = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation", meta = (ClampMin = "0.0"))
+	float Light = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation", meta = (ClampMin = "0.0"))
 	float Corruption = 0.f;
 };
 
@@ -121,6 +151,27 @@ struct ALS_PROJECTHUNTER_API FAnimationDamageInfo
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation")
 	FAnimationBaseDamageMulti BaseMulti;
 
+	/** Base damage supplied by the skill itself. Useful for spells and weapon-independent attacks. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation")
+	FAnimationSkillBaseDamage SkillBaseDamage;
+
+	/** Percentage of the equipped weapon damage range used by this hit. 100 is a normal weapon hit; 0 ignores the weapon. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation",
+		meta = (ClampMin = "0.0", UIMin = "0.0", UIMax = "500.0", Units = "Percent"))
+	float WeaponDamageEffectivenessPercent = 100.f;
+
+	/** Percentage of flat added damage from attacker attributes used by this hit. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation",
+		meta = (ClampMin = "0.0", UIMin = "0.0", UIMax = "500.0", Units = "Percent"))
+	float AddedDamageEffectivenessPercent = 100.f;
+
+	/**
+	 * Poise/posture damage for this hit. Zero derives it from damage that gets
+	 * through block, keeping existing Blueprint attacks useful without setup.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation", meta = (ClampMin = "0.0"))
+	float PoiseDamage = 0.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation")
 	FAnimationPiercingMulti Piercing;
 
@@ -129,6 +180,86 @@ struct ALS_PROJECTHUNTER_API FAnimationDamageInfo
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation")
 	FAnimationSkillTags Tags;
+};
+
+/**
+ * Identity and deterministic inputs for one authoritative attack. Reuse the
+ * same AttackId and RandomSeed for every trace sample in one swing; the combat
+ * manager will reject duplicate targets unless bAllowRepeatHit is enabled.
+ */
+USTRUCT(BlueprintType)
+struct ALS_PROJECTHUNTER_API FCombatHitContext
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Hit")
+	FGuid AttackId;
+
+	/** Non-zero deterministic seed. The server creates one when this is zero. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Hit")
+	int32 RandomSeed = 0;
+
+	/** Increment for intentional repeat hits from the same attack (for example a channel tick). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Hit", meta = (ClampMin = "0"))
+	int32 HitIndex = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Hit")
+	FVector HitLocation = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Hit")
+	FVector ImpactDirection = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Hit")
+	FGameplayTagContainer SkillTags;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Hit")
+	bool bAllowRepeatHit = false;
+};
+
+/** Data-driven defaults used when attacker attributes do not override duration. */
+USTRUCT(BlueprintType)
+struct ALS_PROJECTHUNTER_API FCombatAilmentTuning
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float BleedDuration = 4.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float IgniteDuration = 4.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float FreezeDuration = 1.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float ShockDuration = 4.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float PetrifyDuration = 2.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float CorruptionDuration = 4.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float ChillDuration = 2.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float BleedDamagePerTickFraction = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float IgniteDamagePerTickFraction = 0.25f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float CorruptionDamagePerTickFraction = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float ShockDamageTakenFraction = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float ChillSlowFraction = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments")
+	bool bColdDamageAlwaysChills = true;
 };
 
 /** Per-type damage snapshot produced before mitigation. */
@@ -163,6 +294,18 @@ struct ALS_PROJECTHUNTER_API FCombatDamagePacket
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	float TotalPreMitigation = 0.f;
+
+	void Scale(const float Multiplier)
+	{
+		const float SafeMultiplier = FMath::Max(0.f, Multiplier);
+		Physical *= SafeMultiplier;
+		Fire *= SafeMultiplier;
+		Ice *= SafeMultiplier;
+		Lightning *= SafeMultiplier;
+		Light *= SafeMultiplier;
+		Corruption *= SafeMultiplier;
+		TotalPreMitigation *= SafeMultiplier;
+	}
 };
 
 USTRUCT(BlueprintType)
@@ -229,6 +372,14 @@ struct ALS_PROJECTHUNTER_API FCombatResolveResult
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	float TotalDamageTaken = 0.f;
+
+	/** Damage actually removed after current shield and health cap overkill. */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
+	float TotalDamageApplied = 0.f;
+
+	/** Poise/posture damage after the defender's PoiseResistance. */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
+	float EffectivePoiseDamage = 0.f;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	float HealthAfterHit = 0.f;

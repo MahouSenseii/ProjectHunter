@@ -1,5 +1,6 @@
 #include "Interactable/Actors/Portal/PortalActor.h"
 #include "Tower/Subsystems/PortalSubsystem.h"
+#include "Tower/Subsystems/PortalTravelSubsystem.h"
 #include "Interactable/Components/InteractableManager.h"
 #include "Components/StaticMeshComponent.h"
 #include "NiagaraComponent.h"
@@ -7,6 +8,10 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Engine/GameInstance.h"
+#include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY(LogPortalActor);
@@ -86,6 +91,15 @@ void APortalActor::BeginPlay()
 		SetStateInternal(bActiveOnBeginPlay
 			? EPortalState::PS_Active
 			: EPortalState::PS_Inactive);
+
+		if (UGameInstance* GameInstance = GetGameInstance())
+		{
+			if (UPortalTravelSubsystem* TravelSubsystem = GameInstance->GetSubsystem<UPortalTravelSubsystem>();
+				TravelSubsystem && TravelSubsystem->MatchesArrivalPortal(PortalID))
+			{
+				GetWorldTimerManager().SetTimerForNextTick(this, &APortalActor::TryResolvePendingArrival);
+			}
+		}
 	}
 }
 
@@ -132,13 +146,11 @@ void APortalActor::OnInteract_Implementation(AActor* Interactor)
 		return;
 	}
 
-	if (GetLocalRole() == ROLE_Authority)
+	// InteractionManager already owns the player RPC and invokes this again on
+	// the server. Actor-owned RPCs from an unowned world portal would be dropped.
+	if (HasAuthority())
 	{
-		Server_ActivatePortal_Implementation(Traveller);
-	}
-	else
-	{
-		Server_ActivatePortal(Traveller);
+		TryActivatePortal(Traveller);
 	}
 }
 
@@ -212,19 +224,15 @@ void APortalActor::OnInteractableManagerTap(AActor* Interactor)
 		return;
 	}
 
-	if (GetLocalRole() == ROLE_Authority)
+	if (HasAuthority())
 	{
-		Server_ActivatePortal_Implementation(Traveller);
-	}
-	else
-	{
-		Server_ActivatePortal(Traveller);
+		TryActivatePortal(Traveller);
 	}
 }
 
-void APortalActor::Server_ActivatePortal_Implementation(APawn* Traveller)
+void APortalActor::TryActivatePortal(APawn* Traveller)
 {
-	if (!Traveller || !IsUsable())
+	if (!HasAuthority() || !Traveller || !IsUsable())
 	{
 		return;
 	}
@@ -235,22 +243,41 @@ void APortalActor::Server_ActivatePortal_Implementation(APawn* Traveller)
 		return;
 	}
 
+	if (FVector::DistSquared(Traveller->GetActorLocation(), GetActorLocation())
+		> FMath::Square(FMath::Max(100.f, MaxUseDistance)))
+	{
+		UE_LOG(LogPortalActor, Warning, TEXT("Portal '%s' rejected distant traveller '%s'."),
+			*PortalID.ToString(), *Traveller->GetName());
+		return;
+	}
+
 	ExecuteTravel(Traveller);
 }
 
 void APortalActor::ExecuteTravel(APawn* Traveller)
 {
-	PlayTravelFeedback();
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	Multicast_PlayTravelFeedback();
 	OnPortalActivated.Broadcast(this, Traveller);
 
 	if (DestinationLevelName != NAME_None)
 	{
-		if (UGameInstance* GI = GetGameInstance())
+		if (UGameInstance* GameInstance = GetGameInstance())
 		{
-			// Persist arrival intent across the level boundary so the destination
-			// level's portal actor with a matching PortalID can teleport the player
-			// to the right spawn point.
-			GI->GetEngine()->AddOnScreenDebugMessage(-1, 0.f, FColor::Transparent, TEXT(""));
+			if (UPortalTravelSubsystem* TravelSubsystem = GameInstance->GetSubsystem<UPortalTravelSubsystem>())
+			{
+				int32 ExpectedTravellers = 0;
+				for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+				{
+					ExpectedTravellers += It->IsValid() ? 1 : 0;
+				}
+				TravelSubsystem->SetPendingArrival(
+					DestinationLevelName, DestinationPortalID, ExpectedTravellers);
+			}
 		}
 
 		UE_LOG(LogPortalActor, Log,
@@ -259,7 +286,14 @@ void APortalActor::ExecuteTravel(APawn* Traveller)
 			*DestinationLevelName.ToString(),
 			*DestinationPortalID.ToString());
 
-		UGameplayStatics::OpenLevel(this, DestinationLevelName);
+		if (GetNetMode() == NM_Standalone)
+		{
+			UGameplayStatics::OpenLevel(this, DestinationLevelName);
+		}
+		else
+		{
+			GetWorld()->ServerTravel(DestinationLevelName.ToString(), false);
+		}
 		return;
 	}
 
@@ -282,7 +316,12 @@ void APortalActor::ExecuteTravel(APawn* Traveller)
 	}
 
 	const FTransform ArrivalTF = Destination->GetArrivalTransform();
-	Traveller->SetActorTransform(ArrivalTF, false, nullptr, ETeleportType::TeleportPhysics);
+	if (!TeleportTraveller(Traveller, ArrivalTF))
+	{
+		UE_LOG(LogPortalActor, Warning, TEXT("ExecuteTravel: failed to place pawn '%s' at portal '%s'."),
+			*Traveller->GetName(), *DestinationPortalID.ToString());
+		return;
+	}
 
 	UE_LOG(LogPortalActor, Log,
 		TEXT("ExecuteTravel: '%s' teleported pawn '%s' to portal '%s'"),
@@ -331,6 +370,11 @@ void APortalActor::EndCooldown()
 void APortalActor::OnRep_PortalState()
 {
 	UpdateVFXForState();
+	if (InteractableManager)
+	{
+		InteractableManager->SetCanInteract(IsUsable());
+		InteractableManager->SetInteractionText(GetInteractionText_Implementation());
+	}
 }
 
 void APortalActor::UpdateVFXForState()
@@ -376,4 +420,87 @@ void APortalActor::PlayTravelFeedback()
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, TravelSound, GetActorLocation());
 	}
+}
+
+void APortalActor::Multicast_PlayTravelFeedback_Implementation()
+{
+	PlayTravelFeedback();
+}
+
+bool APortalActor::TeleportTraveller(APawn* Traveller, const FTransform& ArrivalTransform) const
+{
+	if (!Traveller)
+	{
+		return false;
+	}
+
+	const bool bTeleported = Traveller->TeleportTo(
+		ArrivalTransform.GetLocation(), ArrivalTransform.Rotator(), false, true);
+	if (bTeleported)
+	{
+		if (ACharacter* Character = Cast<ACharacter>(Traveller))
+		{
+			if (UCharacterMovementComponent* Movement = Character->GetCharacterMovement())
+			{
+				Movement->StopMovementImmediately();
+			}
+		}
+	}
+	return bTeleported;
+}
+
+void APortalActor::TryResolvePendingArrival()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UPortalTravelSubsystem* TravelSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPortalTravelSubsystem>()
+		: nullptr;
+	if (!TravelSubsystem || !TravelSubsystem->MatchesArrivalPortal(PortalID))
+	{
+		return;
+	}
+
+	int32 AvailableTravellers = 0;
+	int32 PlacedTravellers = 0;
+	const FTransform ArrivalTransform = GetArrivalTransform();
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PlayerController = It->Get();
+		APawn* Pawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+		if (!Pawn)
+		{
+			continue;
+		}
+
+		++AvailableTravellers;
+		PlacedTravellers += TeleportTraveller(Pawn, ArrivalTransform) ? 1 : 0;
+	}
+
+	const int32 ExpectedTravellers = TravelSubsystem->GetExpectedTravellerCount();
+	const int32 MaxAttempts = FMath::Max(1, FMath::CeilToInt(ArrivalRetryWindow / 0.25f));
+	++ArrivalRetryAttempts;
+	if (AvailableTravellers >= ExpectedTravellers && PlacedTravellers >= ExpectedTravellers)
+	{
+		UE_LOG(LogPortalActor, Log, TEXT("Portal '%s' placed %d traveller(s) after map travel."),
+			*PortalID.ToString(), PlacedTravellers);
+		TravelSubsystem->ClearPendingArrival();
+		return;
+	}
+
+	if (ArrivalRetryAttempts >= MaxAttempts)
+	{
+		UE_LOG(LogPortalActor, Warning,
+			TEXT("Portal '%s' timed out waiting for travellers (placed %d of %d)."),
+			*PortalID.ToString(), PlacedTravellers, ExpectedTravellers);
+		TravelSubsystem->ClearPendingArrival();
+		return;
+	}
+
+	GetWorldTimerManager().SetTimer(
+		ArrivalRetryTimer, this, &APortalActor::TryResolvePendingArrival, 0.25f, false);
 }

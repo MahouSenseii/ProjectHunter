@@ -4,11 +4,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameState.h"
 #include "Framework/GameModes/Library/Enums/GameModeEnumLibrary.h"
+#include "Tower/Library/Structs/RunStructs.h"
 #include "PHGameState.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPHGameState, Log, All);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchPhaseChanged, EPHMatchPhase, NewPhase);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnReplicatedRunChanged, ERunState, NewState, FRunSessionData, SessionData);
 
 UCLASS()
 class ALS_PROJECTHUNTER_API APHGameState : public AGameState
@@ -57,7 +59,32 @@ public:
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Difficulty")
 	int32 WorldTier = 1;
 
+	// TOWER RUN STATE
+
+	/** Server-owned party run state. Clients consume this instead of mutating a local subsystem copy. */
+	UPROPERTY(ReplicatedUsing = OnRep_RunSnapshot, BlueprintReadOnly, Category = "Run")
+	ERunState RunState = ERunState::Inactive;
+
+	UPROPERTY(ReplicatedUsing = OnRep_RunSnapshot, BlueprintReadOnly, Category = "Run")
+	FRunSessionData RunSession;
+
+	/** Server clock at the last snapshot, allowing clients to display a live run timer. */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Run")
+	float RunSnapshotServerTime = 0.f;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Run")
+	void ApplyRunSnapshot(ERunState NewState, const FRunSessionData& NewSession);
+
+	UFUNCTION(BlueprintPure, Category = "Run")
+	float GetRunElapsedTime() const;
+
+	UPROPERTY(BlueprintAssignable, Category = "Run")
+	FOnReplicatedRunChanged OnReplicatedRunChanged;
+
 protected:
 	UFUNCTION()
 	void OnRep_MatchPhase();
+
+	UFUNCTION()
+	void OnRep_RunSnapshot();
 };

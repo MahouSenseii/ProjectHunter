@@ -16,6 +16,9 @@ void APHGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(APHGameState, MatchStartServerTime);
 	DOREPLIFETIME(APHGameState, TotalMobKills);
 	DOREPLIFETIME(APHGameState, WorldTier);
+	DOREPLIFETIME(APHGameState, RunState);
+	DOREPLIFETIME(APHGameState, RunSession);
+	DOREPLIFETIME(APHGameState, RunSnapshotServerTime);
 }
 
 void APHGameState::SetMatchPhase(EPHMatchPhase NewPhase)
@@ -65,4 +68,33 @@ float APHGameState::GetMatchElapsedTime() const
 void APHGameState::IncrementMobKills(int32 Count)
 {
 	TotalMobKills += FMath::Max(0, Count);
+}
+
+void APHGameState::ApplyRunSnapshot(const ERunState NewState, const FRunSessionData& NewSession)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	RunState = NewState;
+	RunSession = NewSession;
+	RunSnapshotServerTime = GetServerWorldTimeSeconds();
+	OnReplicatedRunChanged.Broadcast(RunState, RunSession);
+	ForceNetUpdate();
+}
+
+float APHGameState::GetRunElapsedTime() const
+{
+	float Elapsed = FMath::Max(0.f, RunSession.TimeElapsed);
+	if (RunState == ERunState::Active)
+	{
+		Elapsed += FMath::Max(0.f, GetServerWorldTimeSeconds() - RunSnapshotServerTime);
+	}
+	return Elapsed;
+}
+
+void APHGameState::OnRep_RunSnapshot()
+{
+	OnReplicatedRunChanged.Broadcast(RunState, RunSession);
 }

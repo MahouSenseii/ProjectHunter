@@ -32,6 +32,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Combat|Hit")
 	TObjectPtr<AActor> DefenderActor = nullptr;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Hit")
+	FCombatHitContext HitContext;
+
 	UPROPERTY(BlueprintReadWrite, Category = "Combat|Hit")
 	FAnimationDamageInfo DamageInfo;
 
@@ -130,6 +133,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Instanced, Category = "Combat|Status")
 	TObjectPtr<UCombatStatusEffectApplier> CombatStatus;
 
+	/** Native defaults for ailment magnitude/duration; tune these on the character Blueprint. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Status")
+	FCombatAilmentTuning AilmentTuning;
+
 	UFUNCTION(BlueprintPure, Category = "Combat|Status")
 	UCombatStatusEffectApplier* GetCombatStatus() const { return CombatStatus; }
 
@@ -141,16 +148,16 @@ public:
 	 * input; weapon damage, added damage, conversion, scaling, mitigation, and
 	 * every defensive layer come from attacker/defender attributes.
 	 *
-	 * Runs the full calculation everywhere, but only mutates state (damage,
-	 * recovery, ailments, reflect) on the authority. Non-authority calls return
-	 * a preview result. Returns false when the hit was invalid or rejected.
+	 * Resolution is server-authoritative. A non-authority call returns false and
+	 * does not roll a divergent client result. Existing single-player calls keep
+	 * working because standalone actors have authority.
 	 *
 	 * @param HitResponse       Defender-resolved outcome (parry window, i-frames,
 	 *                          resource absorb) decided before calling ApplyHit.
 	 * @param bCanApplyAilments Master ailment gate for this hit (e.g. false for
 	 *                          hazard ticks that should never bleed/ignite).
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Combat|Hit")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Combat|Hit")
 	bool ApplyHit(
 		AActor* AttackerActor,
 		AActor* DefenderActor,
@@ -158,6 +165,29 @@ public:
 		FCombatResolveResult& OutResult,
 		EHitResponse HitResponse = EHitResponse::Normal,
 		bool bCanApplyAilments = true);
+
+	/**
+	 * Context-aware hit entry point for networked/multi-target attacks. Reuse a
+	 * context across every trace sample in one swing to get deterministic rolls
+	 * and automatic duplicate-target suppression.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Combat|Hit")
+	bool ApplyHitWithContext(
+		AActor* AttackerActor,
+		AActor* DefenderActor,
+		const FAnimationDamageInfo& DamageInfo,
+		const FCombatHitContext& HitContext,
+		FCombatResolveResult& OutResult,
+		EHitResponse HitResponse = EHitResponse::Normal,
+		bool bCanApplyAilments = true);
+
+	/** Creates a unique attack context on the authority. Pass a seed to reproduce a run or test. */
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Combat|Hit")
+	FCombatHitContext CreateCombatHitContext(int32 RandomSeed = 0);
+
+	/** Releases duplicate-hit history early when an attack window closes. */
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Combat|Hit")
+	void ClearCombatHitContext(const FGuid& AttackId);
 
 protected:
 	//~ Application
@@ -183,11 +213,40 @@ protected:
 		const UHunterAttributeSet* AttackerAttributes) const;
 
 	// Rolls attacker ailment chances against per-type mitigated damage and routes successful rolls through CombatStatus.
-	void ApplyAilments(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result) const;
+	void ApplyAilments(
+		AActor* AttackerActor,
+		AActor* DefenderActor,
+		const FCombatResolveResult& Result,
+		FRandomStream& RandomStream) const;
 
 	// Defender reflect chance/percent attributes returned to the attacker
 	// through ReflectApplicationGE.
-	void ApplyReflect(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result) const;
+	void ApplyReflect(
+		AActor* AttackerActor,
+		AActor* DefenderActor,
+		const FCombatResolveResult& Result,
+		FRandomStream& RandomStream) const;
 
 	void BroadcastDamagePopup(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result);
+
+private:
+	bool ApplyHitInternal(
+		AActor* AttackerActor,
+		AActor* DefenderActor,
+		const FAnimationDamageInfo& DamageInfo,
+		const FCombatHitContext& HitContext,
+		FCombatResolveResult& OutResult,
+		EHitResponse HitResponse,
+		bool bCanApplyAilments);
+
+	bool ValidateAuthoritativeHit(AActor* AttackerActor, AActor* DefenderActor) const;
+	bool HasAlreadyProcessedTarget(const FCombatHitContext& HitContext, AActor* DefenderActor) const;
+	void RememberProcessedTarget(const FCombatHitContext& HitContext, AActor* DefenderActor);
+	int32 ResolveHitSeed(const FCombatHitContext& HitContext, const AActor* DefenderActor) const;
+
+	TMap<FGuid, TSet<TWeakObjectPtr<AActor>>> ProcessedTargetsByAttack;
+	TArray<FGuid> RememberedAttackOrder;
+	uint32 NextAttackSequence = 0;
+
+	static constexpr int32 MaxRememberedAttackContexts = 64;
 };

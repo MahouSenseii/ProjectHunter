@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "Character/PHBaseCharacter.h"
+#include "Curves/CurveFloat.h"
 #include "Net/UnrealNetwork.h"
 #include "Progression/Helpers/ProgressionAbilityHelper.h"
 #include "Progression/Helpers/ProgressionStatPointHelper.h"
@@ -41,7 +42,7 @@ void UCharacterProgressionManager::BeginPlay()
 
 	RebuildSpentStatPointsCache();
 
-	XPToNextLevel = GetXPForLevel(Level + 1);
+	XPToNextLevel = Level >= MaxLevel ? 0 : GetXPForLevel(Level + 1);
 }
 
 void UCharacterProgressionManager::AwardExperienceFromKill(APHBaseCharacter* KilledCharacter)
@@ -94,11 +95,12 @@ void UCharacterProgressionManager::AwardExperienceFromKill(APHBaseCharacter* Kil
 		FinalXP,
 		BaseXP,
 		IncreasedMultiplier,
-		FMath::Max(MoreXP, 1.0f),
+		FMath::Max(MoreXP, 0.01f),
 		Penalty,
 		LevelPenalty);
 
 	OnXPGained.Broadcast(FinalXP, BaseXP, FinalMultiplier);
+	OnProgressionChanged.Broadcast();
 }
 
 void UCharacterProgressionManager::AwardExperience(const int64 Amount)
@@ -130,6 +132,7 @@ void UCharacterProgressionManager::AwardExperience(const int64 Amount)
 	CheckForLevelUp();
 
 	OnXPGained.Broadcast(FinalXP, Amount, FinalMultiplier);
+	OnProgressionChanged.Broadcast();
 }
 
 float UCharacterProgressionManager::CalculateLevelPenalty(const int32 LevelDifference) const
@@ -139,6 +142,10 @@ float UCharacterProgressionManager::CalculateLevelPenalty(const int32 LevelDiffe
 
 void UCharacterProgressionManager::LevelUp()
 {
+#if UE_BUILD_SHIPPING
+	UE_LOG(LogCharacterProgressionManager, Warning, TEXT("DebugGrantLevel is disabled in shipping builds."));
+	return;
+#else
 	const AActor* Owner = GetOwner();
 	if (!Owner || !Owner->HasAuthority())
 	{
@@ -155,6 +162,7 @@ void UCharacterProgressionManager::LevelUp()
 	OnLevelUpInternal();
 
 	UE_LOG(LogCharacterProgressionManager, Log, TEXT("Level Up! New Level: %d"), Level);
+#endif
 }
 
 void UCharacterProgressionManager::CheckForLevelUp()
@@ -184,6 +192,10 @@ void UCharacterProgressionManager::CheckForLevelUp()
 
 int64 UCharacterProgressionManager::GetXPForLevel(const int32 TargetLevel) const
 {
+	if (XPRequirementCurve)
+	{
+		return FMath::Max<int64>(1, FMath::RoundToInt64(XPRequirementCurve->GetFloatValue(TargetLevel)));
+	}
 	return UProgressionFunctionLibrary::GetXPForLevel(TargetLevel, BaseXPPerLevel, XPScalingExponent);
 }
 
@@ -256,17 +268,30 @@ bool UCharacterProgressionManager::SpendStatPoint(const FName AttributeName)
 	CachedCount++;
 
 	OnStatPointSpent.Broadcast(AttributeName, UnspentStatPoints);
+	OnProgressionChanged.Broadcast();
 
 	UE_LOG(LogCharacterProgressionManager, Log, TEXT("Stat Point Spent: %s (Remaining: %d)"), *AttributeName.ToString(), UnspentStatPoints);
 
 	return true;
 }
 
-bool UCharacterProgressionManager::ResetStatPoints(const int32)
+bool UCharacterProgressionManager::ResetStatPoints(const int32 Cost)
 {
 	const AActor* Owner = GetOwner();
 	if (!Owner || !Owner->HasAuthority())
 	{
+		return false;
+	}
+
+	if (SpentStatPoints.IsEmpty())
+	{
+		return true;
+	}
+
+	if (Cost < 0 || !SpendRespecCurrency(Cost))
+	{
+		UE_LOG(LogCharacterProgressionManager, Warning,
+			TEXT("ResetStatPoints: Could not spend respec cost %d; reset cancelled."), Cost);
 		return false;
 	}
 
@@ -278,9 +303,28 @@ bool UCharacterProgressionManager::ResetStatPoints(const int32)
 	UnspentStatPoints = TotalStatPoints;
 	SpentStatPoints.Empty();
 	SpentStatPointsCache.Empty();
+	OnProgressionChanged.Broadcast();
 
 	UE_LOG(LogCharacterProgressionManager, Log, TEXT("Stat Points Reset! Refunded: %d points"), TotalStatPoints);
 
+	return true;
+}
+
+bool UCharacterProgressionManager::SpendRespecCurrency_Implementation(const int32 Cost)
+{
+	return Cost == 0;
+}
+
+bool UCharacterProgressionManager::SpendSkillPoints(const int32 Amount)
+{
+	const AActor* Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority() || Amount <= 0 || UnspentSkillPoints < Amount)
+	{
+		return false;
+	}
+
+	UnspentSkillPoints -= Amount;
+	OnProgressionChanged.Broadcast();
 	return true;
 }
 
@@ -303,11 +347,12 @@ void UCharacterProgressionManager::OnLevelUpInternal()
 	const int32 SkillPointsAwarded = SkillPointsPerLevel;
 	UnspentSkillPoints += SkillPointsAwarded;
 
-	XPToNextLevel = GetXPForLevel(Level + 1);
+	XPToNextLevel = Level >= MaxLevel ? 0 : GetXPForLevel(Level + 1);
 
 	FProgressionAbilityHelper::TrySyncPlayerLevelAttribute(GetAbilitySystemComponent(), Level);
 
 	OnLevelUp.Broadcast(Level, StatPointsAwarded, SkillPointsAwarded);
+	OnProgressionChanged.Broadcast();
 }
 
 bool UCharacterProgressionManager::ApplyStatPointToAttribute(const FName AttributeName)
@@ -337,13 +382,20 @@ UHunterAttributeSet* UCharacterProgressionManager::GetAttributeSet() const
 
 void UCharacterProgressionManager::OnRep_Level(const int32 OldLevel)
 {
-	XPToNextLevel = GetXPForLevel(Level + 1);
+	XPToNextLevel = Level >= MaxLevel ? 0 : GetXPForLevel(Level + 1);
+	if (Level > OldLevel)
+	{
+		const int32 LevelsGained = Level - OldLevel;
+		OnLevelUp.Broadcast(Level, LevelsGained * StatPointsPerLevel, LevelsGained * SkillPointsPerLevel);
+	}
+	OnProgressionChanged.Broadcast();
 
 	UE_LOG(LogCharacterProgressionManager, Log, TEXT("OnRep_Level: %d -> %d"), OldLevel, Level);
 }
 
 void UCharacterProgressionManager::OnRep_CurrentXP(const int64 OldXP)
 {
+	OnProgressionChanged.Broadcast();
 	UE_LOG(
 		LogCharacterProgressionManager,
 		Log,
@@ -356,6 +408,7 @@ void UCharacterProgressionManager::OnRep_CurrentXP(const int64 OldXP)
 void UCharacterProgressionManager::OnRep_SpentStatPoints()
 {
 	RebuildSpentStatPointsCache();
+	OnProgressionChanged.Broadcast();
 
 	UE_LOG(LogCharacterProgressionManager, Log, TEXT("OnRep_SpentStatPoints: cache rebuilt (%d entries)"), SpentStatPoints.Num());
 }

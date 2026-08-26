@@ -22,11 +22,18 @@ void UStashSubsystem::Deinitialize()
 
 void UStashSubsystem::LoadStashHandles(const FString& CharacterSlotName)
 {
-	ActiveSlotName = CharacterSlotName;
+	ActiveSlotName = CharacterSlotName.TrimStartAndEnd();
+	if (ActiveSlotName.IsEmpty())
+	{
+		ActiveSlotName = TEXT("Hunter");
+		UE_LOG(LogStashSubsystem, Warning,
+			TEXT("LoadStashHandles: Empty character slot name; using '%s'."), *ActiveSlotName);
+	}
 	TabHandles.Empty();
 	LoadedTabs.Empty();
+	bHandlesDirty = false;
 
-	const FString HandleSlot = CharacterSlotName + TEXT("_StashHandles");
+	const FString HandleSlot = ActiveSlotName + TEXT("_StashHandles");
 
 	if (UGameplayStatics::DoesSaveGameExist(HandleSlot, 0))
 	{
@@ -34,16 +41,30 @@ void UStashSubsystem::LoadStashHandles(const FString& CharacterSlotName)
 		{
 			if (UStashHandlesSaveGame* HandlesSave = Cast<UStashHandlesSaveGame>(Raw))
 			{
-				for (const FStashTabHandleSaveData& Saved : HandlesSave->Handles)
+				if (HandlesSave->SaveVersion > UStashHandlesSaveGame::CurrentSaveVersion)
 				{
-					FStashTabHandle Handle(Saved.TabID, Saved.TabName, Saved.TabType);
-					Handle.CachedItemCount = Saved.CachedItemCount;
-					Handle.AccentColor     = Saved.AccentColor;
-					TabHandles.Add(Handle);
+					UE_LOG(LogStashSubsystem, Error,
+						TEXT("LoadStashHandles: Save version %d is newer than supported version %d."),
+						HandlesSave->SaveVersion, UStashHandlesSaveGame::CurrentSaveVersion);
 				}
-				UE_LOG(LogStashSubsystem, Log,
-					TEXT("LoadStashHandles: Loaded %d handles from '%s'"),
-					TabHandles.Num(), *HandleSlot);
+				else
+				{
+					for (const FStashTabHandleSaveData& Saved : HandlesSave->Handles)
+					{
+						if (Saved.TabID == NAME_None || TabHandles.ContainsByPredicate(
+							[&Saved](const FStashTabHandle& Existing) { return Existing.TabID == Saved.TabID; }))
+						{
+							continue;
+						}
+						FStashTabHandle Handle(Saved.TabID, Saved.TabName, Saved.TabType);
+						Handle.CachedItemCount = FMath::Max(0, Saved.CachedItemCount);
+						Handle.AccentColor     = Saved.AccentColor;
+						TabHandles.Add(Handle);
+					}
+					UE_LOG(LogStashSubsystem, Log,
+						TEXT("LoadStashHandles: Loaded %d handles from '%s'"),
+						TabHandles.Num(), *HandleSlot);
+				}
 			}
 		}
 	}
@@ -53,6 +74,7 @@ void UStashSubsystem::LoadStashHandles(const FString& CharacterSlotName)
 		TabHandles.Add(FStashTabHandle(TEXT("Tab_0"), FText::FromString(TEXT("Main Stash")),       EStashTabType::STT_Normal));
 		TabHandles.Add(FStashTabHandle(TEXT("Tab_1"), FText::FromString(TEXT("Currency")),          EStashTabType::STT_Currency));
 		TabHandles.Add(FStashTabHandle(TEXT("Tab_2"), FText::FromString(TEXT("Gear Storage")),      EStashTabType::STT_Quad));
+		bHandlesDirty = true;
 	}
 
 	UE_LOG(LogStashSubsystem, Log,
@@ -149,6 +171,7 @@ bool UStashSubsystem::AddItemToTab(int32 TabIndex, UItemInstance* Item, FIntPoin
 
 	TabData->Items.Add(FStashItemEntry(Item, PlacePos));
 	TabHandles[TabIndex].CachedItemCount++;
+	bHandlesDirty = true;
 
 	MarkTabDirty(TabIndex);
 	OnStashItemAdded.Broadcast(TabHandles[TabIndex].TabID, Item);
@@ -179,6 +202,7 @@ UItemInstance* UStashSubsystem::RemoveItemFromTab(int32 TabIndex, FIntPoint Grid
 			if (TabHandles[TabIndex].CachedItemCount > 0)
 			{
 				TabHandles[TabIndex].CachedItemCount--;
+				bHandlesDirty = true;
 			}
 
 			MarkTabDirty(TabIndex);
@@ -223,17 +247,22 @@ void UStashSubsystem::FlushDirtyTabs()
 	{
 		if (TabHandles[i].bIsDirty && TabHandles[i].bIsLoaded)
 		{
-			SaveTab(i);
-			TabHandles[i].bIsDirty = false;
-			bAnySaved = true;
-			UE_LOG(LogStashSubsystem, Log,
-				TEXT("FlushDirtyTabs: Saved tab '%s'"), *TabHandles[i].TabID.ToString());
+			if (SaveTab(i))
+			{
+				TabHandles[i].bIsDirty = false;
+				bAnySaved = true;
+				UE_LOG(LogStashSubsystem, Log,
+					TEXT("FlushDirtyTabs: Saved tab '%s'"), *TabHandles[i].TabID.ToString());
+			}
 		}
 	}
 
-	if (bAnySaved)
+	if (bAnySaved || bHandlesDirty)
 	{
-		SaveHandles();
+		if (SaveHandles())
+		{
+			bHandlesDirty = false;
+		}
 	}
 }
 
@@ -256,6 +285,7 @@ int32 UStashSubsystem::AddTab(const FText& Name, EStashTabType Type)
 {
 	const FName NewID = *FString::Printf(TEXT("Tab_%d"), TabHandles.Num());
 	TabHandles.Add(FStashTabHandle(NewID, Name, Type));
+	bHandlesDirty = true;
 	return TabHandles.Num() - 1;
 }
 
@@ -264,7 +294,7 @@ void UStashSubsystem::RenameTab(int32 TabIndex, const FText& NewName)
 	if (IsValidTabIndex(TabIndex))
 	{
 		TabHandles[TabIndex].TabName = NewName;
-		MarkTabDirty(TabIndex);
+		bHandlesDirty = true;
 	}
 }
 
@@ -296,24 +326,30 @@ bool UStashSubsystem::FindFreeGridPosition(const FStashTabData& Tab, FIntPoint& 
 	return false;
 }
 
-void UStashSubsystem::SaveTab(int32 TabIndex)
+bool UStashSubsystem::SaveTab(int32 TabIndex)
 {
+	if (!IsValidTabIndex(TabIndex) || ActiveSlotName.IsEmpty())
+	{
+		return false;
+	}
+
 	const FStashTabHandle& Handle = TabHandles[TabIndex];
 	const FStashTabData* TabData = LoadedTabs.Find(Handle.TabID);
 	if (!TabData)
 	{
-		return;
+		return false;
 	}
 
 	UStashTabSaveGame* SaveObj = Cast<UStashTabSaveGame>(
 		UGameplayStatics::CreateSaveGameObject(UStashTabSaveGame::StaticClass()));
 	if (!SaveObj)
 	{
-		return;
+		return false;
 	}
 
 	SaveObj->TabID    = TabData->TabID;
 	SaveObj->GridSize = TabData->GridSize;
+	bool bAllItemsSerialized = true;
 
 	for (const FStashItemEntry& Entry : TabData->Items)
 	{
@@ -331,26 +367,47 @@ void UStashSubsystem::SaveTab(int32 TabIndex)
 		FObjectAndNameAsStringProxyArchive Ar(MemWriter, false);
 		Ar.ArIsSaveGame = true;
 		Entry.Item->Serialize(Ar);
+		if (Ar.IsError() || Bytes.IsEmpty())
+		{
+			UE_LOG(LogStashSubsystem, Error,
+				TEXT("SaveTab: Failed to serialize item '%s' in tab '%s'."),
+				*Entry.Item->GetName(), *Handle.TabID.ToString());
+			bAllItemsSerialized = false;
+			continue;
+		}
 		ItemSave.ItemBytes = MoveTemp(Bytes);
 
 		SaveObj->Items.Add(MoveTemp(ItemSave));
 	}
+	if (!bAllItemsSerialized)
+	{
+		UE_LOG(LogStashSubsystem, Error,
+			TEXT("SaveTab: Aborted slot write for '%s' so unserializable items are not silently lost."),
+			*Handle.TabID.ToString());
+		return false;
+	}
 
 	const FString SlotName = BuildTabSlotName(Handle.TabID);
-	UGameplayStatics::SaveGameToSlot(SaveObj, SlotName, 0);
+	const bool bSaved = UGameplayStatics::SaveGameToSlot(SaveObj, SlotName, 0);
+	if (!bSaved)
+	{
+		UE_LOG(LogStashSubsystem, Error, TEXT("SaveTab: Failed to write slot '%s'."), *SlotName);
+		return false;
+	}
 
 	UE_LOG(LogStashSubsystem, Log,
 		TEXT("SaveTab: Saved %d items for tab '%s' -> slot '%s'"),
 		SaveObj->Items.Num(), *Handle.TabID.ToString(), *SlotName);
+	return true;
 }
 
-void UStashSubsystem::SaveHandles()
+bool UStashSubsystem::SaveHandles()
 {
 	UStashHandlesSaveGame* SaveObj = Cast<UStashHandlesSaveGame>(
 		UGameplayStatics::CreateSaveGameObject(UStashHandlesSaveGame::StaticClass()));
 	if (!SaveObj)
 	{
-		return;
+		return false;
 	}
 
 	for (const FStashTabHandle& Handle : TabHandles)
@@ -365,11 +422,16 @@ void UStashSubsystem::SaveHandles()
 	}
 
 	const FString Slot = ActiveSlotName + TEXT("_StashHandles");
-	UGameplayStatics::SaveGameToSlot(SaveObj, Slot, 0);
+	if (!UGameplayStatics::SaveGameToSlot(SaveObj, Slot, 0))
+	{
+		UE_LOG(LogStashSubsystem, Error, TEXT("SaveHandles: Failed to write slot '%s'."), *Slot);
+		return false;
+	}
 
 	UE_LOG(LogStashSubsystem, Log,
 		TEXT("SaveHandles: Saved %d handles -> slot '%s'"),
 		SaveObj->Handles.Num(), *Slot);
+	return true;
 }
 
 bool UStashSubsystem::LoadTab(int32 TabIndex)
@@ -388,12 +450,34 @@ bool UStashSubsystem::LoadTab(int32 TabIndex)
 			TEXT("LoadTab: Failed to load/cast save game from slot '%s'"), *SlotName);
 		return false;
 	}
+	if (TabSave->SaveVersion > UStashTabSaveGame::CurrentSaveVersion)
+	{
+		UE_LOG(LogStashSubsystem, Error,
+			TEXT("LoadTab: Save version %d is newer than supported version %d in slot '%s'."),
+			TabSave->SaveVersion, UStashTabSaveGame::CurrentSaveVersion, *SlotName);
+		return false;
+	}
 
-	FStashTabData TabData(TabSave->TabID);
-	TabData.GridSize = TabSave->GridSize;
+	const FName ExpectedTabID = TabHandles[TabIndex].TabID;
+	FStashTabData TabData(ExpectedTabID);
+	TabData.GridSize.X = FMath::Clamp(TabSave->GridSize.X, 1, 64);
+	TabData.GridSize.Y = FMath::Clamp(TabSave->GridSize.Y, 1, 64);
+	TSet<FIntPoint> OccupiedPositions;
 
 	for (const FStashItemSaveData& ItemSave : TabSave->Items)
 	{
+		if (ItemSave.ItemBytes.IsEmpty()
+			|| ItemSave.GridPosition.X < 0 || ItemSave.GridPosition.Y < 0
+			|| ItemSave.GridPosition.X >= TabData.GridSize.X
+			|| ItemSave.GridPosition.Y >= TabData.GridSize.Y
+			|| OccupiedPositions.Contains(ItemSave.GridPosition))
+		{
+			UE_LOG(LogStashSubsystem, Warning,
+				TEXT("LoadTab: Skipping invalid or overlapping item entry at (%d,%d) in '%s'."),
+				ItemSave.GridPosition.X, ItemSave.GridPosition.Y, *SlotName);
+			continue;
+		}
+
 		UClass* ItemClass = ItemSave.ItemClassPath.TryLoadClass<UItemInstance>();
 		if (!ItemClass)
 		{
@@ -413,14 +497,22 @@ bool UStashSubsystem::LoadTab(int32 TabIndex)
 		FObjectAndNameAsStringProxyArchive Ar(MemReader, true);
 		Ar.ArIsSaveGame = true;
 		Item->Serialize(Ar);
+		if (Ar.IsError())
+		{
+			UE_LOG(LogStashSubsystem, Warning,
+				TEXT("LoadTab: Item payload was corrupt in slot '%s' - skipping."), *SlotName);
+			continue;
+		}
 
 		// Run any version migration (added in ItemInstance serialization versioning)
 		Item->PostLoadInit();
 
 		TabData.Items.Add(FStashItemEntry(Item, ItemSave.GridPosition));
+		OccupiedPositions.Add(ItemSave.GridPosition);
 	}
 
 	LoadedTabs.Add(TabData.TabID, MoveTemp(TabData));
+	TabHandles[TabIndex].CachedItemCount = LoadedTabs[ExpectedTabID].Items.Num();
 
 	UE_LOG(LogStashSubsystem, Log,
 		TEXT("LoadTab: Loaded %d items from slot '%s'"),

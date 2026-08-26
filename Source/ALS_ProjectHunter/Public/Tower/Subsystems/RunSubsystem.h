@@ -22,19 +22,25 @@ public:
 	virtual void Deinitialize() override;
 
 	UFUNCTION(BlueprintCallable, Category = "Run")
-	void StartRun();
+	void StartRun(int32 RunSeed = 0, int32 Difficulty = 1);
 
 	UFUNCTION(BlueprintCallable, Category = "Run")
 	void AdvanceFloor();
 
 	UFUNCTION(BlueprintCallable, Category = "Run")
-	void EndRun();
+	void EndRun(ERunEndReason EndReason = ERunEndReason::Quit);
 
 	UFUNCTION(BlueprintPure, Category = "Run")
-	int32 GetCurrentFloor() const { return CurrentFloor; }
+	int32 GetCurrentFloor() const;
 
 	UFUNCTION(BlueprintPure, Category = "Run")
-	bool IsRunActive() const { return bRunActive; }
+	bool IsRunActive() const;
+
+	UFUNCTION(BlueprintPure, Category = "Run")
+	ERunState GetRunState() const;
+
+	UFUNCTION(BlueprintPure, Category = "Run")
+	FRunSessionData GetSessionData() const;
 
 	UFUNCTION(BlueprintPure, Category = "Run")
 	float GetElapsedTime() const;
@@ -43,7 +49,10 @@ public:
 	void RegisterKill();
 
 	UFUNCTION(BlueprintPure, Category = "Run")
-	int32 GetTotalKills() const { return SessionData.TotalKills; }
+	int32 GetTotalKills() const;
+
+	/** Re-publishes persistent GameInstance state after a map transition creates a new GameState. */
+	void SyncToGameState();
 
 	UPROPERTY(BlueprintAssignable, Category = "Run|Events")
 	FOnRunStarted OnRunStarted;
@@ -56,10 +65,7 @@ public:
 
 private:
 	UPROPERTY()
-	int32 CurrentFloor = 0;
-
-	UPROPERTY()
-	bool bRunActive = false;
+	ERunState RunState = ERunState::Inactive;
 
 	// Process time is used because OpenLevel resets world time during a run.
 	double RunStartTimeSeconds = 0.0;
@@ -68,4 +74,5 @@ private:
 	FRunSessionData SessionData;
 
 	void ResetState();
+	bool HasServerAuthority() const;
 };

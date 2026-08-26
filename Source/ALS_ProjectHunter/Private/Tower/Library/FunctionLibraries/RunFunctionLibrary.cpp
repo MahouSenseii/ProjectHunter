@@ -30,7 +30,7 @@ ERunState URunFunctionLibrary::GetRunState(const UObject* WorldContextObject)
 		return ERunState::Inactive;
 	}
 
-	return RS->IsRunActive() ? ERunState::Active : ERunState::Inactive;
+	return RS->GetRunState();
 }
 
 bool URunFunctionLibrary::IsRunActive(const UObject* WorldContextObject)

@@ -214,30 +214,33 @@ EItemRarity FLootGenerator::DetermineRarity(
 		return Entry.OverrideRarity;
 	}
 
-	if (Settings.MinimumItemRarity != EItemRarity::IR_None)
-	{
-		return Settings.MinimumItemRarity;
-	}
-
-	float UpgradeChance = Settings.RarityBonusChance;
-	UpgradeChance += Settings.PlayerLuckBonus * 0.005f;
-
 	EItemRarity BaseRarity = ULootRarityFunctionLibrary::DropRarityToItemRarity(Settings.SourceRarity);
 	if (BaseRarity == EItemRarity::IR_None)
 	{
 		BaseRarity = EItemRarity::IR_GradeF;
 	}
 
+	constexpr int32 MinimumGrade = static_cast<int32>(EItemRarity::IR_GradeF);
+	constexpr int32 MaximumGeneratedGrade = static_cast<int32>(EItemRarity::IR_GradeS);
+	const int32 ConfiguredMinimum = static_cast<int32>(Settings.MinimumItemRarity);
+	if (ConfiguredMinimum >= MinimumGrade && ConfiguredMinimum <= MaximumGeneratedGrade)
+	{
+		BaseRarity = static_cast<EItemRarity>(FMath::Max(
+			static_cast<int32>(BaseRarity), ConfiguredMinimum));
+	}
+
+	float UpgradeChance = Settings.RarityBonusChance;
+	UpgradeChance += Settings.PlayerLuckBonus * 0.005f;
+	UpgradeChance = FMath::Clamp(UpgradeChance, 0.f, 1.f);
+
 	if (UpgradeChance > 0.0f)
 	{
 		constexpr float DecayFactor = 0.35f;
-		constexpr int32 MaxRarityInt = static_cast<int32>(EItemRarity::IR_GradeS);
-
 		float CurrentChance = UpgradeChance;
 		while (CurrentChance > 0.0f && RandStream.FRand() < CurrentChance)
 		{
 			const int32 RarityInt = static_cast<int32>(BaseRarity);
-			if (RarityInt >= MaxRarityInt)
+			if (RarityInt >= MaximumGeneratedGrade)
 			{
 				break;
 			}
@@ -259,7 +262,9 @@ UItemInstance* FLootGenerator::CreateItemInstance(
 	int32 Seed,
 	UObject* Outer) const
 {
-	UItemInstance* Item = NewObject<UItemInstance>(Outer);
+	UItemInstance* Item = Entry.ItemClass.Get()
+		? NewObject<UItemInstance>(Outer, Entry.ItemClass.Get())
+		: NewObject<UItemInstance>(Outer);
 
 	if (!Item)
 	{
@@ -267,7 +272,7 @@ UItemInstance* FLootGenerator::CreateItemInstance(
 		return nullptr;
 	}
 
-	Item->SetSeed(Seed);
+	Item->SetDeterministicSeedAndIdentity(Seed);
 
 	if (Entry.ItemRowHandle.DataTable)
 	{
@@ -282,7 +287,23 @@ UItemInstance* FLootGenerator::CreateItemInstance(
 	}
 	else if (Entry.ItemClass.Get())
 	{
-		UE_LOG(LogLootGenerator, Warning, TEXT("Class-based item creation not yet implemented"));
+		// Item subclasses may author their base row handle on the class defaults.
+		// They still pass through the same initialization pipeline as table entries.
+		if (!Item->BaseItemHandle.DataTable || Item->BaseItemHandle.RowName.IsNone())
+		{
+			UE_LOG(LogLootGenerator, Error,
+				TEXT("Class-based item '%s' has no valid BaseItemHandle; drop rejected."),
+				*GetNameSafe(Entry.ItemClass.Get()));
+			return nullptr;
+		}
+
+		Item->InitializeWithCorruption(
+			Item->BaseItemHandle,
+			ItemLevel,
+			Rarity,
+			Entry.bGenerateAffixes,
+			CorruptionChance,
+			bForceCorrupted);
 	}
 
 	return Item;

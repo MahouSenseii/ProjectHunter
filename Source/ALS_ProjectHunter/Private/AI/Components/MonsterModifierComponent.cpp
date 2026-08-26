@@ -2,6 +2,7 @@
 
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayEffect.h"
 #include "Abilities/GameplayAbility.h"
@@ -38,6 +39,9 @@ void UMonsterModifierComponent::RollAndApplyMods()
 	}
 	bModsApplied = true;
 
+	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(GetOwner());
+	UAbilitySystemComponent* ASC = ASCInterface ? ASCInterface->GetAbilitySystemComponent() : nullptr;
+	RollBaseStatVariation();
 
 	if (!CachedSpawnConfig)
 	{
@@ -47,13 +51,14 @@ void UMonsterModifierComponent::RollAndApplyMods()
 	if (!Config)
 	{
 		PH_LOG_WARNING(LogMonsterModifier,
-			"RollAndApplyMods fallback: No SpawnConfig was set on Owner=%s, so the monster will remain normal.",
+			"RollAndApplyMods fallback: No SpawnConfig was set on Owner=%s; applying native base variation only.",
 			*GetOwner()->GetName());
+		AssignedTier = EMonsterTier::MT_Normal;
+		FullDisplayName = GetOwner()->GetClass()->GetDisplayNameText();
+		ApplyCombinedStatScaling(ASC);
+		OnMonsterModsApplied.Broadcast(AssignedTier, FullDisplayName);
 		return;
 	}
-
-
-	RollBaseStatVariation();
 
 	if (ForcedTier != EMonsterTier::MT_Normal || AssignedTier != EMonsterTier::MT_Normal)
 	{
@@ -68,6 +73,7 @@ void UMonsterModifierComponent::RollAndApplyMods()
 	{
 
 		FullDisplayName = GetOwner()->GetClass()->GetDisplayNameText();
+		ApplyCombinedStatScaling(ASC);
 		OnMonsterModsApplied.Broadcast(AssignedTier, FullDisplayName);
 		return;
 	}
@@ -76,6 +82,9 @@ void UMonsterModifierComponent::RollAndApplyMods()
 	if (!ModTable)
 	{
 		PH_LOG_WARNING(LogMonsterModifier, "RollAndApplyMods failed: SpawnConfig had no ModifierTable assigned.");
+		ApplyCombinedStatScaling(ASC);
+		FullDisplayName = GetOwner()->GetClass()->GetDisplayNameText();
+		OnMonsterModsApplied.Broadcast(AssignedTier, FullDisplayName);
 		return;
 	}
 
@@ -98,13 +107,11 @@ void UMonsterModifierComponent::RollAndApplyMods()
 	TArray<FMonsterModRow> RolledMods = RollMods(NumMods, AssignedTier, ModTable);
 	AppliedMods.Append(RolledMods);
 
-	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(GetOwner());
-	UAbilitySystemComponent* ASC = ASCInterface ? ASCInterface->GetAbilitySystemComponent() : nullptr;
-
 	for (const FMonsterModRow& Mod : AppliedMods)
 	{
 		ApplyMod(Mod, ASC);
 	}
+	ApplyCombinedStatScaling(ASC);
 
 	FullDisplayName = BuildDisplayName(AppliedMods);
 
@@ -336,6 +343,10 @@ void UMonsterModifierComponent::ClearAppliedRuntimeMods(UAbilitySystemComponent*
 {
 	if (ASC)
 	{
+		if (AppliedStatScalingHandle.IsValid())
+		{
+			ASC->RemoveActiveGameplayEffect(AppliedStatScalingHandle);
+		}
 		for (const FActiveGameplayEffectHandle& Handle : AppliedGEHandles)
 		{
 			if (Handle.IsValid())
@@ -374,10 +385,98 @@ void UMonsterModifierComponent::ClearAppliedRuntimeMods(UAbilitySystemComponent*
 	}
 
 	AppliedGEHandles.Empty();
+	AppliedStatScalingHandle.Invalidate();
 	GrantedAbilityHandles.Empty();
 	GrantedLooseTags.Reset();
 	GrantedLooseTagGrants.Empty();
 	AppliedMoveSpeedMultiplier = 1.0f;
+}
+
+void UMonsterModifierComponent::ApplyCombinedStatScaling(UAbilitySystemComponent* ASC)
+{
+	if (!ASC)
+	{
+		return;
+	}
+
+	if (AppliedStatScalingHandle.IsValid())
+	{
+		ASC->RemoveActiveGameplayEffect(AppliedStatScalingHandle);
+		AppliedStatScalingHandle.Invalidate();
+	}
+
+	TMap<FGameplayAttribute, float> FlatBonuses;
+	TMap<FGameplayAttribute, float> Products;
+	Products.Add(UHunterAttributeSet::GetMaxHealthAttribute(), GetCombinedHPMultiplier());
+
+	if (!FMath::IsNearlyZero(BaseStatVariation.ResistBonusPct))
+	{
+		FlatBonuses.FindOrAdd(UHunterAttributeSet::GetFireResistanceFlatBonusAttribute()) += BaseStatVariation.ResistBonusPct;
+		FlatBonuses.FindOrAdd(UHunterAttributeSet::GetIceResistanceFlatBonusAttribute()) += BaseStatVariation.ResistBonusPct;
+		FlatBonuses.FindOrAdd(UHunterAttributeSet::GetLightningResistanceFlatBonusAttribute()) += BaseStatVariation.ResistBonusPct;
+		FlatBonuses.FindOrAdd(UHunterAttributeSet::GetLightResistanceFlatBonusAttribute()) += BaseStatVariation.ResistBonusPct;
+		FlatBonuses.FindOrAdd(UHunterAttributeSet::GetCorruptionResistanceFlatBonusAttribute()) += BaseStatVariation.ResistBonusPct;
+	}
+
+	for (const FMonsterModRow& Mod : AppliedMods)
+	{
+		for (const FMonsterStatOverride& Override : Mod.StatOverrides)
+		{
+			if (!Override.Attribute.IsValid())
+			{
+				continue;
+			}
+			FlatBonuses.FindOrAdd(Override.Attribute) += Override.FlatBonus;
+			Products.FindOrAdd(Override.Attribute, 1.f) *= FMath::Max(0.f, 1.f + Override.PercentBonus);
+		}
+	}
+
+	UGameplayEffect* ScalingEffect = NewObject<UGameplayEffect>(GetOwner());
+	ScalingEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
+	for (const TPair<FGameplayAttribute, float>& Pair : FlatBonuses)
+	{
+		if (FMath::IsNearlyZero(Pair.Value))
+		{
+			continue;
+		}
+		FGameplayModifierInfo Modifier;
+		Modifier.Attribute = Pair.Key;
+		Modifier.ModifierOp = EGameplayModOp::Additive;
+		Modifier.ModifierMagnitude = FScalableFloat(Pair.Value);
+		ScalingEffect->Modifiers.Add(Modifier);
+	}
+	for (const TPair<FGameplayAttribute, float>& Pair : Products)
+	{
+		if (FMath::IsNearlyEqual(Pair.Value, 1.f))
+		{
+			continue;
+		}
+		FGameplayModifierInfo Modifier;
+		Modifier.Attribute = Pair.Key;
+		Modifier.ModifierOp = EGameplayModOp::Multiplicitive;
+		Modifier.ModifierMagnitude = FScalableFloat(FMath::Max(0.f, Pair.Value));
+		ScalingEffect->Modifiers.Add(Modifier);
+	}
+
+	if (ScalingEffect->Modifiers.IsEmpty())
+	{
+		return;
+	}
+
+	const float OldMaxHealth = ASC->GetNumericAttribute(UHunterAttributeSet::GetMaxHealthAttribute());
+	const float OldHealth = ASC->GetNumericAttribute(UHunterAttributeSet::GetHealthAttribute());
+	const float HealthFraction = OldMaxHealth > KINDA_SMALL_NUMBER
+		? FMath::Clamp(OldHealth / OldMaxHealth, 0.f, 1.f)
+		: 1.f;
+
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	Context.AddSourceObject(this);
+	const FGameplayEffectSpec ScalingSpec(ScalingEffect, Context, 1.f);
+	AppliedStatScalingHandle = ASC->ApplyGameplayEffectSpecToSelf(ScalingSpec);
+
+	const float NewMaxHealth = ASC->GetNumericAttribute(UHunterAttributeSet::GetMaxHealthAttribute());
+	ASC->SetNumericAttributeBase(
+		UHunterAttributeSet::GetHealthAttribute(), FMath::Max(0.f, NewMaxHealth * HealthFraction));
 }
 
 

@@ -252,8 +252,12 @@ FCombatResolveResult FCombatIncomingDamageResolver::MitigateDamagePacket(
 
 	// ArcaneShield absorbs before Health.
 	const float CurrentArcaneShield = FMath::Max(DefenderAttributes->GetArcaneShield(), 0.f);
+	const float CurrentHealth = FMath::Max(DefenderAttributes->GetHealth(), 0.f);
 	Result.DamageToArcaneShield = FMath::Min(CurrentArcaneShield, Result.TotalDamageTaken);
-	Result.DamageToHealth = FMath::Max(0.f, Result.TotalDamageTaken - Result.DamageToArcaneShield);
+	Result.DamageToHealth = FMath::Min(
+		CurrentHealth,
+		FMath::Max(0.f, Result.TotalDamageTaken - Result.DamageToArcaneShield));
+	Result.TotalDamageApplied = Result.DamageToArcaneShield + Result.DamageToHealth;
 
 	if (bDebugLog)
 	{
@@ -282,24 +286,34 @@ float FCombatIncomingDamageResolver::GetResistanceValue(
 	}
 
 	const float GlobalDefenses = DefenderAttributes->GetGlobalDefenses();
+	const auto ResolveResistance = [GlobalDefenses](const float FlatPoints, const float IncreasedPercent)
+	{
+		const float BaseResistancePoints = GlobalDefenses + FlatPoints;
+		return BaseResistancePoints * (1.f + (IncreasedPercent / 100.f));
+	};
 
 	switch (DamageType)
 	{
 	case EHunterDamageType::Fire:
-		return GlobalDefenses + DefenderAttributes->GetFireResistanceFlatBonus()
-			+ DefenderAttributes->GetFireResistancePercentBonus();
+		return ResolveResistance(
+			DefenderAttributes->GetFireResistanceFlatBonus(),
+			DefenderAttributes->GetFireResistancePercentBonus());
 	case EHunterDamageType::Ice:
-		return GlobalDefenses + DefenderAttributes->GetIceResistanceFlatBonus()
-			+ DefenderAttributes->GetIceResistancePercentBonus();
+		return ResolveResistance(
+			DefenderAttributes->GetIceResistanceFlatBonus(),
+			DefenderAttributes->GetIceResistancePercentBonus());
 	case EHunterDamageType::Lightning:
-		return GlobalDefenses + DefenderAttributes->GetLightningResistanceFlatBonus()
-			+ DefenderAttributes->GetLightningResistancePercentBonus();
+		return ResolveResistance(
+			DefenderAttributes->GetLightningResistanceFlatBonus(),
+			DefenderAttributes->GetLightningResistancePercentBonus());
 	case EHunterDamageType::Light:
-		return GlobalDefenses + DefenderAttributes->GetLightResistanceFlatBonus()
-			+ DefenderAttributes->GetLightResistancePercentBonus();
+		return ResolveResistance(
+			DefenderAttributes->GetLightResistanceFlatBonus(),
+			DefenderAttributes->GetLightResistancePercentBonus());
 	case EHunterDamageType::Corruption:
-		return GlobalDefenses + DefenderAttributes->GetCorruptionResistanceFlatBonus()
-			+ DefenderAttributes->GetCorruptionResistancePercentBonus();
+		return ResolveResistance(
+			DefenderAttributes->GetCorruptionResistanceFlatBonus(),
+			DefenderAttributes->GetCorruptionResistancePercentBonus());
 	default:
 		return 0.f;
 	}
@@ -507,9 +521,8 @@ void FCombatIncomingDamageResolver::ApplyBlockingToMitigatedResult(
 	float TotalIncomingForBlock = 0.f;
 	for (const EHunterDamageType DamageType : CombatIncomingDamageResolverPrivate::AllDamageTypes)
 	{
-		TotalIncomingForBlock += FMath::Max(0.f,
-			CombatIncomingDamageResolverPrivate::GetResultTakenByType(InOutResult, DamageType)
-			* GetBlockTypeMultiplier(DamageType, DefenderAttributes));
+		TotalIncomingForBlock += FMath::Max(
+			0.f, CombatIncomingDamageResolverPrivate::GetResultTakenByType(InOutResult, DamageType));
 	}
 
 	float TotalAfterBlock = 0.f;
@@ -519,18 +532,21 @@ void FCombatIncomingDamageResolver::ApplyBlockingToMitigatedResult(
 	{
 		const float DamageBeforeBlock = FMath::Max(
 			0.f, CombatIncomingDamageResolverPrivate::GetResultTakenByType(InOutResult, DamageType));
-		const float BlockedInput = DamageBeforeBlock * GetBlockTypeMultiplier(DamageType, DefenderAttributes);
 
 		// Flat block splits across types proportionally to their contribution.
 		const float TypeFlatShare = TotalIncomingForBlock > 0.f
-			? FlatBlockAmount * (BlockedInput / TotalIncomingForBlock)
+			? FlatBlockAmount * (DamageBeforeBlock / TotalIncomingForBlock)
 			: 0.f;
 
-		const float BlockedTotal = (BlockedInput * BlockStrengthFraction) + TypeFlatShare;
-		const float DamageAfterBlock = FMath::Max(0.f, BlockedInput - BlockedTotal);
+		const float BlockedTotal = (DamageBeforeBlock * BlockStrengthFraction) + TypeFlatShare;
+		const float DamageAfterAbsorption = FMath::Max(0.f, DamageBeforeBlock - BlockedTotal);
+		// Typed block multipliers are explicitly damage-taken multipliers while
+		// guarding: 1 is neutral, below 1 is stronger, above 1 is a weakness.
+		const float DamageAfterBlock = DamageAfterAbsorption
+			* GetBlockTypeMultiplier(DamageType, DefenderAttributes);
 
 		// Chip damage guarantees a floor of unblockable bleed-through.
-		const float ChipFloor = BlockedInput * ChipDamageFraction;
+		const float ChipFloor = DamageBeforeBlock * ChipDamageFraction;
 		const float FinalTypeDamage = FMath::Max(DamageAfterBlock, ChipFloor);
 		const float BlockedAmount = FMath::Max(0.f, DamageBeforeBlock - FinalTypeDamage);
 
@@ -571,17 +587,17 @@ void FCombatIncomingDamageResolver::ApplyStaminaBlockCost(
 void FCombatIncomingDamageResolver::EvaluateStagger(
 	AActor* DefenderActor,
 	const UHunterAttributeSet* DefenderAttributes,
+	const FAnimationDamageInfo& DamageInfo,
 	FCombatResolveResult& InOutResult)
 {
-	if (!DefenderAttributes || InOutResult.DamageToStamina <= 0.f)
+	if (!DefenderAttributes)
 	{
 		return;
 	}
 
-	const float StaminaAfterHit = FMath::Max(
-		0.f, DefenderAttributes->GetStamina() - InOutResult.DamageToStamina);
-	if (StaminaAfterHit > 0.f)
+	if (InOutResult.bGuardBroken)
 	{
+		InOutResult.bShouldStagger = true;
 		return;
 	}
 
@@ -597,7 +613,16 @@ void FCombatIncomingDamageResolver::EvaluateStagger(
 		return;
 	}
 
-	InOutResult.bShouldStagger = true;
+	const float RawPoiseDamage = DamageInfo.PoiseDamage > 0.f
+		? DamageInfo.PoiseDamage
+		: InOutResult.TotalDamageTaken;
+	const float PoiseResistancePercent = FMath::Clamp(
+		DefenderAttributes->GetPoiseResistance(), 0.f, 95.f);
+	InOutResult.EffectivePoiseDamage = RawPoiseDamage * (1.f - (PoiseResistancePercent / 100.f));
+
+	const float PoiseThreshold = FMath::Max(DefenderAttributes->GetPoise(), 0.f);
+	InOutResult.bShouldStagger = PoiseThreshold > 0.f
+		&& InOutResult.EffectivePoiseDamage >= PoiseThreshold;
 }
 
 void FCombatIncomingDamageResolver::ApplyHitResponse(
@@ -611,14 +636,31 @@ void FCombatIncomingDamageResolver::ApplyHitResponse(
 	switch (HitResponse)
 	{
 	case EHitResponse::Parry:
-		// Damage cancelled, but contact was made: per-type taken values stay
-		// intact so ailments still roll with real magnitudes.
+		InOutResult.PhysicalTaken = 0.f;
+		InOutResult.FireTaken = 0.f;
+		InOutResult.IceTaken = 0.f;
+		InOutResult.LightningTaken = 0.f;
+		InOutResult.LightTaken = 0.f;
+		InOutResult.CorruptionTaken = 0.f;
+		InOutResult.PhysicalBlocked = 0.f;
+		InOutResult.FireBlocked = 0.f;
+		InOutResult.IceBlocked = 0.f;
+		InOutResult.LightningBlocked = 0.f;
+		InOutResult.LightBlocked = 0.f;
+		InOutResult.CorruptionBlocked = 0.f;
+		InOutResult.TotalDamageBeforeBlock = 0.f;
+		InOutResult.TotalDamageAfterBlock = 0.f;
+		InOutResult.TotalBlockedAmount = 0.f;
 		InOutResult.DamageToHealth = 0.f;
 		InOutResult.DamageToArcaneShield = 0.f;
 		InOutResult.DamageToStamina = 0.f;
 		InOutResult.TotalDamageTaken = 0.f;
-		InOutResult.bShouldApplyAilments = bCanApplyAilments;
+		InOutResult.TotalDamageApplied = 0.f;
+		InOutResult.EffectivePoiseDamage = 0.f;
+		InOutResult.bShouldApplyAilments = false;
 		InOutResult.bShouldStagger = false;
+		InOutResult.bWasBlocked = false;
+		InOutResult.bGuardBroken = false;
 		InOutResult.bKilledTarget = false;
 		break;
 
@@ -642,6 +684,8 @@ void FCombatIncomingDamageResolver::ApplyHitResponse(
 		InOutResult.DamageToArcaneShield = 0.f;
 		InOutResult.DamageToHealth = 0.f;
 		InOutResult.TotalDamageTaken = 0.f;
+		InOutResult.TotalDamageApplied = 0.f;
+		InOutResult.EffectivePoiseDamage = 0.f;
 		InOutResult.bShouldApplyAilments = false;
 		InOutResult.bShouldStagger = false;
 		InOutResult.bWasBlocked = false;

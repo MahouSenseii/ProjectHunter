@@ -177,6 +177,7 @@ protected:
 
 	/** Apply a single mod row to the owning character's ASC. */
 	void ApplyMod(const FMonsterModRow& Mod, UAbilitySystemComponent* ASC);
+	void ApplyCombinedStatScaling(UAbilitySystemComponent* ASC);
 
 	void ClearAppliedRuntimeMods(UAbilitySystemComponent* ASC);
 
@@ -195,6 +196,8 @@ protected:
 
 	UPROPERTY(Transient)
 	TArray<FGameplayTagContainer> GrantedLooseTagGrants;
+
+	FActiveGameplayEffectHandle AppliedStatScalingHandle;
 
 	float AppliedMoveSpeedMultiplier = 1.0f;
 };

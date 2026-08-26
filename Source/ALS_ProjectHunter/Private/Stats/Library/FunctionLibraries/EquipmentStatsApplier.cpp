@@ -22,17 +22,22 @@ namespace EquipmentStatsApplierPrivate
 		float Base = 0.f;
 		float LocalFlat = 0.f;
 		float LocalIncreasedPct = 0.f;
+		float LocalMoreMultiplier = 1.f;
 
 		bool HasContribution() const
 		{
 			return Base > 0.f
 				|| !FMath::IsNearlyZero(LocalFlat)
-				|| !FMath::IsNearlyZero(LocalIncreasedPct);
+				|| !FMath::IsNearlyZero(LocalIncreasedPct)
+				|| !FMath::IsNearlyEqual(LocalMoreMultiplier, 1.f);
 		}
 
 		float Resolve() const
 		{
-			return FMath::Max(0.f, (Base + LocalFlat) * FStatsModifierMath::PercentToMultiplier(LocalIncreasedPct));
+			return FMath::Max(0.f,
+				(Base + LocalFlat)
+				* FStatsModifierMath::PercentToMultiplier(LocalIncreasedPct)
+				* LocalMoreMultiplier);
 		}
 	};
 
@@ -126,17 +131,21 @@ namespace EquipmentStatsApplierPrivate
 			return true;
 
 		case EModifyType::MT_Reduced:
-			Side.LocalFlat -= FMath::Abs(Stat.RolledStatValue);
+			Side.LocalIncreasedPct -= FMath::Abs(Stat.RolledStatValue);
 			return true;
 
 		case EModifyType::MT_Increased:
-		case EModifyType::MT_Multiply:
-		case EModifyType::MT_More:
 			Side.LocalIncreasedPct += Stat.RolledStatValue;
 			return true;
 
+		case EModifyType::MT_Multiply:
+		case EModifyType::MT_More:
+		case EModifyType::MT_MultiplyRange:
+			Side.LocalMoreMultiplier *= FStatsModifierMath::PercentToMultiplier(Stat.RolledStatValue);
+			return true;
+
 		case EModifyType::MT_Less:
-			Side.LocalIncreasedPct -= FMath::Abs(Stat.RolledStatValue);
+			Side.LocalMoreMultiplier *= FStatsModifierMath::PercentToMultiplier(-FMath::Abs(Stat.RolledStatValue));
 			return true;
 
 		default:
@@ -151,6 +160,30 @@ namespace EquipmentStatsApplierPrivate
 		Modifier.ModifierOp = EGameplayModOp::Additive;
 		Modifier.ModifierMagnitude = FScalableFloat(Magnitude);
 		Effect->Modifiers.Add(Modifier);
+	}
+
+	bool IsProductModifier(const FPHAttributeData& Stat)
+	{
+		if (Stat.GameplayEffect
+			|| Stat.Condition != EAffixCondition::AC_None
+			|| Stat.ModifiedLocation == EAffixScope::AS_Conditional
+			|| Stat.ModifiedLocation == EAffixScope::AS_Skill
+			|| IsLocalAffix(Stat))
+		{
+			return false;
+		}
+
+		return Stat.ModifyType == EModifyType::MT_Multiply
+			|| Stat.ModifyType == EModifyType::MT_More
+			|| Stat.ModifyType == EModifyType::MT_MultiplyRange
+			|| Stat.ModifyType == EModifyType::MT_Less;
+	}
+
+	float GetProductFactor(const FPHAttributeData& Stat)
+	{
+		return Stat.ModifyType == EModifyType::MT_Less
+			? FStatsModifierMath::PercentToMultiplier(-FMath::Abs(Stat.RolledStatValue))
+			: FStatsModifierMath::PercentToMultiplier(Stat.RolledStatValue);
 	}
 
 	bool HasBaseEquipmentContribution(const FItemBase& Base)
@@ -221,18 +254,59 @@ void FEquipmentStatsApplier::ApplyEquipmentStats(UStatsManager& Manager, UItemIn
 		return;
 	}
 
+	TArray<FActiveGameplayEffectHandle> AppliedHandles;
 	FGameplayEffectSpecHandle EffectSpec = CreateEquipmentEffect(Manager, Item, AllStats);
-	if (!EffectSpec.IsValid())
+	if (EffectSpec.IsValid())
 	{
-		PH_LOG_WARNING(LogStatsManager, "ApplyEquipmentStats: No applicable modifiers (or spec creation failed) for Item=%s.", *Item->GetName());
-		return;
+		const FActiveGameplayEffectHandle EffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
+		if (EffectHandle.IsValid())
+		{
+			AppliedHandles.Add(EffectHandle);
+		}
 	}
 
-	const FActiveGameplayEffectHandle EffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
-	if (EffectHandle.IsValid())
+	for (const FPHAttributeData& Stat : AllStats)
 	{
-		Manager.ActiveEquipmentEffects.Add(Item->UniqueID, EffectHandle);
+		if (!Stat.GameplayEffect)
+		{
+			continue;
+		}
+
+		const UGameplayEffect* EffectCDO = Stat.GameplayEffect->GetDefaultObject<UGameplayEffect>();
+		if (!EffectCDO || EffectCDO->DurationPolicy == EGameplayEffectDurationType::Instant)
+		{
+			PH_LOG_WARNING(LogStatsManager,
+				"ApplyEquipmentStats skipped instant GameplayEffect '%s' on Item=%s because it could not be removed on unequip.",
+				*GetNameSafe(Stat.GameplayEffect), *Item->GetName());
+			continue;
+		}
+
+		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+		Context.AddSourceObject(Item);
+		const FGameplayEffectSpecHandle CustomSpec = ASC->MakeOutgoingSpec(Stat.GameplayEffect, 1.f, Context);
+		if (!CustomSpec.IsValid())
+		{
+			continue;
+		}
+
+		const FActiveGameplayEffectHandle CustomHandle = ASC->ApplyGameplayEffectSpecToSelf(*CustomSpec.Data.Get());
+		if (CustomHandle.IsValid())
+		{
+			AppliedHandles.Add(CustomHandle);
+		}
+	}
+
+	const bool bHasProductModifier = AllStats.ContainsByPredicate(
+		[](const FPHAttributeData& Stat)
+		{
+			return EquipmentStatsApplierPrivate::IsProductModifier(Stat);
+		});
+
+	if (!AppliedHandles.IsEmpty() || bHasProductModifier)
+	{
+		Manager.ActiveEquipmentEffects.Add(Item->UniqueID, MoveTemp(AppliedHandles));
 		Manager.ActiveEquipmentItems.Add(Item->UniqueID, Item);
+		RebuildEquipmentProductEffect(Manager);
 
 		UE_LOG(LogStatsManager, Log, TEXT("StatsManager: Applied %d stats from %s (GUID: %s)"),
 			AllStats.Num(), *Item->GetName(), *Item->UniqueID.ToString());
@@ -265,16 +339,23 @@ void FEquipmentStatsApplier::RemoveEquipmentStats(UStatsManager& Manager, UItemI
 		return;
 	}
 
-	FActiveGameplayEffectHandle* EffectHandle = Manager.ActiveEquipmentEffects.Find(Item->UniqueID);
-	if (!EffectHandle || !EffectHandle->IsValid())
+	TArray<FActiveGameplayEffectHandle>* EffectHandles = Manager.ActiveEquipmentEffects.Find(Item->UniqueID);
+	if (!EffectHandles)
 	{
 		PH_LOG_WARNING(LogStatsManager, "RemoveEquipmentStats skipped: No active equipment effect was found for Item=%s.", *Item->GetName());
 		return;
 	}
 
-	ASC->RemoveActiveGameplayEffect(*EffectHandle);
+	for (const FActiveGameplayEffectHandle& EffectHandle : *EffectHandles)
+	{
+		if (EffectHandle.IsValid())
+		{
+			ASC->RemoveActiveGameplayEffect(EffectHandle);
+		}
+	}
 	Manager.ActiveEquipmentEffects.Remove(Item->UniqueID);
 	Manager.ActiveEquipmentItems.Remove(Item->UniqueID);
+	RebuildEquipmentProductEffect(Manager);
 
 	UE_LOG(LogStatsManager, Log, TEXT("StatsManager: Removed equipment stats for %s (GUID: %s)"),
 		*Item->GetName(), *Item->UniqueID.ToString());
@@ -306,11 +387,19 @@ void FEquipmentStatsApplier::RefreshEquipmentStats(UStatsManager& Manager)
 	}
 
 	const int32 NumEffects = Manager.ActiveEquipmentEffects.Num();
-	for (const TPair<FGuid, FActiveGameplayEffectHandle>& Pair : Manager.ActiveEquipmentEffects)
+	if (Manager.ActiveEquipmentProductEffect.IsValid())
 	{
-		if (Pair.Value.IsValid())
+		ASC->RemoveActiveGameplayEffect(Manager.ActiveEquipmentProductEffect);
+		Manager.ActiveEquipmentProductEffect.Invalidate();
+	}
+	for (const TPair<FGuid, TArray<FActiveGameplayEffectHandle>>& Pair : Manager.ActiveEquipmentEffects)
+	{
+		for (const FActiveGameplayEffectHandle& EffectHandle : Pair.Value)
 		{
-			ASC->RemoveActiveGameplayEffect(Pair.Value);
+			if (EffectHandle.IsValid())
+			{
+				ASC->RemoveActiveGameplayEffect(EffectHandle);
+			}
 		}
 	}
 
@@ -383,6 +472,23 @@ FGameplayEffectSpecHandle FEquipmentStatsApplier::CreateEquipmentEffect(UStatsMa
 	int32 ModifiersAdded = 0;
 	for (const FPHAttributeData& Stat : Stats)
 	{
+		const bool bRequiresAuthoredEffect =
+			Stat.GameplayEffect != nullptr
+			|| Stat.Condition != EAffixCondition::AC_None
+			|| Stat.ModifiedLocation == EAffixScope::AS_Conditional
+			|| Stat.ModifiedLocation == EAffixScope::AS_Skill
+			|| Stat.ModifyType == EModifyType::MT_GrantSkill;
+		if (bRequiresAuthoredEffect)
+		{
+			if (!Stat.GameplayEffect)
+			{
+				PH_LOG_WARNING(LogStatsManager,
+					"CreateEquipmentEffect skipped affix '%s': conditional/skill behavior requires an authored GameplayEffect.",
+					*Stat.AffixName.ToString());
+			}
+			continue;
+		}
+
 		FGameplayAttribute Attribute = Stat.ModifiedAttribute;
 		if (!Attribute.IsValid() && Stat.AttributeName != NAME_None)
 		{
@@ -392,6 +498,13 @@ FGameplayEffectSpecHandle FEquipmentStatsApplier::CreateEquipmentEffect(UStatsMa
 		if (!Attribute.IsValid())
 		{
 			PH_LOG_WARNING(LogStatsManager, "CreateEquipmentEffect skipped Stat=%s because it could not resolve to a valid attribute.", *Stat.AttributeName.ToString());
+			continue;
+		}
+
+		// GAS combines separate multiplicative modifiers additively around 1.0.
+		// Fold equipment products into one exact multiplier effect instead.
+		if (IsProductModifier(Stat))
+		{
 			continue;
 		}
 
@@ -523,4 +636,73 @@ bool FEquipmentStatsApplier::ApplyStatModifier(UGameplayEffect* Effect, const FP
 		*Attribute.GetName(), *Stat.AttributeName.ToString(), ResolvedModifier.Magnitude, static_cast<int32>(ResolvedModifier.ModOp));
 
 	return true;
+}
+
+void FEquipmentStatsApplier::RebuildEquipmentProductEffect(UStatsManager& Manager)
+{
+	using namespace EquipmentStatsApplierPrivate;
+
+	UAbilitySystemComponent* ASC = FStatsAttributeResolver::GetAbilitySystemComponent(Manager);
+	if (!ASC)
+	{
+		return;
+	}
+
+	if (Manager.ActiveEquipmentProductEffect.IsValid())
+	{
+		ASC->RemoveActiveGameplayEffect(Manager.ActiveEquipmentProductEffect);
+		Manager.ActiveEquipmentProductEffect.Invalidate();
+	}
+
+	TMap<FGameplayAttribute, float> ProductsByAttribute;
+	for (const TPair<FGuid, TObjectPtr<UItemInstance>>& Pair : Manager.ActiveEquipmentItems)
+	{
+		const UItemInstance* Item = Pair.Value;
+		if (!IsValid(Item))
+		{
+			continue;
+		}
+
+		for (const FPHAttributeData& Stat : Item->Stats.GetAllStats())
+		{
+			if (!IsProductModifier(Stat))
+			{
+				continue;
+			}
+
+			FGameplayAttribute Attribute = Stat.ModifiedAttribute;
+			if (!Attribute.IsValid() && Stat.AttributeName != NAME_None)
+			{
+				FStatsAttributeResolver::ResolveAttributeByName(Manager, Stat.AttributeName, Attribute);
+			}
+			if (!Attribute.IsValid())
+			{
+				continue;
+			}
+
+			float& Product = ProductsByAttribute.FindOrAdd(Attribute, 1.f);
+			Product *= GetProductFactor(Stat);
+		}
+	}
+
+	if (ProductsByAttribute.IsEmpty())
+	{
+		return;
+	}
+
+	UGameplayEffect* ProductEffect = NewObject<UGameplayEffect>(Manager.GetOwner());
+	ProductEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
+	for (const TPair<FGameplayAttribute, float>& Pair : ProductsByAttribute)
+	{
+		FGameplayModifierInfo Modifier;
+		Modifier.Attribute = Pair.Key;
+		Modifier.ModifierOp = EGameplayModOp::Multiplicitive;
+		Modifier.ModifierMagnitude = FScalableFloat(FMath::Max(0.f, Pair.Value));
+		ProductEffect->Modifiers.Add(Modifier);
+	}
+
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	EffectContext.AddSourceObject(&Manager);
+	const FGameplayEffectSpec ProductSpec(ProductEffect, EffectContext, 1.f);
+	Manager.ActiveEquipmentProductEffect = ASC->ApplyGameplayEffectSpecToSelf(ProductSpec);
 }

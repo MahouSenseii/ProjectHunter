@@ -134,6 +134,16 @@ struct FPHAttributeData : public FTableRowBase
 		AttributeUID = FGuid::NewGuid();
 	}
 
+	/** Deterministic identity for seeded loot generation and replay tests. */
+	void GenerateUID(FRandomStream& RandStream)
+	{
+		AttributeUID = FGuid(
+			static_cast<uint32>(RandStream.RandHelper(MAX_int32)),
+			static_cast<uint32>(RandStream.RandHelper(MAX_int32)),
+			static_cast<uint32>(RandStream.RandHelper(MAX_int32)),
+			static_cast<uint32>(RandStream.RandHelper(MAX_int32)));
+	}
+
 	void RollValue()
 	{
 		RolledStatValue = FMath::RandRange(MinValue, MaxValue);

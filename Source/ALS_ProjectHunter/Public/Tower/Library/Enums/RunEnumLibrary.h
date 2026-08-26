@@ -14,6 +14,11 @@ enum class ERunState : uint8
 UENUM(BlueprintType)
 enum class ERunEndReason : uint8
 {
+	None         UMETA(DisplayName = "None"),
 	PlayerDeath  UMETA(DisplayName = "Player Death"),
-	Quit         UMETA(DisplayName = "Quit")
+	Quit         UMETA(DisplayName = "Quit"),
+	Completed    UMETA(DisplayName = "Completed"),
+	Extracted    UMETA(DisplayName = "Extracted"),
+	Disconnect   UMETA(DisplayName = "Disconnected"),
+	InvalidRun   UMETA(DisplayName = "Invalid Run")
 };

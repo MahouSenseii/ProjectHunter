@@ -96,6 +96,14 @@ public:
 		meta = (ClampMin = 0.0f))
 	float UseCooldown = 2.0f;
 
+	/** Server-side distance validation for direct interface calls. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Behaviour", meta = (ClampMin = "100.0"))
+	float MaxUseDistance = 650.0f;
+
+	/** How long a destination portal waits for all travelling player pawns after a map load. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Behaviour", meta = (ClampMin = "1.0"))
+	float ArrivalRetryWindow = 10.0f;
+
 	/** Whether this portal is active on BeginPlay. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Behaviour")
 	bool bActiveOnBeginPlay = true;
@@ -173,11 +181,11 @@ protected:
 	UFUNCTION()
 	void OnInteractableManagerTap(AActor* Interactor);
 
-	UFUNCTION(Server, Reliable)
-	void Server_ActivatePortal(APawn* Traveller);
-
 	/** Performs the actual teleport on the authority - called after validation. */
 	void ExecuteTravel(APawn* Traveller);
+	void TryActivatePortal(APawn* Traveller);
+	void TryResolvePendingArrival();
+	bool TeleportTraveller(APawn* Traveller, const FTransform& ArrivalTransform) const;
 
 	void SetStateInternal(EPortalState NewState);
 	void StartCooldown();
@@ -189,7 +197,12 @@ protected:
 	void UpdateVFXForState();
 	void PlayTravelFeedback();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayTravelFeedback();
+
 	FTimerHandle CooldownTimer;
+	FTimerHandle ArrivalRetryTimer;
+	int32 ArrivalRetryAttempts = 0;
 	// InputAction is configured directly on the InteractableManager component's
 	// Config.InputAction (Details panel -> InteractableManager -> Interaction ->
 	// Config -> Input Action).  No separate portal-level property is needed.
