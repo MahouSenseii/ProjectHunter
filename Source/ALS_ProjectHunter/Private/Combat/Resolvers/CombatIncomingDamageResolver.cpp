@@ -3,31 +3,17 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "Combat/Library/CombatDebug.h"
 #include "GameFramework/Actor.h"
 #include "Tags/PHGameplayTags.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogCombatIncomingDamageResolver, Log, All);
 
-#if !UE_BUILD_SHIPPING
-static TAutoConsoleVariable<int32> CVarDebugCombatReductions(
-	TEXT("Hunter.Debug.Combat"),
-	0,
-	TEXT("Log the per-stage combat damage breakdown for every ApplyHit\n")
-	TEXT("0: Disabled (default)\n")
-	TEXT("1: Log base roll, conversion, scaling, crit, mitigation, block, and routing"),
-	ECVF_Cheat
-);
-#endif
-
 namespace CombatIncomingDamageResolverPrivate
 {
 	bool IsCombatDebugLoggingEnabled()
 	{
-#if !UE_BUILD_SHIPPING
-		return CVarDebugCombatReductions.GetValueOnGameThread() != 0;
-#else
-		return false;
-#endif
+		return PHCombatDebug::IsCombatDebugLoggingEnabled();
 	}
 
 	constexpr float MinResistancePercent = -100.f;
@@ -57,10 +43,13 @@ namespace CombatIncomingDamageResolverPrivate
 			|| DamageType == EHunterDamageType::Light;
 	}
 
-	// Multiplier attributes default to 0 when untouched; 0 means "no modifier".
-	float GetNeutralMultiplier(const float Value)
+	// Multiplier attributes use a literal ratio: 1.0 neutral, 0.5 half, 0.0 none,
+	// 2.0 double. Every one of them is seeded to 1.0 in UHunterAttributeSet's
+	// constructor, so an incoming 0 is a real "take no damage" modifier and must
+	// survive. Only negative values are nonsense, and those clamp to 0.
+	float SanitizeMultiplier(const float Value)
 	{
-		return Value > 0.f ? Value : 1.f;
+		return FMath::Max(0.f, Value);
 	}
 
 	float GetPacketDamage(const FCombatDamagePacket& Packet, const EHunterDamageType DamageType)
@@ -388,34 +377,34 @@ float FCombatIncomingDamageResolver::GetDamageTakenMultiplier(
 		return 1.f;
 	}
 
-	float Multiplier = CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(
+	float Multiplier = CombatIncomingDamageResolverPrivate::SanitizeMultiplier(
 		DefenderAttributes->GetGlobalDamageTakenMultiplier());
 
 	if (CombatIncomingDamageResolverPrivate::IsElementalDamageType(DamageType))
 	{
-		Multiplier *= CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(
+		Multiplier *= CombatIncomingDamageResolverPrivate::SanitizeMultiplier(
 			DefenderAttributes->GetElementalDamageTakenMultiplier());
 	}
 
 	switch (DamageType)
 	{
 	case EHunterDamageType::Physical:
-		Multiplier *= CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(DefenderAttributes->GetPhysicalDamageTakenMultiplier());
+		Multiplier *= CombatIncomingDamageResolverPrivate::SanitizeMultiplier(DefenderAttributes->GetPhysicalDamageTakenMultiplier());
 		break;
 	case EHunterDamageType::Fire:
-		Multiplier *= CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(DefenderAttributes->GetFireDamageTakenMultiplier());
+		Multiplier *= CombatIncomingDamageResolverPrivate::SanitizeMultiplier(DefenderAttributes->GetFireDamageTakenMultiplier());
 		break;
 	case EHunterDamageType::Ice:
-		Multiplier *= CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(DefenderAttributes->GetIceDamageTakenMultiplier());
+		Multiplier *= CombatIncomingDamageResolverPrivate::SanitizeMultiplier(DefenderAttributes->GetIceDamageTakenMultiplier());
 		break;
 	case EHunterDamageType::Lightning:
-		Multiplier *= CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(DefenderAttributes->GetLightningDamageTakenMultiplier());
+		Multiplier *= CombatIncomingDamageResolverPrivate::SanitizeMultiplier(DefenderAttributes->GetLightningDamageTakenMultiplier());
 		break;
 	case EHunterDamageType::Light:
-		Multiplier *= CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(DefenderAttributes->GetLightDamageTakenMultiplier());
+		Multiplier *= CombatIncomingDamageResolverPrivate::SanitizeMultiplier(DefenderAttributes->GetLightDamageTakenMultiplier());
 		break;
 	case EHunterDamageType::Corruption:
-		Multiplier *= CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(DefenderAttributes->GetCorruptionDamageTakenMultiplier());
+		Multiplier *= CombatIncomingDamageResolverPrivate::SanitizeMultiplier(DefenderAttributes->GetCorruptionDamageTakenMultiplier());
 		break;
 	default:
 		break;
@@ -482,14 +471,14 @@ float FCombatIncomingDamageResolver::GetBlockTypeMultiplier(
 	switch (DamageType)
 	{
 	case EHunterDamageType::Physical:
-		return CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(DefenderAttributes->GetBlockPhysicalMultiplier());
+		return CombatIncomingDamageResolverPrivate::SanitizeMultiplier(DefenderAttributes->GetBlockPhysicalMultiplier());
 	case EHunterDamageType::Fire:
 	case EHunterDamageType::Ice:
 	case EHunterDamageType::Lightning:
 	case EHunterDamageType::Light:
-		return CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(DefenderAttributes->GetBlockElementalMultiplier());
+		return CombatIncomingDamageResolverPrivate::SanitizeMultiplier(DefenderAttributes->GetBlockElementalMultiplier());
 	case EHunterDamageType::Corruption:
-		return CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(DefenderAttributes->GetBlockCorruptionMultiplier());
+		return CombatIncomingDamageResolverPrivate::SanitizeMultiplier(DefenderAttributes->GetBlockCorruptionMultiplier());
 	default:
 		return 1.f;
 	}
@@ -570,7 +559,7 @@ void FCombatIncomingDamageResolver::ApplyStaminaBlockCost(
 		return;
 	}
 
-	const float CostMultiplier = CombatIncomingDamageResolverPrivate::GetNeutralMultiplier(
+	const float CostMultiplier = CombatIncomingDamageResolverPrivate::SanitizeMultiplier(
 		DefenderAttributes->GetBlockStaminaCostMultiplier());
 	const float RequestedCost = FMath::Max(0.f, InOutResult.TotalBlockedAmount * CostMultiplier);
 	const float CurrentStamina = FMath::Max(DefenderAttributes->GetStamina(), 0.f);
@@ -623,6 +612,53 @@ void FCombatIncomingDamageResolver::EvaluateStagger(
 	const float PoiseThreshold = FMath::Max(DefenderAttributes->GetPoise(), 0.f);
 	InOutResult.bShouldStagger = PoiseThreshold > 0.f
 		&& InOutResult.EffectivePoiseDamage >= PoiseThreshold;
+}
+
+EHitResponse FCombatIncomingDamageResolver::ResolveDefenderHitResponse(
+	AActor* DefenderActor,
+	const EHitResponse RequestedResponse,
+	bool& bOutOverrodeCaller)
+{
+	bOutOverrodeCaller = false;
+
+	const UAbilitySystemComponent* DefenderASC = GetAbilitySystemComponentFromActor(DefenderActor);
+	if (!DefenderASC)
+	{
+		// No defender ASC means no defender-owned defensive state exists to trust.
+		// Refuse a caller-asserted negation rather than granting it for free.
+		if (RequestedResponse == EHitResponse::Parry || RequestedResponse == EHitResponse::Invincible)
+		{
+			bOutOverrodeCaller = true;
+			return EHitResponse::Normal;
+		}
+		return RequestedResponse;
+	}
+
+	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+
+	// Invincibility outranks everything: i-frames negate a hit that would
+	// otherwise have been parried or blocked.
+	if (DefenderASC->HasMatchingGameplayTag(Tags.Condition_Self_IsInvincible))
+	{
+		bOutOverrodeCaller = RequestedResponse != EHitResponse::Invincible;
+		return EHitResponse::Invincible;
+	}
+
+	if (DefenderASC->HasMatchingGameplayTag(Tags.Condition_Self_IsParrying))
+	{
+		bOutOverrodeCaller = RequestedResponse != EHitResponse::Parry;
+		return EHitResponse::Parry;
+	}
+
+	// The defender is neither invincible nor parrying, so the attacking side
+	// does not get to claim either outcome.
+	if (RequestedResponse == EHitResponse::Parry || RequestedResponse == EHitResponse::Invincible)
+	{
+		bOutOverrodeCaller = true;
+		return EHitResponse::Normal;
+	}
+
+	return RequestedResponse;
 }
 
 void FCombatIncomingDamageResolver::ApplyHitResponse(

@@ -62,8 +62,13 @@ struct FItemBase : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Class")
 	EALSOverlayState OverlayState = EALSOverlayState::Default;
 
+	/** Default affix-roll budget when Initialize receives IR_None; runtime grade is score-derived. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Class")
 	EItemRarity ItemRarity = EItemRarity::IR_GradeF;
+
+	/** Starting item-power score before implicits and rolled affixes are added. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Power", meta = (ClampMin = "0.0"))
+	float BasePowerValue = 10.0f;
 
 	/** Only show for equipment types */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Class",

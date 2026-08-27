@@ -90,6 +90,7 @@ UItemInstance* FItemStackingHelper::SplitStack(UItemInstance& Item, int32 Amount
 	NewInstance->BaseItemHandle = Item.BaseItemHandle;
 	NewInstance->ItemLevel = Item.ItemLevel;
 	NewInstance->Rarity = Item.Rarity;
+	NewInstance->ItemPowerScore = Item.ItemPowerScore;
 	NewInstance->Quantity = Amount;
 	NewInstance->RemainingUses = Item.RemainingUses;
 	NewInstance->UniqueID = FGuid::NewGuid();

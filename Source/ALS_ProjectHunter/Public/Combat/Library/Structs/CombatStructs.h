@@ -91,6 +91,59 @@ struct ALS_PROJECTHUNTER_API FAnimationPiercingMulti
 	float Corruption = 0.f;
 };
 
+/** Where an attack landed relative to the defender's facing. */
+UENUM(BlueprintType)
+enum class EHitDirection : uint8
+{
+	Front UMETA(DisplayName = "Front"),
+	Flank UMETA(DisplayName = "Flank"),
+	Rear  UMETA(DisplayName = "Rear")
+};
+
+/**
+ * Tunable positional damage rules.
+ *
+ * Rear hits deal more damage. This is a damage modifier only - it is NOT a
+ * Souls-style backstab execution, and deliberately has no animation, camera or
+ * cinematic component. If a dedicated backstab is added later, Blueprint drives
+ * the attack flow and C++ keeps owning validation and damage.
+ */
+USTRUCT(BlueprintType)
+struct ALS_PROJECTHUNTER_API FCombatPositionalRules
+{
+	GENERATED_BODY()
+
+	/** Master toggle for positional damage. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Positional")
+	bool bEnablePositionalDamage = true;
+
+	/**
+	 * Total cone behind the defender that counts as a rear hit, in degrees.
+	 * 120 means the attacker must be within 60 degrees of directly behind.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Positional",
+		meta = (ClampMin = "0.0", ClampMax = "360.0", Units = "Degrees"))
+	float RearAttackAngle = 120.f;
+
+	/**
+	 * Total cone in front of the defender that counts as a front hit, in degrees.
+	 * Anything between the front and rear cones is a flank.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Positional",
+		meta = (ClampMin = "0.0", ClampMax = "360.0", Units = "Degrees"))
+	float FrontAttackAngle = 180.f;
+
+	/** Damage ratio for a rear hit. 1.0 neutral, 1.5 = +50% from behind. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Positional",
+		meta = (ClampMin = "0.0", UIMin = "1.0", UIMax = "3.0"))
+	float BackDamageMultiplier = 1.5f;
+
+	/** Damage ratio for a flank hit. 1.0 neutral. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Positional",
+		meta = (ClampMin = "0.0", UIMin = "1.0", UIMax = "3.0"))
+	float FlankDamageMultiplier = 1.f;
+};
+
 /** Animation-authored critical strike behavior for one hit. */
 USTRUCT(BlueprintType)
 struct ALS_PROJECTHUNTER_API FAnimationCritInfo
@@ -103,10 +156,20 @@ struct ALS_PROJECTHUNTER_API FAnimationCritInfo
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation")
 	bool bForceCrit = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation")
+	/** Additive crit chance bonus for this hit, in percentage points. 5 = +5% chance. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation",
+		meta = (ToolTip = "Additive crit chance bonus in percentage points. 5 means +5% chance. 0 = no bonus."))
 	float CritChance = 0.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation")
+	/**
+	 * Additive crit multiplier bonus for this hit, as a ratio delta above neutral.
+	 * 0 = no bonus, 0.5 = +50% crit damage, 1.0 = +100% crit damage.
+	 * This is a DELTA, unlike the CritMultiplier attribute which is an absolute
+	 * ratio (1.5 = 150%). Do not enter 50 here expecting +50%.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation",
+		meta = (UIMin = "0.0", UIMax = "3.0",
+			ToolTip = "Additive crit multiplier bonus as a ratio delta. 0 = no bonus, 0.5 = +50% crit damage. NOT a percentage - do not enter 50."))
 	float CritMultiplier = 0.f;
 };
 
@@ -398,6 +461,14 @@ struct ALS_PROJECTHUNTER_API FCombatResolveResult
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	EHitResponse HitResponse = EHitResponse::Normal;
+
+	/** Which side the hit landed on. Drives the positional damage bonus and hit reactions. */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
+	EHitDirection HitDirection = EHitDirection::Front;
+
+	/** Positional ratio actually applied to this hit. 1.0 when the hit was frontal. */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
+	float PositionalMultiplierApplied = 1.f;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	bool bShouldApplyAilments = true;

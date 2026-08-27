@@ -412,3 +412,8 @@ void UCharacterProgressionManager::OnRep_SpentStatPoints()
 
 	UE_LOG(LogCharacterProgressionManager, Log, TEXT("OnRep_SpentStatPoints: cache rebuilt (%d entries)"), SpentStatPoints.Num());
 }
+
+void UCharacterProgressionManager::OnRep_ProgressionValue()
+{
+	OnProgressionChanged.Broadcast();
+}

@@ -84,3 +84,68 @@ FText UCombatFunctionLibrary::FormatDamagePopupAmount(const float DamageAmount)
 {
 	return FText::AsNumber(FMath::RoundToInt(FMath::Max(DamageAmount, 0.f)));
 }
+
+EHitDirection UCombatFunctionLibrary::GetHitDirection(
+	const AActor* AttackerActor,
+	const AActor* DefenderActor,
+	const FCombatPositionalRules& Rules)
+{
+	if (!IsValid(AttackerActor) || !IsValid(DefenderActor))
+	{
+		return EHitDirection::Front;
+	}
+
+	// Flatten to the horizontal plane: a hit from directly above should not
+	// register as a rear hit just because the vertical component dominates.
+	FVector ToAttacker = AttackerActor->GetActorLocation() - DefenderActor->GetActorLocation();
+	ToAttacker.Z = 0.f;
+	if (!ToAttacker.Normalize())
+	{
+		return EHitDirection::Front;
+	}
+
+	FVector DefenderForward = DefenderActor->GetActorForwardVector();
+	DefenderForward.Z = 0.f;
+	if (!DefenderForward.Normalize())
+	{
+		return EHitDirection::Front;
+	}
+
+	const float ForwardDot = FVector::DotProduct(DefenderForward, ToAttacker);
+
+	// Rear first: when the two cones are configured to overlap, the defensive
+	// reading (attacker is behind me) is the one that should win.
+	const float RearHalfAngle = FMath::DegreesToRadians(
+		FMath::Clamp(Rules.RearAttackAngle, 0.f, 360.f) * 0.5f);
+	if (Rules.RearAttackAngle > 0.f && ForwardDot <= -FMath::Cos(RearHalfAngle))
+	{
+		return EHitDirection::Rear;
+	}
+
+	const float FrontHalfAngle = FMath::DegreesToRadians(
+		FMath::Clamp(Rules.FrontAttackAngle, 0.f, 360.f) * 0.5f);
+	if (Rules.FrontAttackAngle > 0.f && ForwardDot >= FMath::Cos(FrontHalfAngle))
+	{
+		return EHitDirection::Front;
+	}
+
+	return EHitDirection::Flank;
+}
+
+float UCombatFunctionLibrary::GetPositionalDamageMultiplier(
+	const EHitDirection HitDirection,
+	const FCombatPositionalRules& Rules)
+{
+	if (!Rules.bEnablePositionalDamage)
+	{
+		return 1.f;
+	}
+
+	switch (HitDirection)
+	{
+	case EHitDirection::Rear:  return FMath::Max(0.f, Rules.BackDamageMultiplier);
+	case EHitDirection::Flank: return FMath::Max(0.f, Rules.FlankDamageMultiplier);
+	case EHitDirection::Front:
+	default:                   return 1.f;
+	}
+}

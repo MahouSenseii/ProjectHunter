@@ -65,6 +65,30 @@ public:
 		const FAnimationDamageInfo& DamageInfo,
 		FCombatResolveResult& InOutResult);
 
+	/**
+	 * Authoritative defensive outcome for one hit, read from the DEFENDER's own
+	 * ability system rather than trusted from the caller.
+	 *
+	 * UCombatManager::ApplyHit runs on the attacker's component, so a
+	 * caller-supplied EHitResponse lets the attacking side assert a defensive
+	 * state the defender never had. This resolves it from defender tags instead:
+	 *
+	 *   Condition.Self.IsInvincible -> Invincible   (highest precedence)
+	 *   Condition.Self.IsParrying   -> Parry
+	 *
+	 * A caller that requests Parry or Invincible without the matching defender
+	 * tag is downgraded to Normal. Scripted immunity must therefore apply the
+	 * tag - which is already the documented contract in PHGameplayTags.h.
+	 * Normal and Blocked pass through untouched; block is separately resolved
+	 * from defender guard state and facing in CanBlockHit.
+	 *
+	 * @param bOutOverrodeCaller  True when the caller's request was changed.
+	 */
+	static EHitResponse ResolveDefenderHitResponse(
+		AActor* DefenderActor,
+		EHitResponse RequestedResponse,
+		bool& bOutOverrodeCaller);
+
 	// Parry and Invincible negate damage, ailments, and poise effects.
 	static void ApplyHitResponse(EHitResponse HitResponse, bool bCanApplyAilments, FCombatResolveResult& InOutResult);
 

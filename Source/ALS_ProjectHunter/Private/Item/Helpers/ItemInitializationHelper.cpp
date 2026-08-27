@@ -5,6 +5,7 @@
 #include "Item/ItemInstance.h"
 #include "Item/Helpers/ItemStackingHelper.h"
 #include "Item/Library/ItemLog.h"
+#include "Item/Library/FunctionLibraries/ItemPowerFunctionLibrary.h"
 
 bool FItemInitializationHelper::MigrateToCurrentVersion(UItemInstance& Item)
 {
@@ -30,6 +31,24 @@ bool FItemInitializationHelper::MigrateToCurrentVersion(UItemInstance& Item)
 		bMigrated = true;
 	}
 
+	if (Item.SerializationVersion < 3)
+	{
+		// Older saves predate explicit item-power authoring. Preserve their rough
+		// strength until they are recrafted by assigning a conservative legacy value.
+		Item.Stats.ForEachMutableStat([](FPHAttributeData& Affix)
+		{
+			if (FMath::IsNearlyZero(Affix.PowerValue))
+			{
+				const int32 Rank = Affix.GetRankPointValue();
+				Affix.PowerValue = (Affix.IsCorruptedAffix() || Rank < 0)
+					? -FMath::Max(1.0f, static_cast<float>(FMath::Abs(Rank)))
+					: 10.0f + (2.0f * FMath::Max(0, Rank));
+			}
+		});
+		Item.SerializationVersion = 3;
+		bMigrated = true;
+	}
+
 	if (bMigrated)
 	{
 		UE_LOG(LogItemInstance, Log,
@@ -44,6 +63,9 @@ void FItemInitializationHelper::PostLoadInit(UItemInstance& Item)
 {
 	MigrateToCurrentVersion(Item);
 	Item.InvalidateBaseCache();
+	CalculateCorruptionState(Item);
+	Item.RefreshIdentificationState();
+	UItemPowerFunctionLibrary::RecalculateItemGrade(&Item);
 }
 
 void FItemInitializationHelper::Initialize(UItemInstance& Item, FDataTableRowHandle InBaseItemHandle, int32 InItemLevel, EItemRarity InRarity, bool bGenerateAffixes)
@@ -129,6 +151,7 @@ void FItemInitializationHelper::InitializeWithCorruption(UItemInstance& Item, FD
 			const bool bRevealAllAffixes = !Base->bCanBeIdentified || Base->bForceAllAffixesIdentified;
 			Item.Stats.SetAllIdentified(bRevealAllAffixes);
 			Item.RefreshIdentificationState();
+			UItemPowerFunctionLibrary::RecalculateItemGrade(&Item);
 			break;
 		}
 
@@ -178,35 +201,17 @@ void FItemInitializationHelper::CalculateCorruptionState(UItemInstance& Item)
 	Item.bHasCorruptedAffixes = false;
 	Item.TotalCorruptionPoints = 0;
 
-	for (const FPHAttributeData& Affix : Item.Stats.Prefixes)
+	Item.Stats.ForEachStat([&Item](const FPHAttributeData& Affix)
 	{
 		const int32 Points = Affix.GetRankPointValue();
-		if (Points < 0)
+		if (Affix.IsCorruptedAffix() || Points < 0)
 		{
 			Item.bHasCorruptedAffixes = true;
-			Item.TotalCorruptionPoints += Points;
+			// Type-authored corruption may intentionally use RP_0. It still locks
+			// crafting, while negative rank points continue to describe severity.
+			Item.TotalCorruptionPoints += FMath::Min(0, Points);
 		}
-	}
-
-	for (const FPHAttributeData& Affix : Item.Stats.Suffixes)
-	{
-		const int32 Points = Affix.GetRankPointValue();
-		if (Points < 0)
-		{
-			Item.bHasCorruptedAffixes = true;
-			Item.TotalCorruptionPoints += Points;
-		}
-	}
-
-	for (const FPHAttributeData& Affix : Item.Stats.Crafted)
-	{
-		const int32 Points = Affix.GetRankPointValue();
-		if (Points < 0)
-		{
-			Item.bHasCorruptedAffixes = true;
-			Item.TotalCorruptionPoints += Points;
-		}
-	}
+	});
 
 	if (Item.bHasCorruptedAffixes)
 	{
@@ -218,30 +223,13 @@ void FItemInitializationHelper::CalculateCorruptionState(UItemInstance& Item)
 TArray<FPHAttributeData> FItemInitializationHelper::GetCorruptedAffixes(const UItemInstance& Item)
 {
 	TArray<FPHAttributeData> Corrupted;
-
-	for (const FPHAttributeData& Affix : Item.Stats.Prefixes)
+	Item.Stats.ForEachStat([&Corrupted](const FPHAttributeData& Affix)
 	{
-		if (Affix.IsCorruptedAffix())
+		if (Affix.IsCorruptedAffix() || Affix.GetRankPointValue() < 0)
 		{
 			Corrupted.Add(Affix);
 		}
-	}
-
-	for (const FPHAttributeData& Affix : Item.Stats.Suffixes)
-	{
-		if (Affix.IsCorruptedAffix())
-		{
-			Corrupted.Add(Affix);
-		}
-	}
-
-	for (const FPHAttributeData& Affix : Item.Stats.Crafted)
-	{
-		if (Affix.IsCorruptedAffix())
-		{
-			Corrupted.Add(Affix);
-		}
-	}
+	});
 
 	return Corrupted;
 }
@@ -266,4 +254,5 @@ void FItemInitializationHelper::PostLoadInitialize(UItemInstance& Item)
 
 	CalculateCorruptionState(Item);
 	Item.RefreshIdentificationState();
+	UItemPowerFunctionLibrary::RecalculateItemGrade(&Item);
 }

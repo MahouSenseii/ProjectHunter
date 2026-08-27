@@ -26,12 +26,44 @@ namespace HunterAttributeSetPrivate
 		Attribute.SetCurrentValue(NewValue);
 	}
 
-	void AssignAttributeDirectIfNeeded(FGameplayAttributeData& Attribute, float NewValue)
+	/**
+	 * Writes a derived vital through the ability system so the change is visible
+	 * to everything that watches attributes.
+	 *
+	 * Writing FGameplayAttributeData::SetBaseValue/SetCurrentValue directly skips
+	 * the ASC entirely, so GetGameplayAttributeValueChangeDelegate never fires and
+	 * anything bound to it - the HUD resource widgets, TagManager's resource
+	 * conditions - keeps rendering a stale value on the server and in standalone
+	 * play. It also leaves the aggregator's base out of sync, so the next
+	 * aggregator recompute silently reverts the write.
+	 *
+	 * SetNumericAttributeBase re-enters PreAttributeChange/PostAttributeChange.
+	 * That is safe here because UpdateDerivedVitalAttributes holds
+	 * bIsUpdatingDerivedVitalAttributes for the whole pass, and
+	 * ShouldSkipDerivedVitalUpdate turns the re-entrant call into a no-op.
+	 *
+	 * The direct write survives only as an initialization fallback for the CDO and
+	 * for the window before the ASC exists, where there is no aggregator to update
+	 * and no listener to notify.
+	 */
+	void AssignDerivedAttributeIfNeeded(
+		UAbilitySystemComponent* ASC,
+		const FGameplayAttribute& Attribute,
+		FGameplayAttributeData& AttributeData,
+		float NewValue)
 	{
-		if (ShouldAssignAttributeDataValue(Attribute, NewValue))
+		if (!ShouldAssignAttributeDataValue(AttributeData, NewValue))
 		{
-			AssignAttributeDirect(Attribute, NewValue);
+			return;
 		}
+
+		if (ASC && Attribute.IsValid())
+		{
+			ASC->SetNumericAttributeBase(Attribute, NewValue);
+			return;
+		}
+
+		AssignAttributeDirect(AttributeData, NewValue);
 	}
 
 }
@@ -248,6 +280,8 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, MaxReservedArcaneShield,      COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, FlatReservedArcaneShield,     COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, PercentageReservedArcaneShield,COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, MaxArcaneShieldRegenRate,     COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, MaxArcaneShieldRegenAmount,   COND_OwnerOnly, REPNOTIFY_Always);
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, GlobalDamages,        COND_OwnerOnly, REPNOTIFY_Always);
 
@@ -596,6 +630,7 @@ void UHunterAttributeSet::UpdateDerivedVitalAttributes(const FGameplayAttribute&
 
 void UHunterAttributeSet::UpdateHealthDerivedAttributes()
 {
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
 	const float RawMaxHealth = FMath::Max(GetMaxHealth(), 0.0f);
 	const FPHResourceReservationResult Reservation = UPHResourceFunctionLibrary::ResolveResourceReservation(
 		FPHResourceReservationInput(
@@ -611,12 +646,17 @@ void UHunterAttributeSet::UpdateHealthDerivedAttributes()
 
 	if (Reservation.bUsesComponentReservation)
 	{
-		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedHealth, Reservation.ReservedValue);
+		HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+			ASC, GetReservedHealthAttribute(), ReservedHealth, Reservation.ReservedValue);
 	}
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveHealth, Reservation.MaxEffectiveValue);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Health, TargetHealth);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(HealthRegenRate, TargetHealthRegenRate);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(HealthRegenAmount, TargetHealthRegenAmount);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetMaxEffectiveHealthAttribute(), MaxEffectiveHealth, Reservation.MaxEffectiveValue);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetHealthAttribute(), Health, TargetHealth);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetHealthRegenRateAttribute(), HealthRegenRate, TargetHealthRegenRate);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetHealthRegenAmountAttribute(), HealthRegenAmount, TargetHealthRegenAmount);
 
 	UE_LOG(
 		LogHunterAttributeSet,
@@ -632,6 +672,7 @@ void UHunterAttributeSet::UpdateHealthDerivedAttributes()
 
 void UHunterAttributeSet::UpdateManaDerivedAttributes()
 {
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
 	const float RawMaxMana = FMath::Max(GetMaxMana(), 0.0f);
 	const FPHResourceReservationResult Reservation = UPHResourceFunctionLibrary::ResolveResourceReservation(
 		FPHResourceReservationInput(
@@ -647,12 +688,17 @@ void UHunterAttributeSet::UpdateManaDerivedAttributes()
 
 	if (Reservation.bUsesComponentReservation)
 	{
-		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedMana, Reservation.ReservedValue);
+		HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+			ASC, GetReservedManaAttribute(), ReservedMana, Reservation.ReservedValue);
 	}
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveMana, Reservation.MaxEffectiveValue);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Mana, TargetMana);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ManaRegenRate, TargetManaRegenRate);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ManaRegenAmount, TargetManaRegenAmount);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetMaxEffectiveManaAttribute(), MaxEffectiveMana, Reservation.MaxEffectiveValue);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetManaAttribute(), Mana, TargetMana);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetManaRegenRateAttribute(), ManaRegenRate, TargetManaRegenRate);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetManaRegenAmountAttribute(), ManaRegenAmount, TargetManaRegenAmount);
 
 	UE_LOG(
 		LogHunterAttributeSet,
@@ -668,6 +714,7 @@ void UHunterAttributeSet::UpdateManaDerivedAttributes()
 
 void UHunterAttributeSet::UpdateStaminaDerivedAttributes()
 {
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
 	const float RawMaxStamina = FMath::Max(GetMaxStamina(), 0.0f);
 	const FPHResourceReservationResult Reservation = UPHResourceFunctionLibrary::ResolveResourceReservation(
 		FPHResourceReservationInput(
@@ -683,12 +730,17 @@ void UHunterAttributeSet::UpdateStaminaDerivedAttributes()
 
 	if (Reservation.bUsesComponentReservation)
 	{
-		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedStamina, Reservation.ReservedValue);
+		HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+			ASC, GetReservedStaminaAttribute(), ReservedStamina, Reservation.ReservedValue);
 	}
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveStamina, Reservation.MaxEffectiveValue);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(Stamina, TargetStamina);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(StaminaRegenRate, TargetStaminaRegenRate);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(StaminaRegenAmount, TargetStaminaRegenAmount);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetMaxEffectiveStaminaAttribute(), MaxEffectiveStamina, Reservation.MaxEffectiveValue);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetStaminaAttribute(), Stamina, TargetStamina);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetStaminaRegenRateAttribute(), StaminaRegenRate, TargetStaminaRegenRate);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetStaminaRegenAmountAttribute(), StaminaRegenAmount, TargetStaminaRegenAmount);
 
 	UE_LOG(
 		LogHunterAttributeSet,
@@ -706,6 +758,7 @@ void UHunterAttributeSet::UpdateStaminaDerivedAttributes()
 
 void UHunterAttributeSet::UpdateArcaneShieldDerivedAttributes()
 {
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
 	const float RawMaxArcaneShield = FMath::Max(GetMaxArcaneShield(), 0.0f);
 	const FPHResourceReservationResult Reservation = UPHResourceFunctionLibrary::ResolveResourceReservation(
 		FPHResourceReservationInput(
@@ -720,13 +773,18 @@ void UHunterAttributeSet::UpdateArcaneShieldDerivedAttributes()
 
 	if (Reservation.bUsesComponentReservation)
 	{
-		HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ReservedArcaneShield, Reservation.ReservedValue);
+		HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+			ASC, GetReservedArcaneShieldAttribute(), ReservedArcaneShield, Reservation.ReservedValue);
 	}
 
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(MaxEffectiveArcaneShield, Reservation.MaxEffectiveValue);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ArcaneShield, TargetArcaneShield);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ArcaneShieldRegenRate, TargetArcaneShieldRegenRate);
-	HunterAttributeSetPrivate::AssignAttributeDirectIfNeeded(ArcaneShieldRegenAmount, TargetArcaneShieldRegenAmount);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetMaxEffectiveArcaneShieldAttribute(), MaxEffectiveArcaneShield, Reservation.MaxEffectiveValue);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetArcaneShieldAttribute(), ArcaneShield, TargetArcaneShield);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetArcaneShieldRegenRateAttribute(), ArcaneShieldRegenRate, TargetArcaneShieldRegenRate);
+	HunterAttributeSetPrivate::AssignDerivedAttributeIfNeeded(
+		ASC, GetArcaneShieldRegenAmountAttribute(), ArcaneShieldRegenAmount, TargetArcaneShieldRegenAmount);
 
 	UE_LOG(
 		LogHunterAttributeSet,

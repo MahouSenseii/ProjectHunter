@@ -497,10 +497,74 @@ namespace BaseStatsDataPrivate
 			Entry->BaseValue = Value;
 		}
 	}
+
+	struct FRequiredStatDefault
+	{
+		const TCHAR* StatName;
+		float Value;
+	};
+
+	static constexpr FRequiredStatDefault RequiredNonZeroDefaults[] =
+	{
+		{TEXT("PlayerLevel"), 1.0f},
+		{TEXT("XPGainMultiplier"), 1.0f},
+		{TEXT("XPPenalty"), 1.0f},
+		{TEXT("BlockStaminaCostMultiplier"), 1.0f},
+		{TEXT("BlockAngle"), 120.0f},
+		{TEXT("BlockPhysicalMultiplier"), 1.0f},
+		{TEXT("BlockElementalMultiplier"), 1.0f},
+		{TEXT("BlockCorruptionMultiplier"), 1.0f},
+		{TEXT("GlobalMoreDamage"), 1.0f},
+		{TEXT("PhysicalMoreDamage"), 1.0f},
+		{TEXT("ElementalMoreDamage"), 1.0f},
+		{TEXT("FireMoreDamage"), 1.0f},
+		{TEXT("IceMoreDamage"), 1.0f},
+		{TEXT("LightningMoreDamage"), 1.0f},
+		{TEXT("LightMoreDamage"), 1.0f},
+		{TEXT("CorruptionMoreDamage"), 1.0f},
+		{TEXT("GlobalDamageTakenMultiplier"), 1.0f},
+		{TEXT("PhysicalDamageTakenMultiplier"), 1.0f},
+		{TEXT("ElementalDamageTakenMultiplier"), 1.0f},
+		{TEXT("FireDamageTakenMultiplier"), 1.0f},
+		{TEXT("IceDamageTakenMultiplier"), 1.0f},
+		{TEXT("LightningDamageTakenMultiplier"), 1.0f},
+		{TEXT("LightDamageTakenMultiplier"), 1.0f},
+		{TEXT("CorruptionDamageTakenMultiplier"), 1.0f},
+		{TEXT("CritMultiplier"), 1.5f},
+		{TEXT("SpellsCritMultiplier"), 1.5f},
+	};
+
+	static void ApplyRequiredNonZeroDefaults(TArray<FStatInitializationEntry>& Entries)
+	{
+		for (const FRequiredStatDefault& Default : RequiredNonZeroDefaults)
+		{
+			ApplyStarterOverride(Entries, Default.StatName, Default.Value);
+		}
+	}
+
+	static bool HasZeroedLegacyCombatDefaults(const TArray<FStatInitializationEntry>& Entries)
+	{
+		auto IsAuthoredZero = [&Entries](const FName StatName)
+		{
+			const FStatInitializationEntry* Entry = Entries.FindByPredicate(
+				[StatName](const FStatInitializationEntry& Candidate)
+				{
+					return Candidate.StatName == StatName;
+				});
+			return Entry && Entry->bOverrideValue && FMath::IsNearlyZero(Entry->BaseValue);
+		};
+
+		// These three unrelated neutral ratios being authored as zero is the
+		// signature produced by the old reflected-row setup, not a normal build.
+		return IsAuthoredZero(TEXT("GlobalMoreDamage"))
+			&& IsAuthoredZero(TEXT("GlobalDamageTakenMultiplier"))
+			&& IsAuthoredZero(TEXT("CritMultiplier"));
+	}
 }
 
 UBaseStatsData::UBaseStatsData()
 	: bSkipInitializationEffectsThatModifyAuthoredStats(true)
+	, StatsSchemaVersion(0)
 {
 }
 
@@ -911,6 +975,8 @@ void UBaseStatsData::ValidateStats()
 void UBaseStatsData::StartStats()
 {
 	RefreshFromAttributeSetDefinition();
+	BaseStatsDataPrivate::ApplyRequiredNonZeroDefaults(BaseAttributes);
+	StatsSchemaVersion = CurrentStatsSchemaVersion;
 
 	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("PlayerLevel"),       1.0f);
 	BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("XPGainMultiplier"),  1.0f);
@@ -987,6 +1053,26 @@ void UBaseStatsData::PostLoad()
 	else
 	{
 		ValidateStats();
+	}
+
+	if (StatsSchemaVersion < CurrentStatsSchemaVersion)
+	{
+		if (BaseStatsDataPrivate::HasZeroedLegacyCombatDefaults(BaseAttributes))
+		{
+			BaseStatsDataPrivate::ApplyRequiredNonZeroDefaults(BaseAttributes);
+			UE_LOG(
+				LogBaseStatsData,
+				Warning,
+				TEXT("Migrated legacy zero-valued neutral combat multipliers in %s. Save the asset to persist schema version %d."),
+				*GetPathName(),
+				CurrentStatsSchemaVersion);
+
+#if WITH_EDITOR
+			MarkPackageDirty();
+#endif
+		}
+
+		StatsSchemaVersion = CurrentStatsSchemaVersion;
 	}
 }
 

@@ -19,7 +19,7 @@ TArray<FPHAttributeData*> UItemAffixSelectionFunctionLibrary::BuildAffixPoolByCo
 			continue;
 		}
 
-		if (ExcludeAffixes.Contains(Affix->AttributeName))
+		if (ExcludeAffixes.Contains(Affix->GetStableAffixID()))
 		{
 			continue;
 		}

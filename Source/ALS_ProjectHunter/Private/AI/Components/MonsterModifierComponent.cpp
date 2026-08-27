@@ -10,6 +10,8 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "Tower/Library/FunctionLibraries/RunSeedFunctionLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogMonsterModifier);
 
@@ -18,7 +20,48 @@ DEFINE_LOG_CATEGORY(LogMonsterModifier);
 UMonsterModifierComponent::UMonsterModifierComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	SetIsReplicatedByDefault(false);
+
+	// Rarity tier and display name drive remote nameplates and rarity beams, so
+	// the component has to replicate. The mod rows and stat variation behind them
+	// stay server-only - see the property comments in the header.
+	SetIsReplicatedByDefault(true);
+}
+
+void UMonsterModifierComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UMonsterModifierComponent, AssignedTier);
+	DOREPLIFETIME(UMonsterModifierComponent, FullDisplayName);
+}
+
+void UMonsterModifierComponent::OnRep_MonsterPresentation()
+{
+	OnMonsterModsApplied.Broadcast(AssignedTier, FullDisplayName);
+}
+
+void UMonsterModifierComponent::SetMonsterSeed(const int32 InSeed)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	MonsterSeed = InSeed;
+}
+
+FRandomStream UMonsterModifierComponent::MakeRollStream() const
+{
+	// Seeded path: every roll for this monster derives from the run seed, so the
+	// same RunSeed reproduces the same monster composition and modifiers.
+	if (MonsterSeed != 0)
+	{
+		return URunSeedFunctionLibrary::MakeModifierStream(MonsterSeed);
+	}
+
+	// Unseeded path for level-placed and out-of-run monsters. Seeding from the
+	// global RNG keeps behaviour identical to before the seed chain existed.
+	return FRandomStream(FMath::Rand());
 }
 
 void UMonsterModifierComponent::BeginPlay()
@@ -41,7 +84,12 @@ void UMonsterModifierComponent::RollAndApplyMods()
 
 	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(GetOwner());
 	UAbilitySystemComponent* ASC = ASCInterface ? ASCInterface->GetAbilitySystemComponent() : nullptr;
-	RollBaseStatVariation();
+
+	// One stream drives tier, mod count and mod selection for this monster so the
+	// whole roll is reproducible from MonsterSeed.
+	FRandomStream RollStream = MakeRollStream();
+
+	RollBaseStatVariation(RollStream);
 
 	if (!CachedSpawnConfig)
 	{
@@ -66,7 +114,7 @@ void UMonsterModifierComponent::RollAndApplyMods()
 	}
 	else
 	{
-		AssignedTier = Config->RollMonsterTier(AreaLevel, NearbyPlayerMagicFind);
+		AssignedTier = Config->RollMonsterTierSeeded(AreaLevel, NearbyPlayerMagicFind, RollStream);
 	}
 
 	if (AssignedTier == EMonsterTier::MT_Normal)
@@ -92,10 +140,10 @@ void UMonsterModifierComponent::RollAndApplyMods()
 	switch (AssignedTier)
 	{
 	case EMonsterTier::MT_Magic:
-		NumMods = FMath::RandRange(Config->MagicModMin, Config->MagicModMax);
+		NumMods = RollStream.RandRange(Config->MagicModMin, Config->MagicModMax);
 		break;
 	case EMonsterTier::MT_Rare:
-		NumMods = FMath::RandRange(Config->RareModMin, Config->RareModMax);
+		NumMods = RollStream.RandRange(Config->RareModMin, Config->RareModMax);
 		break;
 	case EMonsterTier::MT_Unique:
 		NumMods = 0;
@@ -104,7 +152,7 @@ void UMonsterModifierComponent::RollAndApplyMods()
 		break;
 	}
 
-	TArray<FMonsterModRow> RolledMods = RollMods(NumMods, AssignedTier, ModTable);
+	TArray<FMonsterModRow> RolledMods = RollMods(NumMods, AssignedTier, ModTable, RollStream);
 	AppliedMods.Append(RolledMods);
 
 	for (const FMonsterModRow& Mod : AppliedMods)
@@ -166,6 +214,12 @@ void UMonsterModifierComponent::RerollMods()
 
 void UMonsterModifierComponent::RollBaseStatVariation()
 {
+	FRandomStream Stream = MakeRollStream();
+	RollBaseStatVariation(Stream);
+}
+
+void UMonsterModifierComponent::RollBaseStatVariation(FRandomStream& Stream)
+{
 	if (BaseStatVariation.bRolled)
 	{
 		return;
@@ -177,17 +231,17 @@ void UMonsterModifierComponent::RollBaseStatVariation()
 		return;
 	}
 
-	auto RollSymmetric = [](const float VariancePct) -> float
+	auto RollSymmetric = [&Stream](const float VariancePct) -> float
 	{
 		if (VariancePct <= 0.0f) { return 1.0f; }
-		return 1.0f + FMath::FRandRange(-VariancePct, VariancePct);
+		return 1.0f + Stream.FRandRange(-VariancePct, VariancePct);
 	};
 
 	BaseStatVariation.HPMultiplier        = RollSymmetric(HPVariancePct);
 	BaseStatVariation.DamageMultiplier    = RollSymmetric(DamageVariancePct);
 	BaseStatVariation.MoveSpeedMultiplier = RollSymmetric(MoveSpeedVariancePct);
 	BaseStatVariation.ResistBonusPct      = (ResistVariancePct > 0.0f)
-		? FMath::FRandRange(-ResistVariancePct, ResistVariancePct)
+		? Stream.FRandRange(-ResistVariancePct, ResistVariancePct)
 		: 0.0f;
 	BaseStatVariation.bRolled = true;
 
@@ -215,7 +269,7 @@ void UMonsterModifierComponent::RollBaseStatVariation()
 }
 
 TArray<FMonsterModRow> UMonsterModifierComponent::RollMods(int32 NumMods,
-	EMonsterTier Tier, const UDataTable* Table) const
+	EMonsterTier Tier, const UDataTable* Table, FRandomStream& Stream) const
 {
 	TArray<FMonsterModRow> Result;
 	if (!Table || NumMods <= 0)
@@ -265,7 +319,7 @@ TArray<FMonsterModRow> UMonsterModifierComponent::RollMods(int32 NumMods,
 			break;
 		}
 
-		int32 Roll = FMath::RandRange(0, RemainingWeight - 1);
+		int32 Roll = Stream.RandRange(0, RemainingWeight - 1);
 		int32 Cumulative = 0;
 		for (const auto& Pair : Pool)
 		{

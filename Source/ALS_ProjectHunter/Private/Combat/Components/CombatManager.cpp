@@ -36,6 +36,7 @@ void UCombatIncomingHitEditContext::RejectHit()
 UCombatManager::UCombatManager()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	SetIsReplicatedByDefault(true);
 
 	// Owned sub-object, not a sibling actor component: CombatManager stays the
 	// only actor component in this domain, and status effects still have one
@@ -72,6 +73,39 @@ bool UCombatManager::ApplyHit(
 	const EHitResponse HitResponse,
 	const bool bCanApplyAilments)
 {
+	OutResult = FCombatResolveResult{};
+	if (!IsValid(AttackerActor) || !IsValid(DefenderActor))
+	{
+		return false;
+	}
+
+	// Existing combat Blueprints sometimes call the manager obtained from the
+	// hit/defender actor. Always resolve through the attacker-owned manager so
+	// its effects, status tuning, authority channel, and duplicate tracking are used.
+	if (GetOwner() != AttackerActor)
+	{
+		if (UCombatManager* AttackerManager = AttackerActor->FindComponentByClass<UCombatManager>())
+		{
+			if (AttackerManager != this)
+			{
+				return AttackerManager->ApplyHit(
+					AttackerActor, DefenderActor, DamageInfo, OutResult,
+					HitResponse, bCanApplyAilments);
+			}
+		}
+
+		UE_LOG(LogCombatManager, Warning,
+			TEXT("ApplyHit could not route to an attacker-owned CombatManager. InvokedOwner=%s Attacker=%s"),
+			*GetNameSafe(GetOwner()), *GetNameSafe(AttackerActor));
+		return false;
+	}
+
+	if (!AttackerActor->HasAuthority())
+	{
+		ServerApplyHit(DefenderActor, DamageInfo, HitResponse, bCanApplyAilments);
+		return true;
+	}
+
 	FCombatHitContext HitContext = CreateCombatHitContext();
 	return ApplyHitInternal(
 		AttackerActor, DefenderActor, DamageInfo, HitContext,
@@ -87,6 +121,37 @@ bool UCombatManager::ApplyHitWithContext(
 	const EHitResponse HitResponse,
 	const bool bCanApplyAilments)
 {
+	OutResult = FCombatResolveResult{};
+	if (!IsValid(AttackerActor) || !IsValid(DefenderActor))
+	{
+		return false;
+	}
+
+	if (GetOwner() != AttackerActor)
+	{
+		if (UCombatManager* AttackerManager = AttackerActor->FindComponentByClass<UCombatManager>())
+		{
+			if (AttackerManager != this)
+			{
+				return AttackerManager->ApplyHitWithContext(
+					AttackerActor, DefenderActor, DamageInfo, HitContext, OutResult,
+					HitResponse, bCanApplyAilments);
+			}
+		}
+
+		UE_LOG(LogCombatManager, Warning,
+			TEXT("ApplyHitWithContext could not route to an attacker-owned CombatManager. InvokedOwner=%s Attacker=%s"),
+			*GetNameSafe(GetOwner()), *GetNameSafe(AttackerActor));
+		return false;
+	}
+
+	if (!AttackerActor->HasAuthority())
+	{
+		ServerApplyHitWithContext(
+			DefenderActor, DamageInfo, HitContext, HitResponse, bCanApplyAilments);
+		return true;
+	}
+
 	FCombatHitContext EffectiveContext = HitContext;
 	if (!EffectiveContext.AttackId.IsValid() || EffectiveContext.RandomSeed == 0)
 	{
@@ -104,6 +169,29 @@ bool UCombatManager::ApplyHitWithContext(
 	return ApplyHitInternal(
 		AttackerActor, DefenderActor, DamageInfo, EffectiveContext,
 		OutResult, HitResponse, bCanApplyAilments);
+}
+
+void UCombatManager::ServerApplyHit_Implementation(
+	AActor* DefenderActor,
+	const FAnimationDamageInfo& DamageInfo,
+	const EHitResponse HitResponse,
+	const bool bCanApplyAilments)
+{
+	FCombatResolveResult IgnoredResult;
+	ApplyHit(GetOwner(), DefenderActor, DamageInfo, IgnoredResult, HitResponse, bCanApplyAilments);
+}
+
+void UCombatManager::ServerApplyHitWithContext_Implementation(
+	AActor* DefenderActor,
+	const FAnimationDamageInfo& DamageInfo,
+	const FCombatHitContext& HitContext,
+	const EHitResponse HitResponse,
+	const bool bCanApplyAilments)
+{
+	FCombatResolveResult IgnoredResult;
+	ApplyHitWithContext(
+		GetOwner(), DefenderActor, DamageInfo, HitContext, IgnoredResult,
+		HitResponse, bCanApplyAilments);
 }
 
 FCombatHitContext UCombatManager::CreateCombatHitContext(const int32 RandomSeed)
@@ -286,6 +374,27 @@ bool UCombatManager::ApplyHitInternal(
 		bEffectiveCanApplyAilments = EditContext->bCanApplyAilments;
 	}
 
+	// Defensive outcome is the defender's to declare, not the attacker's.
+	// This runs after the edit hook so neither a caller nor a listener can
+	// assert a parry or i-frame the defender does not actually have.
+	{
+		bool bOverrodeCaller = false;
+		const EHitResponse AuthoritativeResponse =
+			FCombatIncomingDamageResolver::ResolveDefenderHitResponse(
+				DefenderActor, EffectiveHitResponse, bOverrodeCaller);
+
+		if (bOverrodeCaller)
+		{
+			UE_LOG(LogCombatManager, Verbose,
+				TEXT("ApplyHit hit response resolved from defender state: requested=%s authoritative=%s (Attacker=%s Defender=%s)"),
+				*UEnum::GetDisplayValueAsText(EffectiveHitResponse).ToString(),
+				*UEnum::GetDisplayValueAsText(AuthoritativeResponse).ToString(),
+				*GetNameSafe(AttackerActor), *GetNameSafe(DefenderActor));
+		}
+
+		EffectiveHitResponse = AuthoritativeResponse;
+	}
+
 	RememberProcessedTarget(HitContext, DefenderActor);
 	FRandomStream RandomStream(ResolveHitSeed(HitContext, DefenderActor));
 
@@ -297,13 +406,44 @@ bool UCombatManager::ApplyHitInternal(
 	{
 		OutgoingPacket.Scale(MonsterModifiers->GetCombinedDamageMultiplier());
 	}
-	UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHit outgoing packet: %s"),
-		*FCombatOutgoingDamageCalculator::FormatPacket(OutgoingPacket));
+	// Positional bonus: rear hits hurt more. Applied after scaling and crit but
+	// before mitigation, so armour and resistances still work against the
+	// boosted number. This is a damage modifier only - not a backstab execution.
+	const EHitDirection HitDirection =
+		UCombatFunctionLibrary::GetHitDirection(AttackerActor, DefenderActor, PositionalRules);
+	const float PositionalMultiplier =
+		UCombatFunctionLibrary::GetPositionalDamageMultiplier(HitDirection, PositionalRules);
+	if (!FMath::IsNearlyEqual(PositionalMultiplier, 1.f))
+	{
+		OutgoingPacket.Scale(PositionalMultiplier);
+	}
+
+	UE_LOG(LogCombatManager, Verbose, TEXT("ApplyHit outgoing packet: %s (direction=%s x%.2f)"),
+		*FCombatOutgoingDamageCalculator::FormatPacket(OutgoingPacket),
+		*UEnum::GetDisplayValueAsText(HitDirection).ToString(),
+		PositionalMultiplier);
+
+	if (OutgoingPacket.TotalPreMitigation <= KINDA_SMALL_NUMBER)
+	{
+		UE_LOG(
+			LogCombatManager,
+			Warning,
+			TEXT("ApplyHit resolved zero outgoing damage. Attacker=%s Defender=%s WeaponPhysical=%.2f-%.2f WeaponEffectiveness=%.1f%% GlobalMore=%.3f PhysicalMore=%.3f. Check the attack DamageInfo and base-stat multiplier defaults."),
+			*GetNameSafe(AttackerActor),
+			*GetNameSafe(DefenderActor),
+			AttackerAttributes->GetMinPhysicalDamage(),
+			AttackerAttributes->GetMaxPhysicalDamage(),
+			EffectiveInfo.WeaponDamageEffectivenessPercent,
+			AttackerAttributes->GetGlobalMoreDamage(),
+			AttackerAttributes->GetPhysicalMoreDamage());
+	}
 
 	// Incoming: armour/resists -> block -> taken multipliers -> routing.
 	OutResult = FCombatIncomingDamageResolver::MitigateDamagePacket(
 		OutgoingPacket, AttackerActor, DefenderActor,
 		AttackerAttributes, DefenderAttributes, EffectiveInfo);
+	OutResult.HitDirection = HitDirection;
+	OutResult.PositionalMultiplierApplied = PositionalMultiplier;
 
 	// Stagger and hit-response gates run before application so both the
 	// authoritative path and non-authority previews agree on the outcome.
@@ -501,7 +641,8 @@ void UCombatManager::ApplyAilments(
 	};
 
 	// Each typed ailment requires that damage type to have actually landed.
-	// Parry keeps per-type taken values alive precisely so these still work.
+	// A successful parry zeroes every per-type taken value and clears
+	// bShouldApplyAilments, so nothing below can fire through a parry.
 	if (Result.PhysicalTaken > 0.f && RollChance(AttackerAttributes->GetChanceToBleed()))
 	{
 		StatusManager->ApplyBleed(

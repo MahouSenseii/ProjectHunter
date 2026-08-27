@@ -34,6 +34,19 @@ public:
 	UMonsterModifierComponent();
 
 	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+protected:
+	/**
+	 * Fires on clients when replicated presentation state lands. AssignedTier and
+	 * FullDisplayName replicate as independent properties, so this can run twice
+	 * for one roll; broadcasting OnMonsterModsApplied is an idempotent UI refresh,
+	 * so existing nameplate Blueprints stay correct either way.
+	 */
+	UFUNCTION()
+	void OnRep_MonsterPresentation();
+
+public:
 
 
 	/**
@@ -43,6 +56,21 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
 	TSoftObjectPtr<UMonsterSpawnConfig> SpawnConfig;
+
+	/**
+	 * Deterministic seed for this monster's tier, modifier and stat-variation
+	 * rolls. Spawners derive it from the run seed via URunSeedFunctionLibrary so
+	 * one RunSeed reproduces the same monster composition every time.
+	 *
+	 * Zero means "unseeded": the component falls back to the global RNG, which is
+	 * correct for monsters placed directly in a level or spawned outside a run.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config|Determinism")
+	int32 MonsterSeed = 0;
+
+	/** Server-only. Set before RollAndApplyMods to make this monster's rolls reproducible. */
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Modifier")
+	void SetMonsterSeed(int32 InSeed);
 
 	/**
 	 * Area level at which this monster spawns.
@@ -96,18 +124,32 @@ public:
 	float ResistVariancePct = 5.0f;
 
 
-	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
+	/**
+	 * Rolled rarity tier. Replicated: remote clients need it to tint nameplates
+	 * and rarity beams, which is the visual language that makes a rare pack
+	 * readable mid-fight.
+	 */
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MonsterPresentation, Category = "Runtime")
 	EMonsterTier AssignedTier = EMonsterTier::MT_Normal;
 
+	/**
+	 * Rolled modifier rows. Deliberately NOT replicated - these are full DataTable
+	 * rows used only for server-side stat math, and FullDisplayName already carries
+	 * everything the client renders. Replicate a compact summary struct instead if
+	 * per-mod icons are added later.
+	 */
 	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
 	TArray<FMonsterModRow> AppliedMods;
 
-	/** Per-instance base-stat variation rolled at spawn. Folded into combined getters. */
+	/**
+	 * Per-instance base-stat variation rolled at spawn. Folded into combined getters.
+	 * Server-only calculation state; nothing client-side reads it.
+	 */
 	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
 	FMonsterStatVariation BaseStatVariation;
 
-	/** Full display name built from base name + prefix/suffix labels */
-	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
+	/** Full display name built from base name + prefix/suffix labels. Replicated for nameplates. */
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MonsterPresentation, Category = "Runtime")
 	FText FullDisplayName;
 
 
@@ -146,6 +188,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Modifier")
 	void RollBaseStatVariation();
 
+	/** Seeded overload used by RollAndApplyMods so the whole roll shares one stream. */
+	void RollBaseStatVariation(FRandomStream& Stream);
+
 	/** Returns the total HP multiplier from all applied mods combined. */
 	UFUNCTION(BlueprintPure, Category = "Modifier")
 	float GetCombinedHPMultiplier() const;
@@ -172,8 +217,11 @@ protected:
 	TObjectPtr<UMonsterSpawnConfig> CachedSpawnConfig;
 
 	/** Roll N mods from the modifier table, respecting area level and tier. */
+	/** Builds the roll stream: seeded from MonsterSeed, or global RNG when unseeded. */
+	FRandomStream MakeRollStream() const;
+
 	TArray<FMonsterModRow> RollMods(int32 NumMods, EMonsterTier Tier,
-		const UDataTable* Table) const;
+		const UDataTable* Table, FRandomStream& Stream) const;
 
 	/** Apply a single mod row to the owning character's ASC. */
 	void ApplyMod(const FMonsterModRow& Mod, UAbilitySystemComponent* ASC);

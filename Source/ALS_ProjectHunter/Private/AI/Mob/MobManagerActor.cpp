@@ -1,4 +1,8 @@
 #include "AI/Mob/MobManagerActor.h"
+
+#include "Engine/GameInstance.h"
+#include "Tower/Library/FunctionLibraries/RunSeedFunctionLibrary.h"
+#include "Tower/Subsystems/RunSubsystem.h"
 #include "AI/Mob/MobPoolSubsystem.h"
 #include "AI/Mob/MobWanderInterface.h"
 #include "AI/Helpers/MobSpawnConditionEvaluator.h"
@@ -550,7 +554,7 @@ int32 AMobManagerActor::SpawnBatch()
 	const int32 SlotsAvailable = MaxNumOfMobs - GetActiveCount();
 	const int32 ClampedMin = FMath::Max(1, PackSizeMin);
 	const int32 ClampedMax = FMath::Max(ClampedMin, PackSizeMax);
-	const int32 RolledPackSize = FMath::RandRange(ClampedMin, ClampedMax);
+	const int32 RolledPackSize = GetEncounterStream().RandRange(ClampedMin, ClampedMax);
 	const int32 PackSize = FMath::Min(RolledPackSize, SlotsAvailable);
 
 	int32 SpawnCount = 0;
@@ -1062,6 +1066,55 @@ void AMobManagerActor::FinalizeSpawn(APHBaseCharacter* Mob, const FVector& Spawn
 	BP_OnMobSpawned(Mob);
 }
 
+FRandomStream& AMobManagerActor::GetEncounterStream() const
+{
+	if (bEncounterStreamInitialized)
+	{
+		return EncounterStream;
+	}
+
+	bEncounterStreamInitialized = true;
+
+	int32 Seed = EncounterSeedOverride;
+
+	if (Seed == 0)
+	{
+		// Derive from the active run so one RunSeed reproduces the whole floor's
+		// encounter composition.
+		if (const UGameInstance* GameInstance = GetGameInstance())
+		{
+			if (const URunSubsystem* Run = GameInstance->GetSubsystem<URunSubsystem>();
+				Run && Run->IsRunActive())
+			{
+				Seed = Run->GetEncounterSeed(EncounterIndex);
+			}
+		}
+	}
+
+	// No run: level-placed managers and test maps keep their previous
+	// non-deterministic behaviour rather than every play session being identical.
+	if (Seed == 0)
+	{
+		Seed = FMath::Rand();
+	}
+
+	EncounterStream.Initialize(Seed);
+	NextMonsterIndex = 0;
+	return EncounterStream;
+}
+
+void AMobManagerActor::ResetEncounterStream()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	bEncounterStreamInitialized = false;
+	NextMonsterIndex = 0;
+	GetEncounterStream();
+}
+
 void AMobManagerActor::ApplyModifierComponent(APHBaseCharacter* Mob)
 {
 	if (!Mob) { return; }
@@ -1072,6 +1125,12 @@ void AMobManagerActor::ApplyModifierComponent(APHBaseCharacter* Mob)
 
 	ModComp->AreaLevel = AreaLevel;
 	ModComp->NearbyPlayerMagicFind = NearbyMagicFind;
+
+	// Each monster gets its own derived seed so its tier, modifiers and stat
+	// variation are reproducible, and so two monsters in one pack never share a
+	// roll. The index advances per configured monster, not per spawn attempt.
+	ModComp->SetMonsterSeed(
+		URunSeedFunctionLibrary::DeriveMonsterSeed(GetEncounterStream().GetInitialSeed(), NextMonsterIndex++));
 
 	if (PendingForcedTier != EMonsterTier::MT_Normal)
 	{
@@ -1158,7 +1217,7 @@ int32 AMobManagerActor::GetWeightedRandomMobTypeIndex() const
 		return INDEX_NONE;
 	}
 
-	int32 Roll = FMath::RandRange(0, TotalWeight - 1);
+	int32 Roll = GetEncounterStream().RandRange(0, TotalWeight - 1);
 
 	for (int32 Idx : EligibleIndices)
 	{

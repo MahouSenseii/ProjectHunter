@@ -1,6 +1,7 @@
 #include "Item/Generation/AffixGenerator.h"
 #include "Engine/DataTable.h"
 #include "Item/Library/FunctionLibraries/ItemAffixSelectionFunctionLibrary.h"
+#include "Item/Library/Structs/AffixStructs.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogAffixGenerator, Log, All);
 
@@ -23,6 +24,7 @@ namespace
 	{
 		FPHAttributeData Result;
 		Result.AffixType = AffixType;
+		Result.AffixID = FName(Attribute);
 		Result.AffixName = FText::FromString(Name);
 		Result.AffixGroup = FName(Group);
 		Result.AttributeName = FName(Attribute);
@@ -31,6 +33,8 @@ namespace
 		Result.MinValue = MinValue;
 		Result.MaxValue = MaxValue;
 		Result.AllowedItemTypes = MoveTemp(AllowedTypes);
+		Result.SpawnWeight = 100;
+		Result.PowerValue = AffixType == EAffixes::AF_Corrupted ? -10.0f : 10.0f;
 		Result.DisplayFormat = ModifyType == EModifyType::MT_Increased
 			? EAttributeDisplayFormat::ADF_Increase
 			: ModifyType == EModifyType::MT_More
@@ -53,20 +57,109 @@ namespace
 		return bIsRandomAffixPool && ActualType == EAffixes::AF_Corrupted;
 	}
 
+	EAttributeDisplayFormat ConvertDisplayFormat(const EAffixDisplayFormat Format)
+	{
+		switch (Format)
+		{
+		case EAffixDisplayFormat::ADF_Percentage: return EAttributeDisplayFormat::ADF_Percent;
+		case EAffixDisplayFormat::ADF_Range:
+		case EAffixDisplayFormat::ADF_PercentRange: return EAttributeDisplayFormat::ADF_MinMax;
+		case EAffixDisplayFormat::ADF_Skill: return EAttributeDisplayFormat::ADF_SkillGrant;
+		case EAffixDisplayFormat::ADF_CustomFormat: return EAttributeDisplayFormat::ADF_CustomText;
+		case EAffixDisplayFormat::ADF_FlatValue:
+		default: return EAttributeDisplayFormat::ADF_Additive;
+		}
+	}
+
+	void CopyRuntimeRowsFromTable(
+		const UDataTable& Table,
+		const TCHAR* Context,
+		TArray<FPHAttributeData>& OutRows)
+	{
+		OutRows.Reset();
+
+		if (Table.GetRowStruct() == FAffixData::StaticStruct())
+		{
+			TArray<FAffixData*> Definitions;
+			Table.GetAllRows<FAffixData>(Context, Definitions);
+			for (const FAffixData* Definition : Definitions)
+			{
+				if (!Definition)
+				{
+					continue;
+				}
+
+				for (const FAffixTier& Tier : Definition->Tiers)
+				{
+					FPHAttributeData Runtime;
+					Runtime.AffixID = Definition->AffixID;
+					Runtime.AffixType = Definition->AffixType;
+					Runtime.AffixName = Definition->AffixName;
+					Runtime.AffixGroup = Definition->TagGroup;
+					Runtime.TierNumber = Tier.TierNumber;
+					Runtime.PowerValue = Tier.PowerValue;
+					Runtime.SpawnWeight = FMath::Max(0, FMath::RoundToInt(
+						Definition->GetEffectiveWeight() * Tier.WeightMultiplier));
+					Runtime.PrimaryTag = Definition->PrimaryTag;
+					Runtime.SecondaryTags = Definition->SecondaryTags;
+					Runtime.AllowedItemTypes = Definition->AllowedItemTypes;
+					Runtime.AllowedSubTypes = Definition->AllowedSubTypes;
+					Runtime.ExcludedItemTypes = Definition->ExcludedItemTypes;
+					Runtime.MinItemLevel = FMath::Max(1, Tier.MinItemLevel);
+					Runtime.MaxItemLevel = FMath::Max(Runtime.MinItemLevel, Tier.MaxItemLevel);
+					Runtime.ModifiedAttribute = Tier.ModifiedAttribute;
+					Runtime.AttributeName = Definition->AttributeName.IsNone()
+						? Definition->AffixID
+						: Definition->AttributeName;
+					Runtime.ModifyType = Tier.ModifyType;
+					Runtime.ModifiedLocation = Definition->bIsLocal ? EAffixScope::AS_Local : Definition->Scope;
+					Runtime.Condition = Definition->Condition;
+					Runtime.MinValue = Tier.MinValue;
+					Runtime.MaxValue = Tier.MaxValue;
+					Runtime.DisplayFormat = ConvertDisplayFormat(Definition->FormatType);
+					Runtime.DisplayText = Definition->DisplayFormat;
+					Runtime.GameplayEffect = Definition->GameplayEffect;
+					OutRows.Add(MoveTemp(Runtime));
+				}
+			}
+			return;
+		}
+
+		if (Table.GetRowStruct() == FPHAttributeData::StaticStruct())
+		{
+			TArray<FPHAttributeData*> LegacyRows;
+			Table.GetAllRows<FPHAttributeData>(Context, LegacyRows);
+			OutRows.Reserve(LegacyRows.Num());
+			for (const FPHAttributeData* Row : LegacyRows)
+			{
+				if (Row)
+				{
+					OutRows.Add(*Row);
+				}
+			}
+			return;
+		}
+
+		UE_LOG(LogAffixGenerator, Error,
+			TEXT("AffixGenerator: DataTable '%s' must use FAffixData (preferred) or legacy FPHAttributeData rows."),
+			*GetNameSafe(&Table));
+	}
+
 	TArray<FPHAttributeData*> ResolveConfiguredAffixTable(
 		UDataTable* ConfiguredTable,
 		EAffixes ExpectedType,
-		const FName ItemID)
+		const FName ItemID,
+		TArray<FPHAttributeData>& OutOwnedRows)
 	{
-		TArray<FPHAttributeData*> TableRows;
-		ConfiguredTable->GetAllRows<FPHAttributeData>(
-			TEXT("FAffixGenerator::ResolveConfiguredAffixTable"), TableRows);
+		CopyRuntimeRowsFromTable(*ConfiguredTable,
+			TEXT("FAffixGenerator::ResolveConfiguredAffixTable"), OutOwnedRows);
 
 		TArray<FPHAttributeData*> ResolvedRows;
-		ResolvedRows.Reserve(TableRows.Num());
+		ResolvedRows.Reserve(OutOwnedRows.Num());
 
-		for (FPHAttributeData* Affix : TableRows)
+		for (FPHAttributeData& OwnedAffix : OutOwnedRows)
 		{
+			FPHAttributeData* Affix = &OwnedAffix;
 			if (!Affix)
 			{
 				continue;
@@ -127,12 +220,15 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 	const int32 NumSuffixes = RandStream.RandRange(MinSuffixes, MaxSuffixes);
 
 	bool bHasRolledCorrupted = false;
+	TSet<FName> ExcludedAffixes;
+	TSet<FName> ExcludedGroups;
 
 	TArray<FPHAttributeData*> PrefixSource;
+	TArray<FPHAttributeData> ConfiguredPrefixRows;
 	if (BaseItem.PrefixAffixTable)
 	{
 		PrefixSource = ResolveConfiguredAffixTable(
-			BaseItem.PrefixAffixTable, EAffixes::AF_Prefix, BaseItem.ItemID);
+			BaseItem.PrefixAffixTable, EAffixes::AF_Prefix, BaseItem.ItemID, ConfiguredPrefixRows);
 	}
 	else
 	{
@@ -141,10 +237,11 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 	}
 
 	TArray<FPHAttributeData*> SuffixSource;
+	TArray<FPHAttributeData> ConfiguredSuffixRows;
 	if (BaseItem.SuffixAffixTable)
 	{
 		SuffixSource = ResolveConfiguredAffixTable(
-			BaseItem.SuffixAffixTable, EAffixes::AF_Suffix, BaseItem.ItemID);
+			BaseItem.SuffixAffixTable, EAffixes::AF_Suffix, BaseItem.ItemID, ConfiguredSuffixRows);
 	}
 	else
 	{
@@ -162,6 +259,8 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 		CorruptionChance,
 		bForceOneCorrupted && !bHasRolledCorrupted,
 		bHasRolledCorrupted,
+		ExcludedAffixes,
+		ExcludedGroups,
 		RandStream
 	);
 
@@ -175,6 +274,8 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 		CorruptionChance,
 		bForceOneCorrupted && !bHasRolledCorrupted,
 		bHasRolledCorrupted,
+		ExcludedAffixes,
+		ExcludedGroups,
 		RandStream
 	);
 
@@ -224,8 +325,7 @@ UDataTable* FAffixGenerator::LoadEnchantDataTable() const
 	}
 	else
 	{
-		CachedEnchantRows.Reset();
-		CachedEnchantTable->GetAllRows<FPHAttributeData>("LoadEnchantDataTable", CachedEnchantRows);
+		CacheRowsFromTable(*CachedEnchantTable, TEXT("LoadEnchantDataTable"), CachedEnchantRowData, CachedEnchantRows);
 
 		UE_LOG(LogAffixGenerator, Log, TEXT("AffixGenerator: Loaded ENCHANT DataTable with %d rows"),
 			CachedEnchantRows.Num());
@@ -241,10 +341,11 @@ bool FAffixGenerator::ApplyEnchant(
 	FPHItemStats& OutStats) const
 {
 	TArray<FPHAttributeData*> EnchantSource;
+	TArray<FPHAttributeData> ConfiguredEnchantRows;
 	if (BaseItem.EnchantAffixTable)
 	{
 		EnchantSource = ResolveConfiguredAffixTable(
-			BaseItem.EnchantAffixTable, EAffixes::AF_Enchant, BaseItem.ItemID);
+			BaseItem.EnchantAffixTable, EAffixes::AF_Enchant, BaseItem.ItemID, ConfiguredEnchantRows);
 	}
 	else
 	{
@@ -294,6 +395,30 @@ bool FAffixGenerator::ApplyEnchant(
 	return true;
 }
 
+void FAffixGenerator::RebuildRowPointers(
+	TArray<FPHAttributeData>& OwnedRows,
+	TArray<FPHAttributeData*>& OutPointers)
+{
+	OutPointers.Reset(OwnedRows.Num());
+	for (FPHAttributeData& Row : OwnedRows)
+	{
+		OutPointers.Add(&Row);
+	}
+}
+
+void FAffixGenerator::CacheRowsFromTable(
+	const UDataTable& Table,
+	const TCHAR* Context,
+	TArray<FPHAttributeData>& OutOwnedRows,
+	TArray<FPHAttributeData*>& OutPointers)
+{
+	// Copy out immediately. Holding the table's own row pointers would dangle if
+	// the asset is reimported or edited while the generator is alive.
+	CopyRuntimeRowsFromTable(Table, Context, OutOwnedRows);
+
+	RebuildRowPointers(OutOwnedRows, OutPointers);
+}
+
 UDataTable* FAffixGenerator::LoadPrefixDataTable() const
 {
 	if (CachedPrefixTable && IsValid(CachedPrefixTable))
@@ -318,8 +443,7 @@ UDataTable* FAffixGenerator::LoadPrefixDataTable() const
 	else
 	{
 		// GetAllRows again. Raw pointers stay valid as long as the DataTable is alive.
-		CachedPrefixRows.Reset();
-		CachedPrefixTable->GetAllRows<FPHAttributeData>("LoadPrefixDataTable", CachedPrefixRows);
+		CacheRowsFromTable(*CachedPrefixTable, TEXT("LoadPrefixDataTable"), CachedPrefixRowData, CachedPrefixRows);
 
 		UE_LOG(LogAffixGenerator, Log, TEXT("AffixGenerator: Loaded PREFIX DataTable with %d rows"),
 			CachedPrefixRows.Num());
@@ -352,8 +476,7 @@ UDataTable* FAffixGenerator::LoadSuffixDataTable() const
 	else
 	{
 		// Cache all row pointers once (same rationale as CachedPrefixRows).
-		CachedSuffixRows.Reset();
-		CachedSuffixTable->GetAllRows<FPHAttributeData>("LoadSuffixDataTable", CachedSuffixRows);
+		CacheRowsFromTable(*CachedSuffixTable, TEXT("LoadSuffixDataTable"), CachedSuffixRowData, CachedSuffixRows);
 
 		UE_LOG(LogAffixGenerator, Log, TEXT("AffixGenerator: Loaded SUFFIX DataTable with %d rows"),
 			CachedSuffixRows.Num());
@@ -385,11 +508,10 @@ void FAffixGenerator::BuildFallbackRows(const EAffixes AffixType) const
 		FallbackPrefixRows.Add(MakeFallbackAffix(EAffixes::AF_Corrupted, TEXT("Brittle"), TEXT("CorruptedDamage"),
 			TEXT("GlobalMoreDamage"), EModifyType::MT_Less, 5.f, 12.f, GearTypes()));
 
-		CachedPrefixRows.Reset(FallbackPrefixRows.Num());
-		for (FPHAttributeData& Row : FallbackPrefixRows)
-		{
-			CachedPrefixRows.Add(&Row);
-		}
+		// Move the fallback set into the owned cache so the pointer view has a
+		// single, stable backing store regardless of where the rows came from.
+		CachedPrefixRowData = FallbackPrefixRows;
+		RebuildRowPointers(CachedPrefixRowData, CachedPrefixRows);
 		return;
 	}
 
@@ -416,11 +538,10 @@ void FAffixGenerator::BuildFallbackRows(const EAffixes AffixType) const
 		FallbackSuffixRows.Add(MakeFallbackAffix(EAffixes::AF_Corrupted, TEXT("of Agony"), TEXT("CorruptedDefense"),
 			TEXT("GlobalDamageTakenMultiplier"), EModifyType::MT_More, 5.f, 12.f, GearTypes()));
 
-		CachedSuffixRows.Reset(FallbackSuffixRows.Num());
-		for (FPHAttributeData& Row : FallbackSuffixRows)
-		{
-			CachedSuffixRows.Add(&Row);
-		}
+		// Move the fallback set into the owned cache so the pointer view has a
+		// single, stable backing store regardless of where the rows came from.
+		CachedSuffixRowData = FallbackSuffixRows;
+		RebuildRowPointers(CachedSuffixRowData, CachedSuffixRows);
 	}
 }
 
@@ -434,52 +555,59 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 	float CorruptionChance,
 	bool bMustRollOneCorrupted,
 	bool& bOutHasRolledCorrupted,
+	TSet<FName>& InOutExcludedAffixes,
+	TSet<FName>& InOutExcludedGroups,
 	FRandomStream& RandStream) const
 {
 	TArray<FPHAttributeData> RolledAffixes;
-	// TSet for O(1) Contains() lookups instead of O(n) TArray::Contains.
-	TSet<FName> ExcludedAffixes;
-	// Prevent duplicate exclusive affix groups on the same item; NAME_None is exempt.
-	TSet<FName> ExcludedGroups;
-	ExcludedAffixes.Reserve(Count);
-	ExcludedGroups.Reserve(Count);
+	InOutExcludedAffixes.Reserve(InOutExcludedAffixes.Num() + Count);
+	InOutExcludedGroups.Reserve(InOutExcludedGroups.Num() + Count);
 
 	RolledAffixes.Reserve(Count);
 
+	// The forced-corruption guarantee is a debt owed exactly once, not a mode.
+	// Reading bMustRollOneCorrupted directly inside the loop forced every affix
+	// in this batch to be corrupted. Track it as a pending flag and retire it as
+	// soon as a corrupted affix actually lands - natural CorruptionChance rolls
+	// can still add more corruption on top.
+	bool bForcedCorruptionPending = bMustRollOneCorrupted;
+
 	for (int32 i = 0; i < Count; ++i)
 	{
-		const bool bShouldBeCorrupted = bMustRollOneCorrupted
+		const bool bShouldBeCorrupted = bForcedCorruptionPending
 			|| (CorruptionChance > 0.0f && RandStream.FRand() < CorruptionChance);
 
 		TArray<FPHAttributeData*> AvailableAffixes = UItemAffixSelectionFunctionLibrary::BuildAffixPoolByCorruption(
 			SourceAffixes, ItemType, ItemSubType, ItemLevel,
-			bShouldBeCorrupted, ExcludedAffixes, ExcludedGroups
+			bShouldBeCorrupted, InOutExcludedAffixes, InOutExcludedGroups
 		);
 
 		if (AvailableAffixes.Num() == 0)
 		{
-			if (bShouldBeCorrupted && !bMustRollOneCorrupted)
+			if (bShouldBeCorrupted)
 			{
+				// No corrupted candidate is available. Fill the slot from the normal
+				// pool rather than dropping the affix, and keep the debt pending so a
+				// later slot can still satisfy the guarantee.
+				if (bForcedCorruptionPending)
+				{
+					UE_LOG(LogAffixGenerator, Warning,
+						TEXT("AffixGenerator: No corrupted affixes available for type %d at level %d; ")
+						TEXT("filling slot %d from the normal pool and retrying the guarantee."),
+						static_cast<int32>(AffixType), ItemLevel, i);
+				}
+
 				AvailableAffixes = UItemAffixSelectionFunctionLibrary::BuildAffixPoolByCorruption(
 					SourceAffixes, ItemType, ItemSubType, ItemLevel,
-					false, ExcludedAffixes, ExcludedGroups
+					false, InOutExcludedAffixes, InOutExcludedGroups
 				);
 			}
 
 			if (AvailableAffixes.Num() == 0)
 			{
-				if (bMustRollOneCorrupted)
-				{
-					UE_LOG(LogAffixGenerator, Error,
-						TEXT("AffixGenerator: No required corrupted affixes for type %d at level %d"),
-						static_cast<int32>(AffixType), ItemLevel);
-				}
-				else
-				{
-					UE_LOG(LogAffixGenerator, Warning,
-						TEXT("AffixGenerator: No compatible affixes for type %d at level %d"),
-						static_cast<int32>(AffixType), ItemLevel);
-				}
+				UE_LOG(LogAffixGenerator, Warning,
+					TEXT("AffixGenerator: No compatible affixes for type %d at level %d"),
+					static_cast<int32>(AffixType), ItemLevel);
 				continue;
 			}
 		}
@@ -496,12 +624,13 @@ TArray<FPHAttributeData> FAffixGenerator::RollAffixesWithCorruption(
 		if (RolledAffix.IsCorruptedAffix())
 		{
 			bOutHasRolledCorrupted = true;
+			bForcedCorruptionPending = false;
 		}
 
-		ExcludedAffixes.Add(SelectedAffix->AttributeName);
+		InOutExcludedAffixes.Add(SelectedAffix->GetStableAffixID());
 		if (SelectedAffix->AffixGroup != NAME_None)
 		{
-			ExcludedGroups.Add(SelectedAffix->AffixGroup);
+			InOutExcludedGroups.Add(SelectedAffix->AffixGroup);
 		}
 	}
 

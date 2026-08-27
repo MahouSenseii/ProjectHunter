@@ -215,6 +215,28 @@ public:
 		meta = (ClampMin = 0.0f))
 	float NearbyMagicFind = 0.0f;
 
+	/**
+	 * Index of the encounter this manager represents on the current floor.
+	 * Combined with the floor seed to derive a stable encounter stream, so the
+	 * same run seed reproduces the same pack sizes, mob types and monster mods.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mob Manager|Determinism",
+		meta = (ClampMin = 0))
+	int32 EncounterIndex = 0;
+
+	/**
+	 * Explicit encounter seed. Leave at zero to derive it from the active run's
+	 * floor seed plus EncounterIndex; set it directly for tests or scripted
+	 * encounters. Outside a run this falls back to the global RNG, which keeps
+	 * level-placed managers behaving as before.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mob Manager|Determinism")
+	int32 EncounterSeedOverride = 0;
+
+	/** Re-derives the encounter stream from the current run/floor. Server-only. */
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Mob Manager|Determinism")
+	void ResetEncounterStream();
+
 
 	/**
 	 * Designer-authored rules that trigger special spawns based on gameplay state
@@ -578,6 +600,17 @@ protected:
 	void DrawDebugVisuals() const;
 
 private:
+	// Composition stream: pack sizes, mob-type selection, per-monster seeds.
+	// Mutable because drawing from the stream is part of answering const spawn
+	// queries such as PickMobTypeIndex - the roll advances stream state without
+	// changing the manager's observable configuration.
+	mutable FRandomStream EncounterStream;
+	mutable bool bEncounterStreamInitialized = false;
+	mutable int32 NextMonsterIndex = 0;
+
+	/** Lazily initialises and returns the composition stream. */
+	FRandomStream& GetEncounterStream() const;
+
 	FTimerHandle SpawnTimerHandle;
 
 	/**

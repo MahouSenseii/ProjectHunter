@@ -60,6 +60,8 @@ private:
 		float CorruptionChance,
 		bool bMustRollOneCorrupted,
 		bool& bOutHasRolledCorrupted,
+		TSet<FName>& InOutExcludedAffixes,
+		TSet<FName>& InOutExcludedGroups,
 		FRandomStream& RandStream) const;
 
 	mutable UDataTable* CachedPrefixTable = nullptr;
@@ -68,10 +70,35 @@ private:
 
 	mutable UDataTable* CachedEnchantTable = nullptr;
 
-	// DataTable row pointers remain valid for the loaded table lifetime and avoid repeated GetAllRows scans.
+	// Owned copies of the affix rows.
+	//
+	// These used to be raw FPHAttributeData* into the DataTable's own row map.
+	// That is safe for the table's lifetime but NOT across mutation: reimporting
+	// or editing an affix table during PIE empties and reallocates the row map,
+	// leaving every cached pointer dangling. Copying the rows costs a few KB once
+	// per table and removes the hazard.
+	mutable TArray<FPHAttributeData> CachedPrefixRowData;
+	mutable TArray<FPHAttributeData> CachedSuffixRowData;
+	mutable TArray<FPHAttributeData> CachedEnchantRowData;
+
+	// Pointer views over the owned copies above. Rebuilt whenever the owning
+	// array is refilled and never appended to afterwards, so a reallocation can
+	// never invalidate them.
 	mutable TArray<FPHAttributeData*> CachedPrefixRows;
 	mutable TArray<FPHAttributeData*> CachedSuffixRows;
 	mutable TArray<FPHAttributeData*> CachedEnchantRows;
+
+	/** Refills a pointer view from its owned copies. */
+	static void RebuildRowPointers(
+		TArray<FPHAttributeData>& OwnedRows,
+		TArray<FPHAttributeData*>& OutPointers);
+
+	/** Copies every row out of a DataTable into owned storage, then rebuilds the view. */
+	static void CacheRowsFromTable(
+		const UDataTable& Table,
+		const TCHAR* Context,
+		TArray<FPHAttributeData>& OutOwnedRows,
+		TArray<FPHAttributeData*>& OutPointers);
 
 	// Minimal native pools keep loot functional before designers author DataTables.
 	mutable TArray<FPHAttributeData> FallbackPrefixRows;

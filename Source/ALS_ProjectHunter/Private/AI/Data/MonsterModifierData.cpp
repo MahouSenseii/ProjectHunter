@@ -14,21 +14,37 @@ float UMonsterSpawnConfig::GetEffectiveRareChance(int32 AreaLevel, float MagicFi
 	return FMath::Clamp(BaseRareChance + LevelBonus + MFBonus, 0.0f, 1.0f);
 }
 
+namespace MonsterSpawnConfigPrivate
+{
+	EMonsterTier ResolveTierFromRoll(const float Roll, const float RareChance, const float MagicChance)
+	{
+		if (Roll < RareChance)
+		{
+			return EMonsterTier::MT_Rare;
+		}
+		if (Roll < MagicChance)
+		{
+			return EMonsterTier::MT_Magic;
+		}
+		return EMonsterTier::MT_Normal;
+	}
+}
+
 EMonsterTier UMonsterSpawnConfig::RollMonsterTier(int32 AreaLevel, float MagicFind) const
 {
-	const float Roll       = FMath::FRand();
-	const float RareChance = GetEffectiveRareChance(AreaLevel, MagicFind);
-	const float MagicChance = GetEffectiveMagicChance(AreaLevel, MagicFind);
+	return MonsterSpawnConfigPrivate::ResolveTierFromRoll(
+		FMath::FRand(),
+		GetEffectiveRareChance(AreaLevel, MagicFind),
+		GetEffectiveMagicChance(AreaLevel, MagicFind));
+}
 
-	if (Roll < RareChance)
-	{
-		return EMonsterTier::MT_Rare;
-	}
-	if (Roll < MagicChance)
-	{
-		return EMonsterTier::MT_Magic;
-	}
-	return EMonsterTier::MT_Normal;
+EMonsterTier UMonsterSpawnConfig::RollMonsterTierSeeded(
+	int32 AreaLevel, float MagicFind, FRandomStream& Stream) const
+{
+	return MonsterSpawnConfigPrivate::ResolveTierFromRoll(
+		Stream.FRand(),
+		GetEffectiveRareChance(AreaLevel, MagicFind),
+		GetEffectiveMagicChance(AreaLevel, MagicFind));
 }
 
 int32 UMonsterSpawnConfig::RollPackSize(EMonsterTier Tier) const
@@ -41,5 +57,18 @@ int32 UMonsterSpawnConfig::RollPackSize(EMonsterTier Tier) const
 		return FMath::RandRange(RarePackMin, RarePackMax);
 	default:
 		return FMath::RandRange(NormalPackMin, NormalPackMax);
+	}
+}
+
+int32 UMonsterSpawnConfig::RollPackSizeSeeded(EMonsterTier Tier, FRandomStream& Stream) const
+{
+	switch (Tier)
+	{
+	case EMonsterTier::MT_Magic:
+		return Stream.RandRange(MagicPackMin, MagicPackMax);
+	case EMonsterTier::MT_Rare:
+		return Stream.RandRange(RarePackMin, RarePackMax);
+	default:
+		return Stream.RandRange(NormalPackMin, NormalPackMax);
 	}
 }

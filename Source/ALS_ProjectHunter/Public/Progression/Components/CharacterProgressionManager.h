@@ -57,10 +57,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression|XP Curve")
 	TObjectPtr<UCurveFloat> XPRequirementCurve = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "Progression|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_ProgressionValue, Category = "Progression|Stats")
 	int32 UnspentStatPoints = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "Progression|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_ProgressionValue, Category = "Progression|Stats")
 	int32 TotalStatPoints = 0;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression|Stats")
@@ -76,7 +76,7 @@ public:
 	UPROPERTY(Transient)
 	TMap<FName, int32> SpentStatPointsCache;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "Progression|Skills")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_ProgressionValue, Category = "Progression|Skills")
 	int32 UnspentSkillPoints = 0;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression|Skills")
@@ -154,6 +154,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_SpentStatPoints();
+
+	UFUNCTION()
+	void OnRep_ProgressionValue();
 
 	TMap<FName, TArray<FActiveGameplayEffectHandle>> StatPointGEHandles;
 

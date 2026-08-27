@@ -24,6 +24,10 @@ struct FPHAttributeData : public FTableRowBase
 	UPROPERTY(SaveGame, BlueprintReadOnly, Category = "Attribute")
 	FGuid AttributeUID;
 
+	/** Stable ID of the authored affix definition. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Affix")
+	FName AffixID = NAME_None;
+
 
 	/** Affix type: Prefix, Suffix, Implicit, etc. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Affix")
@@ -47,6 +51,26 @@ struct FPHAttributeData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Affix")
 	ERankPoints RankPoints = ERankPoints::RP_0;
 
+	/** Authored tier number retained on the rolled modifier for UI and crafting. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Affix", meta = (ClampMin = "0"))
+	int32 TierNumber = 0;
+
+	/** Contribution of this rolled affix to the item's derived power score. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Power")
+	float PowerValue = 0.0f;
+
+	/** Explicit generation weight. Zero preserves legacy RankPoints-based weighting. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Generation", meta = (ClampMin = "0"))
+	int32 SpawnWeight = 0;
+
+	/** Primary category used by future targeted crafting. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Generation")
+	EAffixTag PrimaryTag = EAffixTag::AT_None;
+
+	/** Additional categories used by future targeted crafting. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Generation")
+	TArray<EAffixTag> SecondaryTags;
+
 
 	/** Allowed item types (empty = all types allowed) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Filtering")
@@ -55,6 +79,10 @@ struct FPHAttributeData : public FTableRowBase
 	/** Allowed item subtypes (empty = all subtypes allowed) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Filtering")
 	TArray<EItemSubType> AllowedSubTypes;
+
+	/** Explicit exclusions take precedence over AllowedItemTypes. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Filtering")
+	TArray<EItemType> ExcludedItemTypes;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Filtering",
 		meta = (ClampMin = "1", ClampMax = "100"))
@@ -194,6 +222,11 @@ struct FPHAttributeData : public FTableRowBase
 	 */
 	bool IsAllowedOnItemType(EItemType ItemType) const
 	{
+		if (ExcludedItemTypes.Contains(ItemType))
+		{
+			return false;
+		}
+
 		if (AllowedItemTypes.Num() == 0)
 		{
 			return true;
@@ -225,12 +258,19 @@ struct FPHAttributeData : public FTableRowBase
 	 */
 	int32 GetWeight() const
 	{
+		if (SpawnWeight > 0)
+		{
+			return SpawnWeight;
+		}
+
 		const int32 RankValue = UItemEnumFunctionLibrary::GetRankPointsValue(RankPoints);
 		const int32 TierDistance = FMath::Abs(RankValue);
 		return FMath::Clamp(1000 / (1 + TierDistance), 1, 1000);
 	}
 
 	bool IsCorruptedAffix() const { return AffixType == EAffixes::AF_Corrupted; }
+
+	FName GetStableAffixID() const { return AffixID.IsNone() ? AttributeName : AffixID; }
 
 	// Use dedicated MinItemLevel/MaxItemLevel instead of MinValue/MaxValue.
 	bool IsValidForItemLevel(int32 Level) const { return MinItemLevel <= Level && Level <= MaxItemLevel; }

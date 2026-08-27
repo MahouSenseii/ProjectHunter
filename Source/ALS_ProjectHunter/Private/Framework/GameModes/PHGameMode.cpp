@@ -69,9 +69,31 @@ void APHGameMode::OnPlayerDied(AController* DeadPlayer, AController* Killer)
 		*GetNameSafe(DeadPlayer),
 		*GetNameSafe(Killer));
 
+	// Inside a run, death is a run event, not a respawn event. RunSubsystem
+	// moves the player to Downed, leaves room for a teammate revive, and ends
+	// the run on a party wipe. Solo, that is the first death.
+	if (URunSubsystem* RunSubsystem = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<URunSubsystem>()
+		: nullptr)
+	{
+		if (RunSubsystem->IsRunActive())
+		{
+			if (APHPlayerState* HunterState = DeadPlayer->GetPlayerState<APHPlayerState>())
+			{
+				RunSubsystem->NotifyPlayerDowned(HunterState);
+			}
+			else
+			{
+				UE_LOG(LogPHGameMode, Warning,
+					TEXT("OnPlayerDied: %s has no APHPlayerState; run death handling skipped."),
+					*GetNameSafe(DeadPlayer));
+			}
+			return;
+		}
+	}
+
 	if (!bAutoRespawn)
 	{
-
 		return;
 	}
 

@@ -14,15 +14,22 @@ void APHGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 
 	DOREPLIFETIME(APHGameState, MatchPhase);
 	DOREPLIFETIME(APHGameState, MatchStartServerTime);
+	DOREPLIFETIME(APHGameState, MatchSnapshotRevision);
 	DOREPLIFETIME(APHGameState, TotalMobKills);
 	DOREPLIFETIME(APHGameState, WorldTier);
 	DOREPLIFETIME(APHGameState, RunState);
 	DOREPLIFETIME(APHGameState, RunSession);
 	DOREPLIFETIME(APHGameState, RunSnapshotServerTime);
+	DOREPLIFETIME(APHGameState, RunSnapshotRevision);
 }
 
 void APHGameState::SetMatchPhase(EPHMatchPhase NewPhase)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (MatchPhase == NewPhase)
 	{
 		return;
@@ -33,17 +40,16 @@ void APHGameState::SetMatchPhase(EPHMatchPhase NewPhase)
 
 	if (NewPhase == EPHMatchPhase::InProgress)
 	{
-		if (UWorld* World = GetWorld())
-		{
-			MatchStartServerTime = World->GetTimeSeconds();
-		}
+		MatchStartServerTime = GetServerWorldTimeSeconds();
 	}
+	++MatchSnapshotRevision;
 
 	UE_LOG(LogPHGameState, Log, TEXT("Match phase: %s -> %s"),
 		*UEnum::GetValueAsString(OldPhase),
 		*UEnum::GetValueAsString(NewPhase));
 
 	OnMatchPhaseChanged.Broadcast(NewPhase);
+	ForceNetUpdate();
 }
 
 void APHGameState::OnRep_MatchPhase()
@@ -58,9 +64,9 @@ float APHGameState::GetMatchElapsedTime() const
 		return 0.f;
 	}
 
-	if (const UWorld* World = GetWorld())
+	if (GetWorld())
 	{
-		return FMath::Max(0.f, World->GetTimeSeconds() - MatchStartServerTime);
+		return FMath::Max(0.f, GetServerWorldTimeSeconds() - MatchStartServerTime);
 	}
 	return 0.f;
 }
@@ -80,6 +86,7 @@ void APHGameState::ApplyRunSnapshot(const ERunState NewState, const FRunSessionD
 	RunState = NewState;
 	RunSession = NewSession;
 	RunSnapshotServerTime = GetServerWorldTimeSeconds();
+	++RunSnapshotRevision;
 	OnReplicatedRunChanged.Broadcast(RunState, RunSession);
 	ForceNetUpdate();
 }

@@ -1,32 +1,16 @@
 #include "Combat/Calculators/CombatOutgoingDamageCalculator.h"
 
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "Combat/Library/CombatDebug.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogCombatOutgoingDamageCalculator, Log, All);
-
-#if !UE_BUILD_SHIPPING
-static TAutoConsoleVariable<int32> CVarDebugCombatDamage(
-	TEXT("Hunter.Debug.Combat"),
-	0,
-	TEXT("Log the per-stage combat damage breakdown for every ApplyHit\n")
-	TEXT("0: Disabled (default)\n")
-	TEXT("1: Log base roll, conversion, scaling, crit, mitigation, block, and routing"),
-	ECVF_Cheat
-);
-#endif
 
 namespace CombatOutgoingDamageCalculatorPrivate
 {
 	bool IsCombatDebugLoggingEnabled()
 	{
-#if !UE_BUILD_SHIPPING
-		return CVarDebugCombatDamage.GetValueOnGameThread() != 0;
-#else
-		return false;
-#endif
+		return PHCombatDebug::IsCombatDebugLoggingEnabled();
 	}
-
-	constexpr float DefaultCritMultiplier = 1.5f;
 
 	constexpr EHunterDamageType AllDamageTypes[] =
 	{
@@ -51,10 +35,13 @@ namespace CombatOutgoingDamageCalculatorPrivate
 		return BaseValue * (1.f + (IncreasedPercent / 100.f));
 	}
 
-	// Multiplier attributes default to 0 when untouched; 0 means "no modifier".
-	float GetNeutralMultiplier(const float Value)
+	// Multiplier attributes use a literal ratio: 1.0 neutral, 0.5 half, 0.0 none,
+	// 2.0 double. Every one of them is seeded to 1.0 in UHunterAttributeSet's
+	// constructor, so an incoming 0 is a real "deal no damage" modifier and must
+	// survive. Only negative values are nonsense, and those clamp to 0.
+	float SanitizeMultiplier(const float Value)
 	{
-		return Value > 0.f ? Value : 1.f;
+		return FMath::Max(0.f, Value);
 	}
 
 	float GetPacketDamage(const FCombatDamagePacket& Packet, const EHunterDamageType DamageType)
@@ -506,32 +493,32 @@ float FCombatOutgoingDamageCalculator::GetMoreDamageMultiplier(
 		return 1.f;
 	}
 
-	float Multiplier = CombatOutgoingDamageCalculatorPrivate::GetNeutralMultiplier(AttackerAttributes->GetGlobalMoreDamage());
+	float Multiplier = CombatOutgoingDamageCalculatorPrivate::SanitizeMultiplier(AttackerAttributes->GetGlobalMoreDamage());
 
 	if (CombatOutgoingDamageCalculatorPrivate::IsElementalDamageType(DamageType))
 	{
-		Multiplier *= CombatOutgoingDamageCalculatorPrivate::GetNeutralMultiplier(AttackerAttributes->GetElementalMoreDamage());
+		Multiplier *= CombatOutgoingDamageCalculatorPrivate::SanitizeMultiplier(AttackerAttributes->GetElementalMoreDamage());
 	}
 
 	switch (DamageType)
 	{
 	case EHunterDamageType::Physical:
-		Multiplier *= CombatOutgoingDamageCalculatorPrivate::GetNeutralMultiplier(AttackerAttributes->GetPhysicalMoreDamage());
+		Multiplier *= CombatOutgoingDamageCalculatorPrivate::SanitizeMultiplier(AttackerAttributes->GetPhysicalMoreDamage());
 		break;
 	case EHunterDamageType::Fire:
-		Multiplier *= CombatOutgoingDamageCalculatorPrivate::GetNeutralMultiplier(AttackerAttributes->GetFireMoreDamage());
+		Multiplier *= CombatOutgoingDamageCalculatorPrivate::SanitizeMultiplier(AttackerAttributes->GetFireMoreDamage());
 		break;
 	case EHunterDamageType::Ice:
-		Multiplier *= CombatOutgoingDamageCalculatorPrivate::GetNeutralMultiplier(AttackerAttributes->GetIceMoreDamage());
+		Multiplier *= CombatOutgoingDamageCalculatorPrivate::SanitizeMultiplier(AttackerAttributes->GetIceMoreDamage());
 		break;
 	case EHunterDamageType::Lightning:
-		Multiplier *= CombatOutgoingDamageCalculatorPrivate::GetNeutralMultiplier(AttackerAttributes->GetLightningMoreDamage());
+		Multiplier *= CombatOutgoingDamageCalculatorPrivate::SanitizeMultiplier(AttackerAttributes->GetLightningMoreDamage());
 		break;
 	case EHunterDamageType::Light:
-		Multiplier *= CombatOutgoingDamageCalculatorPrivate::GetNeutralMultiplier(AttackerAttributes->GetLightMoreDamage());
+		Multiplier *= CombatOutgoingDamageCalculatorPrivate::SanitizeMultiplier(AttackerAttributes->GetLightMoreDamage());
 		break;
 	case EHunterDamageType::Corruption:
-		Multiplier *= CombatOutgoingDamageCalculatorPrivate::GetNeutralMultiplier(AttackerAttributes->GetCorruptionMoreDamage());
+		Multiplier *= CombatOutgoingDamageCalculatorPrivate::SanitizeMultiplier(AttackerAttributes->GetCorruptionMoreDamage());
 		break;
 	default:
 		break;
@@ -572,16 +559,24 @@ void FCombatOutgoingDamageCalculator::ResolveCriticalStrike(
 		return;
 	}
 
-	float CritMultiplier = AttackerAttributes->GetCritMultiplier() > 0.f
-		? AttackerAttributes->GetCritMultiplier()
-		: CombatOutgoingDamageCalculatorPrivate::DefaultCritMultiplier;
+	// Crit multiplier units, stated once so the three inputs cannot drift apart:
+	//   CritMultiplier attribute       - absolute ratio. 1.5 = 150% damage on crit.
+	//   SpellsCritMultiplier attribute - absolute ratio, same scale.
+	//   DamageInfo.Crit.CritMultiplier - additive ratio DELTA. 0.5 = +50%.
+	// Both attribute ratios are seeded to 1.5 in UHunterAttributeSet's constructor.
+	// Everything is normalised to a delta above neutral here, then re-based on 1.0,
+	// so a spell crit stacks its bonus on top of the base instead of replacing it.
+	const float BaseCritRatio =
+		CombatOutgoingDamageCalculatorPrivate::SanitizeMultiplier(AttackerAttributes->GetCritMultiplier());
+
+	float CritMultiplier = BaseCritRatio;
 	if (DamageInfo.Tags.bIsSpell)
 	{
-		const float SpellCritMultiplier =
-			CombatOutgoingDamageCalculatorPrivate::GetNeutralMultiplier(AttackerAttributes->GetSpellsCritMultiplier());
-		CritMultiplier += FMath::Max(0.f, SpellCritMultiplier - 1.f);
+		const float SpellCritRatio =
+			CombatOutgoingDamageCalculatorPrivate::SanitizeMultiplier(AttackerAttributes->GetSpellsCritMultiplier());
+		CritMultiplier += SpellCritRatio - 1.f;
 	}
-	CritMultiplier += FMath::Max(0.f, DamageInfo.Crit.CritMultiplier);
+	CritMultiplier += DamageInfo.Crit.CritMultiplier;
 	CritMultiplier = FMath::Max(CritMultiplier, 0.f);
 
 	for (const EHunterDamageType DamageType : CombatOutgoingDamageCalculatorPrivate::AllDamageTypes)

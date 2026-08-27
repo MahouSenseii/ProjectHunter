@@ -137,6 +137,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Status")
 	FCombatAilmentTuning AilmentTuning;
 
+	/**
+	 * Rear/flank damage rules. Damage-only positional bonus, not a backstab
+	 * execution - see FCombatPositionalRules. Tune per character Blueprint.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Positional")
+	FCombatPositionalRules PositionalRules;
+
 	UFUNCTION(BlueprintPure, Category = "Combat|Status")
 	UCombatStatusEffectApplier* GetCombatStatus() const { return CombatStatus; }
 
@@ -148,16 +155,19 @@ public:
 	 * input; weapon damage, added damage, conversion, scaling, mitigation, and
 	 * every defensive layer come from attacker/defender attributes.
 	 *
-	 * Resolution is server-authoritative. A non-authority call returns false and
-	 * does not roll a divergent client result. Existing single-player calls keep
-	 * working because standalone actors have authority.
+	 * Resolution is server-authoritative. Calls made on a defender's component
+	 * are transparently routed to the attacker's CombatManager. Owning-client
+	 * calls are forwarded to the server and return an empty preview result.
 	 *
-	 * @param HitResponse       Defender-resolved outcome (parry window, i-frames,
-	 *                          resource absorb) decided before calling ApplyHit.
+	 * @param HitResponse       Requested outcome only. Parry and Invincible are
+	 *                          re-resolved from the DEFENDER's own gameplay tags
+	 *                          (Condition.Self.IsParrying / .IsInvincible) and are
+	 *                          downgraded to Normal when the defender does not have
+	 *                          them, so the attacking side cannot assert them.
 	 * @param bCanApplyAilments Master ailment gate for this hit (e.g. false for
 	 *                          hazard ticks that should never bleed/ignite).
 	 */
-	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Combat|Hit")
+	UFUNCTION(BlueprintCallable, Category = "Combat|Hit")
 	bool ApplyHit(
 		AActor* AttackerActor,
 		AActor* DefenderActor,
@@ -171,7 +181,7 @@ public:
 	 * context across every trace sample in one swing to get deterministic rolls
 	 * and automatic duplicate-target suppression.
 	 */
-	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Combat|Hit")
+	UFUNCTION(BlueprintCallable, Category = "Combat|Hit")
 	bool ApplyHitWithContext(
 		AActor* AttackerActor,
 		AActor* DefenderActor,
@@ -230,6 +240,23 @@ protected:
 	void BroadcastDamagePopup(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result);
 
 private:
+	/** Client bridge used by the existing ApplyHit Blueprint node. */
+	UFUNCTION(Server, Reliable)
+	void ServerApplyHit(
+		AActor* DefenderActor,
+		const FAnimationDamageInfo& DamageInfo,
+		EHitResponse HitResponse,
+		bool bCanApplyAilments);
+
+	/** Client bridge for context-aware/multi-target attacks. */
+	UFUNCTION(Server, Reliable)
+	void ServerApplyHitWithContext(
+		AActor* DefenderActor,
+		const FAnimationDamageInfo& DamageInfo,
+		const FCombatHitContext& HitContext,
+		EHitResponse HitResponse,
+		bool bCanApplyAilments);
+
 	bool ApplyHitInternal(
 		AActor* AttackerActor,
 		AActor* DefenderActor,

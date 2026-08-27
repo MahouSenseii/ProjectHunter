@@ -304,6 +304,14 @@ void ALootChest::SetupLootComponent()
 
 void ALootChest::OnInteracted(AActor* Interactor)
 {
+	// The player-owned InteractionManager repeats this interaction on the
+	// server. The local call is presentation-only and must not try to send an
+	// RPC from this unowned world actor.
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (ChestState != EChestState::CS_Closed)
 	{
 		UE_LOG(LogLootChest, Verbose, TEXT("%s: Cannot interact - state is %s"),
@@ -323,7 +331,9 @@ void ALootChest::OpenChest(AActor* Opener)
 
 	if (!HasAuthority())
 	{
-		ServerOpenChest(Opener);
+		UE_LOG(LogLootChest, Warning,
+			TEXT("%s: OpenChest rejected on a client. Use the player InteractionManager so the request is validated by the server."),
+			*GetName());
 		return;
 	}
 
@@ -356,11 +366,6 @@ void ALootChest::OpenChest(AActor* Opener)
 
 	UE_LOG(LogLootChest, Log, TEXT("%s: Opened by %s"),
 		*GetName(), Opener ? *Opener->GetName() : TEXT("Unknown"));
-}
-
-void ALootChest::ServerOpenChest_Implementation(AActor* Opener)
-{
-	OpenChest(Opener);
 }
 
 void ALootChest::ResetChest()

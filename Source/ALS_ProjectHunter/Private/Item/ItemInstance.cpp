@@ -8,6 +8,7 @@
 #include "Item/ItemValueCalculator.h"
 #include "Item/Library/FunctionLibraries/ItemEnumFunctionLibrary.h"
 #include "Item/Library/FunctionLibraries/ItemReinforcementFunctionLibrary.h"
+#include "Item/Library/FunctionLibraries/ItemPowerFunctionLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "Item/Library/ItemLog.h"
 
@@ -31,6 +32,7 @@ void UItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(UItemInstance, TotalWeight);
 	DOREPLIFETIME(UItemInstance, ItemLevel);
 	DOREPLIFETIME(UItemInstance, Rarity);
+	DOREPLIFETIME(UItemInstance, ItemPowerScore);
 	DOREPLIFETIME(UItemInstance, bIdentified);
 	DOREPLIFETIME(UItemInstance, bForceAllAffixesIdentified);
 	DOREPLIFETIME(UItemInstance, DisplayName);
@@ -63,6 +65,11 @@ void UItemInstance::PostLoadInit()
 float UItemInstance::GetReinforcementMultiplier() const
 {
 	return UItemReinforcementFunctionLibrary::CalculateReinforcementMultiplier(Quality);
+}
+
+bool UItemInstance::RecalculateItemGrade()
+{
+	return UItemPowerFunctionLibrary::RecalculateItemGrade(this);
 }
 
 void UItemInstance::Initialize(FDataTableRowHandle InBaseItemHandle, int32 InItemLevel, EItemRarity InRarity, bool bGenerateAffixes)

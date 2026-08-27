@@ -9,6 +9,8 @@
 #include "AttributeSet.h"
 #include "AffixStructs.generated.h"
 
+class UGameplayEffect;
+
 /**
  * Affix Tier - Different power levels of same affix
  *
@@ -43,6 +45,14 @@ struct FAffixTier
 	/** Maximum stat value */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tier")
 	float MaxValue = 0.0f;
+
+	/** Item-power score contributed by this tier to the finished item's grade. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tier", meta = (ClampMin = "-1000.0"))
+	float PowerValue = 10.0f;
+
+	/** Optional tier-specific multiplier for the parent affix's spawn weight. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tier", meta = (ClampMin = "0.0"))
+	float WeightMultiplier = 1.0f;
 
 	/** Attribute to modify */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tier")
@@ -85,6 +95,10 @@ struct FAffixData : public FTableRowBase
 	/** Display name (e.g., "Increased Physical Damage") */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Basic")
 	FText AffixName;
+
+	/** Stable runtime/stat lookup name. Defaults to AffixID when left empty. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Basic")
+	FName AttributeName = NAME_None;
 
 	/** Affix type (Prefix, Suffix, Implicit, etc.) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Basic")
@@ -153,6 +167,10 @@ struct FAffixData : public FTableRowBase
 	/** Condition description (for tooltip) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Conditional")
 	FText ConditionDescription;
+
+	/** Optional Gameplay Effect for conditional or complex behavior. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Conditional")
+	TSubclassOf<UGameplayEffect> GameplayEffect;
 
 
 	/** Affix tiers (different power levels by item level) */

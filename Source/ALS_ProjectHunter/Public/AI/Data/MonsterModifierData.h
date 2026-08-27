@@ -104,11 +104,25 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Spawn Config")
 	float GetEffectiveRareChance(int32 AreaLevel, float MagicFind) const;
 
+	/**
+	 * Non-deterministic tier roll using the global RNG.
+	 *
+	 * Prefer RollMonsterTierSeeded inside a run: the run seed is supposed to
+	 * reproduce the whole run, and the global RNG breaks that. This overload
+	 * remains for placed-in-level test monsters and existing Blueprint callers.
+	 */
 	UFUNCTION(BlueprintPure, Category = "Spawn Config")
 	EMonsterTier RollMonsterTier(int32 AreaLevel, float MagicFind) const;
 
+	/** Deterministic tier roll. Same stream state and inputs always give the same tier. */
+	EMonsterTier RollMonsterTierSeeded(int32 AreaLevel, float MagicFind, FRandomStream& Stream) const;
+
+	/** Non-deterministic pack size. Prefer RollPackSizeSeeded inside a run. */
 	UFUNCTION(BlueprintPure, Category = "Spawn Config")
 	int32 RollPackSize(EMonsterTier Tier) const;
+
+	/** Deterministic pack size. */
+	int32 RollPackSizeSeeded(EMonsterTier Tier, FRandomStream& Stream) const;
 
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override
 	{

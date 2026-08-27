@@ -62,7 +62,7 @@ public:
 	 * (new fields, renamed fields, changed semantics).  The save/load system
 	 * can branch on this value to upgrade old items without data loss.
 	 */
-	static constexpr int32 ITEM_CURRENT_VERSION = 2;
+	static constexpr int32 ITEM_CURRENT_VERSION = 3;
 
 	UPROPERTY(SaveGame, BlueprintReadOnly, Replicated, Category = "Item")
 	int32 SerializationVersion = ITEM_CURRENT_VERSION;
@@ -81,9 +81,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter")
 	int32 ItemLevel = 1;
 
-	/** Item rarity grade (F-SS) - Determines affix count */
+	/** Derived F-SS grade. Initial generation rarity only controls the first affix roll. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter")
 	EItemRarity Rarity = EItemRarity::IR_GradeF;
+
+	/** BasePowerValue + the PowerValue of every current modifier. */
+	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated, Category = "Item|Power")
+	float ItemPowerScore = 0.0f;
+
+	/** Call after crafting or any runtime modifier change. Updates score, grade, and display name. */
+	UFUNCTION(BlueprintCallable, Category = "Item|Power")
+	bool RecalculateItemGrade();
 
 	/** Has every item affix been identified? Individual affixes still own their reveal state. */
 	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated, Category = "Item|Hunter")
@@ -194,7 +202,7 @@ public:
 	 *
 	 * @param InBaseItemHandle - Row handle to FItemBase in DataTable
 	 * @param InItemLevel - Item level (1-100) affects affix tier rolls
-	 * @param InRarity - Item grade (F-SS) determines affix count
+	 * @param InRarity - Initial affix-roll budget. The finished grade is derived from item power.
 	 * @param bGenerateAffixes - Whether to roll affixes (only for equipment Grade E+)
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Item")
@@ -209,7 +217,7 @@ public:
 	 *
 	 * @param InBaseItemHandle - Row handle to FItemBase in DataTable
 	 * @param InItemLevel - Item level (1-100) affects affix tier rolls
-	 * @param InRarity - Item grade (F-SS) determines affix count
+	 * @param InRarity - Initial affix-roll budget. The finished grade is derived from item power.
 	 * @param bGenerateAffixes - Whether to roll affixes (only for equipment Grade E+)
 	 * @param CorruptionChance - Per-affix chance to be corrupted (0.0 - 1.0)
 	 * @param bForceCorrupted - Force at least one corrupted affix

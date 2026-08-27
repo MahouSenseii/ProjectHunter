@@ -103,7 +103,11 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Loot Chest|Events")
 	void OnChestRespawned();
 
-	UFUNCTION(BlueprintCallable, Category = "Loot Chest")
+	/**
+	 * Opens the chest authoritatively. Client input should use the normal
+	 * InteractionManager path, whose RPC is owned by the interacting player.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Loot Chest")
 	void OpenChest(AActor* Opener);
 
 	UFUNCTION(BlueprintCallable, Category = "Loot Chest")
@@ -131,10 +135,6 @@ public:
 
 	UFUNCTION()
 	void OnRep_ChestState();
-
-	// Lets clients request opening while the server remains authoritative.
-	UFUNCTION(Server, Reliable)
-	void ServerOpenChest(AActor* Opener);
 
 protected:
 	void SetupInteraction();

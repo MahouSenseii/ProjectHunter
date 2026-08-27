@@ -18,6 +18,9 @@ class ALS_PROJECTHUNTER_API UBaseStatsData : public UPrimaryDataAsset
 	GENERATED_BODY()
 
 public:
+	/** Bump when serialized stat defaults require a one-time data migration. */
+	static constexpr int32 CurrentStatsSchemaVersion = 1;
+
 	UBaseStatsData();
 	static TSubclassOf<UAttributeSet> ResolveSourceAttributeSetClass(const UBaseStatsData* Data);
 	static void GatherStatDefinitionsFromAttributeSet(TSubclassOf<UAttributeSet> AttributeSetClass, TArray<FStatInitializationEntry>& OutDefinitions);
@@ -66,6 +69,13 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Advanced")
 	bool bSkipInitializationEffectsThatModifyAuthoredStats;
+
+	/**
+	 * Internal version for one-time stat-default migrations. Version 1 repairs
+	 * legacy assets whose reflected rows authored neutral multipliers as zero.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Advanced")
+	int32 StatsSchemaVersion;
 
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	TMap<FName, float> GetAllStatsAsMap() const;

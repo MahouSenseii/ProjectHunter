@@ -180,13 +180,13 @@ void UItemAffixFunctionLibrary::GetAffixCountByRarity(
 			break;
 
 		case EItemRarity::IR_GradeS:
-			OutMinPrefixes = 3; OutMaxPrefixes = 3;
-			OutMinSuffixes = 3; OutMaxSuffixes = 3;
+			OutMinPrefixes = 2; OutMaxPrefixes = 3;
+			OutMinSuffixes = 2; OutMaxSuffixes = 3;
 			break;
 
 		case EItemRarity::IR_GradeSS:
-			OutMinPrefixes = 0; OutMaxPrefixes = 0;
-			OutMinSuffixes = 0; OutMaxSuffixes = 0;
+			OutMinPrefixes = 3; OutMaxPrefixes = 3;
+			OutMinSuffixes = 3; OutMaxSuffixes = 3;
 			break;
 
 		default:

@@ -16,6 +16,7 @@ public class ALS_ProjectHunter : ModuleRules
 			"AIModule",
 			"GameplayAbilities",
 			"GameplayTags",
+			"DeveloperSettings",
 			"PhysicsCore",
 			"Niagara",
 			"EnhancedInput",

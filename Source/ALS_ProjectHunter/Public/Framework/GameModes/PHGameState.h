@@ -24,7 +24,7 @@ public:
 
 	// MATCH STATE
 
-	UPROPERTY(ReplicatedUsing = OnRep_MatchPhase, BlueprintReadOnly, Category = "Match")
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Match")
 	EPHMatchPhase MatchPhase = EPHMatchPhase::WaitingToStart;
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Match")
@@ -38,6 +38,10 @@ public:
 	/** Server time (seconds) when InProgress phase began. Clients use this to derive elapsed time. */
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Match")
 	float MatchStartServerTime = 0.f;
+
+	/** One coherent notification for MatchPhase plus its associated clock data. */
+	UPROPERTY(ReplicatedUsing = OnRep_MatchPhase)
+	uint32 MatchSnapshotRevision = 0;
 
 	/** Blueprint helper: seconds elapsed since InProgress started */
 	UFUNCTION(BlueprintPure, Category = "Match")
@@ -62,15 +66,23 @@ public:
 	// TOWER RUN STATE
 
 	/** Server-owned party run state. Clients consume this instead of mutating a local subsystem copy. */
-	UPROPERTY(ReplicatedUsing = OnRep_RunSnapshot, BlueprintReadOnly, Category = "Run")
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Run")
 	ERunState RunState = ERunState::Inactive;
 
-	UPROPERTY(ReplicatedUsing = OnRep_RunSnapshot, BlueprintReadOnly, Category = "Run")
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Run")
 	FRunSessionData RunSession;
 
 	/** Server clock at the last snapshot, allowing clients to display a live run timer. */
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Run")
 	float RunSnapshotServerTime = 0.f;
+
+	/**
+	 * Changes once per complete snapshot. RepNotify lives here instead of on
+	 * RunState and RunSession individually so Blueprint receives exactly one
+	 * coherent callback after the whole snapshot has arrived.
+	 */
+	UPROPERTY(ReplicatedUsing = OnRep_RunSnapshot)
+	uint32 RunSnapshotRevision = 0;
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Run")
 	void ApplyRunSnapshot(ERunState NewState, const FRunSessionData& NewSession);
