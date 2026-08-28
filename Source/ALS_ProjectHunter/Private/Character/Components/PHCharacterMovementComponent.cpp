@@ -89,6 +89,7 @@ void UPHCharacterMovementComponent::FSavedMove_PH::Clear()
 {
 	Super::Clear();
 	bSavedWantsWallTraversal = 0;
+	SavedWallAttachRetryAccumulator = 0.0f;
 }
 
 uint8 UPHCharacterMovementComponent::FSavedMove_PH::GetCompressedFlags() const
@@ -130,6 +131,20 @@ void UPHCharacterMovementComponent::FSavedMove_PH::SetMoveFor(
 		Cast<UPHCharacterMovementComponent>(Character->GetCharacterMovement()))
 	{
 		bSavedWantsWallTraversal = PHMovement->bWantsWallTraversalInput;
+		SavedWallAttachRetryAccumulator = PHMovement->WallAttachRetryAccumulator;
+	}
+}
+
+void UPHCharacterMovementComponent::FSavedMove_PH::PrepMoveFor(ACharacter* Character)
+{
+	Super::PrepMoveFor(Character);
+
+	// Replaying a corrected move must restart the attach probe from the same
+	// point in its cycle, or the replay can probe on a frame the original did not.
+	if (UPHCharacterMovementComponent* PHMovement =
+		Cast<UPHCharacterMovementComponent>(Character->GetCharacterMovement()))
+	{
+		PHMovement->WallAttachRetryAccumulator = SavedWallAttachRetryAccumulator;
 	}
 }
 
@@ -491,6 +506,15 @@ FVector UPHCharacterMovementComponent::ConvertCameraDirectionToWallDirection(
 	return bTreatIntoSurfaceAsUp ? FVector::ZeroVector : WallRight;
 }
 
+void UPHCharacterMovementComponent::OnMovementUpdated(
+	const float DeltaTime,
+	const FVector& OldLocation,
+	const FVector& OldVelocity)
+{
+	Super::OnMovementUpdated(DeltaTime, OldLocation, OldVelocity);
+	UpdateWallAttachRetry(DeltaTime);
+}
+
 float UPHCharacterMovementComponent::GetMaxSpeed() const
 {
 	return IsWallTraversing() ? GetWallTraversalSpeed() : Super::GetMaxSpeed();
@@ -604,6 +628,10 @@ void UPHCharacterMovementComponent::PhysWallTraversal(const float DeltaTime, int
 		if (!WallTraversalStep(StepTime))
 		{
 			// The sub-step changed movement mode (ground transition or detach).
+			// Hand the rest of the frame to the new mode instead of dropping it,
+			// or dropping off a wall costs a frame of gravity. StartNewPhysics
+			// no-ops on a spent remainder or exhausted iterations.
+			StartNewPhysics(RemainingTime, Iterations);
 			return;
 		}
 	}
@@ -611,6 +639,19 @@ void UPHCharacterMovementComponent::PhysWallTraversal(const float DeltaTime, int
 
 bool UPHCharacterMovementComponent::WallTraversalStep(const float DeltaTime)
 {
+	// Attachment checks stamina once; without this the character keeps traversing
+	// for free after running dry, since nothing else re-evaluates it while attached.
+	if (const APHBaseCharacter* PHCharacter = Cast<APHBaseCharacter>(CharacterOwner);
+		PHCharacter && !PHCharacter->CanUseStaminaMovement())
+	{
+		if (bDebugWallTraversal)
+		{
+			PH_LOG(LogPHWallTraversal, Log, "Exiting traversal: stamina movement is blocked.");
+		}
+		StopWallTraversal();
+		return false;
+	}
+
 	FHitResult WallHit;
 	TArray<FHitResult> WallHits;
 	bool bHasWall =
@@ -1047,12 +1088,19 @@ bool UPHCharacterMovementComponent::TraceWallSurfaces(
 		// on an arc.
 		if (bRequireInitialWall)
 		{
+			// The refine ray runs center -> impact point, which is not parallel to
+			// the sweep, so it can strike unrelated geometry (a rail, a pillar, a
+			// door frame) on the way. Adopting that normal would leave the hit
+			// describing one surface by normal and another by component and impact
+			// point, and IsWalkable/IsWallSurface would then judge two different
+			// surfaces. Only take the refinement when it lands on the same surface.
 			FHitResult FaceHit;
 			const FVector FaceEnd =
 				CandidateHit.ImpactPoint + TraceDirection * (WallTraceRadius + FaceRefineExtension);
 			if (GetWorld()->LineTraceSingleByChannel(
 					FaceHit, Start, FaceEnd, WallDetectionChannel, QueryParams) &&
-				FaceHit.IsValidBlockingHit())
+				FaceHit.IsValidBlockingHit() &&
+				FaceHit.GetComponent() == CandidateHit.GetComponent())
 			{
 				CandidateHit.ImpactNormal = FaceHit.ImpactNormal;
 				CandidateHit.Normal = FaceHit.Normal;
@@ -1594,8 +1642,10 @@ void UPHCharacterMovementComponent::HandleWallLost()
 			bLeavingUpwardEdge ? TEXT(" (attempting top mantle)") : TEXT(""));
 	}
 
-	ClearWallTraversalState();
+	// Order matters: RestoreWorldUpRotation derives the upright facing from the
+	// wall normal, which ClearWallTraversalState now resets.
 	RestoreWorldUpRotation();
+	ClearWallTraversalState();
 	if (bLeavingUpwardEdge)
 	{
 		// Set the normal short cooldown before entering falling so the movement
@@ -1737,6 +1787,46 @@ void UPHCharacterMovementComponent::UpdateWallTraversalCombatMovementScale()
 	ClearWallTraversalCombatMovementScale();
 }
 
+void UPHCharacterMovementComponent::UpdateWallAttachRetry(const float DeltaTime)
+{
+	// Not every wall is met head-on: drifting alongside one never produces the
+	// impact that HandleImpact attaches from, so falling is probed periodically.
+	// This runs from the movement update, which the server replays move for move,
+	// rather than from Tick, whose wall-clock timer free-runs per machine and
+	// would let the two sides attach on different frames.
+	if (!CharacterOwner ||
+		CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy ||
+		!bWantsWallTraversalInput ||
+		MovementMode != MOVE_Falling ||
+		IsWallTraversing())
+	{
+		WallAttachRetryAccumulator = 0.0f;
+		return;
+	}
+
+	WallAttachRetryAccumulator += DeltaTime;
+	if (WallAttachRetryAccumulator < WallAttachRetryInterval)
+	{
+		return;
+	}
+
+	WallAttachRetryAccumulator = 0.0f;
+
+	const APHBaseCharacter* PHCharacter = Cast<APHBaseCharacter>(CharacterOwner);
+	if (!PHCharacter)
+	{
+		return;
+	}
+
+	const EALSMovementState RequestedState =
+		PHCharacter->SelectWallTraversalState(PHCharacter->GetWallTraversalWeight());
+	if (RequestedState == EALSMovementState::WallRunning ||
+		RequestedState == EALSMovementState::WallClimbing)
+	{
+		TryStartWallTraversal(RequestedState);
+	}
+}
+
 void UPHCharacterMovementComponent::ApplyWallTraversalRootMotionMode()
 {
 	if (!bIgnoreRootMotionWhileWallTraversing || !CharacterOwner)
@@ -1789,7 +1879,16 @@ void UPHCharacterMovementComponent::ClearWallTraversalState()
 	WallSurfaceComponent.Reset();
 	WallLostFrames = 0;
 	WallTraversalElapsed = 0.0f;
+	WallAttachRetryAccumulator = 0.0f;
 	ClearWallTraversalCombatMovementScale();
+
+	// The wall basis is read by GetWallNormal/GetWallUp/GetWallTraversalRotation,
+	// which the anim layer polls; leaving it set makes a detached character keep
+	// reporting the wall it just left. Callers that need the outgoing wall must
+	// read it (RestoreWorldUpRotation, JumpOffWall) before calling this.
+	WallNormal = FVector::ZeroVector;
+	WallUpDirection = FVector::UpVector;
+	WallImpactPoint = FVector::ZeroVector;
 }
 
 void UPHCharacterMovementComponent::RecordWallDetachTime()

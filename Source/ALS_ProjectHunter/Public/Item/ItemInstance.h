@@ -62,7 +62,7 @@ public:
 	 * (new fields, renamed fields, changed semantics).  The save/load system
 	 * can branch on this value to upgrade old items without data loss.
 	 */
-	static constexpr int32 ITEM_CURRENT_VERSION = 3;
+	static constexpr int32 ITEM_CURRENT_VERSION = 5;
 
 	UPROPERTY(SaveGame, BlueprintReadOnly, Replicated, Category = "Item")
 	int32 SerializationVersion = ITEM_CURRENT_VERSION;

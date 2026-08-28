@@ -15,7 +15,25 @@
 
 DEFINE_LOG_CATEGORY(LogMonsterModifier);
 
+namespace MonsterModifierPrivate
+{
+	FText GetOwnerClassDisplayName(const AActor* Owner)
+	{
+		const UClass* OwnerClass = Owner ? Owner->GetClass() : nullptr;
+		if (!OwnerClass)
+		{
+			return FText::GetEmpty();
+		}
 
+#if WITH_EDITORONLY_DATA
+		return OwnerClass->GetDisplayNameText();
+#else
+		FString ClassName = OwnerClass->GetName();
+		ClassName.RemoveFromEnd(TEXT("_C"));
+		return FText::FromString(FName::NameToDisplayString(ClassName, false));
+#endif
+	}
+}
 
 UMonsterModifierComponent::UMonsterModifierComponent()
 {
@@ -102,7 +120,7 @@ void UMonsterModifierComponent::RollAndApplyMods()
 			"RollAndApplyMods fallback: No SpawnConfig was set on Owner=%s; applying native base variation only.",
 			*GetOwner()->GetName());
 		AssignedTier = EMonsterTier::MT_Normal;
-		FullDisplayName = GetOwner()->GetClass()->GetDisplayNameText();
+		FullDisplayName = MonsterModifierPrivate::GetOwnerClassDisplayName(GetOwner());
 		ApplyCombinedStatScaling(ASC);
 		OnMonsterModsApplied.Broadcast(AssignedTier, FullDisplayName);
 		return;
@@ -120,7 +138,7 @@ void UMonsterModifierComponent::RollAndApplyMods()
 	if (AssignedTier == EMonsterTier::MT_Normal)
 	{
 
-		FullDisplayName = GetOwner()->GetClass()->GetDisplayNameText();
+		FullDisplayName = MonsterModifierPrivate::GetOwnerClassDisplayName(GetOwner());
 		ApplyCombinedStatScaling(ASC);
 		OnMonsterModsApplied.Broadcast(AssignedTier, FullDisplayName);
 		return;
@@ -131,7 +149,7 @@ void UMonsterModifierComponent::RollAndApplyMods()
 	{
 		PH_LOG_WARNING(LogMonsterModifier, "RollAndApplyMods failed: SpawnConfig had no ModifierTable assigned.");
 		ApplyCombinedStatScaling(ASC);
-		FullDisplayName = GetOwner()->GetClass()->GetDisplayNameText();
+		FullDisplayName = MonsterModifierPrivate::GetOwnerClassDisplayName(GetOwner());
 		OnMonsterModsApplied.Broadcast(AssignedTier, FullDisplayName);
 		return;
 	}
@@ -536,7 +554,7 @@ void UMonsterModifierComponent::ApplyCombinedStatScaling(UAbilitySystemComponent
 
 FText UMonsterModifierComponent::BuildDisplayName(const TArray<FMonsterModRow>& Mods) const
 {
-	FString BaseName = GetOwner()->GetClass()->GetDisplayNameText().ToString();
+	FString BaseName = MonsterModifierPrivate::GetOwnerClassDisplayName(GetOwner()).ToString();
 
 	FString PrefixStr;
 	FString SuffixStr;

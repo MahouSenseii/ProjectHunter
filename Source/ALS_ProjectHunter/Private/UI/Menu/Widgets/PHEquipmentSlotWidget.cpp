@@ -6,6 +6,7 @@
 #include "Engine/Texture2D.h"
 #include "Components/TextBlock.h"
 #include "Equipment/Components/EquipmentManager.h"
+#include "Equipment/Library/FunctionLibraries/EquipmentFunctionLibrary.h"
 #include "Inventory/Components/InventoryManager.h"
 #include "Item/ItemInstance.h"
 #include "UI/Menu/DragDrop/PHItemDragDropOperation.h"
@@ -38,14 +39,23 @@ void UPHEquipmentSlotWidget::SetOwningEquipmentPage(UPHEquipmentMenuPageWidget* 
 
 void UPHEquipmentSlotWidget::RefreshSlot()
 {
-	UItemInstance* Item = (EquipmentManager && ConnectedEquipmentSlot != EEquipmentSlot::ES_None)
-		? EquipmentManager->GetEquippedItem(ConnectedEquipmentSlot)
+	// Read through the occupying slot so a two-handed weapon shows in both hands,
+	// but keep the connected slot in the view data so the label stays the one the
+	// player sees ("Off Hand", not "Two Hand").
+	const EEquipmentSlot OccupyingSlot = GetOccupyingEquipmentSlot();
+	UItemInstance* Item = (EquipmentManager && OccupyingSlot != EEquipmentSlot::ES_None)
+		? EquipmentManager->GetEquippedItem(OccupyingSlot)
 		: nullptr;
 	SlotData = UMenuFunctionLibrary::MakeEquipmentSlotViewData(ConnectedEquipmentSlot, Item);
 	RefreshVisuals();
 
 	OnSlotDataRefreshed(SlotData);
 	SlotDataRefreshed.Broadcast(SlotData);
+}
+
+bool UPHEquipmentSlotWidget::IsFilledByTwoHandedWeapon() const
+{
+	return GetOccupyingEquipmentSlot() != ConnectedEquipmentSlot;
 }
 
 bool UPHEquipmentSlotWidget::CanAcceptItem(UItemInstance* Item) const
@@ -77,14 +87,15 @@ bool UPHEquipmentSlotWidget::RequestEquipSelectedItem()
 
 bool UPHEquipmentSlotWidget::RequestUnequip(bool bMoveToBag)
 {
+	const EEquipmentSlot OccupyingSlot = GetOccupyingEquipmentSlot();
 	if (!EquipmentManager
-		|| ConnectedEquipmentSlot == EEquipmentSlot::ES_None
-		|| !EquipmentManager->IsSlotOccupied(ConnectedEquipmentSlot))
+		|| OccupyingSlot == EEquipmentSlot::ES_None
+		|| !EquipmentManager->IsSlotOccupied(OccupyingSlot))
 	{
 		return false;
 	}
 
-	EquipmentManager->UnequipItem(ConnectedEquipmentSlot, bMoveToBag);
+	EquipmentManager->UnequipItem(OccupyingSlot, bMoveToBag);
 	return true;
 }
 
@@ -110,8 +121,9 @@ bool UPHEquipmentSlotWidget::CanAcceptDroppedItem(UPHItemDragDropOperation* Oper
 		return false;
 	}
 
-	// Dropping a slot back onto itself is a no-op, not a valid target.
-	if (Operation->IsSameEquipmentSlot(ConnectedEquipmentSlot))
+	// Dropping a slot back onto itself is a no-op, not a valid target. A
+	// two-handed weapon dragged between the hands lands on its own slot too.
+	if (Operation->IsSameEquipmentSlot(GetOccupyingEquipmentSlot()))
 	{
 		return false;
 	}
@@ -257,7 +269,8 @@ void UPHEquipmentSlotWidget::NativeOnDragDetected(
 {
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
 
-	if (!bEnableDragAndDrop || !SlotData.Item || ConnectedEquipmentSlot == EEquipmentSlot::ES_None)
+	const EEquipmentSlot OccupyingSlot = GetOccupyingEquipmentSlot();
+	if (!bEnableDragAndDrop || !SlotData.Item || OccupyingSlot == EEquipmentSlot::ES_None)
 	{
 		return;
 	}
@@ -265,8 +278,10 @@ void UPHEquipmentSlotWidget::NativeOnDragDetected(
 	FMenuSlotTooltipHelper::Hide(*this);
 	SetHovered(false);
 
+	// Carry the slot the item is stored in: dragging the two-handed weapon out of
+	// the off hand still has to unequip ES_TwoHand.
 	UPHItemDragDropOperation* Operation = FMenuItemDragDropHelper::MakeEquipmentDrag(
-		*this, SlotData.Item, ConnectedEquipmentSlot, DragVisualWidgetClass, DragVisualSize);
+		*this, SlotData.Item, OccupyingSlot, DragVisualWidgetClass, DragVisualSize);
 	if (!Operation)
 	{
 		return;
@@ -397,7 +412,7 @@ void UPHEquipmentSlotWidget::HandleSlotClicked()
 
 void UPHEquipmentSlotWidget::HandleEquipmentChanged(EEquipmentSlot EquipmentSlot, UItemInstance* NewItem, UItemInstance* OldItem)
 {
-	if (EquipmentSlot != ConnectedEquipmentSlot)
+	if (!IsAffectedByEquipmentChange(EquipmentSlot))
 	{
 		return;
 	}
@@ -431,6 +446,27 @@ void UPHEquipmentSlotWidget::HandleDragCancelled(UDragDropOperation* Operation)
 			InventoryManager->DropItemToGround(ItemOperation->Item);
 		}
 	}
+}
+
+EEquipmentSlot UPHEquipmentSlotWidget::GetOccupyingEquipmentSlot() const
+{
+	return EquipmentManager
+		? EquipmentManager->ResolveOccupyingSlot(ConnectedEquipmentSlot)
+		: ConnectedEquipmentSlot;
+}
+
+bool UPHEquipmentSlotWidget::IsAffectedByEquipmentChange(EEquipmentSlot ChangedSlot) const
+{
+	if (ChangedSlot == ConnectedEquipmentSlot)
+	{
+		return true;
+	}
+
+	// Both hands render the shared two-hand entry, and this fires after the
+	// change - so testing the slot rather than the current occupant is what
+	// catches the two-hander being unequipped as well as equipped.
+	return ChangedSlot == EEquipmentSlot::ES_TwoHand
+		&& UEquipmentFunctionLibrary::IsHandSlot(ConnectedEquipmentSlot);
 }
 
 void UPHEquipmentSlotWidget::BindManagerDelegates()

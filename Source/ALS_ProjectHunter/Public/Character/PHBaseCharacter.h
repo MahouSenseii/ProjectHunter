@@ -431,8 +431,4 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerCompleteWallToGroundTransition();
 
-	float WallAttachRetryAccumulator = 0.0f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Movement|Wall Traversal", meta = (ClampMin = "0.0"))
-	float WallAttachRetryInterval = 0.05f;
 };

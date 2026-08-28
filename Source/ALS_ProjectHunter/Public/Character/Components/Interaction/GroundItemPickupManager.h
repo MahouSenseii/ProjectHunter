@@ -44,10 +44,19 @@ private:
 	bool PickupToInventoryInternal(int32 ItemID, FVector ClientLocation);
 	bool PickupAndEquipInternal(int32 ItemID, FVector ClientLocation);
 
+	UPROPERTY()
 	AActor* OwnerActor;
+	
+	UPROPERTY()
 	UWorld* WorldContext;
+	
+	UPROPERTY()
 	UInventoryManager* CachedInventoryManager;
+	
+	UPROPERTY()
 	UEquipmentManager* CachedEquipmentManager;
+	
+	UPROPERTY()
 	UGroundItemSubsystem* CachedGroundItemSubsystem;
 
 };

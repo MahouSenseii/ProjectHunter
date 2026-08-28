@@ -39,15 +39,15 @@ bool FStatsModifierMath::ResolveGameplayModifier(const EModifyType ModifyType, c
 		return true;
 
 	case EModifyType::MT_Override:
-	case EModifyType::MT_SetRank:
 		OutModifier.ModOp = EGameplayModOp::Override;
 		OutModifier.Magnitude = RolledValue;
 		OutModifier.bCreatesGameplayModifier = true;
 		return true;
 
 	case EModifyType::MT_GrantSkill:
-		// Ability grants require an authored GameplayEffect/ability component and
-		// must never silently turn into an unrelated numeric attribute modifier.
+	case EModifyType::MT_SetRank:
+		// Ability grants and ranks require typed ability ownership. They must
+		// never silently turn into unrelated numeric attribute modifiers.
 		return false;
 
 	default:

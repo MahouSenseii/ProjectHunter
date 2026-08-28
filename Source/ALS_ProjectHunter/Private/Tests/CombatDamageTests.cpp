@@ -22,7 +22,12 @@
 #include "Combat/Resolvers/CombatIncomingDamageResolver.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "Item/Library/Structs/ItemStatsStructs.h"
 #include "Stats/Data/BaseStatsData.h"
+#include "Stats/Library/FunctionLibraries/ContextualStatModifierEvaluator.h"
+#include "Stats/Library/FunctionLibraries/ItemLocalStatResolver.h"
+#include "Stats/Library/Structs/ResolvedItemStats.h"
+#include "Tags/PHGameplayTags.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -95,7 +100,7 @@ bool FPHCombatBaseStatsNeutralMultiplierTest::RunTest(const FString&)
 	TestStat(TEXT("GlobalDamageTakenMultiplier"), 1.f);
 	TestStat(TEXT("PhysicalDamageTakenMultiplier"), 1.f);
 	TestStat(TEXT("CritMultiplier"), 1.5f);
-	TestStat(TEXT("SpellsCritMultiplier"), 1.5f);
+	TestStat(TEXT("SpellsCritMultiplier"), 1.f);
 	TestEqual(
 		TEXT("DA_BaseStats has the current schema"),
 		BaseStats->StatsSchemaVersion,
@@ -287,6 +292,107 @@ bool FPHCombatDeterministicRangeTest::RunTest(const FString&)
 	const FCombatDamagePacket C =
 		FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(Attrs.Get(), MakeNonCritInfo(), StreamC);
 	TestTrue(TEXT("A different seed still lands inside the range"), C.Physical >= 10.f - Tolerance && C.Physical <= 20.f + Tolerance);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPHCombatSelectedWeaponDoesNotSumHandsTest,
+	"ProjectHunter.Combat.Outgoing.SelectedWeaponDoesNotSumHands",
+	PHCombatTests::TestFlags)
+
+bool FPHCombatSelectedWeaponDoesNotSumHandsTest::RunTest(const FString&)
+{
+	using namespace PHCombatTests;
+
+	const TStrongObjectPtr<UHunterAttributeSet> Attrs = MakeFlatPhysicalAttacker(999.f);
+	FResolvedWeaponStats MainHand;
+	MainHand.bIsValid = true;
+	MainHand.Values.MinPhysicalDamage = 10.f;
+	MainHand.Values.MaxPhysicalDamage = 10.f;
+	FResolvedWeaponStats OffHand;
+	OffHand.bIsValid = true;
+	OffHand.Values.MinPhysicalDamage = 25.f;
+	OffHand.Values.MaxPhysicalDamage = 25.f;
+
+	FRandomStream MainStream(1);
+	FRandomStream OffStream(1);
+	const FAnimationDamageInfo Info = MakeNonCritInfo();
+	const FCombatDamagePacket MainPacket =
+		FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
+			Attrs.Get(), Info, MainStream, &MainHand);
+	const FCombatDamagePacket OffPacket =
+		FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
+			Attrs.Get(), Info, OffStream, &OffHand);
+
+	TestEqual(TEXT("Main-hand attack uses only main-hand local damage"), MainPacket.Physical, 10.f, Tolerance);
+	TestEqual(TEXT("Off-hand attack uses only off-hand local damage"), OffPacket.Physical, 25.f, Tolerance);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPHCombatLocalItemStatResolutionTest,
+	"ProjectHunter.Combat.Outgoing.LocalItemStatResolution",
+	PHCombatTests::TestFlags)
+
+bool FPHCombatLocalItemStatResolutionTest::RunTest(const FString&)
+{
+	using namespace PHCombatTests;
+
+	FBaseWeaponStats WeaponBase;
+	WeaponBase.MinPhysicalDamage = 10.f;
+	WeaponBase.MaxPhysicalDamage = 20.f;
+	WeaponBase.AttackSpeed = 1.f;
+
+	FPHItemStats WeaponAffixes;
+	FPHAttributeData IncreasedPhysical;
+	IncreasedPhysical.ModifiedLocation = EAffixScope::AS_Local;
+	IncreasedPhysical.ModifiedAttribute = UHunterAttributeSet::GetPhysicalPercentDamageAttribute();
+	IncreasedPhysical.ModifyType = EModifyType::MT_Increased;
+	IncreasedPhysical.RolledStatValue = 50.f;
+	WeaponAffixes.Prefixes.Add(IncreasedPhysical);
+
+	FPHAttributeData AddedFireRange;
+	AddedFireRange.ModifiedLocation = EAffixScope::AS_Local;
+	AddedFireRange.ModifiedAttribute = UHunterAttributeSet::GetMinFireDamageAttribute();
+	AddedFireRange.ModifyType = EModifyType::MT_AddRange;
+	AddedFireRange.RolledStatValue = 3.f;
+	AddedFireRange.RolledSecondaryStatValue = 7.f;
+	WeaponAffixes.Prefixes.Add(AddedFireRange);
+
+	FPHAttributeData IncreasedAttackSpeed;
+	IncreasedAttackSpeed.ModifiedLocation = EAffixScope::AS_Local;
+	IncreasedAttackSpeed.ModifiedAttribute = UHunterAttributeSet::GetAttackSpeedAttribute();
+	IncreasedAttackSpeed.ModifyType = EModifyType::MT_Increased;
+	IncreasedAttackSpeed.RolledStatValue = 20.f;
+	WeaponAffixes.Suffixes.Add(IncreasedAttackSpeed);
+
+	const FResolvedWeaponStats Weapon =
+		FItemLocalStatResolver::ResolveWeapon(WeaponBase, WeaponAffixes);
+	TestEqual(TEXT("Local increased physical scales the owning weapon minimum"), Weapon.Values.MinPhysicalDamage, 15.f, Tolerance);
+	TestEqual(TEXT("Local increased physical scales the owning weapon maximum"), Weapon.Values.MaxPhysicalDamage, 30.f, Tolerance);
+	TestEqual(TEXT("A range affix retains its rolled lower endpoint"), Weapon.Values.MinFireDamage, 3.f, Tolerance);
+	TestEqual(TEXT("A range affix retains its rolled upper endpoint"), Weapon.Values.MaxFireDamage, 7.f, Tolerance);
+	TestEqual(TEXT("Local attack speed resolves from the weapon base"), Weapon.Values.AttackSpeed, 1.2f, Tolerance);
+
+	FBaseArmorStats ArmorBase;
+	ArmorBase.Armor = 100.f;
+	FPHItemStats ArmorAffixes;
+	FPHAttributeData FlatArmour;
+	FlatArmour.ModifiedLocation = EAffixScope::AS_Local;
+	FlatArmour.ModifiedAttribute = UHunterAttributeSet::GetArmourFlatBonusAttribute();
+	FlatArmour.ModifyType = EModifyType::MT_Add;
+	FlatArmour.RolledStatValue = 20.f;
+	ArmorAffixes.Prefixes.Add(FlatArmour);
+	FPHAttributeData IncreasedArmour;
+	IncreasedArmour.ModifiedLocation = EAffixScope::AS_Local;
+	IncreasedArmour.ModifiedAttribute = UHunterAttributeSet::GetArmourPercentBonusAttribute();
+	IncreasedArmour.ModifyType = EModifyType::MT_Increased;
+	IncreasedArmour.RolledStatValue = 50.f;
+	ArmorAffixes.Suffixes.Add(IncreasedArmour);
+
+	const FResolvedArmorStats Armor =
+		FItemLocalStatResolver::ResolveArmor(ArmorBase, ArmorAffixes);
+	TestEqual(TEXT("Local flat and increased armour fold once into the owning item"), Armor.Values.Armor, 180.f, Tolerance);
 	return true;
 }
 
@@ -552,6 +658,175 @@ bool FPHCombatConversionOverAllocationTest::RunTest(const FString&)
 	TestEqual(TEXT("Fire takes a proportional half"), Packet.Fire, 50.f, Tolerance);
 	TestEqual(TEXT("Ice takes a proportional half"), Packet.Ice, 50.f, Tolerance);
 	TestEqual(TEXT("Nothing is left unconverted"), Packet.Physical, 0.f, Tolerance);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPHCombatStagedConversionAndGainAsExtraTest,
+	"ProjectHunter.Combat.Outgoing.StagedConversionAndGainAsExtra",
+	PHCombatTests::TestFlags)
+
+bool FPHCombatStagedConversionAndGainAsExtraTest::RunTest(const FString&)
+{
+	using namespace PHCombatTests;
+
+	{
+		const TStrongObjectPtr<UHunterAttributeSet> Attrs = MakeFlatPhysicalAttacker(100.f);
+		Attrs->InitFireToIce(100.f);
+		FAnimationDamageInfo Info = MakeNonCritInfo();
+		FCombatDamageConversionRule& SkillRule = Info.SkillDamageConversions.AddDefaulted_GetRef();
+		SkillRule.From = EHunterDamageType::Physical;
+		SkillRule.To = EHunterDamageType::Fire;
+		SkillRule.Percent = 100.f;
+		FRandomStream Stream(1);
+
+		const FCombatDamagePacket Packet =
+			FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(Attrs.Get(), Info, Stream);
+		TestEqual(TEXT("Skill conversion runs before external conversion"), Packet.Ice, 100.f, Tolerance);
+		TestEqual(TEXT("Staged conversion conserves the hit"), PacketTotal(Packet), 100.f, Tolerance);
+	}
+
+	{
+		const TStrongObjectPtr<UHunterAttributeSet> Attrs = MakeFlatPhysicalAttacker(100.f);
+		FAnimationDamageInfo Info = MakeNonCritInfo();
+		FCombatDamageConversionRule& ExtraRule = Info.SkillDamageConversions.AddDefaulted_GetRef();
+		ExtraRule.From = EHunterDamageType::Physical;
+		ExtraRule.To = EHunterDamageType::Fire;
+		ExtraRule.Percent = 50.f;
+		ExtraRule.bGainAsExtra = true;
+		FRandomStream Stream(1);
+
+		const FCombatDamagePacket Packet =
+			FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(Attrs.Get(), Info, Stream);
+		TestEqual(TEXT("Gain as extra keeps the source damage"), Packet.Physical, 100.f, Tolerance);
+		TestEqual(TEXT("Gain as extra adds the destination damage"), Packet.Fire, 50.f, Tolerance);
+		TestEqual(TEXT("Gain as extra intentionally increases total damage"), PacketTotal(Packet), 150.f, Tolerance);
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPHCombatDamageOverTimeSkipsConversionTest,
+	"ProjectHunter.Combat.Outgoing.DamageOverTimeSkipsConversion",
+	PHCombatTests::TestFlags)
+
+bool FPHCombatDamageOverTimeSkipsConversionTest::RunTest(const FString&)
+{
+	using namespace PHCombatTests;
+
+	const TStrongObjectPtr<UHunterAttributeSet> Attrs = MakeFlatPhysicalAttacker(100.f);
+	Attrs->InitPhysicalToFire(100.f);
+	FAnimationDamageInfo Info = MakeNonCritInfo();
+	Info.Tags.bIsDamageOverTime = true;
+	FRandomStream Stream(1);
+
+	const FCombatDamagePacket Packet =
+		FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(Attrs.Get(), Info, Stream);
+	TestEqual(TEXT("Damage over time remains in its authored source type"), Packet.Physical, 100.f, Tolerance);
+	TestEqual(TEXT("Damage over time is not converted"), Packet.Fire, 0.f, Tolerance);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPHCombatContextualModifierTagsTest,
+	"ProjectHunter.Combat.Outgoing.ContextualModifierTags",
+	PHCombatTests::TestFlags)
+
+bool FPHCombatContextualModifierTagsTest::RunTest(const FString&)
+{
+	using namespace PHCombatTests;
+
+	FPHAttributeData MeleeDamage;
+	MeleeDamage.ModifiedAttribute = UHunterAttributeSet::GetGlobalDamagesAttribute();
+	MeleeDamage.ModifiedLocation = EAffixScope::AS_Conditional;
+	MeleeDamage.ModifyType = EModifyType::MT_Increased;
+	MeleeDamage.RolledStatValue = 50.f;
+	MeleeDamage.RequiredSourceTags.AddTag(FPHGameplayTags::Get().Skill_Melee);
+
+	FStatModifierEvaluationContext Context;
+	Context.bIsSkillHit = true;
+	Context.SourceTags.AddTag(FPHGameplayTags::Get().Skill_Melee);
+	FContextualStatModifierSnapshot Snapshot;
+	FContextualStatModifierEvaluator::AccumulateModifiers(
+		TArray<FPHAttributeData>{MeleeDamage}, nullptr, Context, Snapshot);
+
+	const TStrongObjectPtr<UHunterAttributeSet> Attrs = MakeFlatPhysicalAttacker(100.f);
+	FRandomStream Stream(1);
+	const FCombatDamagePacket Packet =
+		FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
+			Attrs.Get(), MakeNonCritInfo(), Stream, nullptr, &Snapshot);
+	TestEqual(TEXT("Matching skill tags activate a contextual item modifier"), Packet.Physical, 150.f, Tolerance);
+
+	Context.SourceTags.Reset();
+	FContextualStatModifierSnapshot UnmatchedSnapshot;
+	FContextualStatModifierEvaluator::AccumulateModifiers(
+		TArray<FPHAttributeData>{MeleeDamage}, nullptr, Context, UnmatchedSnapshot);
+	TestTrue(TEXT("Missing required skill tags leave no modifier"), UnmatchedSnapshot.IsEmpty());
+
+	FPHAttributeData BlockedWhileMelee;
+	BlockedWhileMelee.ModifiedAttribute = UHunterAttributeSet::GetGlobalDamagesAttribute();
+	BlockedWhileMelee.ModifiedLocation = EAffixScope::AS_Conditional;
+	BlockedWhileMelee.ModifyType = EModifyType::MT_Increased;
+	BlockedWhileMelee.RolledStatValue = 20.f;
+	BlockedWhileMelee.BlockedSourceTags.AddTag(FPHGameplayTags::Get().Skill_Melee);
+
+	FContextualStatModifierSnapshot BlockOnlySnapshot;
+	FContextualStatModifierEvaluator::AccumulateModifiers(
+		TArray<FPHAttributeData>{BlockedWhileMelee}, nullptr, Context, BlockOnlySnapshot);
+	TestFalse(TEXT("A block-only condition applies when its blocked tag is absent"),
+		BlockOnlySnapshot.IsEmpty());
+
+	Context.SourceTags.AddTag(FPHGameplayTags::Get().Skill_Melee);
+	FContextualStatModifierSnapshot BlockedSnapshot;
+	FContextualStatModifierEvaluator::AccumulateModifiers(
+		TArray<FPHAttributeData>{BlockedWhileMelee}, nullptr, Context, BlockedSnapshot);
+	TestTrue(TEXT("A block-only condition is suppressed by its blocked tag"),
+		BlockedSnapshot.IsEmpty());
+
+	FPHAttributeData ItemGainAsExtra;
+	ItemGainAsExtra.ModifyType = EModifyType::MT_ConvertTo;
+	ItemGainAsExtra.FromDamageType = EDamageType::DT_Physical;
+	ItemGainAsExtra.ToDamageType = EDamageType::DT_Fire;
+	ItemGainAsExtra.RolledStatValue = 50.f;
+	ItemGainAsExtra.bGainAsExtra = true;
+
+	FContextualStatModifierSnapshot GainAsExtraSnapshot;
+	FContextualStatModifierEvaluator::AccumulateModifiers(
+		TArray<FPHAttributeData>{ItemGainAsExtra}, nullptr,
+		FStatModifierEvaluationContext(), GainAsExtraSnapshot);
+	TestEqual(TEXT("An unconditional item gain-as-extra affix creates one rule"),
+		GainAsExtraSnapshot.DamageConversionRules.Num(), 1);
+
+	FRandomStream GainAsExtraStream(1);
+	const FCombatDamagePacket GainAsExtraPacket =
+		FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
+			Attrs.Get(), MakeNonCritInfo(), GainAsExtraStream, nullptr, &GainAsExtraSnapshot);
+	TestEqual(TEXT("Item gain-as-extra keeps source damage"),
+		GainAsExtraPacket.Physical, 100.f, Tolerance);
+	TestEqual(TEXT("Item gain-as-extra adds destination damage"),
+		GainAsExtraPacket.Fire, 50.f, Tolerance);
+
+	FPHAttributeData ItemConversion = ItemGainAsExtra;
+	ItemConversion.RolledStatValue = 80.f;
+	ItemConversion.bGainAsExtra = false;
+	FContextualStatModifierSnapshot ConversionSnapshot;
+	FContextualStatModifierEvaluator::AccumulateModifiers(
+		TArray<FPHAttributeData>{ItemConversion}, nullptr,
+		FStatModifierEvaluationContext(), ConversionSnapshot);
+
+	const TStrongObjectPtr<UHunterAttributeSet> ConvertingAttrs = MakeFlatPhysicalAttacker(100.f);
+	ConvertingAttrs->InitPhysicalToIce(80.f);
+	FRandomStream ConversionStream(1);
+	const FCombatDamagePacket ConversionPacket =
+		FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
+			ConvertingAttrs.Get(), MakeNonCritInfo(), ConversionStream, nullptr, &ConversionSnapshot);
+	TestEqual(TEXT("Item and character conversion normalize together to fire"),
+		ConversionPacket.Fire, 50.f, Tolerance);
+	TestEqual(TEXT("Item and character conversion normalize together to ice"),
+		ConversionPacket.Ice, 50.f, Tolerance);
+	TestEqual(TEXT("Normalized mixed-source conversion consumes the source"),
+		ConversionPacket.Physical, 0.f, Tolerance);
 	return true;
 }
 

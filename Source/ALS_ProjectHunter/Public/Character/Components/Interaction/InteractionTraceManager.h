@@ -20,12 +20,16 @@ struct ALS_PROJECTHUNTER_API FGroundItemInteractionCandidate
 	UPROPERTY(BlueprintReadOnly, Category = "Interaction|Ground Items")
 	int32 ItemID = INDEX_NONE;
 
-	/** Camera-alignment score, including the current-focus hysteresis bonus. */
+	/** Aim score, including the current-focus hysteresis bonus. 1.0 = dead on the aim ray. */
 	UPROPERTY(BlueprintReadOnly, Category = "Interaction|Ground Items")
 	float Score = -1.0f;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Interaction|Ground Items")
 	float Distance = 0.0f;
+
+	/** Perpendicular distance from the aim ray in cm - what the score ranks on. */
+	UPROPERTY(BlueprintReadOnly, Category = "Interaction|Ground Items")
+	float AimOffset = 0.0f;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Interaction|Ground Items")
 	FVector WorldLocation = FVector::ZeroVector;
@@ -106,11 +110,39 @@ public:
 	float MinPlayerForwardDot = 0.0f;
 
 	/**
-	 * Hysteresis score bonus given to the current target. A challenger must
-	 * exceed this amount before focus changes.
+	 * Targets within this distance of the player bypass both forward gates.
+	 *
+	 * Point-blank targets sit at an unstable angle from the player centre - a
+	 * small strafe flips the forward dot's sign - and sit almost straight down
+	 * from the camera whenever camera collision pulls it in close. Gating them
+	 * makes items at the player's feet flicker or vanish; the aim score still
+	 * ranks them, so bypassing only makes them reachable, not preferred.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace|Aim", meta = (ClampMin = "0.0", ClampMax = "0.25"))
-	float CurrentFocusDotBonus = 0.015f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace|Aim", meta = (ClampMin = "0.0", ClampMax = "400.0"))
+	float NearFieldBypassRadius = 150.0f;
+
+	/**
+	 * World-space radius around the aim ray that still counts as "aimed at".
+	 *
+	 * Ranking uses perpendicular distance from the aim ray in cm rather than the
+	 * angle to it. A fixed angular tolerance covers almost no world space close
+	 * to the camera and a lot of it far away, which is why targets at the
+	 * player's feet used to lose to targets across the room.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace|Aim", meta = (ClampMin = "10.0", ClampMax = "1000.0"))
+	float AimRadius = 120.0f;
+
+	/** How strongly closer targets are preferred over better-aimed ones. 0 = pure aim. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace|Aim", meta = (ClampMin = "0.0", ClampMax = "2.0"))
+	float DistanceWeight = 0.35f;
+
+	/**
+	 * Hysteresis score bonus given to the current target. A challenger must
+	 * exceed this amount before focus changes. Score is in AimRadius units, so
+	 * 0.05 means a challenger must be ~0.05 * AimRadius cm closer to the aim ray.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace|Aim", meta = (ClampMin = "0.0", ClampMax = "0.5"))
+	float CurrentFocusScoreBonus = 0.05f;
 
 	/** Maximum number of ranked ground items returned to UInteractionManager. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace|Aim", meta = (ClampMin = "1", ClampMax = "64"))
@@ -143,11 +175,14 @@ public:
 	/**
 	 * Player-centered interaction search:
 	 *   1. Gather actors and saved ground-item locations inside InteractionDistance.
-	 *   2. Gate by camera and player forward vectors.
-	 *   3. Rank by camera dot, player dot, distance, and current-focus hysteresis.
+	 *   2. Gate by camera and player forward vectors (near-field targets bypass).
+	 *   3. Rank by distance from the aim ray, proximity, and current-focus hysteresis.
 	 *
 	 * @param CurrentInteractable  Currently focused actor interactable (for hysteresis).
 	 * @param CurrentItemID        Currently focused ground item ID (for hysteresis).
+	 * @param bRefreshCandidates   Re-run the spatial queries. Pass false to re-score
+	 *                             the previously gathered set against the current
+	 *                             camera, which is cheap enough to run every frame.
 	 */
 	void FindBestInteractionTarget(
 		const TScriptInterface<IInteractable>& CurrentInteractable,
@@ -155,7 +190,11 @@ public:
 		TScriptInterface<IInteractable>& OutInteractable,
 		int32& OutGroundItemID,
 		TArray<FGroundItemInteractionCandidate>& OutGroundItemCandidates,
-		bool& bOutHasProximityCandidates);
+		bool& bOutHasProximityCandidates,
+		bool bRefreshCandidates = true);
+
+	/** Drop the gathered candidate set so the next scoring pass re-queries. */
+	void InvalidateCandidateCache();
 
 	/**
 	 * Find nearest ground item within interaction distance.
@@ -206,16 +245,44 @@ private:
 	/** Returns true when TargetLocation is in the character's front half-space. */
 	bool PassesPlayerForwardGate(const FVector& TargetLocation, float& OutDot) const;
 
+	/** Re-run the spatial queries that populate the cached candidate set. */
+	void GatherCandidates(const FVector& PlayerCenter, float SearchRadius);
+
+	/**
+	 * Point on an actor used for scoring: the point on its bounds nearest the
+	 * aim ray, so large interactables are not penalised for a distant pivot.
+	 */
+	FVector GetActorScoreLocation(const AActor* Actor, const FVector& RayOrigin, const FVector& RayDirection) const;
+
 	// CACHED REFERENCES
 
+	UPROPERTY()
 	AActor* OwnerActor;
+	
+	UPROPERTY()
 	UWorld* WorldContext;
+	
+	UPROPERTY()
 	APlayerController* CachedPlayerController;
+	
+	UPROPERTY()
 	AALSPlayerCameraManager* CachedALSCameraManager;
+	
+	UPROPERTY()
 	UGroundItemSubsystem* CachedGroundItemSubsystem;
+	
 	FInteractionDebugManager* DebugManager;
 
 	// STATE
 
 	FHitResult LastTraceResult;
+
+	// CACHED CANDIDATE SET
+	//
+	// The spatial queries run on the InteractionManager's timer, but scoring runs
+	// every frame - the camera moves each frame while these results do not.
+
+	TArray<TWeakObjectPtr<AActor>> CachedActorCandidates;
+	TArray<int32> CachedGroundItemIDs;
+	bool bHasGatheredCandidates = false;
 };

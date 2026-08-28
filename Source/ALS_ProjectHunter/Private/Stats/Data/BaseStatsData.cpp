@@ -277,6 +277,7 @@ namespace BaseStatsDataPrivate
 			return FString();
 		}
 
+#if WITH_METADATA
 		const FString StatCategory = Property->GetMetaData(TEXT("StatCategory"));
 		if (!StatCategory.IsEmpty())
 		{
@@ -292,6 +293,7 @@ namespace BaseStatsDataPrivate
 			RawCategory.TrimStartAndEndInline();
 			return RawCategory;
 		}
+#endif
 
 		return FString();
 	}
@@ -303,8 +305,12 @@ namespace BaseStatsDataPrivate
 			return 0;
 		}
 
+#if WITH_METADATA
 		const FString SortOrderString = Property->GetMetaData(TEXT("SortOrder"));
 		return SortOrderString.IsEmpty() ? 0 : FCString::Atoi(*SortOrderString);
+#else
+		return 0;
+#endif
 	}
 
 	static FText GetTooltipFromProperty(const FProperty* Property)
@@ -314,13 +320,19 @@ namespace BaseStatsDataPrivate
 			return FText::GetEmpty();
 		}
 
+#if WITH_METADATA
 		const FString TooltipString = Property->GetMetaData(TEXT("StatTooltip"));
 		if (!TooltipString.IsEmpty())
 		{
 			return FText::FromString(TooltipString);
 		}
+#endif
 
+#if WITH_EDITORONLY_DATA
 		return Property->GetToolTipText();
+#else
+		return FText::GetEmpty();
+#endif
 	}
 
 	static FName GetIconNameFromProperty(const FProperty* Property)
@@ -330,8 +342,12 @@ namespace BaseStatsDataPrivate
 			return NAME_None;
 		}
 
+#if WITH_METADATA
 		const FString IconString = Property->GetMetaData(TEXT("StatIcon"));
 		return IconString.IsEmpty() ? NAME_None : FName(*IconString);
+#else
+		return NAME_None;
+#endif
 	}
 
 	static EHunterStatType GetStatTypeFromProperty(const FProperty* Property, const FParsedStatCategory& ParsedCategory)
@@ -341,6 +357,7 @@ namespace BaseStatsDataPrivate
 			return EHunterStatType::Neutral;
 		}
 
+#if WITH_METADATA
 		const FString StatTypeString = Property->GetMetaData(TEXT("StatType"));
 		if (!StatTypeString.IsEmpty())
 		{
@@ -356,6 +373,7 @@ namespace BaseStatsDataPrivate
 
 			return ParsedStatType;
 		}
+#endif
 
 		return GetStatTypeForParsedCategory(ParsedCategory);
 	}
@@ -405,17 +423,31 @@ namespace BaseStatsDataPrivate
 		for (TFieldIterator<FProperty> It(AttributeSetClass, EFieldIterationFlags::IncludeSuper); It; ++It)
 		{
 			FProperty* Property = *It;
-			if (!Property || !IsGameplayAttributeDataProperty(Property) || Property->HasMetaData(TEXT("HideInStatsData")))
+			if (!Property || !IsGameplayAttributeDataProperty(Property))
 			{
 				continue;
 			}
+
+#if WITH_METADATA
+			if (Property->HasMetaData(TEXT("HideInStatsData")))
+			{
+				continue;
+			}
+#endif
 
 			const FString RawCategory = GetRawCategoryFromProperty(Property);
 			const FParsedStatCategory ParsedCategory = ParseCategoryPathImpl(RawCategory);
 
 			FReflectedStatDefinition Definition;
 			Definition.StatName = Property->GetFName();
+#if WITH_EDITORONLY_DATA
 			Definition.DisplayName = Property->GetDisplayNameText();
+#else
+			// Cooked builds use serialized BaseAttributes for presentation metadata.
+			// This fallback keeps attribute-name resolution available without it.
+			Definition.DisplayName = FText::FromString(
+				FName::NameToDisplayString(Definition.StatName.ToString(), false));
+#endif
 			Definition.RawCategory = ParsedCategory.RawCategory;
 			Definition.Category = ParsedCategory.NormalizedCategory;
 			Definition.MainCategory = ParsedCategory.MainCategory;
@@ -531,7 +563,7 @@ namespace BaseStatsDataPrivate
 		{TEXT("LightDamageTakenMultiplier"), 1.0f},
 		{TEXT("CorruptionDamageTakenMultiplier"), 1.0f},
 		{TEXT("CritMultiplier"), 1.5f},
-		{TEXT("SpellsCritMultiplier"), 1.5f},
+		{TEXT("SpellsCritMultiplier"), 1.0f},
 	};
 
 	static void ApplyRequiredNonZeroDefaults(TArray<FStatInitializationEntry>& Entries)
@@ -559,6 +591,23 @@ namespace BaseStatsDataPrivate
 		return IsAuthoredZero(TEXT("GlobalMoreDamage"))
 			&& IsAuthoredZero(TEXT("GlobalDamageTakenMultiplier"))
 			&& IsAuthoredZero(TEXT("CritMultiplier"));
+	}
+
+	static bool MigrateSpellCritMultiplierToNeutral(TArray<FStatInitializationEntry>& Entries)
+	{
+		FStatInitializationEntry* Entry = Entries.FindByPredicate(
+			[](const FStatInitializationEntry& Candidate)
+			{
+				return Candidate.StatName == TEXT("SpellsCritMultiplier");
+			});
+		if (!Entry || (Entry->bOverrideValue && FMath::IsNearlyEqual(Entry->BaseValue, 1.f)))
+		{
+			return false;
+		}
+
+		Entry->BaseValue = 1.f;
+		Entry->bOverrideValue = true;
+		return true;
 	}
 }
 
@@ -1057,20 +1106,37 @@ void UBaseStatsData::PostLoad()
 
 	if (StatsSchemaVersion < CurrentStatsSchemaVersion)
 	{
+		bool bMigratedDefaults = false;
 		if (BaseStatsDataPrivate::HasZeroedLegacyCombatDefaults(BaseAttributes))
 		{
 			BaseStatsDataPrivate::ApplyRequiredNonZeroDefaults(BaseAttributes);
+			bMigratedDefaults = true;
 			UE_LOG(
 				LogBaseStatsData,
 				Warning,
 				TEXT("Migrated legacy zero-valued neutral combat multipliers in %s. Save the asset to persist schema version %d."),
 				*GetPathName(),
 				CurrentStatsSchemaVersion);
+		}
+
+		if (StatsSchemaVersion < 2
+			&& BaseStatsDataPrivate::MigrateSpellCritMultiplierToNeutral(BaseAttributes))
+		{
+			bMigratedDefaults = true;
+			UE_LOG(
+				LogBaseStatsData,
+				Warning,
+				TEXT("Migrated SpellsCritMultiplier to neutral 1.0 in %s. Save the asset to persist schema version %d."),
+				*GetPathName(),
+				CurrentStatsSchemaVersion);
+		}
 
 #if WITH_EDITOR
+		if (bMigratedDefaults)
+		{
 			MarkPackageDirty();
-#endif
 		}
+#endif
 
 		StatsSchemaVersion = CurrentStatsSchemaVersion;
 	}

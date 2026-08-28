@@ -27,6 +27,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnEquipmentSlotWidgetChanged,
  * - press-and-drag starts an item drag carrying this equipment slot
  * - dropping an inventory item here equips it, another equipment slot re-slots
  * - releasing outside the menu unequips into the bag
+ *
+ * There is no two-hand slot. A two-handed weapon is stored once, in ES_TwoHand,
+ * and both hand slots show it and act on it while it is equipped.
  */
 UCLASS(BlueprintType, Blueprintable)
 class ALS_PROJECTHUNTER_API UPHEquipmentSlotWidget : public UHunterHUDBaseWidget
@@ -56,6 +59,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Equipment Slot")
 	bool IsOccupied() const { return SlotData.bOccupied; }
+
+	/**
+	 * True when this hand slot is showing the two-handed weapon that fills both
+	 * hands, rather than an item equipped into this slot alone.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Equipment Slot")
+	bool IsFilledByTwoHandedWeapon() const;
 
 	UFUNCTION(BlueprintPure, Category = "Equipment Slot")
 	bool CanAcceptItem(UItemInstance* Item) const;
@@ -196,6 +206,12 @@ protected:
 	void OnSlotDragStarted(UPHItemDragDropOperation* Operation);
 
 private:
+	/** Slot this widget reads and mutates - a hand slot follows the two-hander. */
+	EEquipmentSlot GetOccupyingEquipmentSlot() const;
+
+	/** True when a change to ChangedSlot alters what this slot shows. */
+	bool IsAffectedByEquipmentChange(EEquipmentSlot ChangedSlot) const;
+
 	void BindManagerDelegates();
 	void UnbindManagerDelegates();
 	void RefreshVisuals();

@@ -271,12 +271,22 @@ Recommended suffixes:
 Example combat layout:
 
 ```text
-CombatManager          - ActorComponent, directs the pipeline and applies results through GAS.
-CombatStatusManager    - owned sub-object, handles status effects (Bleed/Ignite/Chill/etc.).
-CombatDamageHandler    - plain C++, handles outgoing damage math (base/convert/increased/more/crit).
-CombatReductionsHandler - plain C++, handles incoming mitigation (armour/resist/block/stagger).
+CombatManager                    - ActorComponent, directs the pipeline and applies results through GAS.
+UCombatStatusEffectApplier       - owned sub-object, handles status effects (Bleed/Ignite/Chill/etc.).
+FCombatOutgoingDamageCalculator  - plain C++, handles outgoing damage math.
+FCombatIncomingDamageResolver    - plain C++, handles mitigation, block, routing, and stagger.
 HunterDamagePopupPresentationComponent - listener, presents damage popups.
 ```
+
+`CombatManager` resolves damage on the server and sends the resolved cosmetic
+popup payload only to the attacking player's owning client. The presentation
+component remains a local listener: it does not calculate damage, replicate
+gameplay state, or decide who receives the event.
+
+On-screen stats debug follows the same presentation boundary. Only the owner's
+canonical `StatsManager` on a locally controlled pawn writes to the screen;
+replicated and server-side pawn copies may still write explicitly enabled debug
+output to the log without creating duplicate viewport panels.
 
 Use `Presenter` for visual/UI reactions. Use `Handler`, `Resolver`, or `RuntimeState` for gameplay helpers.
 
@@ -375,10 +385,12 @@ AbilitySystem/Library/Structs
 	PHAbilitySetStructs.h
 	PHAbilityRuntimeStructs.h
 	PHResourceStructs.h
+	PHSkillStructs.h
 
 AbilitySystem/Library/FunctionLibraries
 	PHAbilitySystemFunctionLibrary.h
 	PHResourceFunctionLibrary.h
+	PHSkillFunctionLibrary.h
 ```
 
 AbilitySystem rules:
@@ -389,8 +401,23 @@ AbilitySystem rules:
 - Keep resource reserve/effective math in `PHResourceFunctionLibrary`.
 - Keep resource data passing in `PHResourceStructs`.
 - Keep ability set grant handles in `PHAbilitySetStructs`.
+- Keep authored skill defaults and resolved skill snapshots in `PHSkillStructs`.
+- Keep skill-stat folding in `FPHSkillDataResolver`; it is stateless and does not activate abilities, spawn projectiles, or apply damage.
 - Use runtime structs for small owned bookkeeping when it makes the owner easier to read.
 - Do not move GameplayEffect application into a generic library unless the owner still controls authority and handles.
+
+Base skill data flow:
+
+```text
+Content/ProjectHunter/Combat/BP_GameplayAbility (data-only Blueprint)
+    -> UPHGameplayAbility::SkillData stores authored identity, timing, costs, range, projectile, aura, and damage input
+    -> UGameplayAbility asset tags store Skill.Attack / Skill.Spell / Skill.Projectile / Skill.Aura keywords
+    -> FPHSkillDataResolver combines that data with UHunterAttributeSet and an optional FResolvedWeaponStats snapshot
+    -> FPHResolvedSkillData is consumed by the ability and any projectile/aura listeners it creates
+    -> CombatManager remains the owner of authoritative final hit math
+```
+
+Do not create another generic base skill Blueprint. `BP_GameplayAbility` already derives from `UPHGameplayAbility` and is data-only. Child skills author `SkillData` and standard GAS asset tags; behavior belongs only in the child or its single-purpose execution listeners.
 
 ### Effective And Reserved Resources
 
@@ -645,6 +672,85 @@ Equipment requests
 
 Inventory should not directly own equipment presentation.
 
+### Item And Affix Pipeline
+
+Owner:
+
+```text
+UItemInstance
+```
+
+`UItemInstance` owns one generated item's identity, base-row handle, rolled affixes, per-affix identification state, power/grade, and serialization version. Base DataTable rows are definitions, not runtime owners.
+
+Pipeline:
+
+```text
+FItemBase / FAffixData definitions
+    -> FAffixGenerator selects legal tiers and rolls values
+    -> FPHItemStats stores the rolled runtime modifiers
+    -> FItemLocalStatResolver builds immutable weapon/armour-local snapshots
+    -> FEquipmentStatsApplier applies only persistent global modifiers through GAS
+    -> FContextualStatModifierEvaluator resolves source/skill/target-gated modifiers on demand
+```
+
+Rules:
+
+- An unidentified affix remains mechanically active. Identification changes only visibility and naming.
+- Each affix owns its own `bIsIdentified`; `bForceAllAffixesIdentified` is an explicit item/base override.
+- Equipment can roll affixes. Potions and other consumables use authored Gameplay Effects and do not enter the equipment-affix pipeline.
+- A local modifier changes only the base values of its owning item. It must never be flattened into shared character attributes.
+- A global scalar modifier contributes to the live character AttributeSet while its source is active. Damage conversion and gain-as-extra are rules, not scalars, and resolve once per hit.
+- Conditional and skill modifiers use required/blocked source and target tags plus the legacy condition enum.
+- Range modifiers store and roll both endpoints. Conversion modifiers retain explicit source and destination damage types plus whether they convert or gain damage as extra.
+- Future mob, tower, or world modifier sources should feed the same contextual modifier evaluator instead of duplicating item-specific combat math.
+
+Helpers:
+
+```text
+FAffixGenerator
+FItemLocalStatResolver
+UItemLocalStatFunctionLibrary
+FItemNameBuilder
+UItemAffixFunctionLibrary
+```
+
+Listeners:
+
+```text
+Item tooltip widgets
+Inventory/equipment menu cells
+Ground-item presentation
+```
+
+### Stats
+
+Owners:
+
+```text
+UHunterAttributeSet - owns replicated live attribute values.
+UStatsManager       - coordinates initialization and active source effects.
+```
+
+Helpers:
+
+```text
+FEquipmentStatsApplier
+FStatsAttributeResolver
+FStatsModifierMath
+FContextualStatModifierEvaluator
+FItemLocalStatResolver
+```
+
+Calculation order:
+
+```text
+(base + flat) * (1 + sum(increased and reduced) / 100) * product(more and less)
+```
+
+An override, when present, is final for that evaluated attribute. Increased/reduced sources share one additive pool; each more/less source is a separate product factor. The AttributeSet may hold actor or global values, but selected weapon-local damage, critical chance, attack speed, and range stay in the selected weapon snapshot.
+
+`FAnimationDamageInfo::WeaponSource` selects main hand, off hand, two hand, automatic primary, or the character-attribute fallback for actors without item equipment. This keeps dual-wield attacks from summing both weapons and preserves compatibility for mobs that author damage directly on their AttributeSet.
+
 ### Combat
 
 Owner:
@@ -656,10 +762,9 @@ CombatManager
 Recommended internal names:
 
 ```text
-CombatStatusManager      - owned sub-object (not a sibling actor component), handles status effects.
-CombatDamageHandler      - plain C++ handler, outgoing damage math.
-CombatReductionsHandler  - plain C++ handler, incoming mitigation math.
-CombatTargetResolver
+UCombatStatusEffectApplier      - owned sub-object (not a sibling actor component), handles status effects.
+FCombatOutgoingDamageCalculator - plain C++ calculator, outgoing damage math.
+FCombatIncomingDamageResolver   - plain C++ resolver, incoming mitigation and hit response.
 ```
 
 Responsibilities:
@@ -670,7 +775,34 @@ Responsibilities:
 - Apply combat results through authoritative systems
 - Broadcast combat events
 
-Handlers are plain C++ classes (no `UCLASS`), each in its own file under `Combat/Handlers`, with no dependency back on `CombatManager`. Add more handlers as needed rather than growing an existing one past one clear purpose.
+Calculators and resolvers are plain C++ classes (no `UCLASS`), each in its own file under `Combat/Calculators` or `Combat/Resolvers`, with no dependency back on `CombatManager`. Add another single-purpose helper rather than growing an existing one past one clear purpose.
+
+Outgoing damage stages are explicit:
+
+```text
+selected weapon base and local conversion
+    -> added/skill base damage
+    -> skill conversion and gain-as-extra
+    -> character/equipment conversion and gain-as-extra
+    -> increased/reduced pool
+    -> more/less products
+    -> critical strike
+```
+
+Damage over time is authored in its final damage type and skips hit conversion and critical strikes. `FCombatHitContext::SkillTags` is merged with legacy Blueprint booleans, so existing attacks remain compatible while new skills and conditional affixes can use gameplay tags.
+
+Current integration boundaries:
+
+- `FPHSkillDataResolver` now folds selected-weapon attack speed/range plus attack speed, cast speed, area, projectile count/speed, chain/fork count, cooldown recovery, cost, and aura attributes into one immutable `FPHResolvedSkillData` snapshot.
+- The owning ability must use `UseRate`, `UseIntervalSeconds`, `CooldownSeconds`, and resolved costs. Spawned projectile and aura listeners must receive the same snapshot and use its count/speed/chain/fork/radius/effect values. Resolution does not itself execute those mechanics.
+- `Skill.Chain` is capability metadata. Only an actual bounce sets `FAnimationDamageInfo::Tags.bIsChainHit`; otherwise chain-capable skills would receive chain-hit damage on their first target.
+- `MT_GrantSkill` requires an authored Gameplay Effect, and `MT_SetRank` still needs a typed ability-rank owner. Neither special type is allowed to fall through as a generic numeric attribute modifier.
+- The default `DT_Prefixes`, `DT_Suffixes`, and `DT_Enchants` assets are not present under their configured paths. Prefix/suffix generation uses the native starter fallback unless an item base points to an authored affix table; enchant generation requires authored data.
+- Reinforcement/quality has a multiplier and tooltip but is not yet folded into resolved weapon or armour bases because its exact scaling rule is not defined here.
+- One `FAffixData` tier produces one runtime stat line. Atomic hybrid affixes need an explicit grouped multi-line definition rather than several independently rolled affixes.
+- Automatic weapon selection is deterministic (two-hand, main hand, off hand); alternating dual-wield attacks must select the hand in skill data or gain an explicit alternation policy.
+- The contextual evaluator accepts modifiers from any source, but mob, tower, and world/global source registration is future wiring.
+- `EDamageType::DT_True` is not a supported combat packet type and is rejected for conversion instead of being silently treated as physical.
 
 Helpers:
 
@@ -708,9 +840,11 @@ Helpers:
 ```text
 PHAbilitySystemFunctionLibrary
 PHResourceFunctionLibrary
+FPHSkillDataResolver / UPHSkillFunctionLibrary
 PHAbilitySetStructs
 PHAbilityRuntimeStructs
 PHResourceStructs
+PHSkillStructs
 PHAbilityEnums
 HunterResourceEnums
 ```

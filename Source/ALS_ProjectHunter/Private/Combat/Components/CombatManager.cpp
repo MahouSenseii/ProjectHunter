@@ -3,13 +3,21 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "AbilitySystem/Library/FunctionLibraries/PHSkillFunctionLibrary.h"
 #include "AI/Components/MonsterModifierComponent.h"
 #include "Combat/Components/UCombatStatusEffectApplier.h"
 #include "Combat/Calculators/CombatOutgoingDamageCalculator.h"
 #include "Combat/Resolvers/CombatIncomingDamageResolver.h"
 #include "Combat/Library/FunctionLibraries/CombatFunctionLibrary.h"
+#include "Equipment/Components/EquipmentManager.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
 #include "GameplayEffect.h"
+#include "Item/ItemInstance.h"
+#include "Stats/Library/FunctionLibraries/ItemLocalStatResolver.h"
+#include "Stats/Library/FunctionLibraries/ContextualStatModifierEvaluator.h"
+#include "Stats/Components/StatsManager.h"
 #include "Tags/PHGameplayTags.h"
 
 DEFINE_LOG_CATEGORY(LogCombatManager);
@@ -25,6 +33,53 @@ namespace CombatManagerPrivate
 
 		return TargetActor->GetActorLocation() +
 			FVector(0.f, 0.f, TargetActor->GetSimpleCollisionHalfHeight());
+	}
+
+	UItemInstance* ResolveAttackWeapon(
+		const AActor* AttackerActor,
+		const ECombatWeaponSource WeaponSource)
+	{
+		if (!IsValid(AttackerActor)
+			|| WeaponSource == ECombatWeaponSource::CharacterAttributes)
+		{
+			return nullptr;
+		}
+
+		const UEquipmentManager* Equipment = AttackerActor->FindComponentByClass<UEquipmentManager>();
+		if (!Equipment)
+		{
+			return nullptr;
+		}
+
+		auto GetWeapon = [Equipment](const EEquipmentSlot RequestedSlot)
+		{
+			const EEquipmentSlot OccupyingSlot = Equipment->ResolveOccupyingSlot(RequestedSlot);
+			UItemInstance* Item = Equipment->GetEquippedItem(OccupyingSlot);
+			return IsValid(Item) && Item->GetItemType() == EItemType::IT_Weapon
+				? Item
+				: nullptr;
+		};
+
+		switch (WeaponSource)
+		{
+		case ECombatWeaponSource::MainHand:
+			return GetWeapon(EEquipmentSlot::ES_MainHand);
+		case ECombatWeaponSource::OffHand:
+			return GetWeapon(EEquipmentSlot::ES_OffHand);
+		case ECombatWeaponSource::TwoHand:
+			return GetWeapon(EEquipmentSlot::ES_TwoHand);
+		case ECombatWeaponSource::Automatic:
+		default:
+			if (UItemInstance* TwoHand = GetWeapon(EEquipmentSlot::ES_TwoHand))
+			{
+				return TwoHand;
+			}
+			if (UItemInstance* MainHand = GetWeapon(EEquipmentSlot::ES_MainHand))
+			{
+				return MainHand;
+			}
+			return GetWeapon(EEquipmentSlot::ES_OffHand);
+		}
 	}
 }
 
@@ -194,6 +249,12 @@ void UCombatManager::ServerApplyHitWithContext_Implementation(
 		HitResponse, bCanApplyAilments);
 }
 
+void UCombatManager::ClientReceiveDamagePopup_Implementation(
+	const FCombatDamagePopupData& PopupData)
+{
+	OnDamagePopupRequested.Broadcast(PopupData);
+}
+
 FCombatHitContext UCombatManager::CreateCombatHitContext(const int32 RandomSeed)
 {
 	FCombatHitContext Context;
@@ -346,6 +407,7 @@ bool UCombatManager::ApplyHitInternal(
 	}
 
 	FAnimationDamageInfo EffectiveInfo = DamageInfo;
+	FPHSkillDataResolver::MergeSkillTagsIntoDamageInfo(EffectiveInfo, HitContext.SkillTags);
 	EHitResponse EffectiveHitResponse = HitResponse;
 	bool bEffectiveCanApplyAilments = bCanApplyAilments;
 
@@ -398,9 +460,65 @@ bool UCombatManager::ApplyHitInternal(
 	RememberProcessedTarget(HitContext, DefenderActor);
 	FRandomStream RandomStream(ResolveHitSeed(HitContext, DefenderActor));
 
+	FStatModifierEvaluationContext ModifierContext;
+	ModifierContext.bIsSkillHit = true;
+	ModifierContext.SourceTags = HitContext.SkillTags;
+	const UAbilitySystemComponent* AttackerTagASC = GetAbilitySystemComponentFromActor(AttackerActor);
+	const UAbilitySystemComponent* DefenderTagASC = GetAbilitySystemComponentFromActor(DefenderActor);
+	if (AttackerTagASC)
+	{
+		FGameplayTagContainer OwnedSourceTags;
+		AttackerTagASC->GetOwnedGameplayTags(OwnedSourceTags);
+		ModifierContext.SourceTags.AppendTags(OwnedSourceTags);
+	}
+	if (DefenderTagASC)
+	{
+		DefenderTagASC->GetOwnedGameplayTags(ModifierContext.TargetTags);
+	}
+	const float MaxSourceHealth = FMath::Max(
+		AttackerAttributes->GetMaxEffectiveHealth(), AttackerAttributes->GetMaxHealth());
+	ModifierContext.SourceHealthPercent = MaxSourceHealth > 0.f
+		? FMath::Clamp(AttackerAttributes->GetHealth() / MaxSourceHealth, 0.f, 1.f)
+		: 1.f;
+	ModifierContext.bIsMoving = !AttackerActor->GetVelocity().IsNearlyZero();
+
+	TArray<UItemInstance*> EquippedItems;
+	if (const UEquipmentManager* Equipment = AttackerActor->FindComponentByClass<UEquipmentManager>())
+	{
+		EquippedItems = Equipment->GetAllEquippedItems();
+		const UItemInstance* MainHand = Equipment->GetEquippedItem(EEquipmentSlot::ES_MainHand);
+		const UItemInstance* OffHand = Equipment->GetEquippedItem(EEquipmentSlot::ES_OffHand);
+		const UItemInstance* TwoHand = Equipment->GetEquippedItem(EEquipmentSlot::ES_TwoHand);
+		const bool bMainWeapon = IsValid(MainHand) && MainHand->GetItemType() == EItemType::IT_Weapon;
+		const bool bOffWeapon = IsValid(OffHand) && OffHand->GetItemType() == EItemType::IT_Weapon;
+		ModifierContext.bIsDualWielding = bMainWeapon && bOffWeapon;
+		ModifierContext.bIsUnarmed = !bMainWeapon && !bOffWeapon && !IsValid(TwoHand);
+		ModifierContext.bHasShield = IsValid(OffHand)
+			&& OffHand->GetItemSubType() == EItemSubType::IST_Shield;
+	}
+	else
+	{
+		ModifierContext.bIsUnarmed = true;
+	}
+
+	const UStatsManager* StatsManager = AttackerActor->FindComponentByClass<UStatsManager>();
+	const FContextualStatModifierSnapshot ContextualModifiers =
+		FContextualStatModifierEvaluator::BuildFromItems(
+			EquippedItems, StatsManager, ModifierContext);
+	const FContextualStatModifierSnapshot* ContextualModifierPtr =
+		ContextualModifiers.IsEmpty() ? nullptr : &ContextualModifiers;
+
+	FResolvedWeaponStats ResolvedWeaponStats;
+	const UItemInstance* AttackWeapon = CombatManagerPrivate::ResolveAttackWeapon(
+		AttackerActor, EffectiveInfo.WeaponSource);
+	const FResolvedWeaponStats* WeaponStats =
+		FItemLocalStatResolver::ResolveWeapon(AttackWeapon, ResolvedWeaponStats)
+			? &ResolvedWeaponStats
+			: nullptr;
+
 	// Outgoing: base -> conversion -> increased/more -> crit.
 	FCombatDamagePacket OutgoingPacket = FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
-		AttackerAttributes, EffectiveInfo, RandomStream);
+		AttackerAttributes, EffectiveInfo, RandomStream, WeaponStats, ContextualModifierPtr);
 	if (const UMonsterModifierComponent* MonsterModifiers =
 		AttackerActor->FindComponentByClass<UMonsterModifierComponent>())
 	{
@@ -431,8 +549,8 @@ bool UCombatManager::ApplyHitInternal(
 			TEXT("ApplyHit resolved zero outgoing damage. Attacker=%s Defender=%s WeaponPhysical=%.2f-%.2f WeaponEffectiveness=%.1f%% GlobalMore=%.3f PhysicalMore=%.3f. Check the attack DamageInfo and base-stat multiplier defaults."),
 			*GetNameSafe(AttackerActor),
 			*GetNameSafe(DefenderActor),
-			AttackerAttributes->GetMinPhysicalDamage(),
-			AttackerAttributes->GetMaxPhysicalDamage(),
+			WeaponStats ? WeaponStats->Values.MinPhysicalDamage : AttackerAttributes->GetMinPhysicalDamage(),
+			WeaponStats ? WeaponStats->Values.MaxPhysicalDamage : AttackerAttributes->GetMaxPhysicalDamage(),
 			EffectiveInfo.WeaponDamageEffectivenessPercent,
 			AttackerAttributes->GetGlobalMoreDamage(),
 			AttackerAttributes->GetPhysicalMoreDamage());
@@ -786,7 +904,7 @@ void UCombatManager::BroadcastDamagePopup(
 	AActor* DefenderActor,
 	const FCombatResolveResult& Result)
 {
-	if (Result.TotalDamageTaken <= KINDA_SMALL_NUMBER || !OnDamagePopupRequested.IsBound())
+	if (Result.TotalDamageTaken <= KINDA_SMALL_NUMBER)
 	{
 		return;
 	}
@@ -802,6 +920,21 @@ void UCombatManager::BroadcastDamagePopup(
 	PopupData.bWasCrit = Result.bWasCrit;
 	PopupData.bWasBlocked = Result.bWasBlocked;
 	PopupData.bKilledTarget = Result.bKilledTarget;
+
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	const APlayerController* OwnerPlayerController = OwnerPawn
+		? Cast<APlayerController>(OwnerPawn->GetController())
+		: nullptr;
+
+	// Hit resolution stays authoritative, but presentation belongs to the
+	// attacking player. A remote player's server-side component has no local UI
+	// listener, so send the already-resolved cosmetic payload to its owning client.
+	if (GetOwner() && GetOwner()->HasAuthority()
+		&& OwnerPlayerController && !OwnerPlayerController->IsLocalController())
+	{
+		ClientReceiveDamagePopup(PopupData);
+		return;
+	}
 
 	OnDamagePopupRequested.Broadcast(PopupData);
 }

@@ -9,6 +9,7 @@
 #include "Item/Library/Structs/ItemStructs.h"
 #include "Equipment/Components/EquipmentManager.h"
 #include "Stats/Components/StatsManager.h"
+#include "Stats/Library/FunctionLibraries/ItemLocalStatResolver.h"
 #include "Stats/Library/FunctionLibraries/StatsAttributeResolver.h"
 #include "Stats/Library/FunctionLibraries/StatsModifierMath.h"
 
@@ -116,9 +117,7 @@ namespace EquipmentStatsApplierPrivate
 
 	bool IsLocalAffix(const FPHAttributeData& Stat)
 	{
-		return Stat.ModifiedLocation == EAffixScope::AS_Local
-			|| Stat.bIsLocalToWeapon
-			|| Stat.bAffectsBaseWeaponStatsDirectly;
+		return Stat.IsLocal();
 	}
 
 	bool AccumulateLocalDamageMod(const FPHAttributeData& Stat, FWeaponDamageSide& Side)
@@ -153,6 +152,54 @@ namespace EquipmentStatsApplierPrivate
 		}
 	}
 
+	/** One attribute/value pair an affix contributes. A damage range contributes two. */
+	struct FStatContribution
+	{
+		FGameplayAttribute Attribute;
+		float Value = 0.f;
+	};
+
+	/**
+	 * Expand one affix into everything it should modify.
+	 *
+	 * A range affix rolls two endpoints, and globally it has to reach both the
+	 * Min and Max attribute of its damage type. Only the local weapon resolver
+	 * ever read the second endpoint, so "Adds 5-12 Fire Damage" on a ring - which
+	 * has no local resolver and must go global - applied its lower roll and
+	 * dropped the upper one, while the tooltip still promised the full range.
+	 *
+	 * @return False when a range affix could not be paired, so the caller can warn.
+	 */
+	bool GetStatContributions(
+		const FPHAttributeData& Stat,
+		const FGameplayAttribute& ResolvedAttribute,
+		TArray<FStatContribution>& OutContributions)
+	{
+		OutContributions.Reset();
+		OutContributions.Add({ ResolvedAttribute, Stat.RolledStatValue });
+
+		if (!Stat.UsesValueRange())
+		{
+			return true;
+		}
+
+		// Range affixes are authored against the Min attribute of a damage type;
+		// anything else has no second attribute to carry the upper endpoint.
+		int32 TypeIndex = INDEX_NONE;
+		bool bIsMin = false;
+		if (!ResolveWeaponDamageAttribute(ResolvedAttribute, TypeIndex, bIsMin) || !bIsMin)
+		{
+			return false;
+		}
+
+		FGameplayAttribute MinAttribute;
+		FGameplayAttribute MaxAttribute;
+		GetWeaponMinMaxAttributes(TypeIndex, MinAttribute, MaxAttribute);
+		OutContributions.Add({ MaxAttribute, Stat.RolledSecondaryStatValue });
+
+		return true;
+	}
+
 	void AddFlatModifier(UGameplayEffect* Effect, const FGameplayAttribute& Attribute, const float Magnitude)
 	{
 		FGameplayModifierInfo Modifier;
@@ -168,6 +215,10 @@ namespace EquipmentStatsApplierPrivate
 			|| Stat.Condition != EAffixCondition::AC_None
 			|| Stat.ModifiedLocation == EAffixScope::AS_Conditional
 			|| Stat.ModifiedLocation == EAffixScope::AS_Skill
+			|| !Stat.RequiredSourceTags.IsEmpty()
+			|| !Stat.BlockedSourceTags.IsEmpty()
+			|| !Stat.RequiredTargetTags.IsEmpty()
+			|| !Stat.BlockedTargetTags.IsEmpty()
 			|| IsLocalAffix(Stat))
 		{
 			return false;
@@ -179,24 +230,20 @@ namespace EquipmentStatsApplierPrivate
 			|| Stat.ModifyType == EModifyType::MT_Less;
 	}
 
-	float GetProductFactor(const FPHAttributeData& Stat)
+	float GetProductFactor(const FPHAttributeData& Stat, const float Value)
 	{
 		return Stat.ModifyType == EModifyType::MT_Less
-			? FStatsModifierMath::PercentToMultiplier(-FMath::Abs(Stat.RolledStatValue))
-			: FStatsModifierMath::PercentToMultiplier(Stat.RolledStatValue);
+			? FStatsModifierMath::PercentToMultiplier(-FMath::Abs(Value))
+			: FStatsModifierMath::PercentToMultiplier(Value);
 	}
 
 	bool HasBaseEquipmentContribution(const FItemBase& Base)
 	{
 		if (Base.IsWeapon())
 		{
-			const FBaseWeaponStats& W = Base.WeaponStats;
-			return W.MinPhysicalDamage > 0.f || W.MaxPhysicalDamage > 0.f
-				|| W.MinFireDamage > 0.f || W.MaxFireDamage > 0.f
-				|| W.MinIceDamage > 0.f || W.MaxIceDamage > 0.f
-				|| W.MinLightningDamage > 0.f || W.MaxLightningDamage > 0.f
-				|| W.MinLightDamage > 0.f || W.MaxLightDamage > 0.f
-				|| W.MinCorruptionDamage > 0.f || W.MaxCorruptionDamage > 0.f;
+			// Weapon-local values are selected per attack and never flattened into
+			// shared character min/max attributes.
+			return false;
 		}
 
 		if (Base.IsArmor())
@@ -302,7 +349,7 @@ void FEquipmentStatsApplier::ApplyEquipmentStats(UStatsManager& Manager, UItemIn
 			return EquipmentStatsApplierPrivate::IsProductModifier(Stat);
 		});
 
-	if (!AppliedHandles.IsEmpty() || bHasProductModifier)
+	if (!AppliedHandles.IsEmpty() || bHasProductModifier || AllStats.Num() > 0)
 	{
 		Manager.ActiveEquipmentEffects.Add(Item->UniqueID, MoveTemp(AppliedHandles));
 		Manager.ActiveEquipmentItems.Add(Item->UniqueID, Item);
@@ -451,41 +498,42 @@ FGameplayEffectSpecHandle FEquipmentStatsApplier::CreateEquipmentEffect(UStatsMa
 	using namespace EquipmentStatsApplierPrivate;
 
 	const FItemBase* BaseData = Item->GetBaseData();
-	const bool bIsWeapon = BaseData && BaseData->IsWeapon();
-
-	FWeaponDamageAccumulator WeaponAccum;
-	if (bIsWeapon)
-	{
-		SeedWeaponBase(BaseData->WeaponStats, WeaponAccum);
-
-		UE_LOG(LogStatsManager, Log,
-			TEXT("CreateEquipmentEffect: %s weapon base Phys %.1f-%.1f Fire %.1f-%.1f Ice %.1f-%.1f Lightning %.1f-%.1f Light %.1f-%.1f Corruption %.1f-%.1f"),
-			*Item->GetName(),
-			BaseData->WeaponStats.MinPhysicalDamage, BaseData->WeaponStats.MaxPhysicalDamage,
-			BaseData->WeaponStats.MinFireDamage, BaseData->WeaponStats.MaxFireDamage,
-			BaseData->WeaponStats.MinIceDamage, BaseData->WeaponStats.MaxIceDamage,
-			BaseData->WeaponStats.MinLightningDamage, BaseData->WeaponStats.MaxLightningDamage,
-			BaseData->WeaponStats.MinLightDamage, BaseData->WeaponStats.MaxLightDamage,
-			BaseData->WeaponStats.MinCorruptionDamage, BaseData->WeaponStats.MaxCorruptionDamage);
-	}
 
 	int32 ModifiersAdded = 0;
 	for (const FPHAttributeData& Stat : Stats)
 	{
-		const bool bRequiresAuthoredEffect =
-			Stat.GameplayEffect != nullptr
+		// Local modifiers are already folded into the owning item's immutable
+		// weapon/armour snapshot. Applying one here would leak it globally.
+		if (IsLocalAffix(Stat))
+		{
+			continue;
+		}
+		if (Stat.ModifyType == EModifyType::MT_ConvertTo)
+		{
+			// Conversion and gain-as-extra share one normalized per-hit stage;
+			// representing either as a persistent scalar would duplicate it.
+			continue;
+		}
+
+		if (Stat.GameplayEffect
 			|| Stat.Condition != EAffixCondition::AC_None
 			|| Stat.ModifiedLocation == EAffixScope::AS_Conditional
 			|| Stat.ModifiedLocation == EAffixScope::AS_Skill
-			|| Stat.ModifyType == EModifyType::MT_GrantSkill;
-		if (bRequiresAuthoredEffect)
+			|| !Stat.RequiredSourceTags.IsEmpty()
+			|| !Stat.BlockedSourceTags.IsEmpty()
+			|| !Stat.RequiredTargetTags.IsEmpty()
+			|| !Stat.BlockedTargetTags.IsEmpty())
 		{
-			if (!Stat.GameplayEffect)
-			{
-				PH_LOG_WARNING(LogStatsManager,
-					"CreateEquipmentEffect skipped affix '%s': conditional/skill behavior requires an authored GameplayEffect.",
-					*Stat.AffixName.ToString());
-			}
+			// Authored effects own persistent/non-combat behavior. Numeric combat
+			// conditions are evaluated from source/skill/target context per hit.
+			continue;
+		}
+		if (Stat.ModifyType == EModifyType::MT_GrantSkill
+			|| Stat.ModifyType == EModifyType::MT_SetRank)
+		{
+			PH_LOG_WARNING(LogStatsManager,
+				"CreateEquipmentEffect skipped affix '%s': Grant Skill and Set Rank require typed ability ownership or an authored GameplayEffect.",
+				*Stat.AffixName.ToString());
 			continue;
 		}
 
@@ -508,58 +556,17 @@ FGameplayEffectSpecHandle FEquipmentStatsApplier::CreateEquipmentEffect(UStatsMa
 			continue;
 		}
 
-		if (IsLocalAffix(Stat))
-		{
-			int32 TypeIndex = INDEX_NONE;
-			bool bIsMin = false;
-
-			if (bIsWeapon && ResolveWeaponDamageAttribute(Attribute, TypeIndex, bIsMin))
-			{
-				FWeaponDamageSide& Side = bIsMin
-					? WeaponAccum.Min[TypeIndex]
-					: WeaponAccum.Max[TypeIndex];
-
-				if (AccumulateLocalDamageMod(Stat, Side))
-				{
-					continue;
-				}
-			}
-
-			PH_LOG_WARNING(LogStatsManager,
-				"CreateEquipmentEffect: LOCAL affix '%s' on Item=%s targets %s, which has no local fold path. Applying globally.",
-				*Stat.AttributeName.ToString(), *Item->GetName(), *Attribute.GetName());
-		}
-
 		if (ApplyStatModifier(Effect, Stat, Attribute))
 		{
 			++ModifiersAdded;
 		}
 	}
 
-	if (bIsWeapon)
-	{
-		for (int32 TypeIndex = 0; TypeIndex < NumWeaponDamageTypes; ++TypeIndex)
-		{
-			FGameplayAttribute MinAttr;
-			FGameplayAttribute MaxAttr;
-			GetWeaponMinMaxAttributes(TypeIndex, MinAttr, MaxAttr);
-
-			if (WeaponAccum.Max[TypeIndex].HasContribution())
-			{
-				AddFlatModifier(Effect, MaxAttr, WeaponAccum.Max[TypeIndex].Resolve());
-				++ModifiersAdded;
-			}
-			if (WeaponAccum.Min[TypeIndex].HasContribution())
-			{
-				AddFlatModifier(Effect, MinAttr, WeaponAccum.Min[TypeIndex].Resolve());
-				++ModifiersAdded;
-			}
-		}
-	}
-
 	if (BaseData && BaseData->IsArmor())
 	{
-		const FBaseArmorStats& Armor = BaseData->ArmorStats;
+		FResolvedArmorStats ResolvedArmor;
+		FItemLocalStatResolver::ResolveArmor(Item, ResolvedArmor);
+		const FBaseArmorStats& Armor = ResolvedArmor.Values;
 
 		if (!FMath::IsNearlyZero(Armor.Armor))
 		{
@@ -613,29 +620,51 @@ FGameplayEffectSpecHandle FEquipmentStatsApplier::CreateEquipmentEffect(UStatsMa
 
 bool FEquipmentStatsApplier::ApplyStatModifier(UGameplayEffect* Effect, const FPHAttributeData& Stat, const FGameplayAttribute& Attribute)
 {
+	using namespace EquipmentStatsApplierPrivate;
+
 	if (!Effect || !Attribute.IsValid())
 	{
 		return false;
 	}
 
-	FResolvedStatModifier ResolvedModifier;
-	if (!FStatsModifierMath::ResolveGameplayModifier(Stat.ModifyType, Stat.RolledStatValue, ResolvedModifier)
-		|| !ResolvedModifier.bCreatesGameplayModifier)
+	TArray<FStatContribution> Contributions;
+	if (!GetStatContributions(Stat, Attribute, Contributions))
 	{
-		PH_LOG_WARNING(LogStatsManager, "ApplyStatModifier skipped: Unsupported ModifyType=%d for Attribute=%s.", static_cast<int32>(Stat.ModifyType), *Attribute.GetName());
-		return false;
+		PH_LOG_WARNING(LogStatsManager,
+			"ApplyStatModifier: Range affix '%s' targets Attribute=%s, which is not the Min attribute of a damage type; its upper endpoint cannot be applied.",
+			*Stat.AffixName.ToString(), *Attribute.GetName());
 	}
 
-	FGameplayModifierInfo Modifier;
-	Modifier.Attribute = Attribute;
-	Modifier.ModifierOp = ResolvedModifier.ModOp;
-	Modifier.ModifierMagnitude = FScalableFloat(ResolvedModifier.Magnitude);
-	Effect->Modifiers.Add(Modifier);
+	bool bAddedAny = false;
+	for (const FStatContribution& Contribution : Contributions)
+	{
+		if (!Contribution.Attribute.IsValid())
+		{
+			continue;
+		}
 
-	UE_LOG(LogStatsManager, VeryVerbose, TEXT("StatsManager: Added modifier: %s (%s) = %.2f [Op: %d]"),
-		*Attribute.GetName(), *Stat.AttributeName.ToString(), ResolvedModifier.Magnitude, static_cast<int32>(ResolvedModifier.ModOp));
+		FResolvedStatModifier ResolvedModifier;
+		if (!FStatsModifierMath::ResolveGameplayModifier(Stat.ModifyType, Contribution.Value, ResolvedModifier)
+			|| !ResolvedModifier.bCreatesGameplayModifier)
+		{
+			PH_LOG_WARNING(LogStatsManager, "ApplyStatModifier skipped: Unsupported ModifyType=%d for Attribute=%s.",
+				static_cast<int32>(Stat.ModifyType), *Contribution.Attribute.GetName());
+			continue;
+		}
 
-	return true;
+		FGameplayModifierInfo Modifier;
+		Modifier.Attribute = Contribution.Attribute;
+		Modifier.ModifierOp = ResolvedModifier.ModOp;
+		Modifier.ModifierMagnitude = FScalableFloat(ResolvedModifier.Magnitude);
+		Effect->Modifiers.Add(Modifier);
+		bAddedAny = true;
+
+		UE_LOG(LogStatsManager, VeryVerbose, TEXT("StatsManager: Added modifier: %s (%s) = %.2f [Op: %d]"),
+			*Contribution.Attribute.GetName(), *Stat.AttributeName.ToString(),
+			ResolvedModifier.Magnitude, static_cast<int32>(ResolvedModifier.ModOp));
+	}
+
+	return bAddedAny;
 }
 
 void FEquipmentStatsApplier::RebuildEquipmentProductEffect(UStatsManager& Manager)
@@ -680,8 +709,21 @@ void FEquipmentStatsApplier::RebuildEquipmentProductEffect(UStatsManager& Manage
 				continue;
 			}
 
-			float& Product = ProductsByAttribute.FindOrAdd(Attribute, 1.f);
-			Product *= GetProductFactor(Stat);
+			// MultiplyRange is a range type too, so it needs the same Min/Max
+			// pairing the additive path does.
+			TArray<FStatContribution> Contributions;
+			GetStatContributions(Stat, Attribute, Contributions);
+
+			for (const FStatContribution& Contribution : Contributions)
+			{
+				if (!Contribution.Attribute.IsValid())
+				{
+					continue;
+				}
+
+				float& Product = ProductsByAttribute.FindOrAdd(Contribution.Attribute, 1.f);
+				Product *= GetProductFactor(Stat, Contribution.Value);
+			}
 		}
 	}
 

@@ -6,6 +6,7 @@
 #include "Equipment/Helpers/EquipmentReplicationHelper.h"
 #include "Equipment/Helpers/EquipmentSlotResolver.h"
 #include "Equipment/Library/EquipmentLog.h"
+#include "Equipment/Library/FunctionLibraries/EquipmentFunctionLibrary.h"
 #include "Item/ItemInstance.h"
 #include "Net/UnrealNetwork.h"
 
@@ -116,6 +117,11 @@ EEquipmentSlot UEquipmentManager::DetermineEquipmentSlot(UItemInstance* Item) co
 bool UEquipmentManager::CanEquipToSlot(UItemInstance* Item, EEquipmentSlot Slot) const
 {
 	return FEquipmentSlotResolver::CanEquipToSlot(*this, Item, Slot);
+}
+
+EEquipmentSlot UEquipmentManager::ResolveOccupyingSlot(EEquipmentSlot Slot) const
+{
+	return UEquipmentFunctionLibrary::ResolveOccupyingSlot(Slot, IsSlotOccupied(EEquipmentSlot::ES_TwoHand));
 }
 
 bool UEquipmentManager::TryEquipGroundPickupItem(UItemInstance* Item, EEquipmentSlot& OutEquippedSlot, bool bSwapToBag)

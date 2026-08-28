@@ -264,6 +264,7 @@ DEFINE_GAMEPLAY_TAG(Condition_WhileChanneling)
 DEFINE_GAMEPLAY_TAG(Condition_WhileMoving)
 DEFINE_GAMEPLAY_TAG(Condition_WhileStationary)
 DEFINE_GAMEPLAY_TAG(Condition_Sprinting)
+DEFINE_GAMEPLAY_TAG(Condition_DuringFlaskEffect)
 DEFINE_GAMEPLAY_TAG(Condition_BuffDurationBelow50)
 DEFINE_GAMEPLAY_TAG(Condition_EffectDurationExpired)
 DEFINE_GAMEPLAY_TAG(Condition_HasBuff)
@@ -287,6 +288,7 @@ DEFINE_GAMEPLAY_TAG(Condition_Alone)
 DEFINE_GAMEPLAY_TAG(Condition_InLight)
 DEFINE_GAMEPLAY_TAG(Condition_InDark)
 DEFINE_GAMEPLAY_TAG(Condition_InDangerZone)
+DEFINE_GAMEPLAY_TAG(Condition_InDungeon)
 DEFINE_GAMEPLAY_TAG(Condition_Self_Bleeding)
 DEFINE_GAMEPLAY_TAG(Condition_Self_Stunned)
 DEFINE_GAMEPLAY_TAG(Condition_Self_Frozen)
@@ -384,6 +386,10 @@ DEFINE_GAMEPLAY_TAG(Skill_Projectile)
 DEFINE_GAMEPLAY_TAG(Skill_AoE)
 DEFINE_GAMEPLAY_TAG(Skill_Melee)
 DEFINE_GAMEPLAY_TAG(Skill_Strike)
+DEFINE_GAMEPLAY_TAG(Skill_DamageOverTime)
+DEFINE_GAMEPLAY_TAG(Skill_Chain)
+DEFINE_GAMEPLAY_TAG(Skill_Fork)
+DEFINE_GAMEPLAY_TAG(Skill_Aura)
 DEFINE_GAMEPLAY_TAG(Skill_Duration)
 DEFINE_GAMEPLAY_TAG(Skill_Channelling)
 DEFINE_GAMEPLAY_TAG(Skill_Movement)
@@ -687,6 +693,7 @@ void FPHGameplayTags::RegisterConditions()
 	Condition_WhileMoving         = T.AddNativeGameplayTag("Condition.State.WhileMoving",         TEXT("While moving."));
 	Condition_WhileStationary     = T.AddNativeGameplayTag("Condition.State.WhileStationary",     TEXT("While stationary."));
 	Condition_Sprinting           = T.AddNativeGameplayTag("Condition.State.Sprinting",           TEXT("Sprinting."));
+	Condition_DuringFlaskEffect   = T.AddNativeGameplayTag("Condition.State.DuringFlaskEffect",   TEXT("During a flask or potion effect."));
 
 	Condition_BuffDurationBelow50 = T.AddNativeGameplayTag("Condition.Buff.DurationBelow50",      TEXT("Buff < 50% duration."));
 	Condition_EffectDurationExpired= T.AddNativeGameplayTag("Condition.Effect.Expired",           TEXT("Effect expired."));
@@ -705,6 +712,7 @@ void FPHGameplayTags::RegisterConditions()
 	Condition_InLight             = T.AddNativeGameplayTag("Condition.Environment.InLight",       TEXT("In light."));
 	Condition_InDark              = T.AddNativeGameplayTag("Condition.Environment.InDark",        TEXT("In dark."));
 	Condition_InDangerZone        = T.AddNativeGameplayTag("Condition.Environment.InDangerZone",  TEXT("In danger zone."));
+	Condition_InDungeon           = T.AddNativeGameplayTag("Condition.Environment.InDungeon",     TEXT("In a dungeon."));
 
 	Condition_Self_Bleeding                   = T.AddNativeGameplayTag("Condition.Self.Bleeding",                   TEXT("Self bleeding."));
 	Condition_Self_Stunned                    = T.AddNativeGameplayTag("Condition.Self.Stunned",                    TEXT("Self stunned."));
@@ -1447,6 +1455,10 @@ void FPHGameplayTags::RegisterSkillKeywordTags()
 	Skill_AoE         = T.AddNativeGameplayTag("Skill.AoE",         TEXT("Skill affects an area."));
 	Skill_Melee       = T.AddNativeGameplayTag("Skill.Melee",       TEXT("Skill is close-range melee."));
 	Skill_Strike      = T.AddNativeGameplayTag("Skill.Strike",      TEXT("Skill is a single-target melee strike."));
+	Skill_DamageOverTime = T.AddNativeGameplayTag("Skill.DamageOverTime", TEXT("Skill deals damage over time."));
+	Skill_Chain       = T.AddNativeGameplayTag("Skill.Chain",       TEXT("Skill can chain between targets."));
+	Skill_Fork        = T.AddNativeGameplayTag("Skill.Fork",        TEXT("Skill can fork into additional projectiles."));
+	Skill_Aura        = T.AddNativeGameplayTag("Skill.Aura",        TEXT("Skill applies a persistent effect in an area."));
 	Skill_Duration    = T.AddNativeGameplayTag("Skill.Duration",    TEXT("Skill applies an effect over time."));
 	Skill_Channelling = T.AddNativeGameplayTag("Skill.Channelling", TEXT("Skill is held / channelled."));
 	Skill_Movement    = T.AddNativeGameplayTag("Skill.Movement",    TEXT("Skill repositions the character."));

@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
 #include "AttributeSet.h"
+#include "GameplayTagContainer.h"
 #include "Item/Library/Enums/AffixEnums.h"
 #include "Item/Library/Enums/ItemEnums.h"
 #include "Item/Library/FunctionLibraries/ItemEnumFunctionLibrary.h"
@@ -59,9 +60,18 @@ struct FPHAttributeData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Power")
 	float PowerValue = 0.0f;
 
-	/** Explicit generation weight. Zero preserves legacy RankPoints-based weighting. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Generation", meta = (ClampMin = "0"))
-	int32 SpawnWeight = 0;
+	/**
+	 * Generation weight.
+	 *   -1 = derive from RankPoints (the default)
+	 *    0 = never spawns
+	 *   >0 = explicit weight
+	 *
+	 * Zero used to mean "unset" and fell through to the RankPoints formula, which
+	 * returns up to 1000 - so the obvious way to disable an affix made it as
+	 * common as possible instead.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Generation", meta = (ClampMin = "-1"))
+	int32 SpawnWeight = -1;
 
 	/** Primary category used by future targeted crafting. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Generation")
@@ -114,6 +124,38 @@ struct FPHAttributeData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Modification")
 	EAffixCondition Condition = EAffixCondition::AC_None;
 
+	/** Human-readable condition retained from the affix definition for tooltips. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Modification")
+	FText ConditionDescription;
+
+	/** Every source/skill tag in this container must be present for this modifier to apply. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Modification|Tags")
+	FGameplayTagContainer RequiredSourceTags;
+
+	/** This modifier is blocked when any source/skill tag in this container is present. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Modification|Tags")
+	FGameplayTagContainer BlockedSourceTags;
+
+	/** Every target tag in this container must be present for this modifier to apply. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Modification|Tags")
+	FGameplayTagContainer RequiredTargetTags;
+
+	/** This modifier is blocked when any target tag in this container is present. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Modification|Tags")
+	FGameplayTagContainer BlockedTargetTags;
+
+	/** Source damage type for conversion modifiers. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Modification|Conversion")
+	EDamageType FromDamageType = EDamageType::DT_None;
+
+	/** Destination damage type for conversion modifiers. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Modification|Conversion")
+	EDamageType ToDamageType = EDamageType::DT_None;
+
+	/** Gain-as-extra copies damage instead of removing it from the source type. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Modification|Conversion")
+	bool bGainAsExtra = false;
+
 
 	/** Minimum value for this affix */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Value")
@@ -123,9 +165,27 @@ struct FPHAttributeData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Value")
 	float MaxValue = 0.0f;
 
+	/** Roll bounds for the upper endpoint of range modifiers. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Value|Range")
+	float MinSecondaryValue = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Value|Range")
+	float MaxSecondaryValue = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute|Value|Range")
+	bool bRollSecondaryValue = false;
+
 	/** Rolled stat value (generated on item creation) */
 	UPROPERTY(SaveGame, BlueprintReadOnly, Category = "Attribute|Value")
 	float RolledStatValue = 0.0f;
+
+	/** Rolled upper endpoint for Add Range and Multiply Range modifiers. */
+	UPROPERTY(SaveGame, BlueprintReadOnly, Category = "Attribute|Value")
+	float RolledSecondaryStatValue = 0.0f;
+
+	/** True when this modifier folds into the base values of its owning item. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Attribute|Modification")
+	bool bAffectsBaseItemStats = false;
 
 
 	/** How to format this value for tooltip display */
@@ -175,6 +235,10 @@ struct FPHAttributeData : public FTableRowBase
 	void RollValue()
 	{
 		RolledStatValue = FMath::RandRange(MinValue, MaxValue);
+		RolledSecondaryStatValue = UsesValueRange() && bRollSecondaryValue
+			? FMath::RandRange(MinSecondaryValue, MaxSecondaryValue)
+			: RolledStatValue;
+		NormalizeRolledRange();
 	}
 
 	/**
@@ -185,6 +249,24 @@ struct FPHAttributeData : public FTableRowBase
 	void RollValue(FRandomStream& RandStream)
 	{
 		RolledStatValue = RandStream.RandRange(MinValue, MaxValue);
+		RolledSecondaryStatValue = UsesValueRange() && bRollSecondaryValue
+			? RandStream.RandRange(MinSecondaryValue, MaxSecondaryValue)
+			: RolledStatValue;
+		NormalizeRolledRange();
+	}
+
+	bool UsesValueRange() const
+	{
+		return ModifyType == EModifyType::MT_AddRange
+			|| ModifyType == EModifyType::MT_MultiplyRange;
+	}
+
+	void NormalizeRolledRange()
+	{
+		if (UsesValueRange() && RolledSecondaryStatValue < RolledStatValue)
+		{
+			Swap(RolledStatValue, RolledSecondaryStatValue);
+		}
 	}
 
 	int32 GetRankPointValue() const
@@ -209,12 +291,24 @@ struct FPHAttributeData : public FTableRowBase
 
 	bool IsLocal() const
 	{
-		return ModifiedLocation == EAffixScope::AS_Local;
+		return ModifiedLocation == EAffixScope::AS_Local
+			|| bAffectsBaseItemStats
+			|| bIsLocalToWeapon
+			|| bAffectsBaseWeaponStatsDirectly;
 	}
 
+	/**
+	 * Strict complement of IsLocal.
+	 *
+	 * These two decide whether a modifier folds into the owning item's own stats
+	 * or applies to the character, so anything they both accept would be applied
+	 * twice. IsLocal is the wider test - AS_Global plus bAffectsBaseItemStats is
+	 * a reachable authoring state - so this must be derived from it rather than
+	 * testing AS_Global on its own.
+	 */
 	bool IsGlobal() const
 	{
-		return ModifiedLocation == EAffixScope::AS_Global;
+		return !IsLocal();
 	}
 
 	/**
@@ -258,7 +352,9 @@ struct FPHAttributeData : public FTableRowBase
 	 */
 	int32 GetWeight() const
 	{
-		if (SpawnWeight > 0)
+		// Zero is an explicit "never", not a missing value; only the -1 sentinel
+		// falls through to the RankPoints formula.
+		if (SpawnWeight >= 0)
 		{
 			return SpawnWeight;
 		}
@@ -267,6 +363,9 @@ struct FPHAttributeData : public FTableRowBase
 		const int32 TierDistance = FMath::Abs(RankValue);
 		return FMath::Clamp(1000 / (1 + TierDistance), 1, 1000);
 	}
+
+	/** False for affixes disabled by a zero weight. */
+	bool CanEverSpawn() const { return GetWeight() > 0; }
 
 	bool IsCorruptedAffix() const { return AffixType == EAffixes::AF_Corrupted; }
 

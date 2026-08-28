@@ -33,9 +33,27 @@ public:
 	UFUNCTION(BlueprintPure, Category = "ProjectHunter|Equipment|Rules")
 	static bool CanGroundPickupEquipToSlot(const UItemInstance* Item, EEquipmentSlot Slot);
 
-	/** True if the item is two-handed and therefore blocks the off-hand slot. */
+	/** True if the item is two-handed and therefore fills both hand slots. */
 	UFUNCTION(BlueprintPure, Category = "ProjectHunter|Equipment|Rules")
 	static bool IsTwoHanded(const UItemInstance* Item);
+
+	/** True for the main-hand and off-hand slots. */
+	UFUNCTION(BlueprintPure, Category = "ProjectHunter|Equipment|Rules")
+	static bool IsHandSlot(EEquipmentSlot Slot);
+
+	/**
+	 * Where an item requested for RequestedSlot is actually stored. A two-handed
+	 * weapon fills both hands, so either hand resolves to ES_TwoHand.
+	 */
+	UFUNCTION(BlueprintPure, Category = "ProjectHunter|Equipment|Rules")
+	static EEquipmentSlot ResolveEquipSlot(const UItemInstance* Item, EEquipmentSlot RequestedSlot);
+
+	/**
+	 * Which slot backs what Slot shows. A two-handed weapon occupies both hands,
+	 * so while one is equipped either hand reads from ES_TwoHand.
+	 */
+	UFUNCTION(BlueprintPure, Category = "ProjectHunter|Equipment|Rules")
+	static EEquipmentSlot ResolveOccupyingSlot(EEquipmentSlot Slot, bool bTwoHandSlotOccupied);
 
 	UFUNCTION(BlueprintPure, Category = "ProjectHunter|Equipment|Rules")
 	static EEquipmentSlot ResolveRingAutoSlot(bool bRing1Occupied, bool bRing2Occupied);

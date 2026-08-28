@@ -132,7 +132,9 @@ bool UPHEquipmentMenuPageWidget::GetInventorySlotData(int32 SlotIndex, FEquipmen
 
 UItemInstance* UPHEquipmentMenuPageWidget::GetEquippedItem(EEquipmentSlot EquipmentSlot) const
 {
-	return EquipmentManager ? EquipmentManager->GetEquippedItem(EquipmentSlot) : nullptr;
+	// There is no two-hand slot in the menu: both hands read the two-handed
+	// weapon that fills them.
+	return EquipmentManager ? EquipmentManager->GetEquippedItem(ResolveOccupyingSlot(EquipmentSlot)) : nullptr;
 }
 
 UItemInstance* UPHEquipmentMenuPageWidget::GetInventoryItem(int32 SlotIndex) const
@@ -225,6 +227,8 @@ bool UPHEquipmentMenuPageWidget::RequestEquipSelectedItem(EEquipmentSlot TargetS
 
 bool UPHEquipmentMenuPageWidget::RequestUnequipSlot(EEquipmentSlot EquipmentSlot, bool bMoveToBag)
 {
+	EquipmentSlot = ResolveOccupyingSlot(EquipmentSlot);
+
 	if (!EquipmentManager || EquipmentSlot == EEquipmentSlot::ES_None || !EquipmentManager->IsSlotOccupied(EquipmentSlot))
 	{
 		return false;
@@ -320,6 +324,8 @@ bool UPHEquipmentMenuPageWidget::RequestMoveInventoryItem(int32 FromSlotIndex, i
 
 bool UPHEquipmentMenuPageWidget::RequestUnequipToInventory(EEquipmentSlot EquipmentSlot)
 {
+	EquipmentSlot = ResolveOccupyingSlot(EquipmentSlot);
+
 	if (!EquipmentManager
 		|| EquipmentSlot == EEquipmentSlot::ES_None
 		|| !EquipmentManager->IsSlotOccupied(EquipmentSlot))
@@ -505,7 +511,7 @@ void UPHEquipmentMenuPageWidget::RebuildEquipmentSlots()
 			continue;
 		}
 
-		UItemInstance* Item = EquipmentManager ? EquipmentManager->GetEquippedItem(EquipmentSlot) : nullptr;
+		UItemInstance* Item = GetEquippedItem(EquipmentSlot);
 		const FEquipmentMenuSlotViewData SlotData = UMenuFunctionLibrary::MakeEquipmentSlotViewData(EquipmentSlot, Item);
 
 		EquipmentSlots.Add(SlotData);
@@ -574,8 +580,12 @@ EEquipmentSlot UPHEquipmentMenuPageWidget::ResolveSuggestedSlot(UItemInstance* I
 		return EEquipmentSlot::ES_None;
 	}
 
-	EEquipmentSlot SuggestedSlot = EquipmentManager->DetermineEquipmentSlot(Item);
+	// The suggestion has to name a slot the menu shows. A two-handed weapon is
+	// stored in ES_TwoHand, which is not one of them, so it falls through to the
+	// loop below and suggests the main hand it fills.
+	const EEquipmentSlot SuggestedSlot = EquipmentManager->DetermineEquipmentSlot(Item);
 	if (SuggestedSlot != EEquipmentSlot::ES_None &&
+		EquipmentSlotOrder.Contains(SuggestedSlot) &&
 		EquipmentManager->CanEquipToSlot(Item, SuggestedSlot))
 	{
 		return SuggestedSlot;
@@ -590,6 +600,11 @@ EEquipmentSlot UPHEquipmentMenuPageWidget::ResolveSuggestedSlot(UItemInstance* I
 	}
 
 	return EEquipmentSlot::ES_None;
+}
+
+EEquipmentSlot UPHEquipmentMenuPageWidget::ResolveOccupyingSlot(EEquipmentSlot EquipmentSlot) const
+{
+	return EquipmentManager ? EquipmentManager->ResolveOccupyingSlot(EquipmentSlot) : EquipmentSlot;
 }
 
 void UPHEquipmentMenuPageWidget::SetSelection(UItemInstance* Item, int32 InventorySlotIndex, EEquipmentSlot EquipmentSlot)

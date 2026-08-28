@@ -89,12 +89,36 @@ public:
 	int32 AutomaticGroundItemID = INDEX_NONE;
 
 	/**
-	 * How long a manually cycled item remains selected while it is still valid.
-	 * After this expires, normal aim scoring may select a better item again.
+	 * Optional timeout on a manually cycled selection.
+	 *
+	 * 0 (the default) means the selection holds until it is invalidated - the
+	 * item is gone, the camera turns away, or the player walks off. That is what
+	 * lets the player cycle into a stack of overlapping items and have the choice
+	 * stay put: aim scoring cannot tell overlapping items apart, so any timeout
+	 * hands focus straight back to whichever one happens to sort first.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Ground Items",
 		meta = (ClampMin = "0.0", ClampMax = "5.0"))
-	float ManualGroundItemSelectionLockDuration = 0.75f;
+	float ManualGroundItemSelectionLockDuration = 0.0f;
+
+	/** Release a manual selection once the camera has turned this far from where it was made. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Ground Items",
+		meta = (ClampMin = "0.0", ClampMax = "180.0"))
+	float ManualSelectionBreakAngle = 40.0f;
+
+	/** Release a manual selection once the player has walked this far from where it was made. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Ground Items",
+		meta = (ClampMin = "0.0", ClampMax = "1000.0"))
+	float ManualSelectionBreakDistance = 250.0f;
+
+	/**
+	 * Re-score the cached candidates every frame instead of only on the check
+	 * timer. The spatial queries stay on the timer; only the scoring repeats,
+	 * which is what makes focus track the camera at frame rate rather than at
+	 * CheckFrequency.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Ground Items")
+	bool bRescoreFocusEveryFrame = true;
 
 	UPROPERTY(BlueprintAssignable, Category = "Interaction|Events")
 	FOnCurrentInteractableChanged OnCurrentInteractableChanged;
@@ -178,17 +202,32 @@ protected:
 	void ApplyQuickSettings();
 	void UpdateInteractionCheckRate(bool bHasProximityCandidates);
 
+	/**
+	 * Shared focus evaluation.
+	 * @param bRefreshCandidates  True re-runs the spatial queries (the check
+	 *                            timer); false re-scores the cached set against
+	 *                            the current camera (every frame).
+	 */
+	void EvaluateInteractionFocus(bool bRefreshCandidates);
+
 	void UpdateFocusState(TScriptInterface<IInteractable> NewInteractable);
 	void UpdateGroundItemFocus(int32 NewGroundItemID);
 	void ApplyGroundItemCandidates(
 		const TArray<FGroundItemInteractionCandidate>& NewCandidates,
-		int32 NewAutomaticGroundItemID);
+		int32 NewAutomaticGroundItemID,
+		bool bAllowAutomaticSelection);
 	void SelectGroundItemCandidateIndex(int32 NewIndex, bool bManualSelection);
 	void AdvanceGroundItemFocusAfterPickup(int32 PickedUpItemID);
 	void BroadcastGroundItemSelectionChanged();
 	int32 FindGroundItemCandidateIndex(int32 ItemID) const;
+
+	void BeginManualGroundItemSelection(int32 ItemID);
+	void ClearManualGroundItemSelection();
 	bool IsManualGroundItemSelectionLocked() const;
 	float GetManualGroundItemSelectionLockRemaining() const;
+
+	/** True once the camera has turned or the player walked away from the manual pick. */
+	bool HasManualGroundItemSelectionDrifted() const;
 
 	bool InteractWithActor(AActor* TargetActor);
 	bool PickupGroundItemToInventory(int32 ItemID);
@@ -273,8 +312,19 @@ private:
 	TWeakObjectPtr<UObject> CurrentInteractableObject;
 
 	float LastInteractionCheckTimeSeconds = -1.0f;
-	float ManualGroundItemSelectionLockEndTime = -1.0f;
 	float CurrentInteractionCheckInterval = -1.0f;
+
+	// MANUAL GROUND ITEM SELECTION
+	//
+	// Held by ID rather than by index: the candidate list is rebuilt every query
+	// and an index would silently point at a different item once anything nearby
+	// changed. The anchors record where the player was aiming and standing when
+	// they cycled, so the selection can be released on intent rather than a clock.
+
+	int32 ManualGroundItemSelectionID = INDEX_NONE;
+	FVector ManualSelectionAimDirection = FVector::ZeroVector;
+	FVector ManualSelectionPlayerLocation = FVector::ZeroVector;
+	float ManualGroundItemSelectionLockEndTime = -1.0f;
 
 	// All per-interaction transient data lives in ActiveInteraction.
 	// Call ActiveInteraction.Reset() to clear every field at once.

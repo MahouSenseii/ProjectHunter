@@ -1,7 +1,9 @@
 #include "AbilitySystem/Abilities/PHGameplayAbility.h"
 
 #include "AbilitySystem/HunterAbilitySystemComponent.h"
+#include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystem/Library/FunctionLibraries/PHAbilitySystemFunctionLibrary.h"
+#include "AbilitySystem/Library/FunctionLibraries/PHSkillFunctionLibrary.h"
 #include "Character/PHBaseCharacter.h"
 
 #include "AbilitySystemLog.h"
@@ -35,6 +37,26 @@ UHunterAbilitySystemComponent* UPHGameplayAbility::GetHunterAbilitySystemCompone
 APHBaseCharacter* UPHGameplayAbility::GetPHCharacterFromActorInfo() const
 {
 	return CurrentActorInfo ? Cast<APHBaseCharacter>(CurrentActorInfo->AvatarActor.Get()) : nullptr;
+}
+
+FName UPHGameplayAbility::GetAbilityName() const
+{
+	return SkillData.SkillId.IsNone() ? AbilityName : SkillData.SkillId;
+}
+
+FPHResolvedSkillData UPHGameplayAbility::ResolveSkillData() const
+{
+	const UHunterAbilitySystemComponent* HunterASC = GetHunterAbilitySystemComponentFromActorInfo();
+	const UHunterAttributeSet* AttributeSet = HunterASC ? HunterASC->GetSet<UHunterAttributeSet>() : nullptr;
+	return FPHSkillDataResolver::Resolve(SkillData, GetAssetTags(), AttributeSet);
+}
+
+FPHResolvedSkillData UPHGameplayAbility::ResolveSkillDataWithWeapon(
+	const FResolvedWeaponStats& WeaponStats) const
+{
+	const UHunterAbilitySystemComponent* HunterASC = GetHunterAbilitySystemComponentFromActorInfo();
+	const UHunterAttributeSet* AttributeSet = HunterASC ? HunterASC->GetSet<UHunterAttributeSet>() : nullptr;
+	return FPHSkillDataResolver::Resolve(SkillData, GetAssetTags(), AttributeSet, &WeaponStats);
 }
 
 bool UPHGameplayAbility::CanActivateAbility(

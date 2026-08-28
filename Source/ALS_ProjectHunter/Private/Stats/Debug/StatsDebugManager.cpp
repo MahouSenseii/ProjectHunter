@@ -8,6 +8,7 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/Pawn.h"
 #include "HAL/PlatformTime.h"
 #include "Stats/Library/Enums/StatsEnumLibrary.h"
 
@@ -163,6 +164,27 @@ namespace StatsDebugPrivate
 		const uint64 SafeBaseMessageKey = static_cast<uint64>(FMath::Max(0, BaseMessageKey));
 		const uint64 OwnerOffset = KeyObject ? static_cast<uint64>(KeyObject->GetUniqueID()) * 1000ull : 0ull;
 		return SafeBaseMessageKey + OwnerOffset;
+	}
+
+	bool ShouldDrawToScreen(const UStatsManager* StatsManager)
+	{
+		const AActor* Owner = StatsManager ? StatsManager->GetOwner() : nullptr;
+		if (!Owner || Owner->GetNetMode() == NM_DedicatedServer)
+		{
+			return false;
+		}
+
+		// Blueprint assets can retain an older added component after the native
+		// StatsManager is introduced. Only the owner's canonical manager presents.
+		if (Owner->FindComponentByClass<UStatsManager>() != StatsManager)
+		{
+			return false;
+		}
+
+		// Replicated pawns inherit the same debug settings. Without this gate every
+		// server/remote copy writes another panel into GEngine's global message list.
+		const APawn* OwnerPawn = Cast<APawn>(Owner);
+		return !OwnerPawn || OwnerPawn->IsLocallyControlled();
 	}
 
 	FGameplayAttribute ResolveCoreAttribute(const EHunterAttribute AttributeType)
@@ -805,9 +827,10 @@ void FStatsDebugManager::DrawDebug(UStatsManager* StatsManager, UObject* WorldCo
 		return;
 	}
 
+	const bool bCanDrawToScreen = bDrawToScreen && StatsDebugPrivate::ShouldDrawToScreen(StatsManager);
 	const bool bValuesChanged = CheckForValueChanges(StatsManager);
-	const bool bNeedsScreenRedraw = bDrawToScreen && LastDrawnLineCount == 0;
-	const bool bShouldBuildDisplayLines = (bDrawToScreen || bLogToOutput)
+	const bool bNeedsScreenRedraw = bCanDrawToScreen && LastDrawnLineCount == 0;
+	const bool bShouldBuildDisplayLines = (bCanDrawToScreen || bLogToOutput)
 	                                   && (bValuesChanged || CachedDisplayLines.IsEmpty() || bNeedsScreenRedraw);
 
 	TArray<FString> OldLines;
@@ -817,7 +840,7 @@ void FStatsDebugManager::DrawDebug(UStatsManager* StatsManager, UObject* WorldCo
 		BuildDisplayLines(StatsManager, CachedDisplayLines, CachedLineColors);
 	}
 
-	if (bDrawToScreen && GEngine)
+	if (bCanDrawToScreen && GEngine)
 	{
 		if (bShouldBuildDisplayLines)
 		{

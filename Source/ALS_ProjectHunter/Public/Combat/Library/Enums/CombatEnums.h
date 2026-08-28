@@ -20,6 +20,17 @@ enum class EHunterDamageType : uint8
 	Corruption UMETA(DisplayName = "Corruption")
 };
 
+/** Which equipped weapon supplies local base stats for an attack. */
+UENUM(BlueprintType)
+enum class ECombatWeaponSource : uint8
+{
+	Automatic UMETA(DisplayName = "Automatic"),
+	MainHand UMETA(DisplayName = "Main Hand"),
+	OffHand UMETA(DisplayName = "Off Hand"),
+	TwoHand UMETA(DisplayName = "Two Hand"),
+	CharacterAttributes UMETA(DisplayName = "Character Attributes")
+};
+
 /**
  * How an incoming hit was resolved by the target.
  * Parry and Invincible negate damage/status application. Blocked uses the

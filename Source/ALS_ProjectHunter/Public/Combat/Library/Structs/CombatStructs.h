@@ -66,6 +66,27 @@ struct ALS_PROJECTHUNTER_API FAnimationSkillBaseDamage
 	float Corruption = 0.f;
 };
 
+/** One Blueprint-authored damage conversion or gain-as-extra rule. */
+USTRUCT(BlueprintType)
+struct ALS_PROJECTHUNTER_API FCombatDamageConversionRule
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Conversion")
+	EHunterDamageType From = EHunterDamageType::Physical;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Conversion")
+	EHunterDamageType To = EHunterDamageType::Fire;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Conversion",
+		meta = (ClampMin = "0.0", Units = "Percent"))
+	float Percent = 0.f;
+
+	/** Gain-as-extra copies damage without removing it from the source type. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Conversion")
+	bool bGainAsExtra = false;
+};
+
 /** Animation-authored penetration percentages, clamped by the combat pipeline. */
 USTRUCT(BlueprintType)
 struct ALS_PROJECTHUNTER_API FAnimationPiercingMulti
@@ -227,6 +248,14 @@ struct ALS_PROJECTHUNTER_API FAnimationDamageInfo
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation",
 		meta = (ClampMin = "0.0", UIMin = "0.0", UIMax = "500.0", Units = "Percent"))
 	float AddedDamageEffectivenessPercent = 100.f;
+
+	/** Weapon hand used by this hit. Automatic prefers two-hand, then main hand, then off hand. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation")
+	ECombatWeaponSource WeaponSource = ECombatWeaponSource::Automatic;
+
+	/** Skill-inherent conversion runs before character/equipment conversion. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Animation")
+	TArray<FCombatDamageConversionRule> SkillDamageConversions;
 
 	/**
 	 * Poise/posture damage for this hit. Zero derives it from damage that gets

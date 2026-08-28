@@ -49,6 +49,29 @@ bool FItemInitializationHelper::MigrateToCurrentVersion(UItemInstance& Item)
 		bMigrated = true;
 	}
 
+	if (Item.SerializationVersion < 4)
+	{
+		// Legacy range modifiers only stored one rolled value. Preserve their
+		// effective value for both endpoints until the item is rerolled.
+		Item.Stats.ForEachMutableStat([](FPHAttributeData& Affix)
+		{
+			if (Affix.UsesValueRange())
+			{
+				Affix.RolledSecondaryStatValue = Affix.RolledStatValue;
+			}
+		});
+		Item.SerializationVersion = 4;
+		bMigrated = true;
+	}
+
+	if (Item.SerializationVersion < 5)
+	{
+		// Version 5 adds explicit gain-as-extra semantics to conversion affixes.
+		// Existing conversion affixes remain ordinary conversion by default.
+		Item.SerializationVersion = 5;
+		bMigrated = true;
+	}
+
 	if (bMigrated)
 	{
 		UE_LOG(LogItemInstance, Log,

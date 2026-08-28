@@ -314,6 +314,7 @@ public:
 	static FGameplayTag Condition_WhileMoving;
 	static FGameplayTag Condition_WhileStationary;
 	static FGameplayTag Condition_Sprinting;
+	static FGameplayTag Condition_DuringFlaskEffect;
 
 	// Buff/Debuff & effect states
 	static FGameplayTag Condition_BuffDurationBelow50;
@@ -334,6 +335,7 @@ public:
 	static FGameplayTag Condition_InLight;
 	static FGameplayTag Condition_InDark;
 	static FGameplayTag Condition_InDangerZone;
+	static FGameplayTag Condition_InDungeon;
 
 	// Ailment & status (self)
 	static FGameplayTag Condition_Self_Bleeding;
@@ -408,6 +410,10 @@ public:
 	static FGameplayTag Skill_AoE;         // "Skill.AoE"          hits an area
 	static FGameplayTag Skill_Melee;       // "Skill.Melee"        close-range
 	static FGameplayTag Skill_Strike;      // "Skill.Strike"       single-target melee
+	static FGameplayTag Skill_DamageOverTime; // "Skill.DamageOverTime" deals damage over time
+	static FGameplayTag Skill_Chain;       // "Skill.Chain"        can chain between targets
+	static FGameplayTag Skill_Fork;        // "Skill.Fork"         can fork into new projectiles
+	static FGameplayTag Skill_Aura;        // "Skill.Aura"         applies a persistent area effect
 	static FGameplayTag Skill_Duration;    // "Skill.Duration"     applies an effect over time
 	static FGameplayTag Skill_Channelling; // "Skill.Channelling"  held/channelled
 	static FGameplayTag Skill_Movement;    // "Skill.Movement"     repositions the character

@@ -19,7 +19,7 @@ class ALS_PROJECTHUNTER_API UBaseStatsData : public UPrimaryDataAsset
 
 public:
 	/** Bump when serialized stat defaults require a one-time data migration. */
-	static constexpr int32 CurrentStatsSchemaVersion = 1;
+	static constexpr int32 CurrentStatsSchemaVersion = 2;
 
 	UBaseStatsData();
 	static TSubclassOf<UAttributeSet> ResolveSourceAttributeSetClass(const UBaseStatsData* Data);

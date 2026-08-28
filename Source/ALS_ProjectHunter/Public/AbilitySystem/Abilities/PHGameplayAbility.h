@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystem/Library/Enums/PHAbilityEnums.h"
+#include "AbilitySystem/Library/Structs/PHSkillStructs.h"
+#include "Stats/Library/Structs/ResolvedItemStats.h"
 #include "PHGameplayAbility.generated.h"
 
 class APHBaseCharacter;
@@ -39,7 +41,22 @@ public:
 	bool ChangeActivationGroup(EPHAbilityActivationGroup NewGroup);
 	
 	UFUNCTION(BlueprintCallable, Category = "Project Hunter|Base")
-	FName GetAbilityName() const { return AbilityName; }
+	FName GetAbilityName() const;
+
+	UFUNCTION(BlueprintPure, Category = "Project Hunter|Skill")
+	FPHSkillData GetSkillData() const { return SkillData; }
+
+	/** Standard GAS asset tags are the single source of truth for skill keywords. */
+	UFUNCTION(BlueprintPure, Category = "Project Hunter|Skill")
+	FGameplayTagContainer GetSkillTags() const { return GetAssetTags(); }
+
+	/** Resolve authored data against the current actor's global attributes. */
+	UFUNCTION(BlueprintPure, Category = "Project Hunter|Skill")
+	FPHResolvedSkillData ResolveSkillData() const;
+
+	/** Resolve authored data against global attributes and one item-local weapon snapshot. */
+	UFUNCTION(BlueprintPure, Category = "Project Hunter|Skill")
+	FPHResolvedSkillData ResolveSkillDataWithWeapon(const FResolvedWeaponStats& WeaponStats) const;
 
 protected:
 	virtual bool CanActivateAbility(
@@ -69,7 +86,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Project Hunter|Ability Activation")
 	EPHAbilityActivationGroup ActivationGroup = EPHAbilityActivationGroup::Independent;
+
+	/** Authored by the existing data-only BP_GameplayAbility base and its children. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Project Hunter|Skill")
+	FPHSkillData SkillData;
 	
+	/** Legacy serialized identifier. SkillData.SkillId takes precedence when set. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Project Hunter|Base")
 	FName AbilityName;
 };

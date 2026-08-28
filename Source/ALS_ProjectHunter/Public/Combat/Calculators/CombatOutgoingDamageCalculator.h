@@ -9,6 +9,8 @@
 #include "Combat/Library/Structs/CombatStructs.h"
 
 class UHunterAttributeSet;
+struct FResolvedWeaponStats;
+struct FContextualStatModifierSnapshot;
 
 /**
  * Outgoing pipeline (attacker attributes + FAnimationDamageInfo):
@@ -32,39 +34,53 @@ public:
 	static FCombatDamagePacket BuildOutgoingDamagePacket(
 		const UHunterAttributeSet* AttackerAttributes,
 		const FAnimationDamageInfo& DamageInfo,
-		FRandomStream& RandomStream);
+		FRandomStream& RandomStream,
+		const FResolvedWeaponStats* WeaponStats = nullptr,
+		const FContextualStatModifierSnapshot* ContextualModifiers = nullptr);
 
 	// Weapon roll + flat added damage for one type, before any scaling.
 	static float CalculateBaseDamageForType(
 		EHunterDamageType DamageType,
 		const UHunterAttributeSet* AttackerAttributes,
 		const FAnimationDamageInfo& DamageInfo,
-		FRandomStream& RandomStream);
+		FRandomStream& RandomStream,
+		const FResolvedWeaponStats* WeaponStats = nullptr,
+		const FContextualStatModifierSnapshot* ContextualModifiers = nullptr);
+
+	/** One non-chaining conversion stage. Conversion is normalized at 100%; gain-as-extra is not. */
+	static FCombatDamagePacket ApplyDamageConversionRules(
+		const FCombatDamagePacket& InPacket,
+		const TArray<FCombatDamageConversionRule>& Rules);
 
 	// One-pass attribute conversion. Runs on unscaled base damage so converted
 	// damage scales only with modifiers of its final type.
 	static FCombatDamagePacket ApplyDamageConversion(
 		const FCombatDamagePacket& InPacket,
-		const UHunterAttributeSet* AttackerAttributes);
+		const UHunterAttributeSet* AttackerAttributes,
+		const FContextualStatModifierSnapshot* ContextualModifiers = nullptr);
 
 	// Additive increased pool for one type: global + type + elemental +
 	// tag-conditional attribute buckets + animation BaseMulti + HP-state bonuses.
 	static float GetIncreasedDamagePercent(
 		EHunterDamageType DamageType,
 		const UHunterAttributeSet* AttackerAttributes,
-		const FAnimationDamageInfo& DamageInfo);
+		const FAnimationDamageInfo& DamageInfo,
+		const FContextualStatModifierSnapshot* ContextualModifiers = nullptr);
 
 	// Multiplicative more multipliers: global x elemental x type.
 	static float GetMoreDamageMultiplier(
 		EHunterDamageType DamageType,
-		const UHunterAttributeSet* AttackerAttributes);
+		const UHunterAttributeSet* AttackerAttributes,
+		const FContextualStatModifierSnapshot* ContextualModifiers = nullptr);
 
 	// One crit roll for the whole hit. Damage-over-time hits never crit.
 	static void ResolveCriticalStrike(
 		FCombatDamagePacket& Packet,
 		const UHunterAttributeSet* AttackerAttributes,
 		const FAnimationDamageInfo& DamageInfo,
-		FRandomStream& RandomStream);
+		FRandomStream& RandomStream,
+		const FResolvedWeaponStats* WeaponStats = nullptr,
+		const FContextualStatModifierSnapshot* ContextualModifiers = nullptr);
 
 	// Debug/log formatting shared with UCombatManager's own ApplyHit logging.
 	static FString FormatPacket(const FCombatDamagePacket& Packet);

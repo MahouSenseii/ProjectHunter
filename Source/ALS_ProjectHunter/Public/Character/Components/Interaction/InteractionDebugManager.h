@@ -192,9 +192,14 @@ public:
 
 private:
 	// CACHED REFERENCES (Not Blueprint-exposed)
-
+\
+	UPROPERTY()
 	AActor* OwnerActor = nullptr;
+	
+	UPROPERTY()
 	UWorld* WorldContext = nullptr;
+	
+	UPROPERTY()
 	UALSDebugComponent* CachedALSDebugComponent = nullptr;
 
 	// Debug statistics (Not Blueprint-exposed)

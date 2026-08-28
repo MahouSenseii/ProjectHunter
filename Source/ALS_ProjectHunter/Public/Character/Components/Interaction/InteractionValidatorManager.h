@@ -113,8 +113,13 @@ public:
 private:
 	// CACHED REFERENCES (Not Blueprint-exposed)
 
+	UPROPERTY()
 	AActor* OwnerActor = nullptr;
+	
+	UPROPERTY()
 	UWorld* WorldContext = nullptr;
+	
+	UPROPERTY()
 	UGroundItemSubsystem* CachedGroundItemSubsystem = nullptr;
 
 	// Anti-cheat tracking

@@ -228,8 +228,37 @@ bool FPHAffixDeterministicSeedTest::RunTest(const FString&)
 			A.Prefixes[Index].AttributeName, B.Prefixes[Index].AttributeName);
 		TestEqual(TEXT("Same seed rolls the same prefix value"),
 			A.Prefixes[Index].RolledStatValue, B.Prefixes[Index].RolledStatValue, KINDA_SMALL_NUMBER);
+		TestEqual(TEXT("Same seed rolls the same prefix range endpoint"),
+			A.Prefixes[Index].RolledSecondaryStatValue, B.Prefixes[Index].RolledSecondaryStatValue, KINDA_SMALL_NUMBER);
 	}
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPHAffixRangeRollTest,
+	"ProjectHunter.Items.Affixes.RangeRollKeepsBothEndpoints",
+	PHAffixTests::TestFlags)
+
+bool FPHAffixRangeRollTest::RunTest(const FString&)
+{
+	FPHAttributeData RangeAffix;
+	RangeAffix.ModifyType = EModifyType::MT_AddRange;
+	RangeAffix.MinValue = 2.f;
+	RangeAffix.MaxValue = 4.f;
+	RangeAffix.MinSecondaryValue = 8.f;
+	RangeAffix.MaxSecondaryValue = 12.f;
+	RangeAffix.bRollSecondaryValue = true;
+
+	FRandomStream Stream(20260827);
+	RangeAffix.RollValue(Stream);
+
+	TestTrue(TEXT("Lower endpoint uses its own roll bounds"),
+		RangeAffix.RolledStatValue >= 2.f && RangeAffix.RolledStatValue <= 4.f);
+	TestTrue(TEXT("Upper endpoint uses its own roll bounds"),
+		RangeAffix.RolledSecondaryStatValue >= 8.f && RangeAffix.RolledSecondaryStatValue <= 12.f);
+	TestTrue(TEXT("Rolled range is normalized"),
+		RangeAffix.RolledSecondaryStatValue >= RangeAffix.RolledStatValue);
 	return true;
 }
 

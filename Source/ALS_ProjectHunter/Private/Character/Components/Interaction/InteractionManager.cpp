@@ -161,6 +161,14 @@ void UInteractionManager::TickComponent(
 		UpdateActiveInteraction(DeltaTime);
 	}
 
+	// The camera moves every frame while the gathered candidates do not, so
+	// re-scoring here (no spatial queries) is what makes focus follow the aim at
+	// frame rate instead of stepping at CheckFrequency.
+	if (bRescoreFocusEveryFrame && bSystemInitialized && !HasActiveInteraction())
+	{
+		EvaluateInteractionFocus(/*bRefreshCandidates=*/false);
+	}
+
 	if (CurrentGroundItemID != INDEX_NONE)
 	{
 		WidgetPresenter.TickGroundItemWorldWidget(CurrentGroundItemID);
@@ -194,7 +202,8 @@ void UInteractionManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	GroundItemCandidates.Reset();
 	SelectedGroundItemCandidateIndex = INDEX_NONE;
 	AutomaticGroundItemID = INDEX_NONE;
-	ManualGroundItemSelectionLockEndTime = -1.0f;
+	ClearManualGroundItemSelection();
+	TraceManager.InvalidateCandidateCache();
 
 	WidgetPresenter.Shutdown();
 
@@ -345,23 +354,23 @@ void UInteractionManager::OnInteractReleased()
 
 void UInteractionManager::CheckForInteractables()
 {
+	EvaluateInteractionFocus(/*bRefreshCandidates=*/true);
+}
+
+void UInteractionManager::EvaluateInteractionFocus(bool bRefreshCandidates)
+{
 	if (!bInteractionEnabled || !IsLocallyControlled())
 	{
 		return;
 	}
 
-	if (const UWorld* World = GetWorld())
+	if (bRefreshCandidates)
 	{
-		LastInteractionCheckTimeSeconds = World->GetTimeSeconds();
+		if (const UWorld* World = GetWorld())
+		{
+			LastInteractionCheckTimeSeconds = World->GetTimeSeconds();
+		}
 	}
-
-	FVector CameraLocation;
-	FRotator CameraRotation;
-	TraceManager.GetCameraViewPoint(CameraLocation, CameraRotation);
-
-	// Use the actual trace origin (ALS camera position) for all debug drawing so
-	// the visualisation matches where the trace really fires from.
-	const FVector TraceOrigin = TraceManager.GetTraceStart();
 
 	// One player-centered proximity query gathers both actor interactables and
 	// saved ground-item locations, then scores them with the same math.
@@ -375,39 +384,66 @@ void UInteractionManager::CheckForInteractables()
 		NewInteractable,
 		NewGroundItemID,
 		NewGroundItemCandidates,
-		bHasProximityCandidates);
+		bHasProximityCandidates,
+		bRefreshCandidates);
 
 	// The fast evaluation loop only runs while something overlaps the logical
 	// player sphere (or an interaction is still active). Empty-space discovery
 	// uses the slower idle rate because ISM ground items do not emit overlaps.
-	UpdateInteractionCheckRate(bHasProximityCandidates || HasActiveInteraction());
+	if (bRefreshCandidates)
+	{
+		UpdateInteractionCheckRate(bHasProximityCandidates || HasActiveInteraction());
+	}
+
+	const UObject* PreviousFocusObject = GetCurrentInteractableObject();
+	const int32 PreviousGroundItemID = CurrentGroundItemID;
 
 	// Don't shift focus while an interaction is in progress - the outline and
 	// ground-item widget must stay on the active target until it completes.
 	if (!HasActiveInteraction())
 	{
-		if (GetCurrentInteractableObject() != NewInteractable.GetObject())
+		// A manual pick outranks the actor as well as aim scoring: without this
+		// an actor interactable would take focus straight back on the next pass
+		// and there would be no way to cycle to an item lying next to a chest.
+		const bool bManualSelectionHeld =
+			IsManualGroundItemSelectionLocked()
+			&& NewGroundItemCandidates.ContainsByPredicate(
+				[this](const FGroundItemInteractionCandidate& Candidate)
+				{
+					return Candidate.ItemID == ManualGroundItemSelectionID;
+				});
+
+		const TScriptInterface<IInteractable> DesiredInteractable =
+			bManualSelectionHeld ? TScriptInterface<IInteractable>() : NewInteractable;
+
+		if (GetCurrentInteractableObject() != DesiredInteractable.GetObject())
 		{
-			UpdateFocusState(NewInteractable);
+			UpdateFocusState(DesiredInteractable);
 		}
 
-		if (NewInteractable.GetObject())
-		{
-			ApplyGroundItemCandidates({}, INDEX_NONE);
-		}
-		else
-		{
-			ApplyGroundItemCandidates(NewGroundItemCandidates, NewGroundItemID);
-		}
+		// Candidates are kept even when an actor wins, so cycling can still reach
+		// the items around it; the actor just keeps focus until the player cycles.
+		ApplyGroundItemCandidates(
+			NewGroundItemCandidates,
+			NewGroundItemID,
+			/*bAllowAutomaticSelection=*/!DesiredInteractable.GetObject());
 	}
 
-	if (ShouldUpdatePromptWidgetFromFocus())
+	// UpdateForActorInteractable has no early-out and reaches into Blueprint for
+	// its text, so the per-frame path only pays for it when focus actually moved.
+	const bool bFocusChanged = PreviousFocusObject != GetCurrentInteractableObject()
+		|| PreviousGroundItemID != CurrentGroundItemID;
+
+	if ((bRefreshCandidates || bFocusChanged) && ShouldUpdatePromptWidgetFromFocus())
 	{
 		RefreshFocusedWidget();
 	}
 
-	if (DebugManager.ShouldShowDebugTraces())
+	if (bRefreshCandidates && DebugManager.ShouldShowDebugTraces())
 	{
+		// The actual trace origin (ALS camera position), so the visualisation
+		// matches where the trace really fires from.
+		const FVector TraceOrigin = TraceManager.GetTraceStart();
 		UInteractableManager* InteractableComp = GetCurrentInteractable();
 		float Distance = 0.0f;
 
@@ -638,50 +674,50 @@ void UInteractionManager::UpdateGroundItemFocus(int32 NewGroundItemID)
 
 void UInteractionManager::ApplyGroundItemCandidates(
 	const TArray<FGroundItemInteractionCandidate>& NewCandidates,
-	int32 NewAutomaticGroundItemID)
+	int32 NewAutomaticGroundItemID,
+	bool bAllowAutomaticSelection)
 {
 	const bool bCandidateOrderChanged =
 		!InteractionManagerPrivate::HasSameCandidateOrder(GroundItemCandidates, NewCandidates);
 	const int32 OldSelectionIndex = SelectedGroundItemCandidateIndex;
 	const int32 OldGroundItemID = CurrentGroundItemID;
 
-	int32 DesiredGroundItemID = NewAutomaticGroundItemID;
-	if (IsManualGroundItemSelectionLocked() && CurrentGroundItemID != INDEX_NONE)
-	{
-		const bool bCurrentItemStillValid = NewCandidates.ContainsByPredicate(
-			[this](const FGroundItemInteractionCandidate& Candidate)
-			{
-				return Candidate.ItemID == CurrentGroundItemID;
-			});
-
-		if (bCurrentItemStillValid)
-		{
-			DesiredGroundItemID = CurrentGroundItemID;
-		}
-		else
-		{
-			ManualGroundItemSelectionLockEndTime = -1.0f;
-		}
-	}
-
 	GroundItemCandidates = NewCandidates;
 	AutomaticGroundItemID = FindGroundItemCandidateIndex(NewAutomaticGroundItemID) != INDEX_NONE
 		? NewAutomaticGroundItemID
 		: INDEX_NONE;
-	SelectedGroundItemCandidateIndex = FindGroundItemCandidateIndex(DesiredGroundItemID);
 
-	if (!GroundItemCandidates.IsEmpty() && SelectedGroundItemCandidateIndex == INDEX_NONE)
+	// A manual pick is released only when its item leaves the list or the player
+	// signals they are done with it. Aim scoring must never take it back on its
+	// own: overlapping items score identically, so any automatic override would
+	// snap focus to whichever one sorts first and make cycling useless.
+	if (ManualGroundItemSelectionID != INDEX_NONE
+		&& (FindGroundItemCandidateIndex(ManualGroundItemSelectionID) == INDEX_NONE
+			|| !IsManualGroundItemSelectionLocked()))
 	{
-		SelectedGroundItemCandidateIndex = 0;
-		DesiredGroundItemID = GroundItemCandidates[0].ItemID;
+		ClearManualGroundItemSelection();
 	}
-	else if (GroundItemCandidates.IsEmpty())
+
+	int32 DesiredGroundItemID = INDEX_NONE;
+	if (ManualGroundItemSelectionID != INDEX_NONE)
+	{
+		DesiredGroundItemID = ManualGroundItemSelectionID;
+	}
+	else if (bAllowAutomaticSelection)
+	{
+		DesiredGroundItemID = AutomaticGroundItemID != INDEX_NONE
+			? AutomaticGroundItemID
+			: (GroundItemCandidates.IsEmpty() ? INDEX_NONE : GroundItemCandidates[0].ItemID);
+	}
+
+	if (GroundItemCandidates.IsEmpty())
 	{
 		DesiredGroundItemID = INDEX_NONE;
 		AutomaticGroundItemID = INDEX_NONE;
-		ManualGroundItemSelectionLockEndTime = -1.0f;
+		ClearManualGroundItemSelection();
 	}
 
+	SelectedGroundItemCandidateIndex = FindGroundItemCandidateIndex(DesiredGroundItemID);
 	UpdateGroundItemFocus(DesiredGroundItemID);
 
 	if (bCandidateOrderChanged
@@ -690,6 +726,64 @@ void UInteractionManager::ApplyGroundItemCandidates(
 	{
 		BroadcastGroundItemSelectionChanged();
 	}
+}
+
+void UInteractionManager::BeginManualGroundItemSelection(int32 ItemID)
+{
+	ManualGroundItemSelectionID = ItemID;
+
+	if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+	{
+		ManualSelectionPlayerLocation = OwnerPawn->GetActorLocation();
+		ManualSelectionAimDirection = OwnerPawn->GetControlRotation().Vector();
+	}
+
+	const float LockDuration = FMath::Max(0.0f, ManualGroundItemSelectionLockDuration);
+	const UWorld* World = GetWorld();
+	ManualGroundItemSelectionLockEndTime = (LockDuration > 0.0f && World)
+		? World->GetTimeSeconds() + LockDuration
+		: -1.0f;
+}
+
+void UInteractionManager::ClearManualGroundItemSelection()
+{
+	ManualGroundItemSelectionID = INDEX_NONE;
+	ManualSelectionAimDirection = FVector::ZeroVector;
+	ManualSelectionPlayerLocation = FVector::ZeroVector;
+	ManualGroundItemSelectionLockEndTime = -1.0f;
+}
+
+bool UInteractionManager::HasManualGroundItemSelectionDrifted() const
+{
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	if (!OwnerPawn)
+	{
+		return true;
+	}
+
+	if (ManualSelectionBreakDistance > 0.0f
+		&& FVector::DistSquared(OwnerPawn->GetActorLocation(), ManualSelectionPlayerLocation)
+			> FMath::Square(ManualSelectionBreakDistance))
+	{
+		return true;
+	}
+
+	if (ManualSelectionBreakAngle > 0.0f && !ManualSelectionAimDirection.IsNearlyZero())
+	{
+		// Control rotation rather than TraceManager's view point: this is const,
+		// and it is the direction the player is steering rather than wherever
+		// camera lag has left the camera this frame.
+		const float MinDot = FMath::Cos(FMath::DegreesToRadians(
+			FMath::Clamp(ManualSelectionBreakAngle, 0.0f, 180.0f)));
+
+		if (FVector::DotProduct(OwnerPawn->GetControlRotation().Vector(),
+				ManualSelectionAimDirection) < MinDot)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void UInteractionManager::SelectGroundItemCandidateIndex(int32 NewIndex, bool bManualSelection)
@@ -701,9 +795,7 @@ void UInteractionManager::SelectGroundItemCandidateIndex(int32 NewIndex, bool bM
 
 	if (bManualSelection)
 	{
-		const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
-		ManualGroundItemSelectionLockEndTime =
-			CurrentTime + FMath::Max(0.0f, ManualGroundItemSelectionLockDuration);
+		BeginManualGroundItemSelection(GroundItemCandidates[NewIndex].ItemID);
 	}
 
 	if (HasValidCurrentInteractable())
@@ -723,6 +815,11 @@ void UInteractionManager::SelectGroundItemCandidateIndex(int32 NewIndex, bool bM
 
 void UInteractionManager::AdvanceGroundItemFocusAfterPickup(int32 PickedUpItemID)
 {
+	if (ManualGroundItemSelectionID == PickedUpItemID)
+	{
+		ClearManualGroundItemSelection();
+	}
+
 	const int32 RemovedIndex = FindGroundItemCandidateIndex(PickedUpItemID);
 	if (RemovedIndex == INDEX_NONE)
 	{
@@ -741,7 +838,7 @@ void UInteractionManager::AdvanceGroundItemFocusAfterPickup(int32 PickedUpItemID
 	{
 		SelectedGroundItemCandidateIndex = INDEX_NONE;
 		AutomaticGroundItemID = INDEX_NONE;
-		ManualGroundItemSelectionLockEndTime = -1.0f;
+		ClearManualGroundItemSelection();
 		UpdateGroundItemFocus(INDEX_NONE);
 		BroadcastGroundItemSelectionChanged();
 		return;
@@ -752,9 +849,10 @@ void UInteractionManager::AdvanceGroundItemFocusAfterPickup(int32 PickedUpItemID
 	{
 		AutomaticGroundItemID = GroundItemCandidates[0].ItemID;
 	}
-	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
-	ManualGroundItemSelectionLockEndTime =
-		CurrentTime + FMath::Max(0.0f, ManualGroundItemSelectionLockDuration);
+
+	// Hold the item that slid into the emptied slot, so clearing a pile is
+	// repeated taps in place rather than one pickup then a jump somewhere else.
+	BeginManualGroundItemSelection(GroundItemCandidates[SelectedGroundItemCandidateIndex].ItemID);
 	UpdateGroundItemFocus(GroundItemCandidates[SelectedGroundItemCandidateIndex].ItemID);
 	BroadcastGroundItemSelectionChanged();
 }
@@ -783,18 +881,34 @@ int32 UInteractionManager::FindGroundItemCandidateIndex(int32 ItemID) const
 
 bool UInteractionManager::IsManualGroundItemSelectionLocked() const
 {
-	const UWorld* World = GetWorld();
-	return World
-		&& ManualGroundItemSelectionLockEndTime >= 0.0f
-		&& World->GetTimeSeconds() < ManualGroundItemSelectionLockEndTime;
+	if (ManualGroundItemSelectionID == INDEX_NONE)
+	{
+		return false;
+	}
+
+	// A configured duration is an optional extra timeout on top of the drift
+	// check; at the default of 0 no end time is set and only drift releases it.
+	if (ManualGroundItemSelectionLockEndTime >= 0.0f)
+	{
+		const UWorld* World = GetWorld();
+		if (!World || World->GetTimeSeconds() >= ManualGroundItemSelectionLockEndTime)
+		{
+			return false;
+		}
+	}
+
+	return !HasManualGroundItemSelectionDrifted();
 }
 
 float UInteractionManager::GetManualGroundItemSelectionLockRemaining() const
 {
 	const UWorld* World = GetWorld();
-	return World
-		? FMath::Max(ManualGroundItemSelectionLockEndTime - World->GetTimeSeconds(), 0.0f)
-		: 0.0f;
+	if (!World || ManualGroundItemSelectionLockEndTime < 0.0f)
+	{
+		return 0.0f;
+	}
+
+	return FMath::Max(ManualGroundItemSelectionLockEndTime - World->GetTimeSeconds(), 0.0f);
 }
 
 bool UInteractionManager::InteractWithActor(AActor* TargetActor)

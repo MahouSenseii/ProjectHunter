@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
+#include "GameplayTagContainer.h"
 #include "Item/Library/Enums/ItemEnums.h"
 #include "Item/Library/Enums/AffixEnums.h"
 #include "Item/Library/FunctionLibraries/ItemEnumFunctionLibrary.h"
@@ -45,6 +46,21 @@ struct FAffixTier
 	/** Maximum stat value */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tier")
 	float MaxValue = 0.0f;
+
+	/** Minimum roll for the upper endpoint of an Add Range affix. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tier|Range",
+		meta = (EditCondition = "ModifyType == EModifyType::MT_AddRange || ModifyType == EModifyType::MT_MultiplyRange"))
+	float MinSecondaryValue = 0.0f;
+
+	/** Maximum roll for the upper endpoint of an Add Range affix. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tier|Range",
+		meta = (EditCondition = "ModifyType == EModifyType::MT_AddRange || ModifyType == EModifyType::MT_MultiplyRange"))
+	float MaxSecondaryValue = 0.0f;
+
+	/** Roll a distinct upper endpoint. Disabled preserves legacy single-value range rows. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tier|Range",
+		meta = (EditCondition = "ModifyType == EModifyType::MT_AddRange || ModifyType == EModifyType::MT_MultiplyRange"))
+	bool bRollSecondaryValue = false;
 
 	/** Item-power score contributed by this tier to the finished item's grade. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tier", meta = (ClampMin = "-1000.0"))
@@ -104,8 +120,13 @@ struct FAffixData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Basic")
 	EAffixes AffixType = EAffixes::AF_Prefix;
 
-	/** Generation weight (higher = more common) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Basic")
+	/**
+	 * Generation weight (higher = more common).
+	 *   -1 = derive from AffixRarity
+	 *    0 = never spawns
+	 *   >0 = explicit weight
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Basic", meta = (ClampMin = "-1"))
 	int32 Weight = 100;
 
 	/** Affix rarity tier (affects default weight) */
@@ -172,6 +193,22 @@ struct FAffixData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Conditional")
 	TSubclassOf<UGameplayEffect> GameplayEffect;
 
+	/** Every source/skill tag in this container must be present for the affix to apply. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Conditional|Tags")
+	FGameplayTagContainer RequiredSourceTags;
+
+	/** The affix does not apply when any source/skill tag in this container is present. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Conditional|Tags")
+	FGameplayTagContainer BlockedSourceTags;
+
+	/** Every target tag in this container must be present for the affix to apply. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Conditional|Tags")
+	FGameplayTagContainer RequiredTargetTags;
+
+	/** The affix does not apply when any target tag in this container is present. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Conditional|Tags")
+	FGameplayTagContainer BlockedTargetTags;
+
 
 	/** Affix tiers (different power levels by item level) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tiers")
@@ -200,12 +237,15 @@ struct FAffixData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Conversion", meta = (EditCondition = "ModifyType == EModifyType::MT_ConvertTo"))
 	EDamageType ToDamageType = EDamageType::DT_Fire;
 
+	/** Copy the converted amount without removing the source damage. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Conversion", meta = (EditCondition = "ModifyType == EModifyType::MT_ConvertTo"))
+	bool bGainAsExtra = false;
 
-	/** Get effective weight (base weight x rarity weight) */
+
+	/** Get effective weight. Zero is an explicit "never"; only -1 derives from rarity. */
 	FORCEINLINE int32 GetEffectiveWeight() const
 	{
-		// If custom weight is set, use it; otherwise use rarity-based weight
-		return Weight > 0 ? Weight : UItemEnumFunctionLibrary::GetAffixRarityWeight(AffixRarity);
+		return Weight >= 0 ? Weight : UItemEnumFunctionLibrary::GetAffixRarityWeight(AffixRarity);
 	}
 
 	/** Check if this affix can spawn on item type */
@@ -294,9 +334,16 @@ struct FAffixPoolEntry
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pool")
 	FName AffixID;
 
-	/** Custom weight override (0 = use affix's default weight) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pool")
-	int32 WeightOverride = 0;
+	/**
+	 * Weight for this affix in this pool only.
+	 *   -1 = use the affix's own weight
+	 *    0 = excluded from this pool
+	 *   >0 = explicit weight
+	 *
+	 * Zero is how a sub-type opts out of an affix it inherited through an include.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pool", meta = (ClampMin = "-1"))
+	int32 WeightOverride = -1;
 
 	/** Force specific tier (0 = use item level) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pool")
@@ -308,7 +355,17 @@ struct FAffixPoolEntry
 };
 
 /**
- * Affix Set - Predefined set of affixes (for crafting, uniques, etc.)
+ * Affix Set - the list of affixes that can roll on one item sub-type.
+ *
+ * Entries reference affixes by ID, so the tier ladder still lives in exactly one
+ * row of the affix table no matter how many sub-types can roll it.
+ *
+ * AUTHORING WORKFLOW:
+ * 1. Open DT_AffixPools.
+ * 2. Add a row per item sub-type and set SubType on it.
+ * 3. Put the affixes every slot shares into rows left at SubType = None, and
+ *    pull them in through IncludedSets rather than re-listing them.
+ * 4. List only the sub-type's own affixes in Prefixes/Suffixes/Implicits.
  */
 USTRUCT(BlueprintType)
 struct FAffixSet : public FTableRowBase
@@ -323,6 +380,25 @@ struct FAffixSet : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Set")
 	FText SetDescription;
 
+	/**
+	 * Item sub-type this pool is the affix list for.
+	 *
+	 * None marks a shared building block that is only ever pulled in through
+	 * another set's IncludedSets - it is never selected for an item directly.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Set")
+	EItemSubType SubType = EItemSubType::IST_None;
+
+	/**
+	 * Sets merged into this one before its own entries.
+	 *
+	 * Resolution is depth-first and de-duplicates by AffixID with the LAST entry
+	 * winning, so re-listing an included affix here overrides its weight or tier
+	 * for this sub-type only. Cycles are detected and ignored.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Set")
+	TArray<FDataTableRowHandle> IncludedSets;
+
 	/** Prefixes in this set */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Set")
 	TArray<FAffixPoolEntry> Prefixes;
@@ -335,4 +411,25 @@ struct FAffixSet : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Set")
 	TArray<FAffixPoolEntry> Implicits;
 
+};
+
+/** One FAffixSet with its IncludedSets flattened in and duplicates collapsed. */
+USTRUCT(BlueprintType)
+struct FResolvedAffixPool
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Pool")
+	TArray<FAffixPoolEntry> Prefixes;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Pool")
+	TArray<FAffixPoolEntry> Suffixes;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Pool")
+	TArray<FAffixPoolEntry> Implicits;
+
+	bool IsEmpty() const
+	{
+		return Prefixes.IsEmpty() && Suffixes.IsEmpty() && Implicits.IsEmpty();
+	}
 };

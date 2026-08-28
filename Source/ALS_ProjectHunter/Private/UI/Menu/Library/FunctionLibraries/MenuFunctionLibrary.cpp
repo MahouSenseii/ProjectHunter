@@ -2,11 +2,12 @@
 
 TArray<EEquipmentSlot> UMenuFunctionLibrary::GetDefaultEquipmentSlotOrder()
 {
+	// No two-hand slot: a two-handed weapon is stored in ES_TwoHand but the menu
+	// shows it filling both the main hand and the off hand.
 	return
 	{
 		EEquipmentSlot::ES_MainHand,
 		EEquipmentSlot::ES_OffHand,
-		EEquipmentSlot::ES_TwoHand,
 		EEquipmentSlot::ES_Head,
 		EEquipmentSlot::ES_Chest,
 		EEquipmentSlot::ES_Hands,

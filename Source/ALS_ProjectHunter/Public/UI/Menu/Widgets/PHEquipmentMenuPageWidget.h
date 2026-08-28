@@ -228,6 +228,9 @@ private:
 	void RebuildInventorySlots();
 	void UpdateInventorySummary();
 	EEquipmentSlot ResolveSuggestedSlot(UItemInstance* Item) const;
+
+	/** Slot a menu slot really acts on - both hands follow the two-handed weapon. */
+	EEquipmentSlot ResolveOccupyingSlot(EEquipmentSlot EquipmentSlot) const;
 	void SetSelection(UItemInstance* Item, int32 InventorySlotIndex, EEquipmentSlot EquipmentSlot);
 
 	UFUNCTION()

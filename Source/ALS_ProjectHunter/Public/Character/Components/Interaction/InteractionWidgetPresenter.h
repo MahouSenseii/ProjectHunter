@@ -237,8 +237,11 @@ private:
 
 	// CACHED CONTEXT (raw pointers - valid for lifetime of owner component)
 
+	UPROPERTY()
 	UActorComponent* OwnerComponent = nullptr;
-	UWorld*          WorldContext   = nullptr;
+	
+	UPROPERTY()
+	UWorld*  WorldContext = nullptr;
 
 	/**
 	 * Set to true after a failed TActorIterator<APostProcessVolume> scan so we

@@ -69,6 +69,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	bool CanEquipToSlot(UItemInstance* Item, EEquipmentSlot Slot) const;
 
+	/**
+	 * Slot that backs what Slot shows. A two-handed weapon fills both hands, so
+	 * while one is equipped either hand slot resolves to ES_TwoHand.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	EEquipmentSlot ResolveOccupyingSlot(EEquipmentSlot Slot) const;
+
 	bool TryEquipGroundPickupItem(UItemInstance* Item, EEquipmentSlot& OutEquippedSlot, bool bSwapToBag = true);
 
 	UFUNCTION(BlueprintCallable, Category = "Equipment")

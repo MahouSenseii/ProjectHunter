@@ -57,8 +57,12 @@ public:
 			float InDeltaTime,
 			FVector const& NewAccel,
 			class FNetworkPredictionData_Client_Character& ClientData) override;
+		virtual void PrepMoveFor(ACharacter* Character) override;
 
 		uint8 bSavedWantsWallTraversal : 1;
+
+		/** Restored before a replay so the server retries on the same frames. */
+		float SavedWallAttachRetryAccumulator = 0.0f;
 	};
 
 	class FNetworkPredictionData_Client_PH
@@ -170,6 +174,10 @@ public:
 		const FVector& WorldDirection,
 		bool bTreatIntoSurfaceAsUp) const;
 
+	virtual void OnMovementUpdated(
+		float DeltaTime,
+		const FVector& OldLocation,
+		const FVector& OldVelocity) override;
 	virtual float GetMaxSpeed() const override;
 	virtual float GetMaxAcceleration() const override;
 	virtual float GetMaxBrakingDeceleration() const override;
@@ -222,6 +230,8 @@ protected:
 	float GetCapsuleSupportDistance(const FVector& SurfaceNormal, const FVector& CapsuleUp) const;
 	float GetWallTraversalSpeed() const;
 	void UpdateWallTraversalCombatMovementScale();
+	/** Periodic attach probe while falling, run inside the predicted movement update. */
+	void UpdateWallAttachRetry(float DeltaTime);
 	void ApplyWallTraversalRootMotionMode();
 	void RestoreWallTraversalRootMotionMode();
 	void ClearWallTraversalState();
@@ -376,6 +386,16 @@ protected:
 		meta = (ClampMin = "0"))
 	int32 MaxConsecutiveWallLostFrames = 3;
 
+	/**
+	 * Seconds between attach probes while falling with traversal held, for walls
+	 * the character drifts alongside without ever impacting. Driven from the
+	 * movement update rather than Tick so client and server probe on the same
+	 * simulated frames instead of on two free-running wall-clock timers.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Detection",
+		meta = (ClampMin = "0.0"))
+	float WallAttachRetryInterval = 0.05f;
+
 	/** How far ahead/down the wall to start the one-foot-at-a-time floor transfer. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Wall Traversal|Transition",
 		meta = (ClampMin = "0.0"))
@@ -457,6 +477,7 @@ protected:
 	float LastWallDetachTime = -BIG_NUMBER;
 	int32 WallLostFrames = 0;
 	float WallTraversalElapsed = 0.0f;
+	float WallAttachRetryAccumulator = 0.0f;
 	float WallToGroundElapsed = 0.0f;
 	TEnumAsByte<ERootMotionMode::Type> SavedWallTraversalRootMotionMode =
 		ERootMotionMode::RootMotionFromMontagesOnly;

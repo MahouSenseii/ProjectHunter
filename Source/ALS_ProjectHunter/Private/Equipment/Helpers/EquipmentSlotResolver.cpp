@@ -40,13 +40,17 @@ EEquipmentSlot FEquipmentSlotResolver::DetermineEquipmentSlot(const UEquipmentMa
 
 bool FEquipmentSlotResolver::CanEquipToSlot(const UEquipmentManager& Manager, UItemInstance* Item, EEquipmentSlot Slot)
 {
+	// A two-handed weapon aimed at either hand fills both, so answer for the
+	// slot it actually lands in rather than the one that was asked about.
+	Slot = UEquipmentFunctionLibrary::ResolveEquipSlot(Item, Slot);
+
 	if (UEquipmentFunctionLibrary::IsItemCompatibleWithSlot(Item, Slot))
 	{
 		return true;
 	}
 
 	if (UEquipmentFunctionLibrary::IsOneHandedWeapon(Item)
-		&& (Slot == EEquipmentSlot::ES_MainHand || Slot == EEquipmentSlot::ES_OffHand))
+		&& UEquipmentFunctionLibrary::IsHandSlot(Slot))
 	{
 		return true;
 	}

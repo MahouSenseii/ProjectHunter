@@ -296,23 +296,23 @@ public:
 	FGameplayAttributeData AreaDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AreaDamage);
 
-	/** Increases the radius of area-based effects (AoE). */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AreaOfEffect, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Area Of Effect"))
+	/** Increased/reduced area radius percentage. Zero is neutral. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AreaOfEffect, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Area Of Effect", Units = "Percent"))
 	FGameplayAttributeData AreaOfEffect;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AreaOfEffect);
 
-	/** Increases melee and ranged attack reach. */
+	/** Flat reach added to the selected weapon or authored attack range. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AttackRange, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Attack Range"))
 	FGameplayAttributeData AttackRange;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AttackRange);
 
-	/** Increases the speed of physical melee attacks. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AttackSpeed, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Attack Speed"))
+	/** Increased/reduced attack speed percentage. Zero is neutral. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AttackSpeed, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Attack Speed", Units = "Percent"))
 	FGameplayAttributeData AttackSpeed;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AttackSpeed);
 
-	/** Increases the speed of spell casting. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CastSpeed, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Cast Speed"))
+	/** Increased/reduced cast speed percentage. Zero is neutral. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CastSpeed, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Cast Speed", Units = "Percent"))
 	FGameplayAttributeData CastSpeed;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CastSpeed);
 
@@ -346,13 +346,13 @@ public:
 	FGameplayAttributeData SpellDamage;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, SpellDamage);
 
-	/** Increases the number of projectiles fired at once. */
+	/** Flat number of projectiles added to compatible skills. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ProjectileCount, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Projectile Count"))
 	FGameplayAttributeData ProjectileCount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ProjectileCount);
 
-	/** Increases projectile speed for ranged attacks and spells. */
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ProjectileSpeed, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Projectile Speed"))
+	/** Increased/reduced projectile speed percentage. Zero is neutral. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ProjectileSpeed, Category = "Secondary Attribute | Offensive Stats", meta = (DisplayName = "Projectile Speed", Units = "Percent"))
 	FGameplayAttributeData ProjectileSpeed;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ProjectileSpeed);
 
@@ -371,10 +371,12 @@ public:
 	FGameplayAttributeData SpellsCritMultiplier;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, SpellsCritMultiplier);
 
+	/** Flat number of additional chains for Skill.Chain abilities. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChainCount, Category = "Secondary Attribute | Offensive", meta = (DisplayName = "Chain Count"))
 	FGameplayAttributeData ChainCount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChainCount);
 
+	/** Flat number of forks for Skill.Fork abilities. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ForkCount, Category = "Secondary Attribute | Offensive", meta = (DisplayName = "Fork Count"))
 	FGameplayAttributeData ForkCount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ForkCount);
@@ -817,7 +819,8 @@ public:
 	FGameplayAttributeData ComboCounter;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ComboCounter);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Cooldown, Category = "Vital |  Misc", meta = (DisplayName = "Cooldown"))
+	/** Increased/reduced cooldown recovery rate percentage. Zero is neutral. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_Cooldown, Category = "Vital |  Misc", meta = (DisplayName = "Cooldown Recovery", Units = "Percent"))
 	FGameplayAttributeData Cooldown;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, Cooldown);
 
@@ -857,11 +860,13 @@ public:
 	FGameplayAttributeData StunRecovery;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StunRecovery);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaCostChanges, Category = "Vital |  Misc", meta = (DisplayName = "Mana Cost Changes"))
+	/** Increased/reduced mana cost percentage. Negative 100 makes the mana cost zero. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaCostChanges, Category = "Vital |  Misc", meta = (DisplayName = "Mana Cost Changes", Units = "Percent"))
 	FGameplayAttributeData ManaCostChanges;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ManaCostChanges);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_HealthCostChanges, Category = "Vital |  Misc", meta = (DisplayName = "Health Cost Changes"))
+	/** Increased/reduced health cost percentage. Negative 100 makes the health cost zero. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_HealthCostChanges, Category = "Vital |  Misc", meta = (DisplayName = "Health Cost Changes", Units = "Percent"))
 	FGameplayAttributeData HealthCostChanges;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, HealthCostChanges);
 	
@@ -877,14 +882,17 @@ public:
 	FGameplayAttributeData StaminaOnHit;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StaminaOnHit);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaCostChanges, Category = "Vital |  Misc", meta = (DisplayName = "Stamina Cost Changes"))
+	/** Increased/reduced stamina cost percentage. Negative 100 makes the stamina cost zero. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaCostChanges, Category = "Vital |  Misc", meta = (DisplayName = "Stamina Cost Changes", Units = "Percent"))
 	FGameplayAttributeData StaminaCostChanges;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StaminaCostChanges);
 
-	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AuraEffect, Category = "Vital |  Misc", meta = (DisplayName = "Aura Effect"))
+	/** Increased/reduced aura effect percentage. Zero is neutral. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AuraEffect, Category = "Vital |  Misc", meta = (DisplayName = "Aura Effect", Units = "Percent"))
 	FGameplayAttributeData AuraEffect;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AuraEffect);
 
+	/** Flat radius added to Skill.Aura abilities. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AuraRadius, Category = "Vital |  Misc", meta = (DisplayName = "Aura Radius"))
 	FGameplayAttributeData AuraRadius;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AuraRadius);

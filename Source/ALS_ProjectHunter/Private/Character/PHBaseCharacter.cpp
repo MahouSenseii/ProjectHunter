@@ -194,26 +194,14 @@ void APHBaseCharacter::Tick(float DeltaSeconds)
 		}
 	}
 
-	const bool bCanDriveWallTraversal = IsLocallyControlled() || HasAuthority();
 	if (HasAuthority() && bStaminaMovementInputHeld && !bWallTraversalHeld && CanUseStaminaMovement())
 	{
 		RefreshStaminaMovementInput();
 	}
 
-	if (bCanDriveWallTraversal && WantsWallTraversal() &&
-		GetMovementState() == EALSMovementState::InAir)
-	{
-		WallAttachRetryAccumulator += DeltaSeconds;
-		if (WallAttachRetryAccumulator >= WallAttachRetryInterval)
-		{
-			WallAttachRetryAccumulator = 0.0f;
-			TryStartWallTraversal();
-		}
-	}
-	else
-	{
-		WallAttachRetryAccumulator = 0.0f;
-	}
+	// The periodic wall-attach probe used to live here. It now runs in
+	// UPHCharacterMovementComponent::OnMovementUpdated, inside the predicted move
+	// the server replays, so both sides attach on the same simulated frame.
 
 	if (!IsLocallyControlled())
 	{
@@ -530,15 +518,19 @@ void APHBaseCharacter::OnMovementModeChanged(
 	const UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
 	if (UHunterAbilitySystemComponent* HunterASC = Cast<UHunterAbilitySystemComponent>(AbilitySystemComponent))
 	{
-		HunterASC->SetWallRunningStaminaDegenActive(Movement && Movement->IsWallRunning());
+		// Climbing costs stamina exactly like running does. Asking only about
+		// IsWallRunning left every vertical climb free, and the airborne gate in
+		// RefreshStaminaDegenEffect meant no other request covered it either.
+		HunterASC->SetWallRunningStaminaDegenActive(
+			Movement && (Movement->IsWallRunning() || Movement->IsWallClimbing()));
 	}
 
 	if (Movement && Movement->MovementMode == MOVE_Falling &&
 		WantsWallTraversal() && (IsLocallyControlled() || HasAuthority()))
 	{
 		// Jump may begin while sprint was already held, so there may be no new
-		// sprint input event. Search immediately on entering falling and retain
-		// the periodic retry in Tick until a wall is found.
+		// sprint input event. Search immediately on entering falling; the movement
+		// component's periodic probe keeps trying until a wall is found.
 		TryStartWallTraversal();
 	}
 

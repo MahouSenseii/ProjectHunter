@@ -105,7 +105,9 @@ UHunterAttributeSet::UHunterAttributeSet()
 	// (e.g. +0.5 from gear sets it to 0.5f, not 2.0f).  Initialise here so
 	// item bonuses correctly stack on top of the base value.
 	InitCritMultiplier(1.5f);
-	InitSpellsCritMultiplier(1.5f);
+	// Spell crit is an additional ratio layered on CritMultiplier. Its neutral
+	// value must be 1.0 or every spell crit receives a hidden extra +50%.
+	InitSpellsCritMultiplier(1.0f);
 }
 
 void UHunterAttributeSet::SetIsInitializingStats(bool bInInitializing)
@@ -2101,7 +2103,7 @@ void UHunterAttributeSet::ClampPercentageAttributes(const FGameplayAttribute& At
              Attribute == GetLightningPercentDamageAttribute() ||
              Attribute == GetCorruptionPercentDamageAttribute())
     {
-        NewValue = FMath::Clamp(NewValue, 0.0f, 999.0f);
+		NewValue = FMath::Clamp(NewValue, -100.0f, 999.0f);
     }
     else if (Attribute == GetChanceToBleedAttribute() || Attribute == GetChanceToIgniteAttribute() ||
              Attribute == GetChanceToFreezeAttribute() || Attribute == GetChanceToShockAttribute() ||
@@ -2196,7 +2198,7 @@ void UHunterAttributeSet::ClampDamageAttributes(const FGameplayAttribute& Attrib
              Attribute == GetDamageBonusWhileAtLowHPAttribute() ||
              Attribute == GetChainDamageAttribute())
     {
-        NewValue = FMath::Max(NewValue, 0.0f);
+        NewValue = FMath::Clamp(NewValue, -100.0f, 999.0f);
     }
     else if (Attribute == GetGlobalMoreDamageAttribute() || Attribute == GetPhysicalMoreDamageAttribute() ||
              Attribute == GetElementalMoreDamageAttribute() || Attribute == GetFireMoreDamageAttribute() ||
@@ -2281,39 +2283,42 @@ void UHunterAttributeSet::ClampRateAndAmountAttributes(const FGameplayAttribute&
 
 void UHunterAttributeSet::ClampUtilityAttributes(const FGameplayAttribute& Attribute, float& NewValue) const
 {
-    if (Attribute == GetMovementSpeedAttribute() || Attribute == GetAttackSpeedAttribute() ||
-        Attribute == GetCastSpeedAttribute() || Attribute == GetProjectileSpeedAttribute())
-    {
-        NewValue = FMath::Max(NewValue, 0.0f);
-    }
-    else if (Attribute == GetProjectileCountAttribute() || Attribute == GetChainCountAttribute() ||
-             Attribute == GetForkCountAttribute() || Attribute == GetComboCounterAttribute())
-    {
-        NewValue = FMath::Clamp(NewValue, 0.0f, 99.0f);
-    }
-    else if (Attribute == GetLifeOnHitAttribute() || Attribute == GetManaOnHitAttribute() ||
-             Attribute == GetStaminaOnHitAttribute())
-    {
-        NewValue = FMath::Max(NewValue, 0.0f);
-    }
-    else if (Attribute == GetManaCostChangesAttribute() || Attribute == GetStaminaCostChangesAttribute() ||
-             Attribute == GetHealthCostChangesAttribute())
-    {
-        NewValue = FMath::Clamp(NewValue, -99.0f, 9000.0f);
-    }
-    else if (Attribute == GetAttackRangeAttribute() || Attribute == GetAreaOfEffectAttribute() ||
-             Attribute == GetAuraRadiusAttribute())
-    {
-        NewValue = FMath::Clamp(NewValue, 0.0f, 2000.0f);
-    }
-    else if (Attribute == GetCooldownAttribute())
-    {
-        NewValue = FMath::Max(NewValue, 0.0f);
-    }
-    else if (Attribute == GetAuraEffectAttribute())
-    {
-        NewValue = FMath::Max(NewValue, 0.0f);
-    }
+	if (Attribute == GetMovementSpeedAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 0.0f);
+	}
+	else if (Attribute == GetAttackSpeedAttribute() || Attribute == GetCastSpeedAttribute() ||
+			 Attribute == GetProjectileSpeedAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, -99.0f, 9000.0f);
+	}
+	else if (Attribute == GetProjectileCountAttribute() || Attribute == GetChainCountAttribute() ||
+			 Attribute == GetForkCountAttribute() || Attribute == GetComboCounterAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.0f, 99.0f);
+	}
+	else if (Attribute == GetLifeOnHitAttribute() || Attribute == GetManaOnHitAttribute() ||
+			 Attribute == GetStaminaOnHitAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 0.0f);
+	}
+	else if (Attribute == GetManaCostChangesAttribute() || Attribute == GetStaminaCostChangesAttribute() ||
+			 Attribute == GetHealthCostChangesAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, -100.0f, 9000.0f);
+	}
+	else if (Attribute == GetAttackRangeAttribute() || Attribute == GetAuraRadiusAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.0f, 2000.0f);
+	}
+	else if (Attribute == GetAreaOfEffectAttribute() || Attribute == GetAuraEffectAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, -100.0f, 9000.0f);
+	}
+	else if (Attribute == GetCooldownAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, -99.0f, 9000.0f);
+	}
 }
 
 void UHunterAttributeSet::ClampSpecialAttributes(const FGameplayAttribute& Attribute, float& NewValue) const

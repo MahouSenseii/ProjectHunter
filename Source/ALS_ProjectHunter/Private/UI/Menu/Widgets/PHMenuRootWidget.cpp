@@ -358,8 +358,12 @@ void UPHMenuRootWidget::BuildMenuEntriesFromEnum()
 	{
 		const FString EnumName = MenuEnum->GetNameStringByIndex(EnumIndex);
 		const bool bIsGeneratedMax = EnumName.EndsWith(TEXT("_MAX"));
+		bool bIsHidden = false;
+#if WITH_METADATA
+		bIsHidden = MenuEnum->HasMetaData(TEXT("Hidden"), EnumIndex);
+#endif
 
-		if (MenuEnum->HasMetaData(TEXT("Hidden"), EnumIndex) || bIsGeneratedMax)
+		if (bIsHidden || bIsGeneratedMax)
 		{
 			continue;
 		}

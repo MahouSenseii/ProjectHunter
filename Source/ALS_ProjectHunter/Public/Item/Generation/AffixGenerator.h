@@ -6,6 +6,26 @@
 #include "Item/Library/Enums/AffixEnums.h"
 #include "AffixGenerator.generated.h"
 
+/**
+ * One item sub-type's resolved affix pool, materialised as runtime rows.
+ *
+ * Built once per sub-type on first use: resolving the set and matching every
+ * pool entry against the definition table is O(entries x definitions), which is
+ * far too much to redo for every item that drops.
+ */
+struct FAffixSubTypePoolCache
+{
+	/** False when the pool table has no set for this sub-type - cached so the lookup is not retried. */
+	bool bHasPool = false;
+
+	TArray<FPHAttributeData> PrefixRowData;
+	TArray<FPHAttributeData> SuffixRowData;
+
+	// Views over the owned arrays above; see the note on CachedPrefixRows.
+	TArray<FPHAttributeData*> PrefixRows;
+	TArray<FPHAttributeData*> SuffixRows;
+};
+
 USTRUCT(BlueprintType)
 struct ALS_PROJECTHUNTER_API FAffixGenerator
 {
@@ -21,6 +41,19 @@ public:
 	// Enchants are applied after normal generation and stored separately in FPHItemStats::Enchants.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix Generator")
 	FSoftObjectPath EnchantDataTablePath = FSoftObjectPath(TEXT("/Game/ProjectHunter/Item/Affixes/DT_Enchants.DT_Enchants"));
+
+	/**
+	 * FAffixSet rows naming which affixes each item sub-type can roll.
+	 *
+	 * When a set exists for the item's sub-type it replaces the whole-table scan:
+	 * the pool is the list, so nothing outside it can roll. Items whose sub-type
+	 * has no set fall back to the shared tables above, which keeps loot working
+	 * while the pools are still being authored.
+	 *
+	 * A per-base PrefixAffixTable/SuffixAffixTable override still wins over this.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix Generator")
+	FSoftObjectPath AffixPoolTablePath = FSoftObjectPath(TEXT("/Game/ProjectHunter/Item/Affixes/DT_AffixPools.DT_AffixPools"));
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Affix Generator")
 	int32 DefaultAffixWeight = 100;
@@ -41,6 +74,15 @@ public:
 		int32& OutMaxSuffixes);
 
 	UDataTable* GetAffixDataTable(EAffixes AffixType) const;
+
+	/**
+	 * Use these exact tables instead of loading the configured paths, for tests
+	 * and for swapping the affix set at runtime. Null disables that source
+	 * rather than falling back to its path. Drops every cached pool, which is
+	 * materialised from the definition rows.
+	 */
+	void SetAffixDefinitionTables(UDataTable* PrefixTable, UDataTable* SuffixTable);
+	void SetAffixPoolTable(UDataTable* PoolTable);
 
 	// Items can only hold one enchant at a time; a successful roll replaces the current enchant.
 	bool ApplyEnchant(
@@ -117,4 +159,19 @@ private:
 	UDataTable* LoadEnchantDataTable() const;
 
 	void BuildFallbackRows(EAffixes AffixType) const;
+
+	// SUB-TYPE AFFIX POOLS
+
+	mutable UDataTable* CachedPoolTable = nullptr;
+
+	mutable bool bPoolLoadAttempted = false;
+
+	// Held by shared pointer so the cache entries never move: the RowData arrays
+	// inside them are pointed into by their own PrefixRows/SuffixRows views.
+	mutable TMap<EItemSubType, TSharedPtr<FAffixSubTypePoolCache>> CachedSubTypePools;
+
+	UDataTable* LoadAffixPoolTable() const;
+
+	/** Resolved pool for SubType, building it on first use. Null when pools are not in play. */
+	const FAffixSubTypePoolCache* GetSubTypePool(EItemSubType SubType) const;
 };

@@ -71,6 +71,54 @@ namespace
 		}
 	}
 
+	FName GetConversionAttributeName(const EDamageType From, const EDamageType To)
+	{
+		if (From == To)
+		{
+			return NAME_None;
+		}
+
+		auto ResolveTarget = [To](
+			const TCHAR* Physical, const TCHAR* Fire, const TCHAR* Ice,
+			const TCHAR* Lightning, const TCHAR* Light, const TCHAR* Corruption)
+		{
+			switch (To)
+			{
+			case EDamageType::DT_Physical:   return FName(Physical);
+			case EDamageType::DT_Fire:       return FName(Fire);
+			case EDamageType::DT_Ice:        return FName(Ice);
+			case EDamageType::DT_Lightning:  return FName(Lightning);
+			case EDamageType::DT_Light:      return FName(Light);
+			case EDamageType::DT_Corruption: return FName(Corruption);
+			default:                         return FName();
+			}
+		};
+
+		switch (From)
+		{
+		case EDamageType::DT_Physical:
+			return ResolveTarget(TEXT(""), TEXT("PhysicalToFire"), TEXT("PhysicalToIce"),
+				TEXT("PhysicalToLightning"), TEXT("PhysicalToLight"), TEXT("PhysicalToCorruption"));
+		case EDamageType::DT_Fire:
+			return ResolveTarget(TEXT("FireToPhysical"), TEXT(""), TEXT("FireToIce"),
+				TEXT("FireToLightning"), TEXT("FireToLight"), TEXT("FireToCorruption"));
+		case EDamageType::DT_Ice:
+			return ResolveTarget(TEXT("IceToPhysical"), TEXT("IceToFire"), TEXT(""),
+				TEXT("IceToLightning"), TEXT("IceToLight"), TEXT("IceToCorruption"));
+		case EDamageType::DT_Lightning:
+			return ResolveTarget(TEXT("LightningToPhysical"), TEXT("LightningToFire"), TEXT("LightningToIce"),
+				TEXT(""), TEXT("LightningToLight"), TEXT("LightningToCorruption"));
+		case EDamageType::DT_Light:
+			return ResolveTarget(TEXT("LightToPhysical"), TEXT("LightToFire"), TEXT("LightToIce"),
+				TEXT("LightToLightning"), TEXT(""), TEXT("LightToCorruption"));
+		case EDamageType::DT_Corruption:
+			return ResolveTarget(TEXT("CorruptionToPhysical"), TEXT("CorruptionToFire"), TEXT("CorruptionToIce"),
+				TEXT("CorruptionToLightning"), TEXT("CorruptionToLight"), TEXT(""));
+		default:
+			return NAME_None;
+		}
+	}
+
 	void CopyRuntimeRowsFromTable(
 		const UDataTable& Table,
 		const TCHAR* Context,
@@ -113,9 +161,30 @@ namespace
 						: Definition->AttributeName;
 					Runtime.ModifyType = Tier.ModifyType;
 					Runtime.ModifiedLocation = Definition->bIsLocal ? EAffixScope::AS_Local : Definition->Scope;
+					Runtime.bAffectsBaseItemStats = Definition->bAffectsBaseStats;
+					Runtime.bIsLocalToWeapon = Definition->bIsLocal;
+					Runtime.bAffectsBaseWeaponStatsDirectly = Definition->bAffectsBaseStats;
 					Runtime.Condition = Definition->Condition;
+					Runtime.ConditionDescription = Definition->ConditionDescription;
+					Runtime.RequiredSourceTags = Definition->RequiredSourceTags;
+					Runtime.BlockedSourceTags = Definition->BlockedSourceTags;
+					Runtime.RequiredTargetTags = Definition->RequiredTargetTags;
+					Runtime.BlockedTargetTags = Definition->BlockedTargetTags;
+					Runtime.FromDamageType = Definition->FromDamageType;
+					Runtime.ToDamageType = Definition->ToDamageType;
+					Runtime.bGainAsExtra = Definition->bGainAsExtra;
 					Runtime.MinValue = Tier.MinValue;
 					Runtime.MaxValue = Tier.MaxValue;
+					Runtime.MinSecondaryValue = Tier.MinSecondaryValue;
+					Runtime.MaxSecondaryValue = Tier.MaxSecondaryValue;
+					Runtime.bRollSecondaryValue = Tier.bRollSecondaryValue;
+					if (Runtime.ModifyType == EModifyType::MT_ConvertTo
+						&& !Runtime.ModifiedAttribute.IsValid()
+						&& Definition->AttributeName.IsNone())
+					{
+						Runtime.AttributeName = GetConversionAttributeName(
+							Runtime.FromDamageType, Runtime.ToDamageType);
+					}
 					Runtime.DisplayFormat = ConvertDisplayFormat(Definition->FormatType);
 					Runtime.DisplayText = Definition->DisplayFormat;
 					Runtime.GameplayEffect = Definition->GameplayEffect;
@@ -181,6 +250,74 @@ namespace
 
 		return ResolvedRows;
 	}
+
+	/**
+	 * Turn pool entries into runtime rows by looking each AffixID up in the
+	 * definition table. One ID matches every tier row the affix was flattened
+	 * into, so ForceTier is how a pool pins a single power level.
+	 */
+	void MaterializePoolEntries(
+		const TArray<FAffixPoolEntry>& Entries,
+		const TArray<FPHAttributeData*>& Definitions,
+		const EAffixes ExpectedType,
+		const TCHAR* PoolContext,
+		TArray<FPHAttributeData>& OutRows)
+	{
+		OutRows.Reset();
+
+		for (const FAffixPoolEntry& Entry : Entries)
+		{
+			if (Entry.AffixID.IsNone())
+			{
+				continue;
+			}
+
+			int32 MatchCount = 0;
+
+			for (const FPHAttributeData* Definition : Definitions)
+			{
+				if (!Definition
+					|| Definition->GetStableAffixID() != Entry.AffixID
+					|| !IsAffixCompatibleWithPool(Definition->AffixType, ExpectedType))
+				{
+					continue;
+				}
+
+				if (Entry.ForceTier > 0 && Definition->TierNumber != Entry.ForceTier)
+				{
+					continue;
+				}
+
+				FPHAttributeData Row = *Definition;
+
+				// Zero is a real override meaning "not in this pool", so anything
+				// but the -1 sentinel is applied.
+				if (Entry.WeightOverride >= 0)
+				{
+					Row.SpawnWeight = Entry.WeightOverride;
+				}
+
+				if (Entry.MinItemLevelOverride > 0)
+				{
+					Row.MinItemLevel = FMath::Max(Row.MinItemLevel, Entry.MinItemLevelOverride);
+					Row.MaxItemLevel = FMath::Max(Row.MinItemLevel, Row.MaxItemLevel);
+				}
+
+				OutRows.Add(MoveTemp(Row));
+				++MatchCount;
+			}
+
+			if (MatchCount == 0)
+			{
+				UE_LOG(LogAffixGenerator, Warning,
+					TEXT("AffixGenerator: Pool '%s' lists affix '%s', but the definition table has no matching %s row%s."),
+					PoolContext,
+					*Entry.AffixID.ToString(),
+					ExpectedType == EAffixes::AF_Prefix ? TEXT("prefix") : TEXT("suffix"),
+					Entry.ForceTier > 0 ? TEXT(" at the forced tier") : TEXT(""));
+			}
+		}
+	}
 }
 
 FPHItemStats FAffixGenerator::GenerateAffixes(
@@ -223,12 +360,22 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 	TSet<FName> ExcludedAffixes;
 	TSet<FName> ExcludedGroups;
 
+	// Source precedence: an explicit per-base table override, then the sub-type's
+	// authored pool, then the shared table. The pool is authoritative when it
+	// exists - an affix absent from it cannot roll on that sub-type.
+	const FAffixSubTypePoolCache* SubTypePool = GetSubTypePool(BaseItem.ItemSubType);
+	const bool bHasSubTypePool = SubTypePool && SubTypePool->bHasPool;
+
 	TArray<FPHAttributeData*> PrefixSource;
 	TArray<FPHAttributeData> ConfiguredPrefixRows;
 	if (BaseItem.PrefixAffixTable)
 	{
 		PrefixSource = ResolveConfiguredAffixTable(
 			BaseItem.PrefixAffixTable, EAffixes::AF_Prefix, BaseItem.ItemID, ConfiguredPrefixRows);
+	}
+	else if (bHasSubTypePool)
+	{
+		PrefixSource = SubTypePool->PrefixRows;
 	}
 	else
 	{
@@ -242,6 +389,10 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 	{
 		SuffixSource = ResolveConfiguredAffixTable(
 			BaseItem.SuffixAffixTable, EAffixes::AF_Suffix, BaseItem.ItemID, ConfiguredSuffixRows);
+	}
+	else if (bHasSubTypePool)
+	{
+		SuffixSource = SubTypePool->SuffixRows;
 	}
 	else
 	{
@@ -281,6 +432,121 @@ FPHItemStats FAffixGenerator::GenerateAffixes(
 
 	Stats.bAffixesGenerated = true;
 	return Stats;
+}
+
+void FAffixGenerator::SetAffixDefinitionTables(UDataTable* PrefixTable, UDataTable* SuffixTable)
+{
+	CachedPrefixTable = PrefixTable;
+	bPrefixLoadAttempted = true;
+	CachedPrefixRowData.Reset();
+	CachedPrefixRows.Reset();
+	if (PrefixTable)
+	{
+		CacheRowsFromTable(*PrefixTable, TEXT("SetAffixDefinitionTables"), CachedPrefixRowData, CachedPrefixRows);
+	}
+
+	CachedSuffixTable = SuffixTable;
+	bSuffixLoadAttempted = true;
+	CachedSuffixRowData.Reset();
+	CachedSuffixRows.Reset();
+	if (SuffixTable)
+	{
+		CacheRowsFromTable(*SuffixTable, TEXT("SetAffixDefinitionTables"), CachedSuffixRowData, CachedSuffixRows);
+	}
+
+	CachedSubTypePools.Reset();
+}
+
+void FAffixGenerator::SetAffixPoolTable(UDataTable* PoolTable)
+{
+	CachedPoolTable = PoolTable;
+	bPoolLoadAttempted = true;
+	CachedSubTypePools.Reset();
+}
+
+UDataTable* FAffixGenerator::LoadAffixPoolTable() const
+{
+	if (CachedPoolTable && IsValid(CachedPoolTable))
+	{
+		return CachedPoolTable;
+	}
+
+	if (bPoolLoadAttempted && !CachedPoolTable)
+	{
+		return nullptr;
+	}
+
+	bPoolLoadAttempted = true;
+	CachedPoolTable = Cast<UDataTable>(AffixPoolTablePath.TryLoad());
+
+	// Absent is not an error: a project that has not authored pools yet still
+	// generates loot from the shared tables.
+	if (CachedPoolTable)
+	{
+		UE_LOG(LogAffixGenerator, Log, TEXT("AffixGenerator: Loaded affix POOL DataTable with %d rows"),
+			CachedPoolTable->GetRowMap().Num());
+	}
+
+	return CachedPoolTable;
+}
+
+const FAffixSubTypePoolCache* FAffixGenerator::GetSubTypePool(const EItemSubType SubType) const
+{
+	if (SubType == EItemSubType::IST_None)
+	{
+		return nullptr;
+	}
+
+	if (const TSharedPtr<FAffixSubTypePoolCache>* Existing = CachedSubTypePools.Find(SubType))
+	{
+		return Existing->Get();
+	}
+
+	UDataTable* PoolTable = LoadAffixPoolTable();
+	if (!PoolTable)
+	{
+		return nullptr;
+	}
+
+	// Cached even when empty, so a sub-type without a set costs one lookup total
+	// rather than one per generated item.
+	TSharedPtr<FAffixSubTypePoolCache> Cache = MakeShared<FAffixSubTypePoolCache>();
+	CachedSubTypePools.Add(SubType, Cache);
+
+	const FName SetRowName = UItemAffixSelectionFunctionLibrary::FindAffixSetRowForSubType(PoolTable, SubType);
+	if (SetRowName.IsNone())
+	{
+		return Cache.Get();
+	}
+
+	FResolvedAffixPool ResolvedPool;
+	if (!UItemAffixSelectionFunctionLibrary::ResolveAffixSet(PoolTable, SetRowName, ResolvedPool))
+	{
+		UE_LOG(LogAffixGenerator, Warning,
+			TEXT("AffixGenerator: Affix set '%s' for sub-type %d resolved to nothing; falling back to the shared tables."),
+			*SetRowName.ToString(), static_cast<int32>(SubType));
+		return Cache.Get();
+	}
+
+	LoadPrefixDataTable();
+	LoadSuffixDataTable();
+
+	const FString PoolContext = SetRowName.ToString();
+	MaterializePoolEntries(ResolvedPool.Prefixes, CachedPrefixRows, EAffixes::AF_Prefix,
+		*PoolContext, Cache->PrefixRowData);
+	MaterializePoolEntries(ResolvedPool.Suffixes, CachedSuffixRows, EAffixes::AF_Suffix,
+		*PoolContext, Cache->SuffixRowData);
+
+	RebuildRowPointers(Cache->PrefixRowData, Cache->PrefixRows);
+	RebuildRowPointers(Cache->SuffixRowData, Cache->SuffixRows);
+
+	Cache->bHasPool = !Cache->PrefixRows.IsEmpty() || !Cache->SuffixRows.IsEmpty();
+
+	UE_LOG(LogAffixGenerator, Log,
+		TEXT("AffixGenerator: Resolved affix pool '%s' for sub-type %d (%d prefix rows, %d suffix rows)"),
+		*PoolContext, static_cast<int32>(SubType), Cache->PrefixRows.Num(), Cache->SuffixRows.Num());
+
+	return Cache.Get();
 }
 
 UDataTable* FAffixGenerator::GetAffixDataTable(EAffixes AffixType) const

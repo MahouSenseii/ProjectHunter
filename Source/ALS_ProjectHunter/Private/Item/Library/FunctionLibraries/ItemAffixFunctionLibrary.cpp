@@ -93,13 +93,31 @@ FString UItemAffixFunctionLibrary::FormatAffixValue(
 
 FString UItemAffixFunctionLibrary::FormatAffixText(const FPHAttributeData& Affix)
 {
-	return FormatAffixValue(
-		Affix.RolledStatValue,
-		Affix.DisplayFormat,
-		Affix.AttributeName,
-		Affix.MinValue,
-		Affix.MaxValue,
-		Affix.DisplayText);
+	FString Formatted;
+	if (Affix.DisplayFormat == EAttributeDisplayFormat::ADF_MinMax)
+	{
+		Formatted = FString::Printf(
+			TEXT("Adds %d-%d %s"),
+			FMath::RoundToInt(Affix.RolledStatValue),
+			FMath::RoundToInt(Affix.RolledSecondaryStatValue),
+			*Affix.AttributeName.ToString());
+	}
+	else
+	{
+		Formatted = FormatAffixValue(
+			Affix.RolledStatValue,
+			Affix.DisplayFormat,
+			Affix.AttributeName,
+			Affix.MinValue,
+			Affix.MaxValue,
+			Affix.DisplayText);
+	}
+
+	if (!Affix.ConditionDescription.IsEmpty())
+	{
+		Formatted += FString::Printf(TEXT(" (%s)"), *Affix.ConditionDescription.ToString());
+	}
+	return Formatted;
 }
 
 FString UItemAffixFunctionLibrary::GetModifyTypeSymbol(EModifyType ModifyType)

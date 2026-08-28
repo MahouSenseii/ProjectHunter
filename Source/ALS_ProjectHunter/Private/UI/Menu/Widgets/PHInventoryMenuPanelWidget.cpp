@@ -347,8 +347,13 @@ EEquipmentSlot UPHInventoryMenuPanelWidget::ResolveSuggestedSlot(UItemInstance* 
 		return EEquipmentSlot::ES_None;
 	}
 
-	EEquipmentSlot SuggestedSlot = EquipmentManager->DetermineEquipmentSlot(Item);
-	if (SuggestedSlot != EEquipmentSlot::ES_None && EquipmentManager->CanEquipToSlot(Item, SuggestedSlot))
+	// The suggestion has to name a slot the menu shows. A two-handed weapon is
+	// stored in ES_TwoHand, which is not one of them, so it falls through to the
+	// loop below and suggests the main hand it fills.
+	const EEquipmentSlot SuggestedSlot = EquipmentManager->DetermineEquipmentSlot(Item);
+	if (SuggestedSlot != EEquipmentSlot::ES_None
+		&& EquipmentSlotOrder.Contains(SuggestedSlot)
+		&& EquipmentManager->CanEquipToSlot(Item, SuggestedSlot))
 	{
 		return SuggestedSlot;
 	}

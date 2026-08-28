@@ -148,6 +148,33 @@ bool UEquipmentFunctionLibrary::IsTwoHanded(const UItemInstance* Item)
 	}
 }
 
+bool UEquipmentFunctionLibrary::IsHandSlot(EEquipmentSlot Slot)
+{
+	return Slot == EEquipmentSlot::ES_MainHand || Slot == EEquipmentSlot::ES_OffHand;
+}
+
+EEquipmentSlot UEquipmentFunctionLibrary::ResolveEquipSlot(const UItemInstance* Item, EEquipmentSlot RequestedSlot)
+{
+	// A two-handed weapon aimed at either hand fills both, and both hands are
+	// backed by the single ES_TwoHand entry.
+	if (IsHandSlot(RequestedSlot) && IsTwoHanded(Item))
+	{
+		return EEquipmentSlot::ES_TwoHand;
+	}
+
+	return RequestedSlot;
+}
+
+EEquipmentSlot UEquipmentFunctionLibrary::ResolveOccupyingSlot(EEquipmentSlot Slot, bool bTwoHandSlotOccupied)
+{
+	if (bTwoHandSlotOccupied && IsHandSlot(Slot))
+	{
+		return EEquipmentSlot::ES_TwoHand;
+	}
+
+	return Slot;
+}
+
 EEquipmentSlot UEquipmentFunctionLibrary::ResolveRingAutoSlot(bool bRing1Occupied, bool bRing2Occupied)
 {
 	if (!bRing1Occupied)

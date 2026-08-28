@@ -240,6 +240,10 @@ protected:
 	void BroadcastDamagePopup(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result);
 
 private:
+	/** Delivers the server-resolved cosmetic event to the attacking player's owning client. */
+	UFUNCTION(Client, Unreliable)
+	void ClientReceiveDamagePopup(const FCombatDamagePopupData& PopupData);
+
 	/** Client bridge used by the existing ApplyHit Blueprint node. */
 	UFUNCTION(Server, Reliable)
 	void ServerApplyHit(

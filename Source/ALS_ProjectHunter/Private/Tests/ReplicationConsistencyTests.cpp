@@ -18,6 +18,7 @@
 
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AI/Components/MonsterModifierComponent.h"
+#include "Combat/Components/CombatManager.h"
 #include "Framework/GameModes/PHGameState.h"
 #include "Framework/Player/PHPlayerState.h"
 #include "Interactable/Actors/LootChest/LootChest.h"
@@ -253,6 +254,19 @@ bool FPHReplicationSemanticsTest::RunTest(const FString&)
 	TestNull(
 		TEXT("Loot chest no longer exposes an invalid RPC on an unowned world actor"),
 		ALootChest::StaticClass()->FindFunctionByName(TEXT("ServerOpenChest")));
+
+	const UFunction* DamagePopupFunction = UCombatManager::StaticClass()->FindFunctionByName(
+		TEXT("ClientReceiveDamagePopup"));
+	TestTrue(TEXT("CombatManager exposes an owning-client damage popup bridge"), DamagePopupFunction != nullptr);
+	if (DamagePopupFunction)
+	{
+		TestTrue(
+			TEXT("Damage popup bridge is a client RPC"),
+			DamagePopupFunction->HasAllFunctionFlags(FUNC_Net | FUNC_NetClient));
+		TestFalse(
+			TEXT("Cosmetic damage popup delivery does not block reliable gameplay traffic"),
+			DamagePopupFunction->HasAnyFunctionFlags(FUNC_NetReliable));
+	}
 
 	return true;
 }

@@ -125,6 +125,10 @@ UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Ma
 		return nullptr;
 	}
 
+	// A two-handed weapon fills both hands, so aiming at either one stores it in
+	// the shared ES_TwoHand entry that both hands read from.
+	Slot = UEquipmentFunctionLibrary::ResolveEquipSlot(Item, Slot);
+
 	const bool bCanEquip = bUseGroundPickupRules
 		? UEquipmentFunctionLibrary::CanGroundPickupEquipToSlot(Item, Slot)
 		: FEquipmentSlotResolver::CanEquipToSlot(Manager, Item, Slot);
@@ -135,7 +139,7 @@ UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Ma
 		return nullptr;
 	}
 
-	if (Item->bIsTwoHanded() && Slot == EEquipmentSlot::ES_TwoHand)
+	if (Slot == EEquipmentSlot::ES_TwoHand && UEquipmentFunctionLibrary::IsTwoHanded(Item))
 	{
 		UItemInstance* DisplacedItem = FEquipmentHandSlotMutationHelper::EquipTwoHandedItem(Manager, Item, bSwapToBag);
 		UE_LOG(LogEquipmentManager, Log, TEXT("EquipmentManager: Equipped two-handed '%s'."), *GetNameSafe(Item));
