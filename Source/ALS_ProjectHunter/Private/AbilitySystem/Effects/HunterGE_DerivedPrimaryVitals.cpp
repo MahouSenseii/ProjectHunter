@@ -4,6 +4,7 @@
 #include "AbilitySystem/ModMagnitude/HunterMMC_EffectiveResource.h"
 #include "AbilitySystem/ModMagnitude/HunterMMC_EnduranceMaxStamina.h"
 #include "AbilitySystem/ModMagnitude/HunterMMC_EnduranceStaminaDegen.h"
+#include "AbilitySystem/ModMagnitude/HunterMMC_IntelligenceMaxMana.h"
 #include "AbilitySystem/ModMagnitude/HunterMMC_IntelligenceManaRegen.h"
 #include "AbilitySystem/ModMagnitude/HunterMMC_ReservedResource.h"
 #include "AbilitySystem/ModMagnitude/HunterMMC_StrengthMaxHealth.h"
@@ -33,7 +34,7 @@ UHunterGE_DerivedPrimaryVitals::UHunterGE_DerivedPrimaryVitals()
 {
 	DurationPolicy = EGameplayEffectDurationType::Infinite;
 
-	Modifiers.Reserve(12);
+	Modifiers.Reserve(13);
 	Modifiers.Add(HunterDerivedPrimaryVitalsPrivate::MakeCustomModifier(
 		UHunterAttributeSet::GetMaxHealthAttribute(),
 		EGameplayModOp::Override,
@@ -42,6 +43,10 @@ UHunterGE_DerivedPrimaryVitals::UHunterGE_DerivedPrimaryVitals()
 		UHunterAttributeSet::GetMaxStaminaAttribute(),
 		EGameplayModOp::Override,
 		UHunterMMC_EnduranceMaxStamina::StaticClass()));
+	Modifiers.Add(HunterDerivedPrimaryVitalsPrivate::MakeCustomModifier(
+		UHunterAttributeSet::GetMaxManaAttribute(),
+		EGameplayModOp::Override,
+		UHunterMMC_IntelligenceMaxMana::StaticClass()));
 
 	
 	{
@@ -65,7 +70,7 @@ UHunterGE_DerivedPrimaryVitals::UHunterGE_DerivedPrimaryVitals()
 	}
 	Modifiers.Add(HunterDerivedPrimaryVitalsPrivate::MakeCustomModifier(
 		UHunterAttributeSet::GetStaminaDegenAmountAttribute(),
-		EGameplayModOp::Additive,
+		EGameplayModOp::Multiplicitive,
 		UHunterMMC_EnduranceStaminaDegen::StaticClass()));
 	Modifiers.Add(HunterDerivedPrimaryVitalsPrivate::MakeCustomModifier(
 		UHunterAttributeSet::GetReservedHealthAttribute(),

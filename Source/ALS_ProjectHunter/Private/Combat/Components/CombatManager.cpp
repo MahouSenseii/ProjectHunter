@@ -7,10 +7,13 @@
 #include "AI/Components/MonsterModifierComponent.h"
 #include "Combat/Components/UCombatStatusEffectApplier.h"
 #include "Combat/Calculators/CombatOutgoingDamageCalculator.h"
+#include "Combat/Processors/CombatRecoveryProcessor.h"
+#include "Combat/Resolvers/CombatAilmentResolver.h"
 #include "Combat/Resolvers/CombatIncomingDamageResolver.h"
 #include "Combat/Library/FunctionLibraries/CombatFunctionLibrary.h"
 #include "Equipment/Components/EquipmentManager.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "GameplayEffect.h"
@@ -18,6 +21,7 @@
 #include "Stats/Library/FunctionLibraries/ItemLocalStatResolver.h"
 #include "Stats/Library/FunctionLibraries/ContextualStatModifierEvaluator.h"
 #include "Stats/Components/StatsManager.h"
+#include "Stats/Library/FunctionLibraries/PrimaryAttributeRules.h"
 #include "Tags/PHGameplayTags.h"
 
 DEFINE_LOG_CATEGORY(LogCombatManager);
@@ -97,6 +101,16 @@ UCombatManager::UCombatManager()
 	// only actor component in this domain, and status effects still have one
 	// clear owner via this instance rather than a FindComponentByClass search.
 	CombatStatus = CreateDefaultSubobject<UCombatStatusEffectApplier>(TEXT("CombatStatus"));
+	RecoveryProcessor = CreateDefaultSubobject<UCombatRecoveryProcessor>(TEXT("RecoveryProcessor"));
+}
+
+void UCombatManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (RecoveryProcessor)
+	{
+		RecoveryProcessor->Shutdown();
+	}
+	Super::EndPlay(EndPlayReason);
 }
 
 UAbilitySystemComponent* UCombatManager::GetAbilitySystemComponentFromActor(const AActor* Actor)
@@ -562,6 +576,11 @@ bool UCombatManager::ApplyHitInternal(
 		AttackerAttributes, DefenderAttributes, EffectiveInfo);
 	OutResult.HitDirection = HitDirection;
 	OutResult.PositionalMultiplierApplied = PositionalMultiplier;
+	OutResult.ImpactDirection = HitContext.ImpactDirection.GetSafeNormal();
+	if (OutResult.ImpactDirection.IsNearlyZero())
+	{
+		OutResult.ImpactDirection = (DefenderActor->GetActorLocation() - AttackerActor->GetActorLocation()).GetSafeNormal();
+	}
 
 	// Stagger and hit-response gates run before application so both the
 	// authoritative path and non-authority previews agree on the outcome.
@@ -576,7 +595,13 @@ bool UCombatManager::ApplyHitInternal(
 		&& DefenderAttributes->GetHealth() <= 0.f;
 	OutResult.HealthAfterHit = DefenderAttributes->GetHealth();
 
-	ApplyOnHitRecovery(AttackerActor, OutResult, AttackerASC, AttackerAttributes);
+	ApplyOnHitRecovery(
+		AttackerActor,
+		DefenderActor,
+		OutResult,
+		AttackerASC,
+		AttackerAttributes,
+		DefenderAttributes);
 	ApplyAilments(AttackerActor, DefenderActor, OutResult, RandomStream);
 	ApplyReflect(AttackerActor, DefenderActor, OutResult, RandomStream);
 
@@ -667,59 +692,106 @@ void UCombatManager::ApplyResolvedDamage(
 
 void UCombatManager::ApplyOnHitRecovery(
 	AActor* AttackerActor,
+	AActor* DefenderActor,
 	const FCombatResolveResult& Result,
 	UAbilitySystemComponent* AttackerASC,
-	const UHunterAttributeSet* AttackerAttributes) const
+	const UHunterAttributeSet* AttackerAttributes,
+	const UHunterAttributeSet* DefenderAttributes) const
 {
-	if (!AttackerASC || !AttackerAttributes || Result.TotalDamageApplied <= 0.f)
+	if (!AttackerASC || !AttackerAttributes || !DefenderAttributes
+		|| Result.TotalHitDamageDealt <= 0.f)
 	{
 		return;
 	}
 
-	const float HealthRecovery = FMath::Max(0.f, AttackerAttributes->GetLifeOnHit())
-		+ FMath::Max(0.f, Result.TotalDamageApplied * (AttackerAttributes->GetLifeLeech() / 100.f));
-	const float ManaRecovery = FMath::Max(0.f, AttackerAttributes->GetManaOnHit())
-		+ FMath::Max(0.f, Result.TotalDamageApplied * (AttackerAttributes->GetManaLeech() / 100.f));
-	const float StaminaRecovery = FMath::Max(0.f, AttackerAttributes->GetStaminaOnHit())
-		+ FMath::Max(0.f, Result.TotalDamageApplied * (AttackerAttributes->GetStaminaLeechPercent() / 100.f));
+	const float HealthOnHit = FMath::Max(0.f, AttackerAttributes->GetLifeOnHit());
+	const float ManaOnHit = FMath::Max(0.f, AttackerAttributes->GetManaOnHit());
+	const float StaminaOnHit = FMath::Max(0.f, AttackerAttributes->GetStaminaOnHit());
 
-	if (HealthRecovery <= 0.f && ManaRecovery <= 0.f && StaminaRecovery <= 0.f)
+	if (HealthOnHit > 0.f || ManaOnHit > 0.f || StaminaOnHit > 0.f)
 	{
-		return;
+		if (!RecoveryApplicationGE)
+		{
+			UE_LOG(LogCombatManager, Warning,
+				TEXT("ApplyOnHitRecovery: RecoveryApplicationGE is not set on %s; instant on-hit recovery skipped."),
+				*GetNameSafe(this));
+		}
+		else
+		{
+			FGameplayEffectContextHandle Context = AttackerASC->MakeEffectContext();
+			Context.AddSourceObject(AttackerActor);
+
+			const FGameplayEffectSpecHandle Spec = AttackerASC->MakeOutgoingSpec(
+				RecoveryApplicationGE,
+				1.f,
+				Context);
+			if (Spec.IsValid())
+			{
+				const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+				if (HealthOnHit > 0.f)
+				{
+					Spec.Data->SetSetByCallerMagnitude(Tags.Data_Recovery_Health, HealthOnHit);
+				}
+				if (ManaOnHit > 0.f)
+				{
+					Spec.Data->SetSetByCallerMagnitude(Tags.Data_Recovery_Mana, ManaOnHit);
+				}
+				if (StaminaOnHit > 0.f)
+				{
+					Spec.Data->SetSetByCallerMagnitude(Tags.Data_Recovery_Stamina, StaminaOnHit);
+				}
+				AttackerASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+			}
+		}
 	}
 
-	if (!RecoveryApplicationGE)
+	const auto FindRecoveryProcessor = [](AActor* Actor) -> UCombatRecoveryProcessor*
 	{
-		UE_LOG(LogCombatManager, Warning,
-			TEXT("ApplyOnHitRecovery: RecoveryApplicationGE is not set on %s; on-hit recovery skipped."),
-			*GetNameSafe(this));
-		return;
+		if (!IsValid(Actor))
+		{
+			return nullptr;
+		}
+		if (UCombatManager* Manager = Actor->FindComponentByClass<UCombatManager>())
+		{
+			return Manager->GetRecoveryProcessor();
+		}
+		return nullptr;
+	};
+
+	const float LeechableDamage = Result.TotalHitDamageDealt
+		* (1.f - FMath::Clamp(DefenderAttributes->GetLeechResistancePercent(), 0.f, 100.f) / 100.f);
+	if (UCombatRecoveryProcessor* AttackerRecovery = FindRecoveryProcessor(AttackerActor))
+	{
+		AttackerRecovery->QueueLeech(
+			ECombatRecoveryResource::Health,
+			LeechableDamage * FMath::Max(0.f, AttackerAttributes->GetLifeLeech()) / 100.f,
+			RecoveryTuning.LeechDuration);
+		AttackerRecovery->QueueLeech(
+			ECombatRecoveryResource::Mana,
+			LeechableDamage * FMath::Max(0.f, AttackerAttributes->GetManaLeech()) / 100.f,
+			RecoveryTuning.LeechDuration);
+		AttackerRecovery->QueueLeech(
+			ECombatRecoveryResource::Stamina,
+			LeechableDamage * FMath::Max(0.f, AttackerAttributes->GetStaminaLeechPercent()) / 100.f,
+			RecoveryTuning.LeechDuration);
 	}
 
-	FGameplayEffectContextHandle Context = AttackerASC->MakeEffectContext();
-	Context.AddSourceObject(AttackerActor);
-
-	const FGameplayEffectSpecHandle Spec = AttackerASC->MakeOutgoingSpec(RecoveryApplicationGE, 1.f, Context);
-	if (!Spec.IsValid())
+	if (UCombatRecoveryProcessor* DefenderRecovery = FindRecoveryProcessor(DefenderActor))
 	{
-		return;
+		DefenderRecovery->QueueRecoup(
+			ECombatRecoveryResource::Health,
+			Result.TotalHitDamageDealt * FMath::Max(0.f, DefenderAttributes->GetLifeRecoupPercent()) / 100.f,
+			RecoveryTuning.RecoupDuration);
+		DefenderRecovery->QueueRecoup(
+			ECombatRecoveryResource::Mana,
+			Result.TotalHitDamageDealt * FMath::Max(0.f, DefenderAttributes->GetManaRecoupPercent()) / 100.f,
+			RecoveryTuning.RecoupDuration);
+		DefenderRecovery->QueueRecoup(
+			ECombatRecoveryResource::Stamina,
+			Result.TotalHitDamageDealt * FMath::Max(0.f, DefenderAttributes->GetStaminaRecoupPercent()) / 100.f,
+			RecoveryTuning.RecoupDuration);
+		DefenderRecovery->NotifyHitDamageTaken();
 	}
-
-	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
-	if (HealthRecovery > 0.f)
-	{
-		Spec.Data->SetSetByCallerMagnitude(Tags.Data_Recovery_Health, HealthRecovery);
-	}
-	if (ManaRecovery > 0.f)
-	{
-		Spec.Data->SetSetByCallerMagnitude(Tags.Data_Recovery_Mana, ManaRecovery);
-	}
-	if (StaminaRecovery > 0.f)
-	{
-		Spec.Data->SetSetByCallerMagnitude(Tags.Data_Recovery_Stamina, StaminaRecovery);
-	}
-
-	AttackerASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 }
 
 void UCombatManager::ApplyAilments(
@@ -734,7 +806,8 @@ void UCombatManager::ApplyAilments(
 	}
 
 	const UHunterAttributeSet* AttackerAttributes = GetHunterAttributeSetFromActor(AttackerActor);
-	if (!AttackerAttributes || !IsValid(DefenderActor))
+	const UHunterAttributeSet* DefenderAttributes = GetHunterAttributeSetFromActor(DefenderActor);
+	if (!AttackerAttributes || !DefenderAttributes || !IsValid(DefenderActor))
 	{
 		return;
 	}
@@ -748,57 +821,117 @@ void UCombatManager::ApplyAilments(
 		return;
 	}
 
-	const auto RollChance = [&RandomStream](const float ChancePercent) -> bool
+	const FPHPrimaryAttributeBonuses PrimaryBonuses = FPrimaryAttributeRules::Resolve(AttackerAttributes);
+	const float AilmentThreshold = FCombatAilmentResolver::ResolveThreshold(DefenderAttributes);
+	const float AilmentAvoidance = DefenderAttributes->GetAilmentAvoidance();
+	const auto RollAilment = [
+		&RandomStream,
+		AilmentThreshold,
+		AilmentAvoidance,
+		PrimaryBonuses](
+			const float BaseChancePercent,
+			const float HitDamage,
+			const bool bAddDamageBasedChance) -> bool
 	{
-		return ChancePercent > 0.f
-			&& RandomStream.FRandRange(0.f, 100.f) < FMath::Min(ChancePercent, 100.f);
+		FCombatAilmentRollInput Input;
+		Input.BaseChancePercent = BaseChancePercent;
+		Input.HitDamage = HitDamage;
+		Input.AilmentThreshold = AilmentThreshold;
+		Input.AvoidancePercent = AilmentAvoidance;
+		Input.PrimaryChanceBonusPercent = PrimaryBonuses.AilmentChanceBonusPercent;
+		Input.bAddDamageBasedChance = bAddDamageBasedChance;
+		return FCombatAilmentResolver::Roll(Input, RandomStream);
 	};
-	const auto ResolveDuration = [](const float AttributeDuration, const float DefaultDuration) -> float
+	const auto ResolveDuration = [AttackerAttributes](
+		const float AttributeDuration,
+		const float DefaultDuration) -> float
 	{
-		return AttributeDuration > 0.f ? AttributeDuration : DefaultDuration;
+		return FCombatAilmentResolver::ResolveDuration(
+			AttributeDuration,
+			DefaultDuration,
+			AttackerAttributes);
 	};
 
-	// Each typed ailment requires that damage type to have actually landed.
-	// A successful parry zeroes every per-type taken value and clears
-	// bShouldApplyAilments, so nothing below can fire through a parry.
-	if (Result.PhysicalTaken > 0.f && RollChance(AttackerAttributes->GetChanceToBleed()))
+	// Ailment magnitude uses pre-mitigation damage; application still requires
+	// that the matching type landed after block, so parry and immunity remain absolute.
+	if (Result.PhysicalTaken > 0.f && RollAilment(
+		AttackerAttributes->GetChanceToBleed(),
+		Result.PreMitigationPacket.Physical,
+		false))
 	{
 		StatusManager->ApplyBleed(
 			DefenderActor,
-			Result.PhysicalTaken * AilmentTuning.BleedDamagePerTickFraction,
+			FCombatAilmentResolver::ResolveDamagePerTick(
+				Result.PreMitigationPacket.Physical,
+				AilmentTuning.BleedDamagePerTickFraction,
+				AttackerAttributes),
 			ResolveDuration(AttackerAttributes->GetBleedDuration(), AilmentTuning.BleedDuration),
 			AttackerActor);
 	}
 
-	if (Result.FireTaken > 0.f && RollChance(AttackerAttributes->GetChanceToIgnite()))
+	const float PoisonHitDamage = Result.PreMitigationPacket.Physical
+		+ Result.PreMitigationPacket.Corruption;
+	if (Result.PhysicalTaken + Result.CorruptionTaken > 0.f && RollAilment(
+		AttackerAttributes->GetChanceToPoison(),
+		PoisonHitDamage,
+		false))
+	{
+		StatusManager->ApplyPoison(
+			DefenderActor,
+			FCombatAilmentResolver::ResolveDamagePerTick(
+				PoisonHitDamage,
+				AilmentTuning.PoisonDamagePerTickFraction,
+				AttackerAttributes),
+			ResolveDuration(AttackerAttributes->GetPoisonDuration(), AilmentTuning.PoisonDuration),
+			AttackerActor);
+	}
+
+	if (Result.FireTaken > 0.f && RollAilment(
+		AttackerAttributes->GetChanceToIgnite(),
+		Result.PreMitigationPacket.Fire,
+		true))
 	{
 		StatusManager->ApplyIgnite(
 			DefenderActor,
-			Result.FireTaken * AilmentTuning.IgniteDamagePerTickFraction,
+			FCombatAilmentResolver::ResolveDamagePerTick(
+				Result.PreMitigationPacket.Fire,
+				AilmentTuning.IgniteDamagePerTickFraction,
+				AttackerAttributes),
 			ResolveDuration(AttackerAttributes->GetBurnDuration(), AilmentTuning.IgniteDuration),
 			AttackerActor);
 	}
 
-	if (Result.CorruptionTaken > 0.f && RollChance(AttackerAttributes->GetChanceToCorrupt()))
+	if (Result.CorruptionTaken > 0.f && RollAilment(
+		AttackerAttributes->GetChanceToCorrupt(),
+		Result.PreMitigationPacket.Corruption,
+		true))
 	{
 		StatusManager->ApplyCorruption(
 			DefenderActor,
-			Result.CorruptionTaken * AilmentTuning.CorruptionDamagePerTickFraction,
+			FCombatAilmentResolver::ResolveDamagePerTick(
+				Result.PreMitigationPacket.Corruption,
+				AilmentTuning.CorruptionDamagePerTickFraction,
+				AttackerAttributes),
 			ResolveDuration(AttackerAttributes->GetCorruptionDuration(), AilmentTuning.CorruptionDuration),
 			AttackerActor);
 	}
 
-	if (Result.IceTaken > 0.f && AilmentTuning.bColdDamageAlwaysChills)
+	if (Result.IceTaken > 0.f && RollAilment(
+		AilmentTuning.bColdDamageAlwaysChills ? 100.f : 0.f,
+		Result.PreMitigationPacket.Ice,
+		!AilmentTuning.bColdDamageAlwaysChills))
 	{
-		// Cold damage always chills; freeze is the chance roll on top.
 		StatusManager->ApplyChill(
 			DefenderActor,
 			AilmentTuning.ChillSlowFraction,
-			AilmentTuning.ChillDuration,
+			ResolveDuration(0.f, AilmentTuning.ChillDuration),
 			AttackerActor);
 	}
 
-	if (Result.IceTaken > 0.f && RollChance(AttackerAttributes->GetChanceToFreeze()))
+	if (Result.IceTaken > 0.f && RollAilment(
+		AttackerAttributes->GetChanceToFreeze(),
+		Result.PreMitigationPacket.Ice,
+		true))
 	{
 		StatusManager->ApplyFreeze(
 			DefenderActor,
@@ -806,7 +939,10 @@ void UCombatManager::ApplyAilments(
 			AttackerActor);
 	}
 
-	if (Result.LightningTaken > 0.f && RollChance(AttackerAttributes->GetChanceToShock()))
+	if (Result.LightningTaken > 0.f && RollAilment(
+		AttackerAttributes->GetChanceToShock(),
+		Result.PreMitigationPacket.Lightning,
+		true))
 	{
 		StatusManager->ApplyShock(
 			DefenderActor,
@@ -815,12 +951,60 @@ void UCombatManager::ApplyAilments(
 			AttackerActor);
 	}
 
-	if (Result.LightTaken > 0.f && RollChance(AttackerAttributes->GetChanceToPetrify()))
+	if (Result.LightTaken > 0.f && RollAilment(
+		AttackerAttributes->GetChanceToPetrify(),
+		Result.PreMitigationPacket.Light,
+		true))
 	{
 		StatusManager->ApplyPetrify(
 			DefenderActor,
-			AilmentTuning.PetrifyDuration,
+			ResolveDuration(
+				AttackerAttributes->GetPetrifyBuildUpDuration(),
+				AilmentTuning.PetrifyDuration),
 			AttackerActor);
+	}
+
+	if (Result.PhysicalTaken > 0.f && RollAilment(
+		AttackerAttributes->GetChanceToStun(),
+		Result.PreMitigationPacket.Physical,
+		true))
+	{
+		const float StunRecoveryMultiplier = 1.f
+			+ FMath::Max(0.f, DefenderAttributes->GetStunRecovery()) / 100.f;
+		StatusManager->ApplyStun(
+			DefenderActor,
+			ResolveDuration(0.f, AilmentTuning.StunDuration) / StunRecoveryMultiplier,
+			AttackerActor);
+	}
+
+	if (Result.LightTaken > 0.f && RollAilment(
+		AttackerAttributes->GetChanceToPurify(),
+		Result.PreMitigationPacket.Light,
+		true))
+	{
+		StatusManager->ApplyPurify(
+			DefenderActor,
+			ResolveDuration(AttackerAttributes->GetPurifyDuration(), AilmentTuning.PurifyDuration),
+			AttackerActor);
+	}
+
+	if (Result.PhysicalTaken > 0.f && RollAilment(
+		AttackerAttributes->GetChanceToKnockBack(),
+		Result.PreMitigationPacket.Physical,
+		true))
+	{
+		if (ACharacter* TargetCharacter = Cast<ACharacter>(DefenderActor))
+		{
+			FVector KnockBackDirection = Result.ImpactDirection;
+			KnockBackDirection.Z = 0.f;
+			if (!KnockBackDirection.Normalize())
+			{
+				KnockBackDirection = (DefenderActor->GetActorLocation() - AttackerActor->GetActorLocation()).GetSafeNormal2D();
+			}
+			const FVector LaunchVelocity = KnockBackDirection * AilmentTuning.KnockBackStrength
+				+ FVector::UpVector * AilmentTuning.KnockBackVerticalLift;
+			TargetCharacter->LaunchCharacter(LaunchVelocity, true, false);
+		}
 	}
 }
 
@@ -861,7 +1045,7 @@ void UCombatManager::ApplyReflect(
 	}
 
 	const float AppliedDamageScale = Result.TotalDamageTaken > 0.f
-		? FMath::Clamp(Result.TotalDamageApplied / Result.TotalDamageTaken, 0.f, 1.f)
+		? FMath::Clamp(Result.TotalHitDamageDealt / Result.TotalDamageTaken, 0.f, 1.f)
 		: 0.f;
 	ReflectedDamage *= AppliedDamageScale;
 

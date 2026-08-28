@@ -5,6 +5,7 @@
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "Combat/Library/CombatDebug.h"
 #include "GameFramework/Actor.h"
+#include "Stats/Library/FunctionLibraries/PrimaryAttributeRules.h"
 #include "Tags/PHGameplayTags.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogCombatIncomingDamageResolver, Log, All);
@@ -17,7 +18,8 @@ namespace CombatIncomingDamageResolverPrivate
 	}
 
 	constexpr float MinResistancePercent = -100.f;
-	constexpr float DefaultMaxResistancePercent = 90.f;
+	constexpr float DefaultMaxResistancePercent = 75.f;
+	constexpr float HardMaxResistancePercent = 90.f;
 	constexpr float DefaultBlockAngleDegrees = 120.f;
 
 	// Hit-size armour mitigation: Armour / (Armour + Scale * HitSize).
@@ -174,8 +176,8 @@ FCombatResolveResult FCombatIncomingDamageResolver::MitigateDamagePacket(
 			IncomingPhysical, Result.PhysicalTaken);
 	}
 
-	// Every non-physical type mitigates through its resistance, reduced by
-	// piercing and clamped to [-100, per-type max cap].
+	// Every non-physical type mitigates through its capped resistance. Piercing
+	// applies only to positive resistance and cannot create negative resistance.
 	const auto MitigateTypedDamage = [&](const EHunterDamageType DamageType) -> float
 	{
 		const float IncomingDamage = FMath::Max(
@@ -185,20 +187,22 @@ FCombatResolveResult FCombatIncomingDamageResolver::MitigateDamagePacket(
 			return 0.f;
 		}
 
-		const float Resistance = GetResistanceValue(DamageType, DefenderAttributes)
-			- GetResistancePierceValue(DamageType, AttackerAttributes, DamageInfo);
-		const float ClampedResistance = FMath::Clamp(
-			Resistance,
+		const float CappedResistance = FMath::Clamp(
+			GetResistanceValue(DamageType, DefenderAttributes),
 			CombatIncomingDamageResolverPrivate::MinResistancePercent,
 			GetResistanceCap(DamageType, DefenderAttributes));
-		const float MitigatedDamage = FMath::Max(0.f, IncomingDamage * (1.f - (ClampedResistance / 100.f)));
+		const float Penetration = GetResistancePierceValue(DamageType, AttackerAttributes, DamageInfo);
+		const float EffectiveResistance = CappedResistance > 0.f
+			? FMath::Max(0.f, CappedResistance - Penetration)
+			: CappedResistance;
+		const float MitigatedDamage = FMath::Max(0.f, IncomingDamage * (1.f - (EffectiveResistance / 100.f)));
 
 		if (bDebugLog)
 		{
 			UE_LOG(LogCombatIncomingDamageResolver, Log,
-				TEXT("[CombatDebug] Stage 5 resist %-10s res=%.1f%% (clamped) %.2f -> %.2f"),
+				TEXT("[CombatDebug] Stage 5 resist %-10s capped=%.1f%% penetration=%.1f%% effective=%.1f%% %.2f -> %.2f"),
 				*UEnum::GetDisplayValueAsText(DamageType).ToString(),
-				ClampedResistance, IncomingDamage, MitigatedDamage);
+				CappedResistance, Penetration, EffectiveResistance, IncomingDamage, MitigatedDamage);
 		}
 
 		return MitigatedDamage;
@@ -239,14 +243,39 @@ FCombatResolveResult FCombatIncomingDamageResolver::MitigateDamagePacket(
 		Result.PhysicalTaken + Result.FireTaken + Result.IceTaken +
 		Result.LightningTaken + Result.LightTaken + Result.CorruptionTaken;
 
-	// ArcaneShield absorbs before Health.
+	// Arcane Shield absorbs before Health. Corruption consumes shield at its
+	// configured multiplier, while the prevented hit damage remains unweighted.
 	const float CurrentArcaneShield = FMath::Max(DefenderAttributes->GetArcaneShield(), 0.f);
 	const float CurrentHealth = FMath::Max(DefenderAttributes->GetHealth(), 0.f);
-	Result.DamageToArcaneShield = FMath::Min(CurrentArcaneShield, Result.TotalDamageTaken);
+	const float NonCorruptionDamage = FMath::Max(
+		0.f,
+		Result.TotalDamageTaken - Result.CorruptionTaken);
+	const float CorruptionShieldMultiplier = FMath::Max(
+		0.f,
+		DefenderAttributes->GetCorruptionShieldDamageMultiplier());
+
+	if (CorruptionShieldMultiplier <= KINDA_SMALL_NUMBER)
+	{
+		// A zero multiplier is the explicit bypass mode: corruption reaches Health.
+		Result.DamageToArcaneShield = FMath::Min(CurrentArcaneShield, NonCorruptionDamage);
+		Result.DamageAbsorbedByArcaneShield = Result.DamageToArcaneShield;
+	}
+	else
+	{
+		const float WeightedShieldCost = NonCorruptionDamage
+			+ Result.CorruptionTaken * CorruptionShieldMultiplier;
+		const float AbsorbedFraction = WeightedShieldCost > 0.f
+			? FMath::Clamp(CurrentArcaneShield / WeightedShieldCost, 0.f, 1.f)
+			: 0.f;
+		Result.DamageToArcaneShield = FMath::Min(CurrentArcaneShield, WeightedShieldCost);
+		Result.DamageAbsorbedByArcaneShield = Result.TotalDamageTaken * AbsorbedFraction;
+	}
+
 	Result.DamageToHealth = FMath::Min(
 		CurrentHealth,
-		FMath::Max(0.f, Result.TotalDamageTaken - Result.DamageToArcaneShield));
+		FMath::Max(0.f, Result.TotalDamageTaken - Result.DamageAbsorbedByArcaneShield));
 	Result.TotalDamageApplied = Result.DamageToArcaneShield + Result.DamageToHealth;
+	Result.TotalHitDamageDealt = Result.DamageAbsorbedByArcaneShield + Result.DamageToHealth;
 
 	if (bDebugLog)
 	{
@@ -258,8 +287,9 @@ FCombatResolveResult FCombatIncomingDamageResolver::MitigateDamagePacket(
 				Result.bGuardBroken ? TEXT("yes") : TEXT("no"));
 		}
 		UE_LOG(LogCombatIncomingDamageResolver, Log,
-			TEXT("[CombatDebug] Stage 8 routing: total=%.2f -> shield=%.2f health=%.2f"),
-			Result.TotalDamageTaken, Result.DamageToArcaneShield, Result.DamageToHealth);
+			TEXT("[CombatDebug] Stage 8 routing: total=%.2f -> shieldLoss=%.2f shieldAbsorbed=%.2f health=%.2f"),
+			Result.TotalDamageTaken, Result.DamageToArcaneShield,
+			Result.DamageAbsorbedByArcaneShield, Result.DamageToHealth);
 	}
 
 	return Result;
@@ -274,10 +304,11 @@ float FCombatIncomingDamageResolver::GetResistanceValue(
 		return 0.f;
 	}
 
-	const float GlobalDefenses = DefenderAttributes->GetGlobalDefenses();
-	const auto ResolveResistance = [GlobalDefenses](const float FlatPoints, const float IncreasedPercent)
+	const float AllResistancePoints = DefenderAttributes->GetGlobalDefenses()
+		+ FPrimaryAttributeRules::Resolve(DefenderAttributes).AllResistancePoints;
+	const auto ResolveResistance = [AllResistancePoints](const float FlatPoints, const float IncreasedPercent)
 	{
-		const float BaseResistancePoints = GlobalDefenses + FlatPoints;
+		const float BaseResistancePoints = AllResistancePoints + FlatPoints;
 		return BaseResistancePoints * (1.f + (IncreasedPercent / 100.f));
 	};
 
@@ -328,7 +359,13 @@ float FCombatIncomingDamageResolver::GetResistanceCap(
 	default: break;
 	}
 
-	return Cap > 0.f ? Cap : CombatIncomingDamageResolverPrivate::DefaultMaxResistancePercent;
+	const float ResolvedCap = Cap > 0.f
+		? Cap
+		: CombatIncomingDamageResolverPrivate::DefaultMaxResistancePercent;
+	return FMath::Clamp(
+		ResolvedCap,
+		0.f,
+		CombatIncomingDamageResolverPrivate::HardMaxResistancePercent);
 }
 
 float FCombatIncomingDamageResolver::GetResistancePierceValue(
@@ -689,9 +726,11 @@ void FCombatIncomingDamageResolver::ApplyHitResponse(
 		InOutResult.TotalBlockedAmount = 0.f;
 		InOutResult.DamageToHealth = 0.f;
 		InOutResult.DamageToArcaneShield = 0.f;
+		InOutResult.DamageAbsorbedByArcaneShield = 0.f;
 		InOutResult.DamageToStamina = 0.f;
 		InOutResult.TotalDamageTaken = 0.f;
 		InOutResult.TotalDamageApplied = 0.f;
+		InOutResult.TotalHitDamageDealt = 0.f;
 		InOutResult.EffectivePoiseDamage = 0.f;
 		InOutResult.bShouldApplyAilments = false;
 		InOutResult.bShouldStagger = false;
@@ -718,9 +757,11 @@ void FCombatIncomingDamageResolver::ApplyHitResponse(
 		InOutResult.TotalBlockedAmount = 0.f;
 		InOutResult.DamageToStamina = 0.f;
 		InOutResult.DamageToArcaneShield = 0.f;
+		InOutResult.DamageAbsorbedByArcaneShield = 0.f;
 		InOutResult.DamageToHealth = 0.f;
 		InOutResult.TotalDamageTaken = 0.f;
 		InOutResult.TotalDamageApplied = 0.f;
+		InOutResult.TotalHitDamageDealt = 0.f;
 		InOutResult.EffectivePoiseDamage = 0.f;
 		InOutResult.bShouldApplyAilments = false;
 		InOutResult.bShouldStagger = false;

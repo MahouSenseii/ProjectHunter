@@ -318,6 +318,9 @@ struct ALS_PROJECTHUNTER_API FCombatAilmentTuning
 	float BleedDuration = 4.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float PoisonDuration = 4.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
 	float IgniteDuration = 4.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
@@ -335,8 +338,17 @@ struct ALS_PROJECTHUNTER_API FCombatAilmentTuning
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
 	float ChillDuration = 2.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float StunDuration = 0.75f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float PurifyDuration = 4.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float BleedDamagePerTickFraction = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float PoisonDamagePerTickFraction = 0.2f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float IgniteDamagePerTickFraction = 0.25f;
@@ -352,6 +364,25 @@ struct ALS_PROJECTHUNTER_API FCombatAilmentTuning
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments")
 	bool bColdDamageAlwaysChills = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float KnockBackStrength = 600.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Ailments", meta = (ClampMin = "0.0"))
+	float KnockBackVerticalLift = 120.f;
+};
+
+/** Timing shared by all leech and recoup instances created by a hit. */
+USTRUCT(BlueprintType)
+struct ALS_PROJECTHUNTER_API FCombatRecoveryTuning
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Recovery", meta = (ClampMin = "0.01"))
+	float LeechDuration = 5.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Recovery", meta = (ClampMin = "0.01"))
+	float RecoupDuration = 4.f;
 };
 
 /** Per-type damage snapshot produced before mitigation. */
@@ -459,6 +490,10 @@ struct ALS_PROJECTHUNTER_API FCombatResolveResult
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	float DamageToArcaneShield = 0.f;
 
+	/** Incoming hit damage prevented by Arcane Shield; differs from shield resource loss for corruption. */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
+	float DamageAbsorbedByArcaneShield = 0.f;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	float DamageToHealth = 0.f;
 
@@ -468,6 +503,10 @@ struct ALS_PROJECTHUNTER_API FCombatResolveResult
 	/** Damage actually removed after current shield and health cap overkill. */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	float TotalDamageApplied = 0.f;
+
+	/** Actual hit damage dealt after shield absorption and health overkill caps. Used by leech, recoup, and reflect. */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
+	float TotalHitDamageDealt = 0.f;
 
 	/** Poise/posture damage after the defender's PoiseResistance. */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
@@ -498,6 +537,10 @@ struct ALS_PROJECTHUNTER_API FCombatResolveResult
 	/** Positional ratio actually applied to this hit. 1.0 when the hit was frontal. */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	float PositionalMultiplierApplied = 1.f;
+
+	/** Authoritative world-space impact direction used by deterministic knockback. */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
+	FVector ImpactDirection = FVector::ZeroVector;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	bool bShouldApplyAilments = true;

@@ -39,7 +39,39 @@ bool FPHSkillDataDefaultsTest::RunTest(const FString&)
 	TestEqual(TEXT("Default use interval is one second"), Resolved.UseIntervalSeconds, 1.f, PHSkillTests::Tolerance);
 	TestEqual(TEXT("Default cooldown is zero"), Resolved.CooldownSeconds, 0.f, PHSkillTests::Tolerance);
 	TestEqual(TEXT("Default aura effect multiplier is neutral"), Resolved.Aura.EffectMultiplier, 1.f, PHSkillTests::Tolerance);
+	TestEqual(TEXT("Default minion damage multiplier is neutral"), Resolved.MinionDamageMultiplier, 1.f, PHSkillTests::Tolerance);
+	TestEqual(TEXT("Default minion health multiplier is neutral"), Resolved.MinionHealthMultiplier, 1.f, PHSkillTests::Tolerance);
 	TestEqual(TEXT("Default projectile count is zero"), Resolved.Projectile.Count, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPHSkillPrimaryAttributeScalingTest,
+	"ProjectHunter.AbilitySystem.SkillData.PrimaryAttributeScaling",
+	PHSkillTests::TestFlags)
+
+bool FPHSkillPrimaryAttributeScalingTest::RunTest(const FString&)
+{
+	using namespace PHSkillTests;
+
+	FPHSkillData SkillData;
+	SkillData.BaseUseRate = 2.f;
+	FGameplayTagContainer SkillTags;
+	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
+	SkillTags.AddTag(Tags.Skill_Spell);
+	SkillTags.AddTag(Tags.Skill_Summon);
+
+	const TStrongObjectPtr<UHunterAttributeSet> Attributes = MakeAttributes();
+	Attributes->InitDexterity(10.f);
+	Attributes->InitCovenant(10.f);
+
+	const FPHResolvedSkillData Resolved = FPHSkillDataResolver::Resolve(
+		SkillData,
+		SkillTags,
+		Attributes.Get());
+	TestEqual(TEXT("Dexterity increases spell use rate"), Resolved.UseRate, 2.1f, Tolerance);
+	TestEqual(TEXT("Covenant increases summon damage"), Resolved.MinionDamageMultiplier, 1.2f, Tolerance);
+	TestEqual(TEXT("Covenant increases summon health"), Resolved.MinionHealthMultiplier, 1.1f, Tolerance);
 	return true;
 }
 

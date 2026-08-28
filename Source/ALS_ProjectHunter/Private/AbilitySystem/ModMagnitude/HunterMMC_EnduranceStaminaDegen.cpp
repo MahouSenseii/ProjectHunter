@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "GameplayEffectExtension.h"
+#include "Stats/Library/FunctionLibraries/PrimaryAttributeRules.h"
 
 namespace HunterMMCEnduranceStaminaDegenPrivate
 {
@@ -43,5 +44,6 @@ float UHunterMMC_EnduranceStaminaDegen::CalculateBaseMagnitude_Implementation(co
 		EvaluationParameters,
 		Endurance);
 
-	return FMath::Max(Endurance, 0.0f);
+	return FPrimaryAttributeRules::Resolve(0.f, 0.f, 0.f, Endurance, 0.f, 0.f, 0.f)
+		.StaminaDegenMultiplier;
 }

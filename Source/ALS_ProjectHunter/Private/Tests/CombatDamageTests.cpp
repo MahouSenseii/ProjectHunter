@@ -1021,19 +1021,25 @@ bool FPHCombatMaxResistanceCapTest::RunTest(const FString&)
 	FCombatDamagePacket Packet;
 	Packet.Fire = 100.f;
 
-	// Default cap is 90%, so 200 points of resistance still lets 10% through.
+	// Default cap is 75%, so 200 points of resistance still lets 25% through.
 	const TStrongObjectPtr<UHunterAttributeSet> Defender = MakeAttributes();
 	Defender->InitFireResistanceFlatBonus(200.f);
 
 	const FCombatResolveResult Capped = FCombatIncomingDamageResolver::MitigateDamagePacket(
 		Packet, nullptr, nullptr, nullptr, Defender.Get(), MakeNonCritInfo());
-	TestEqual(TEXT("Resistance is capped at the default 90%"), Capped.FireTaken, 10.f, Tolerance);
+	TestEqual(TEXT("Resistance is capped at the default 75%"), Capped.FireTaken, 25.f, Tolerance);
 
-	// An explicit per-type cap raises the ceiling.
-	Defender->InitMaxFireResistance(75.f);
+	// An explicit per-type cap can lower the ceiling.
+	Defender->InitMaxFireResistance(60.f);
 	const FCombatResolveResult LoweredCap = FCombatIncomingDamageResolver::MitigateDamagePacket(
 		Packet, nullptr, nullptr, nullptr, Defender.Get(), MakeNonCritInfo());
-	TestEqual(TEXT("An explicit max resistance overrides the default"), LoweredCap.FireTaken, 25.f, Tolerance);
+	TestEqual(TEXT("An explicit max resistance overrides the default"), LoweredCap.FireTaken, 40.f, Tolerance);
+
+	// Explicit increases remain bounded by the global hard ceiling.
+	Defender->InitMaxFireResistance(200.f);
+	const FCombatResolveResult HardCapped = FCombatIncomingDamageResolver::MitigateDamagePacket(
+		Packet, nullptr, nullptr, nullptr, Defender.Get(), MakeNonCritInfo());
+	TestEqual(TEXT("Maximum resistance has a 90 percent hard ceiling"), HardCapped.FireTaken, 10.f, Tolerance);
 	return true;
 }
 
@@ -1060,6 +1066,16 @@ bool FPHCombatResistancePenetrationTest::RunTest(const FString&)
 
 	// 50% resistance minus 25 points of penetration leaves 25%.
 	TestEqual(TEXT("Penetration reduces effective resistance"), Result.FireTaken, 75.f, Tolerance);
+
+	Defender->InitFireResistanceFlatBonus(10.f);
+	Info.Piercing.Fire = 50.f;
+	const FCombatResolveResult NoNegativePenetration = FCombatIncomingDamageResolver::MitigateDamagePacket(
+		Packet, nullptr, nullptr, nullptr, Defender.Get(), Info);
+	TestEqual(
+		TEXT("Penetration cannot turn positive resistance into negative resistance"),
+		NoNegativePenetration.FireTaken,
+		100.f,
+		Tolerance);
 	return true;
 }
 
@@ -1120,8 +1136,119 @@ bool FPHCombatArcaneShieldRoutingTest::RunTest(const FString&)
 		Packet, nullptr, nullptr, nullptr, Defender.Get(), MakeNonCritInfo());
 
 	TestEqual(TEXT("Arcane shield absorbs first, up to its current value"), Result.DamageToArcaneShield, 30.f, Tolerance);
+	TestEqual(TEXT("Shield prevents the same amount of ordinary hit damage"), Result.DamageAbsorbedByArcaneShield, 30.f, Tolerance);
 	TestEqual(TEXT("The remainder falls through to health"), Result.DamageToHealth, 70.f, Tolerance);
 	TestEqual(TEXT("Applied damage is the sum of both"), Result.TotalDamageApplied, 100.f, Tolerance);
+	TestEqual(TEXT("Actual hit damage is tracked separately"), Result.TotalHitDamageDealt, 100.f, Tolerance);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPHCombatEnduranceResistanceTest,
+	"ProjectHunter.Combat.Incoming.EnduranceAllResistance",
+	PHCombatTests::TestFlags)
+
+bool FPHCombatEnduranceResistanceTest::RunTest(const FString&)
+{
+	using namespace PHCombatTests;
+
+	FCombatDamagePacket Packet;
+	Packet.Fire = 100.f;
+	const TStrongObjectPtr<UHunterAttributeSet> Defender = MakeAttributes();
+	Defender->InitEndurance(100.f);
+
+	const FCombatResolveResult Result = FCombatIncomingDamageResolver::MitigateDamagePacket(
+		Packet, nullptr, nullptr, nullptr, Defender.Get(), MakeNonCritInfo());
+	TestEqual(TEXT("Endurance contributes all-resistance points"), Result.FireTaken, 99.f, Tolerance);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPHCombatPrimaryAttributeDamageTest,
+	"ProjectHunter.Combat.Outgoing.PrimaryAttributeScaling",
+	PHCombatTests::TestFlags)
+
+bool FPHCombatPrimaryAttributeDamageTest::RunTest(const FString&)
+{
+	using namespace PHCombatTests;
+
+	{
+		const TStrongObjectPtr<UHunterAttributeSet> Attrs = MakeFlatPhysicalAttacker(100.f);
+		Attrs->InitStrength(10.f);
+		FRandomStream Stream(1);
+		const FCombatDamagePacket Packet = FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
+			Attrs.Get(), MakeNonCritInfo(), Stream);
+		TestEqual(TEXT("Strength contributes to physical increased damage"), Packet.Physical, 120.f, Tolerance);
+	}
+
+	{
+		const TStrongObjectPtr<UHunterAttributeSet> Attrs = MakeAttributes();
+		Attrs->InitMinFireDamage(100.f);
+		Attrs->InitMaxFireDamage(100.f);
+		Attrs->InitIntelligence(10.f);
+		FRandomStream Stream(2);
+		const FCombatDamagePacket Packet = FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
+			Attrs.Get(), MakeNonCritInfo(), Stream);
+		TestEqual(TEXT("Intelligence contributes to elemental increased damage"), Packet.Fire, 113.f, Tolerance);
+	}
+
+	{
+		const TStrongObjectPtr<UHunterAttributeSet> Attrs = MakeFlatPhysicalAttacker(100.f);
+		Attrs->InitAffliction(10.f);
+		FAnimationDamageInfo Info = MakeNonCritInfo();
+		Info.Tags.bIsDamageOverTime = true;
+		FRandomStream Stream(3);
+		const FCombatDamagePacket Packet = FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
+			Attrs.Get(), Info, Stream);
+		TestEqual(TEXT("Affliction contributes only to damage-over-time scaling"), Packet.Physical, 110.f, Tolerance);
+	}
+
+	{
+		const TStrongObjectPtr<UHunterAttributeSet> Attrs = MakeFlatPhysicalAttacker(100.f);
+		Attrs->InitDexterity(10.f);
+		FAnimationDamageInfo Info;
+		Info.Crit.bForceCrit = true;
+		FRandomStream Stream(4);
+		const FCombatDamagePacket Packet = FCombatOutgoingDamageCalculator::BuildOutgoingDamagePacket(
+			Attrs.Get(), Info, Stream);
+		TestEqual(TEXT("Dexterity contributes to critical damage"), Packet.Physical, 155.f, Tolerance);
+		TestEqual(TEXT("Resolved critical ratio includes Dexterity"), Packet.CritMultiplierApplied, 1.55f, Tolerance);
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPHCombatCorruptionShieldRoutingTest,
+	"ProjectHunter.Combat.Incoming.CorruptionArcaneShieldRouting",
+	PHCombatTests::TestFlags)
+
+bool FPHCombatCorruptionShieldRoutingTest::RunTest(const FString&)
+{
+	using namespace PHCombatTests;
+
+	FCombatDamagePacket Packet;
+	Packet.Corruption = 100.f;
+
+	const TStrongObjectPtr<UHunterAttributeSet> Defender = MakeAttributes();
+	Defender->InitMaxHealth(500.f);
+	Defender->InitHealth(500.f);
+	Defender->InitArcaneShield(100.f);
+	Defender->InitCorruptionShieldDamageMultiplier(2.f);
+
+	const FCombatResolveResult Result = FCombatIncomingDamageResolver::MitigateDamagePacket(
+		Packet, nullptr, nullptr, nullptr, Defender.Get(), MakeNonCritInfo());
+	TestEqual(TEXT("Corruption consumes shield at double cost"), Result.DamageToArcaneShield, 100.f, Tolerance);
+	TestEqual(TEXT("One hundred shield prevents fifty corruption damage"), Result.DamageAbsorbedByArcaneShield, 50.f, Tolerance);
+	TestEqual(TEXT("Unabsorbed corruption reaches health"), Result.DamageToHealth, 50.f, Tolerance);
+	TestEqual(TEXT("Resource loss includes weighted shield loss"), Result.TotalDamageApplied, 150.f, Tolerance);
+	TestEqual(TEXT("Leech and recoup basis remains actual hit damage"), Result.TotalHitDamageDealt, 100.f, Tolerance);
+
+	Defender->InitCorruptionShieldDamageMultiplier(0.f);
+	const FCombatResolveResult Bypass = FCombatIncomingDamageResolver::MitigateDamagePacket(
+		Packet, nullptr, nullptr, nullptr, Defender.Get(), MakeNonCritInfo());
+	TestEqual(TEXT("Zero corruption multiplier explicitly bypasses shield"), Bypass.DamageToArcaneShield, 0.f, Tolerance);
+	TestEqual(TEXT("Bypassed corruption reaches health"), Bypass.DamageToHealth, 100.f, Tolerance);
 	return true;
 }
 

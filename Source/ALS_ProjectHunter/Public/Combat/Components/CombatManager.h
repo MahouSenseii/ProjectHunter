@@ -9,6 +9,7 @@
 
 class AActor;
 class UAbilitySystemComponent;
+class UCombatRecoveryProcessor;
 class UCombatStatusEffectApplier;
 class UGameplayEffect;
 class UHunterAttributeSet;
@@ -137,6 +138,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Status")
 	FCombatAilmentTuning AilmentTuning;
 
+	/** Timing for recovery instances; amounts and caps come from runtime attributes. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Recovery")
+	FCombatRecoveryTuning RecoveryTuning;
+
+	/** Owned timer/state helper for leech, recoup, and Arcane Shield recharge. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Instanced, Category = "Combat|Recovery")
+	TObjectPtr<UCombatRecoveryProcessor> RecoveryProcessor;
+
 	/**
 	 * Rear/flank damage rules. Damage-only positional bonus, not a backstab
 	 * execution - see FCombatPositionalRules. Tune per character Blueprint.
@@ -149,6 +158,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Combat|Status")
 	UCombatStatusEffectApplier* GetCombatStatusManager() const { return CombatStatus; }
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Recovery")
+	UCombatRecoveryProcessor* GetRecoveryProcessor() const { return RecoveryProcessor; }
 
 	/**
 	 * Main hit entry point. AnimationDamageInfo is the only Blueprint-authored
@@ -214,13 +226,16 @@ protected:
 
 	void ApplyResolvedDamage(AActor* AttackerActor, AActor* DefenderActor, const FCombatResolveResult& Result) const;
 
-	// LifeOnHit/ManaOnHit/StaminaOnHit plus leech percentages of damage dealt,
-	// routed through RecoveryApplicationGE on the attacker.
+	// Applies instant on-hit recovery, then queues capped leech and defender recoup.
 	void ApplyOnHitRecovery(
 		AActor* AttackerActor,
+		AActor* DefenderActor,
 		const FCombatResolveResult& Result,
 		UAbilitySystemComponent* AttackerASC,
-		const UHunterAttributeSet* AttackerAttributes) const;
+		const UHunterAttributeSet* AttackerAttributes,
+		const UHunterAttributeSet* DefenderAttributes) const;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	// Rolls attacker ailment chances against per-type mitigated damage and routes successful rolls through CombatStatus.
 	void ApplyAilments(

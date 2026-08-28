@@ -739,6 +739,7 @@ FStatsAttributeResolver
 FStatsModifierMath
 FContextualStatModifierEvaluator
 FItemLocalStatResolver
+FPrimaryAttributeRules
 ```
 
 Calculation order:
@@ -750,6 +751,20 @@ Calculation order:
 An override, when present, is final for that evaluated attribute. Increased/reduced sources share one additive pool; each more/less source is a separate product factor. The AttributeSet may hold actor or global values, but selected weapon-local damage, critical chance, attack speed, and range stay in the selected weapon snapshot.
 
 `FAnimationDamageInfo::WeaponSource` selects main hand, off hand, two hand, automatic primary, or the character-attribute fallback for actors without item equipment. This keeps dual-wield attacks from summing both weapons and preserves compatibility for mobs that author damage directly on their AttributeSet.
+
+`FPrimaryAttributeRules` is the single source of truth for non-resource primary scaling:
+
+```text
+Strength     -> physical increased damage
+Intelligence -> elemental increased damage
+Dexterity    -> attack/cast speed and critical damage
+Endurance    -> all resistance points and less stamina degeneration
+Affliction   -> damage over time and ailment duration
+Luck         -> ailment application chance
+Covenant     -> summon damage and maximum health multipliers
+```
+
+Maximum Health, Mana, and Stamina remain GAS-derived values through their resource-specific MMCs. Combat and skill resolvers consume the non-resource bonuses; UI and summon execution can read the same resolved primary snapshot through `UPHPrimaryAttributeFunctionLibrary`.
 
 ### Combat
 
@@ -763,8 +778,10 @@ Recommended internal names:
 
 ```text
 UCombatStatusEffectApplier      - owned sub-object (not a sibling actor component), handles status effects.
+UCombatRecoveryProcessor        - owned state helper, handles timed leech, recoup, and Arcane Shield recharge.
 FCombatOutgoingDamageCalculator - plain C++ calculator, outgoing damage math.
 FCombatIncomingDamageResolver   - plain C++ resolver, incoming mitigation and hit response.
+FCombatAilmentResolver          - plain C++ resolver, threshold/chance/avoidance/duration math.
 ```
 
 Responsibilities:
@@ -776,6 +793,8 @@ Responsibilities:
 - Broadcast combat events
 
 Calculators and resolvers are plain C++ classes (no `UCLASS`), each in its own file under `Combat/Calculators` or `Combat/Resolvers`, with no dependency back on `CombatManager`. Add another single-purpose helper rather than growing an existing one past one clear purpose.
+
+`UCombatRecoveryProcessor` is intentionally stateful and manager-owned. It starts a server timer only while recovery or recharge is pending, applies replicated resource changes through the owner's ASC, and stops when idle. `CombatManager` calculates hit outcomes and queues work; it does not own recovery ticking.
 
 Outgoing damage stages are explicit:
 
@@ -803,6 +822,13 @@ Current integration boundaries:
 - Automatic weapon selection is deterministic (two-hand, main hand, off hand); alternating dual-wield attacks must select the hand in skill data or gain an explicit alternation policy.
 - The contextual evaluator accepts modifiers from any source, but mob, tower, and world/global source registration is future wiring.
 - `EDamageType::DT_True` is not a supported combat packet type and is rejected for conversion instead of being silently treated as physical.
+- Elemental and corruption resistances default to a 75% maximum with a 90% hard ceiling. Penetration applies after the resistance cap and cannot turn positive resistance negative; already-negative resistance still increases damage.
+- Block and invincibility remain active-state decisions, not random avoidance rolls. Parry and invincibility clear damage, stagger, ailments, leech, recoup, and recharge notifications for the hit.
+- Elemental ailments add damage-versus-threshold chance to authored chance. Bleed and poison require their explicit chance attributes. Luck adds application chance, Affliction adds duration, and defender Ailment Avoidance applies last. A zero Ailment Threshold falls back to effective maximum Health.
+- Poison uses physical plus corruption hit damage. Bleed, poison, ignite, and corruption magnitudes use the pre-mitigation hit snapshot, then apply `DamageOverTime` and Affliction scaling, but still require matching post-block damage to land.
+- `StunEffectClass` and `PurifyEffectClass`, like the existing status classes, are effect references configured on the owning character Blueprint. Their chance and duration paths are wired in C++; the GameplayEffects own tags, movement restrictions, visuals, and periodic Health damage. Damaging ailment GameplayEffects must modify Health directly when they are intended to bypass Arcane Shield.
+- Leech is recovered over time and is capped per second by the resource's effective maximum and `Max*LeechRatePercent`. Defender Leech Resistance reduces the amount created. Life, Mana, and Stamina recoup are separate timed recovery instances on the defender and do not use the leech cap. On-hit recovery remains instant through `RecoveryApplicationGE`.
+- Arcane Shield recharge starts after `ArcaneShieldRechargeDelay`, restores `ArcaneShieldRechargeRate` percent of effective maximum per second, and restarts its delay on each damaging hit. Corruption consumes shield at `CorruptionShieldDamageMultiplier`; setting that multiplier to zero is the explicit shield-bypass mode.
 
 Helpers:
 

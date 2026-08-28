@@ -516,6 +516,11 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToBleed, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Bleed"))
 	FGameplayAttributeData ChanceToBleed;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToBleed);
+
+	/** Chance for a physical or corruption hit to apply poison. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToPoison, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Poison", Units = "Percent"))
+	FGameplayAttributeData ChanceToPoison;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToPoison);
 	
 	/** Increases the chance to apply corruption effects. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToCorrupt, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Corrupt"))
@@ -556,6 +561,16 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ChanceToStun, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Chance To Stun"))
 	FGameplayAttributeData ChanceToStun;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ChanceToStun);
+
+	/** Absolute hit-damage threshold used when resolving damaging and elemental ailments. Zero falls back to effective max health. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AilmentThreshold, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Ailment Threshold"))
+	FGameplayAttributeData AilmentThreshold;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AilmentThreshold);
+
+	/** Generic chance to avoid an ailment after attacker chance and threshold scaling. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_AilmentAvoidance, Category = "Secondary Attribute | Ailments", meta = (DisplayName = "Ailment Avoidance", Units = "Percent"))
+	FGameplayAttributeData AilmentAvoidance;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, AilmentAvoidance);
 	/* === Duration Attributes === */
 	/** Duration of burn effects (fire damage over time). */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BurnDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Burn Duration"))
@@ -566,6 +581,11 @@ public:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_BleedDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Bleed Duration"))
 	FGameplayAttributeData BleedDuration;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, BleedDuration);
+
+	/** Duration of poison effects. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_PoisonDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Poison Duration"))
+	FGameplayAttributeData PoisonDuration;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, PoisonDuration);
 
 	/** Duration of freeze effects (ice immobilization). */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_FreezeDuration, Category = "Secondary Attribute | Duration", meta = (DisplayName = "Freeze Duration"))
@@ -840,6 +860,36 @@ public:
 	FGameplayAttributeData StaminaLeechPercent;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StaminaLeechPercent);
 
+	/** Maximum life recovered from leech per second, as a percentage of max life. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxLifeLeechRatePercent, Category = "Vital | Misc", meta = (DisplayName = "Maximum Life Leech Rate", Units = "Percent"))
+	FGameplayAttributeData MaxLifeLeechRatePercent;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxLifeLeechRatePercent);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxManaLeechRatePercent, Category = "Vital | Misc", meta = (DisplayName = "Maximum Mana Leech Rate", Units = "Percent"))
+	FGameplayAttributeData MaxManaLeechRatePercent;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxManaLeechRatePercent);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxStaminaLeechRatePercent, Category = "Vital | Misc", meta = (DisplayName = "Maximum Stamina Leech Rate", Units = "Percent"))
+	FGameplayAttributeData MaxStaminaLeechRatePercent;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MaxStaminaLeechRatePercent);
+
+	/** Reduces the amount an attacker can leech from this target. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LeechResistancePercent, Category = "Vital | Misc", meta = (DisplayName = "Leech Resistance", Units = "Percent"))
+	FGameplayAttributeData LeechResistancePercent;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LeechResistancePercent);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_LifeRecoupPercent, Category = "Vital | Misc", meta = (DisplayName = "Damage Recouped As Life", Units = "Percent"))
+	FGameplayAttributeData LifeRecoupPercent;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, LifeRecoupPercent);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ManaRecoupPercent, Category = "Vital | Misc", meta = (DisplayName = "Damage Recouped As Mana", Units = "Percent"))
+	FGameplayAttributeData ManaRecoupPercent;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ManaRecoupPercent);
+
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_StaminaRecoupPercent, Category = "Vital | Misc", meta = (DisplayName = "Damage Recouped As Stamina", Units = "Percent"))
+	FGameplayAttributeData StaminaRecoupPercent;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, StaminaRecoupPercent);
+
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MovementSpeed, Category = "Vital |  Misc", meta = (DisplayName = "Movement Speed"))
 	FGameplayAttributeData MovementSpeed;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, MovementSpeed);
@@ -1101,6 +1151,21 @@ public:
 	FGameplayAttributeData ArcaneShieldRegenAmount;
 	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ArcaneShieldRegenAmount);
 
+	/** Delay after taking hit damage before Arcane Shield recharge begins. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArcaneShieldRechargeDelay, Category = "Vital |Arcane Shield", meta = (DisplayName = "Arcane Shield Recharge Delay", Units = "Seconds"))
+	FGameplayAttributeData ArcaneShieldRechargeDelay;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ArcaneShieldRechargeDelay);
+
+	/** Percentage of effective maximum Arcane Shield recharged per second. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ArcaneShieldRechargeRate, Category = "Vital |Arcane Shield", meta = (DisplayName = "Arcane Shield Recharge Rate", Units = "Percent"))
+	FGameplayAttributeData ArcaneShieldRechargeRate;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, ArcaneShieldRechargeRate);
+
+	/** Arcane Shield resource loss multiplier for corruption damage. */
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_CorruptionShieldDamageMultiplier, Category = "Vital |Arcane Shield", meta = (DisplayName = "Corruption Shield Damage Multiplier"))
+	FGameplayAttributeData CorruptionShieldDamageMultiplier;
+	ATTRIBUTE_ACCESSORS(UHunterAttributeSet, CorruptionShieldDamageMultiplier);
+
 	/** Maximum arcane shield regeneration per tick. */
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MaxArcaneShieldRegenAmount, Category = "Vital |Arcane Shield", meta = (DisplayName = "Max Arcane Shield Regen Amount"))
 	FGameplayAttributeData MaxArcaneShieldRegenAmount;
@@ -1288,6 +1353,15 @@ protected:
 	/** Called when arcane shield regeneration amount changes. */
 	UFUNCTION()
 	void OnRep_ArcaneShieldRegenAmount(const FGameplayAttributeData& OldAmount) const;
+
+	UFUNCTION()
+	void OnRep_ArcaneShieldRechargeDelay(const FGameplayAttributeData& OldAmount) const;
+
+	UFUNCTION()
+	void OnRep_ArcaneShieldRechargeRate(const FGameplayAttributeData& OldAmount) const;
+
+	UFUNCTION()
+	void OnRep_CorruptionShieldDamageMultiplier(const FGameplayAttributeData& OldAmount) const;
 
 	/** Called when max arcane shield regeneration amount changes. */
 	UFUNCTION()
@@ -1702,6 +1776,20 @@ void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_StaminaLeechPercent(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
+	void OnRep_MaxLifeLeechRatePercent(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_MaxManaLeechRatePercent(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_MaxStaminaLeechRatePercent(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_LeechResistancePercent(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_LifeRecoupPercent(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_ManaRecoupPercent(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_StaminaRecoupPercent(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
 	void OnRep_MovementSpeed(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_Poise(const FGameplayAttributeData& OldAmount) const;
@@ -1732,6 +1820,8 @@ void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_ChanceToBleed(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
+	void OnRep_ChanceToPoison(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
 	void OnRep_ChanceToCorrupt(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_ChanceToFreeze(const FGameplayAttributeData& OldAmount) const;
@@ -1747,11 +1837,17 @@ void OnRep_CorruptionToLight(const FGameplayAttributeData& OldAmount) const;
 	void OnRep_ChanceToStun(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_ChanceToPurify(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_AilmentThreshold(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_AilmentAvoidance(const FGameplayAttributeData& OldAmount) const;
 	/* === Status Effect Duration Replication === */
 	UFUNCTION()
 	void OnRep_BurnDuration(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_BleedDuration(const FGameplayAttributeData& OldAmount) const;
+	UFUNCTION()
+	void OnRep_PoisonDuration(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()
 	void OnRep_FreezeDuration(const FGameplayAttributeData& OldAmount) const;
 	UFUNCTION()

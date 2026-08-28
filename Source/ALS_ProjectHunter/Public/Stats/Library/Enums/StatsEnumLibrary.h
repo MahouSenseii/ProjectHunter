@@ -293,6 +293,22 @@ enum class EHunterAttribute : uint8
 	AuraEffect              UMETA(DisplayName = "Aura Effect"),
 	AuraRadius              UMETA(DisplayName = "Aura Radius"),
 
+	// Extended combat attributes. Keep additions here so serialized enum ordinals stay stable.
+	ChanceToPoison                    UMETA(DisplayName = "Chance To Poison"),
+	AilmentThreshold                  UMETA(DisplayName = "Ailment Threshold"),
+	AilmentAvoidance                  UMETA(DisplayName = "Ailment Avoidance"),
+	PoisonDuration                    UMETA(DisplayName = "Poison Duration"),
+	MaxLifeLeechRatePercent           UMETA(DisplayName = "Maximum Life Leech Rate %"),
+	MaxManaLeechRatePercent           UMETA(DisplayName = "Maximum Mana Leech Rate %"),
+	MaxStaminaLeechRatePercent        UMETA(DisplayName = "Maximum Stamina Leech Rate %"),
+	LeechResistancePercent            UMETA(DisplayName = "Leech Resistance %"),
+	LifeRecoupPercent                 UMETA(DisplayName = "Life Recoup %"),
+	ManaRecoupPercent                 UMETA(DisplayName = "Mana Recoup %"),
+	StaminaRecoupPercent              UMETA(DisplayName = "Stamina Recoup %"),
+	ArcaneShieldRechargeDelay         UMETA(DisplayName = "Arcane Shield Recharge Delay"),
+	ArcaneShieldRechargeRate          UMETA(DisplayName = "Arcane Shield Recharge Rate %"),
+	CorruptionShieldDamageMultiplier  UMETA(DisplayName = "Corruption Shield Damage Multiplier"),
+
 	//  Sentinel 
 	// Keep last  used for bounds checking / iteration if needed.
 	MAX                     UMETA(Hidden)

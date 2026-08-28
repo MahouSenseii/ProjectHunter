@@ -67,6 +67,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat Status|Effects")
 	TSubclassOf<UGameplayEffect> ShockEffectClass;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat Status|Effects")
+	TSubclassOf<UGameplayEffect> StunEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat Status|Effects")
+	TSubclassOf<UGameplayEffect> PurifyEffectClass;
+
 	UFUNCTION(BlueprintCallable, Category = "Combat Status")
 	FCombatStatusApplyResult ApplyBleed(AActor* Target, float DamagePerTick,
 		float Duration, AActor* Instigator = nullptr);
@@ -99,6 +105,14 @@ public:
 	FCombatStatusApplyResult ApplyShock(AActor* Target, float AmpFraction,
 		float Duration, AActor* Instigator = nullptr);
 
+	UFUNCTION(BlueprintCallable, Category = "Combat Status")
+	FCombatStatusApplyResult ApplyStun(AActor* Target, float Duration,
+		AActor* Instigator = nullptr);
+
+	UFUNCTION(BlueprintCallable, Category = "Combat Status")
+	FCombatStatusApplyResult ApplyPurify(AActor* Target, float Duration,
+		AActor* Instigator = nullptr);
+
 	UFUNCTION(BlueprintPure, Category = "Combat Status")
 	bool IsBleeding(AActor* Target) const;
 
@@ -123,6 +137,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Combat Status")
 	bool IsShocked(AActor* Target) const;
 
+	UFUNCTION(BlueprintPure, Category = "Combat Status")
+	bool IsStunned(AActor* Target) const;
+
+	UFUNCTION(BlueprintPure, Category = "Combat Status")
+	bool IsPurified(AActor* Target) const;
+
 	UFUNCTION(BlueprintCallable, Category = "Combat Status")
 	void CureBleed(AActor* Target);
 
@@ -146,6 +166,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Combat Status")
 	void RemoveShock(AActor* Target);
+
+	UFUNCTION(BlueprintCallable, Category = "Combat Status")
+	void RemoveStun(AActor* Target);
+
+	UFUNCTION(BlueprintCallable, Category = "Combat Status")
+	void RemovePurify(AActor* Target);
 
 	UFUNCTION(BlueprintCallable, Category = "Combat Status")
 	void CleanseAll(AActor* Target);

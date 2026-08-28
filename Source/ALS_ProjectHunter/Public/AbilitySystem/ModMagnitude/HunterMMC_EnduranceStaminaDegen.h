@@ -5,7 +5,8 @@
 #include "HunterMMC_EnduranceStaminaDegen.generated.h"
 
 /**
- * Returns the Endurance-driven stamina degeneration bonus.
+ * Returns the Endurance-driven stamina degeneration multiplier.
+ * One Endurance reduces drain by 1%, capped at 75% reduction.
  */
 UCLASS()
 class ALS_PROJECTHUNTER_API UHunterMMC_EnduranceStaminaDegen : public UGameplayModMagnitudeCalculation

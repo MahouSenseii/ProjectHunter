@@ -112,6 +112,32 @@ FCombatStatusApplyResult UCombatStatusEffectApplier::ApplyShock(AActor* Target, 
 		ClampedFraction, CombatStatusSetByCallerTags::Shock_AmpFraction, Duration, Instigator);
 }
 
+FCombatStatusApplyResult UCombatStatusEffectApplier::ApplyStun(
+	AActor* Target,
+	const float Duration,
+	AActor* Instigator)
+{
+	if (!StunEffectClass)
+	{
+		PH_LOG_WARNING(LogCombatStatusEffectApplier, "ApplyStun failed: StunEffectClass was not configured.");
+		return {};
+	}
+	return ApplyDoTEffect(StunEffectClass, Target, 1.f, NAME_None, Duration, Instigator);
+}
+
+FCombatStatusApplyResult UCombatStatusEffectApplier::ApplyPurify(
+	AActor* Target,
+	const float Duration,
+	AActor* Instigator)
+{
+	if (!PurifyEffectClass)
+	{
+		PH_LOG_WARNING(LogCombatStatusEffectApplier, "ApplyPurify failed: PurifyEffectClass was not configured.");
+		return {};
+	}
+	return ApplyDoTEffect(PurifyEffectClass, Target, 1.f, NAME_None, Duration, Instigator);
+}
+
 bool UCombatStatusEffectApplier::IsBleeding(AActor* Target) const
 {
 	return BleedEffectClass && HasActiveEffect(Target, BleedEffectClass);
@@ -159,6 +185,16 @@ bool UCombatStatusEffectApplier::IsPetrified(AActor* Target) const
 bool UCombatStatusEffectApplier::IsShocked(AActor* Target) const
 {
 	return ShockEffectClass && HasActiveEffect(Target, ShockEffectClass);
+}
+
+bool UCombatStatusEffectApplier::IsStunned(AActor* Target) const
+{
+	return StunEffectClass && HasActiveEffect(Target, StunEffectClass);
+}
+
+bool UCombatStatusEffectApplier::IsPurified(AActor* Target) const
+{
+	return PurifyEffectClass && HasActiveEffect(Target, PurifyEffectClass);
 }
 
 void UCombatStatusEffectApplier::CureBleed(AActor* Target)
@@ -225,6 +261,22 @@ void UCombatStatusEffectApplier::RemoveShock(AActor* Target)
 	}
 }
 
+void UCombatStatusEffectApplier::RemoveStun(AActor* Target)
+{
+	if (StunEffectClass)
+	{
+		RemoveEffectByClass(Target, StunEffectClass);
+	}
+}
+
+void UCombatStatusEffectApplier::RemovePurify(AActor* Target)
+{
+	if (PurifyEffectClass)
+	{
+		RemoveEffectByClass(Target, PurifyEffectClass);
+	}
+}
+
 void UCombatStatusEffectApplier::CleanseAll(AActor* Target)
 {
 	CureBleed(Target);
@@ -235,6 +287,8 @@ void UCombatStatusEffectApplier::CleanseAll(AActor* Target)
 	RemoveFreeze(Target);
 	RemovePetrify(Target);
 	RemoveShock(Target);
+	RemoveStun(Target);
+	RemovePurify(Target);
 }
 
 FCombatStatusApplyResult UCombatStatusEffectApplier::ApplyDoTEffect(

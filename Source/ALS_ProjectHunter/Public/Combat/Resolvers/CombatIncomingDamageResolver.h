@@ -38,7 +38,8 @@ public:
 	static float GetResistanceValue(EHunterDamageType DamageType, const UHunterAttributeSet* DefenderAttributes);
 	static float GetResistanceCap(EHunterDamageType DamageType, const UHunterAttributeSet* DefenderAttributes);
 
-	// Attacker attribute piercing + animation piercing, clamped 0-100.
+	// Attacker attribute piercing + animation piercing, clamped 0-100. The
+	// mitigation stage applies it only to positive resistance and stops at zero.
 	static float GetResistancePierceValue(
 		EHunterDamageType DamageType,
 		const UHunterAttributeSet* AttackerAttributes,

@@ -1,6 +1,7 @@
 #include "AbilitySystem/Library/FunctionLibraries/PHSkillFunctionLibrary.h"
 
 #include "AbilitySystem/HunterAttributeSet.h"
+#include "Stats/Library/FunctionLibraries/PrimaryAttributeRules.h"
 #include "Tags/PHGameplayTags.h"
 
 namespace PHSkillDataResolverPrivate
@@ -32,6 +33,7 @@ FPHResolvedSkillData FPHSkillDataResolver::Resolve(
 	const bool bCanChain = SkillTags.HasTagExact(Tags.Skill_Chain);
 	const bool bCanFork = SkillTags.HasTagExact(Tags.Skill_Fork);
 	const bool bIsAura = SkillTags.HasTagExact(Tags.Skill_Aura);
+	const bool bIsSummon = SkillTags.HasTagExact(Tags.Skill_Summon);
 	const bool bHasWeapon = WeaponStats && WeaponStats->bIsValid;
 
 	FPHResolvedSkillData Result;
@@ -63,9 +65,20 @@ FPHResolvedSkillData FPHSkillDataResolver::Resolve(
 	float SpeedPercent = 0.f;
 	if (AttributeSet)
 	{
+		const FPHPrimaryAttributeBonuses PrimaryBonuses = FPrimaryAttributeRules::Resolve(AttributeSet);
 		SpeedPercent = bIsAttack
 			? AttributeSet->GetAttackSpeed()
 			: (bIsSpell ? AttributeSet->GetCastSpeed() : 0.f);
+		if (bIsAttack || bIsSpell)
+		{
+			SpeedPercent += PrimaryBonuses.AttackCastSpeedPercent;
+		}
+
+		if (bIsSummon)
+		{
+			Result.MinionDamageMultiplier = PercentToMultiplier(PrimaryBonuses.MinionDamagePercent);
+			Result.MinionHealthMultiplier = PercentToMultiplier(PrimaryBonuses.MinionHealthPercent);
+		}
 	}
 	Result.UseRate = FMath::Max(0.01f, BaseUseRate * PercentToMultiplier(SpeedPercent));
 	Result.UseIntervalSeconds = 1.f / Result.UseRate;

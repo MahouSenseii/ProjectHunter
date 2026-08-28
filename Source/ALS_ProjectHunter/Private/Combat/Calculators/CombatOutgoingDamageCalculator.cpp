@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "Combat/Library/CombatDebug.h"
+#include "Stats/Library/FunctionLibraries/PrimaryAttributeRules.h"
 #include "Stats/Library/Structs/ResolvedItemStats.h"
 #include "Stats/Library/Structs/StatsStructs.h"
 
@@ -545,11 +546,13 @@ float FCombatOutgoingDamageCalculator::GetIncreasedDamagePercent(
 
 	float TotalIncreasedPercent = Resolve(
 		UHunterAttributeSet::GetGlobalDamagesAttribute(), AttackerAttributes->GetGlobalDamages());
+	const FPHPrimaryAttributeBonuses PrimaryBonuses = FPrimaryAttributeRules::Resolve(AttackerAttributes);
 
 	switch (DamageType)
 	{
 	case EHunterDamageType::Physical:
 		TotalIncreasedPercent += Resolve(UHunterAttributeSet::GetPhysicalPercentDamageAttribute(), AttackerAttributes->GetPhysicalPercentDamage());
+		TotalIncreasedPercent += PrimaryBonuses.PhysicalDamagePercent;
 		TotalIncreasedPercent += DamageInfo.BaseMulti.Physical;
 		break;
 	case EHunterDamageType::Fire:
@@ -579,6 +582,7 @@ float FCombatOutgoingDamageCalculator::GetIncreasedDamagePercent(
 	if (CombatOutgoingDamageCalculatorPrivate::IsElementalDamageType(DamageType))
 	{
 		TotalIncreasedPercent += Resolve(UHunterAttributeSet::GetElementalDamageAttribute(), AttackerAttributes->GetElementalDamage());
+		TotalIncreasedPercent += PrimaryBonuses.ElementalDamagePercent;
 	}
 
 	// Tag-conditional increased buckets. Each true flag opts this hit into the
@@ -602,6 +606,7 @@ float FCombatOutgoingDamageCalculator::GetIncreasedDamagePercent(
 	if (DamageInfo.Tags.bIsDamageOverTime)
 	{
 		TotalIncreasedPercent += Resolve(UHunterAttributeSet::GetDamageOverTimeAttribute(), AttackerAttributes->GetDamageOverTime());
+		TotalIncreasedPercent += PrimaryBonuses.DamageOverTimePercent;
 	}
 	if (DamageInfo.Tags.bIsChainHit)
 	{
@@ -733,7 +738,8 @@ void FCombatOutgoingDamageCalculator::ResolveCriticalStrike(
 			CombatOutgoingDamageCalculatorPrivate::ResolveContextual(
 				ContextualModifiers,
 				UHunterAttributeSet::GetCritMultiplierAttribute(),
-				AttackerAttributes->GetCritMultiplier()));
+				AttackerAttributes->GetCritMultiplier()))
+		+ (FPrimaryAttributeRules::Resolve(AttackerAttributes).CriticalDamageBonusPercent / 100.f);
 
 	float CritMultiplier = BaseCritRatio;
 	if (DamageInfo.Tags.bIsSpell)

@@ -511,6 +511,9 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::MaxArcaneShieldRegenRate:        return Attrs->GetMaxArcaneShieldRegenRate();
 	case EHunterAttribute::ArcaneShieldRegenAmount:         return Attrs->GetArcaneShieldRegenAmount();
 	case EHunterAttribute::MaxArcaneShieldRegenAmount:      return Attrs->GetMaxArcaneShieldRegenAmount();
+	case EHunterAttribute::ArcaneShieldRechargeDelay:       return Attrs->GetArcaneShieldRechargeDelay();
+	case EHunterAttribute::ArcaneShieldRechargeRate:        return Attrs->GetArcaneShieldRechargeRate();
+	case EHunterAttribute::CorruptionShieldDamageMultiplier: return Attrs->GetCorruptionShieldDamageMultiplier();
 	case EHunterAttribute::ReservedArcaneShield:            return Attrs->GetReservedArcaneShield();
 	case EHunterAttribute::MaxReservedArcaneShield:         return Attrs->GetMaxReservedArcaneShield();
 	case EHunterAttribute::FlatReservedArcaneShield:        return Attrs->GetFlatReservedArcaneShield();
@@ -600,6 +603,7 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::CorruptionToLightning:   return Attrs->GetCorruptionToLightning();
 	case EHunterAttribute::CorruptionToLight:       return Attrs->GetCorruptionToLight();
 	case EHunterAttribute::ChanceToBleed:           return Attrs->GetChanceToBleed();
+	case EHunterAttribute::ChanceToPoison:          return Attrs->GetChanceToPoison();
 	case EHunterAttribute::ChanceToCorrupt:         return Attrs->GetChanceToCorrupt();
 	case EHunterAttribute::ChanceToFreeze:          return Attrs->GetChanceToFreeze();
 	case EHunterAttribute::ChanceToPurify:          return Attrs->GetChanceToPurify();
@@ -608,8 +612,11 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::ChanceToPetrify:         return Attrs->GetChanceToPetrify();
 	case EHunterAttribute::ChanceToShock:           return Attrs->GetChanceToShock();
 	case EHunterAttribute::ChanceToStun:            return Attrs->GetChanceToStun();
+	case EHunterAttribute::AilmentThreshold:         return Attrs->GetAilmentThreshold();
+	case EHunterAttribute::AilmentAvoidance:         return Attrs->GetAilmentAvoidance();
 	case EHunterAttribute::BurnDuration:            return Attrs->GetBurnDuration();
 	case EHunterAttribute::BleedDuration:           return Attrs->GetBleedDuration();
+	case EHunterAttribute::PoisonDuration:          return Attrs->GetPoisonDuration();
 	case EHunterAttribute::FreezeDuration:          return Attrs->GetFreezeDuration();
 	case EHunterAttribute::CorruptionDuration:      return Attrs->GetCorruptionDuration();
 	case EHunterAttribute::ShockDuration:           return Attrs->GetShockDuration();
@@ -667,6 +674,13 @@ float UStatsManager::GetAttributeByType(EHunterAttribute AttributeType) const
 	case EHunterAttribute::LifeLeech:               return Attrs->GetLifeLeech();
 	case EHunterAttribute::ManaLeech:               return Attrs->GetManaLeech();
 	case EHunterAttribute::StaminaLeechPercent:     return Attrs->GetStaminaLeechPercent();
+	case EHunterAttribute::MaxLifeLeechRatePercent: return Attrs->GetMaxLifeLeechRatePercent();
+	case EHunterAttribute::MaxManaLeechRatePercent: return Attrs->GetMaxManaLeechRatePercent();
+	case EHunterAttribute::MaxStaminaLeechRatePercent: return Attrs->GetMaxStaminaLeechRatePercent();
+	case EHunterAttribute::LeechResistancePercent:  return Attrs->GetLeechResistancePercent();
+	case EHunterAttribute::LifeRecoupPercent:       return Attrs->GetLifeRecoupPercent();
+	case EHunterAttribute::ManaRecoupPercent:       return Attrs->GetManaRecoupPercent();
+	case EHunterAttribute::StaminaRecoupPercent:    return Attrs->GetStaminaRecoupPercent();
 	case EHunterAttribute::MovementSpeed:           return Attrs->GetMovementSpeed();
 	case EHunterAttribute::Poise:                   return Attrs->GetPoise();
 	case EHunterAttribute::Weight:                  return Attrs->GetWeight();

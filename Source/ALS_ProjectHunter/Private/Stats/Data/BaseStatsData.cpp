@@ -564,6 +564,12 @@ namespace BaseStatsDataPrivate
 		{TEXT("CorruptionDamageTakenMultiplier"), 1.0f},
 		{TEXT("CritMultiplier"), 1.5f},
 		{TEXT("SpellsCritMultiplier"), 1.0f},
+		{TEXT("MaxLifeLeechRatePercent"), 20.0f},
+		{TEXT("MaxManaLeechRatePercent"), 20.0f},
+		{TEXT("MaxStaminaLeechRatePercent"), 20.0f},
+		{TEXT("ArcaneShieldRechargeDelay"), 2.0f},
+		{TEXT("ArcaneShieldRechargeRate"), 20.0f},
+		{TEXT("CorruptionShieldDamageMultiplier"), 2.0f},
 	};
 
 	static void ApplyRequiredNonZeroDefaults(TArray<FStatInitializationEntry>& Entries)
@@ -1127,6 +1133,23 @@ void UBaseStatsData::PostLoad()
 				LogBaseStatsData,
 				Warning,
 				TEXT("Migrated SpellsCritMultiplier to neutral 1.0 in %s. Save the asset to persist schema version %d."),
+				*GetPathName(),
+				CurrentStatsSchemaVersion);
+		}
+
+		if (StatsSchemaVersion < 3)
+		{
+			BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxLifeLeechRatePercent"), 20.0f);
+			BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxManaLeechRatePercent"), 20.0f);
+			BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("MaxStaminaLeechRatePercent"), 20.0f);
+			BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("ArcaneShieldRechargeDelay"), 2.0f);
+			BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("ArcaneShieldRechargeRate"), 20.0f);
+			BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, TEXT("CorruptionShieldDamageMultiplier"), 2.0f);
+			bMigratedDefaults = true;
+			UE_LOG(
+				LogBaseStatsData,
+				Warning,
+				TEXT("Added leech-rate and Arcane Shield defaults to %s. Save the asset to persist schema version %d."),
 				*GetPathName(),
 				CurrentStatsSchemaVersion);
 		}

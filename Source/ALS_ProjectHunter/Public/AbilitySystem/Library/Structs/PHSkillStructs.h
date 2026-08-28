@@ -162,6 +162,14 @@ struct ALS_PROJECTHUNTER_API FPHResolvedSkillData
 	UPROPERTY(BlueprintReadOnly, Category = "Skill|Aura")
 	FPHSkillAuraData Aura;
 
+	/** Covenant-derived multiplier copied into summon execution data. */
+	UPROPERTY(BlueprintReadOnly, Category = "Skill|Summon")
+	float MinionDamageMultiplier = 1.f;
+
+	/** Covenant-derived maximum-health multiplier copied into summon execution data. */
+	UPROPERTY(BlueprintReadOnly, Category = "Skill|Summon")
+	float MinionHealthMultiplier = 1.f;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Skill|Damage")
 	FAnimationDamageInfo DamageInfo;
 };

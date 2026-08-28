@@ -108,6 +108,13 @@ UHunterAttributeSet::UHunterAttributeSet()
 	// Spell crit is an additional ratio layered on CritMultiplier. Its neutral
 	// value must be 1.0 or every spell crit receives a hidden extra +50%.
 	InitSpellsCritMultiplier(1.0f);
+
+	InitMaxLifeLeechRatePercent(20.f);
+	InitMaxManaLeechRatePercent(20.f);
+	InitMaxStaminaLeechRatePercent(20.f);
+	InitArcaneShieldRechargeDelay(2.f);
+	InitArcaneShieldRechargeRate(20.f);
+	InitCorruptionShieldDamageMultiplier(2.f);
 }
 
 void UHunterAttributeSet::SetIsInitializingStats(bool bInInitializing)
@@ -278,6 +285,9 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ArcaneShieldRegenRate,        COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ArcaneShieldRegenAmount,      COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ArcaneShieldRechargeDelay,   COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ArcaneShieldRechargeRate,    COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, CorruptionShieldDamageMultiplier, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ReservedArcaneShield,         COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, MaxReservedArcaneShield,      COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, FlatReservedArcaneShield,     COND_OwnerOnly, REPNOTIFY_Always);
@@ -348,6 +358,7 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, BurnDuration,           COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, BleedDuration,          COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, PoisonDuration,         COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, FreezeDuration,         COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, CorruptionDuration,     COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ShockDuration,          COND_OwnerOnly, REPNOTIFY_Always);
@@ -446,6 +457,7 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, IcePiercing,           COND_OwnerOnly, REPNOTIFY_Always);
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ChanceToBleed,        COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ChanceToPoison,       COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ChanceToCorrupt,      COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ChanceToFreeze,       COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ChanceToIgnite,       COND_OwnerOnly, REPNOTIFY_Always);
@@ -454,12 +466,21 @@ void UHunterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ChanceToShock,        COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ChanceToStun,         COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ChanceToKnockBack,    COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, AilmentThreshold,     COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, AilmentAvoidance,     COND_OwnerOnly, REPNOTIFY_Always);
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ComboCounter,     COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, Cooldown,         COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, LifeLeech,        COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ManaLeech,        COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, StaminaLeechPercent, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, MaxLifeLeechRatePercent, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, MaxManaLeechRatePercent, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, MaxStaminaLeechRatePercent, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, LeechResistancePercent, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, LifeRecoupPercent, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, ManaRecoupPercent, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, StaminaRecoupPercent, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, MovementSpeed,    COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, Poise,            COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UHunterAttributeSet, Weight,           COND_OwnerOnly, REPNOTIFY_Always);
@@ -1082,6 +1103,21 @@ void UHunterAttributeSet::OnRep_MaxArcaneShieldRegenRate(const FGameplayAttribut
 void UHunterAttributeSet::OnRep_ArcaneShieldRegenAmount(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet , ArcaneShieldRegenAmount ,OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_ArcaneShieldRechargeDelay(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, ArcaneShieldRechargeDelay, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_ArcaneShieldRechargeRate(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, ArcaneShieldRechargeRate, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_CorruptionShieldDamageMultiplier(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, CorruptionShieldDamageMultiplier, OldAmount)
 }
 
 void UHunterAttributeSet::OnRep_MaxArcaneShieldRegenAmount(const FGameplayAttributeData& OldAmount) const
@@ -1853,6 +1889,41 @@ void UHunterAttributeSet::OnRep_StaminaLeechPercent(const FGameplayAttributeData
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,StaminaLeechPercent, OldAmount)
 }
 
+void UHunterAttributeSet::OnRep_MaxLifeLeechRatePercent(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, MaxLifeLeechRatePercent, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_MaxManaLeechRatePercent(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, MaxManaLeechRatePercent, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_MaxStaminaLeechRatePercent(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, MaxStaminaLeechRatePercent, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_LeechResistancePercent(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, LeechResistancePercent, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_LifeRecoupPercent(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, LifeRecoupPercent, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_ManaRecoupPercent(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, ManaRecoupPercent, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_StaminaRecoupPercent(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, StaminaRecoupPercent, OldAmount)
+}
+
 void UHunterAttributeSet::OnRep_MovementSpeed(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,MovementSpeed, OldAmount)
@@ -1923,6 +1994,11 @@ void UHunterAttributeSet::OnRep_ChanceToBleed(const FGameplayAttributeData& OldA
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,ChanceToBleed, OldAmount)
 }
 
+void UHunterAttributeSet::OnRep_ChanceToPoison(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, ChanceToPoison, OldAmount)
+}
+
 void UHunterAttributeSet::OnRep_ChanceToCorrupt(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,ChanceToCorrupt, OldAmount)
@@ -1963,6 +2039,16 @@ void UHunterAttributeSet::OnRep_ChanceToPurify(const FGameplayAttributeData& Old
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,ChanceToPurify, OldAmount)
 }
 
+void UHunterAttributeSet::OnRep_AilmentThreshold(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, AilmentThreshold, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_AilmentAvoidance(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, AilmentAvoidance, OldAmount)
+}
+
 void UHunterAttributeSet::OnRep_BurnDuration(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,BurnDuration, OldAmount)
@@ -1971,6 +2057,11 @@ void UHunterAttributeSet::OnRep_BurnDuration(const FGameplayAttributeData& OldAm
 void UHunterAttributeSet::OnRep_BleedDuration(const FGameplayAttributeData& OldAmount) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet ,BleedDuration, OldAmount)
+}
+
+void UHunterAttributeSet::OnRep_PoisonDuration(const FGameplayAttributeData& OldAmount) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UHunterAttributeSet, PoisonDuration, OldAmount)
 }
 
 void UHunterAttributeSet::OnRep_FreezeDuration(const FGameplayAttributeData& OldAmount) const
@@ -2105,11 +2196,12 @@ void UHunterAttributeSet::ClampPercentageAttributes(const FGameplayAttribute& At
     {
 		NewValue = FMath::Clamp(NewValue, -100.0f, 999.0f);
     }
-    else if (Attribute == GetChanceToBleedAttribute() || Attribute == GetChanceToIgniteAttribute() ||
+    else if (Attribute == GetChanceToBleedAttribute() || Attribute == GetChanceToPoisonAttribute() ||
+			 Attribute == GetChanceToIgniteAttribute() ||
              Attribute == GetChanceToFreezeAttribute() || Attribute == GetChanceToShockAttribute() ||
              Attribute == GetChanceToCorruptAttribute() || Attribute == GetChanceToPetrifyAttribute() ||
              Attribute == GetChanceToStunAttribute() || Attribute == GetChanceToKnockBackAttribute() ||
-             Attribute == GetChanceToPurifyAttribute())
+             Attribute == GetChanceToPurifyAttribute() || Attribute == GetAilmentAvoidanceAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.0f, 100.0f);
     }
@@ -2148,7 +2240,15 @@ void UHunterAttributeSet::ClampPercentageAttributes(const FGameplayAttribute& At
         NewValue = FMath::Clamp(NewValue, 0.0f, 100.0f);
     }
     else if (Attribute == GetLifeLeechAttribute() || Attribute == GetManaLeechAttribute() ||
-             Attribute == GetStaminaLeechPercentAttribute())
+             Attribute == GetStaminaLeechPercentAttribute() ||
+			 Attribute == GetMaxLifeLeechRatePercentAttribute() ||
+			 Attribute == GetMaxManaLeechRatePercentAttribute() ||
+			 Attribute == GetMaxStaminaLeechRatePercentAttribute() ||
+			 Attribute == GetLeechResistancePercentAttribute() ||
+			 Attribute == GetLifeRecoupPercentAttribute() ||
+			 Attribute == GetManaRecoupPercentAttribute() ||
+			 Attribute == GetStaminaRecoupPercentAttribute() ||
+			 Attribute == GetArcaneShieldRechargeRateAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.0f, 100.0f);
     }
@@ -2243,7 +2343,8 @@ void UHunterAttributeSet::ClampResistanceAttributes(const FGameplayAttribute& At
              Attribute == GetGlobalDamageTakenMultiplierAttribute() || Attribute == GetPhysicalDamageTakenMultiplierAttribute() ||
              Attribute == GetElementalDamageTakenMultiplierAttribute() || Attribute == GetFireDamageTakenMultiplierAttribute() ||
              Attribute == GetIceDamageTakenMultiplierAttribute() || Attribute == GetLightningDamageTakenMultiplierAttribute() ||
-             Attribute == GetLightDamageTakenMultiplierAttribute() || Attribute == GetCorruptionDamageTakenMultiplierAttribute())
+             Attribute == GetLightDamageTakenMultiplierAttribute() || Attribute == GetCorruptionDamageTakenMultiplierAttribute() ||
+			 Attribute == GetCorruptionShieldDamageMultiplierAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.0f, 10.0f);
     }
@@ -2273,12 +2374,17 @@ void UHunterAttributeSet::ClampRateAndAmountAttributes(const FGameplayAttribute&
         NewValue = FMath::Max(NewValue, 0.0f);
     }
     else if (Attribute == GetBurnDurationAttribute() || Attribute == GetBleedDurationAttribute() ||
+			 Attribute == GetPoisonDurationAttribute() ||
              Attribute == GetFreezeDurationAttribute() || Attribute == GetShockDurationAttribute() ||
              Attribute == GetCorruptionDurationAttribute() || Attribute == GetPetrifyBuildUpDurationAttribute() ||
              Attribute == GetPurifyDurationAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.0f, 300.0f);
     }
+	else if (Attribute == GetAilmentThresholdAttribute() || Attribute == GetArcaneShieldRechargeDelayAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 0.f);
+	}
 }
 
 void UHunterAttributeSet::ClampUtilityAttributes(const FGameplayAttribute& Attribute, float& NewValue) const
