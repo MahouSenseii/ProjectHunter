@@ -148,6 +148,11 @@ void AHunterHUD::OpenMenu(const EMenuType MenuType)
 		MenuCamera->ActivateMenuCamera(MenuRootWidget->GetActiveMenuType());
 	}
 
+	if (bHideMainHUDWhileMenuOpen && MainHUDWidget)
+	{
+		MainHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
 	UE_LOG(LogHunterHUD, Log, TEXT("OpenMenu: menu opened on page %d."),
 		static_cast<int32>(MenuRootWidget->GetActiveMenuType()));
 }
@@ -165,6 +170,11 @@ void AHunterHUD::CloseMenu()
 	if (MenuCamera)
 	{
 		MenuCamera->DeactivateMenuCamera();
+	}
+
+	if (bHideMainHUDWhileMenuOpen && MainHUDWidget)
+	{
+		MainHUDWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	}
 
 	// A slot may have been hovered at the moment the menu closed.

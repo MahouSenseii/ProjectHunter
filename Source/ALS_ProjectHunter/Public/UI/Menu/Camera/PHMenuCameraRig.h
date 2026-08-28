@@ -86,15 +86,15 @@ protected:
 	/** Candelas. Tune against your exposure - these are a starting point, not gospel. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Menu Camera Rig|Lighting",
 		meta = (ClampMin = "0.0"))
-	float KeyLightIntensity = 60.0f;
+	float KeyLightIntensity = 25.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Menu Camera Rig|Lighting",
 		meta = (ClampMin = "0.0"))
-	float FillLightIntensity = 18.0f;
+	float FillLightIntensity = 7.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Menu Camera Rig|Lighting",
 		meta = (ClampMin = "0.0"))
-	float RimLightIntensity = 110.0f;
+	float RimLightIntensity = 45.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Menu Camera Rig|Lighting")
 	FLinearColor KeyLightColor = FLinearColor(1.0f, 0.97f, 0.92f);

@@ -20,12 +20,12 @@ struct ALS_PROJECTHUNTER_API FPHMenuCameraView
 	/** Horizontal distance from the pivot. Low is a portrait, high is full body. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Camera",
 		meta = (ClampMin = "30.0", UIMin = "80.0", UIMax = "600.0"))
-	float Distance = 230.0f;
+	float Distance = 300.0f;
 
 	/** Raises the point the camera looks at. Positive frames the upper body. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Camera",
 		meta = (UIMin = "-100.0", UIMax = "150.0"))
-	float PivotHeightOffset = 5.0f;
+	float PivotHeightOffset = 55.0f;
 
 	/**
 	 * Degrees around the character, measured from directly in front of them.

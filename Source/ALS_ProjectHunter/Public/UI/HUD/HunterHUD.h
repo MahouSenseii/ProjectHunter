@@ -199,6 +199,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HUD|Menu")
 	bool bUseUIOnlyInputMode = false;
 
+	/**
+	 * Hides the gameplay HUD while the menu is up. The menu already shows
+	 * vitals, so leaving it visible just bleeds a health bar through the
+	 * bottom of the window.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "HUD|Menu")
+	bool bHideMainHUDWhileMenuOpen = true;
+
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UItemTooltipWidget> ItemTooltipWidgetClass;
 
