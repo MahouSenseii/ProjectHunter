@@ -1,4 +1,5 @@
 #include "UI/Menu/Library/FunctionLibraries/MenuFunctionLibrary.h"
+#include "UI/Library/PHUIStyle.h"
 
 TArray<EEquipmentSlot> UMenuFunctionLibrary::GetDefaultEquipmentSlotOrder()
 {
@@ -60,4 +61,41 @@ FEquipmentMenuInventorySlotViewData UMenuFunctionLibrary::MakeInventorySlotViewD
 	SlotData.SuggestedEquipmentSlot = SuggestedEquipmentSlot;
 	SlotData.bCanEquip = SuggestedEquipmentSlot != EEquipmentSlot::ES_None;
 	return SlotData;
+}
+
+FLinearColor UMenuFunctionLibrary::GetItemGradeColor(const EItemRarity Grade)
+{
+	switch (Grade)
+	{
+	case EItemRarity::IR_GradeF:    return PHUIStyle::GradeF;
+	case EItemRarity::IR_GradeE:    return PHUIStyle::GradeE;
+	case EItemRarity::IR_GradeD:    return PHUIStyle::GradeD;
+	case EItemRarity::IR_GradeC:    return PHUIStyle::GradeC;
+	case EItemRarity::IR_GradeB:    return PHUIStyle::GradeB;
+	case EItemRarity::IR_GradeA:    return PHUIStyle::GradeA;
+	case EItemRarity::IR_GradeS:    return PHUIStyle::GradeS;
+	case EItemRarity::IR_GradeSS:   return PHUIStyle::GradeSS;
+	case EItemRarity::IR_Unknown:   return PHUIStyle::GradeUnknown;
+	case EItemRarity::IR_Corrupted: return PHUIStyle::GradeCorrupted;
+	default:                        return PHUIStyle::TextPrimary;
+	}
+}
+
+FText UMenuFunctionLibrary::GetItemGradeGlyph(const EItemRarity Grade)
+{
+	switch (Grade)
+	{
+	case EItemRarity::IR_GradeF:    return NSLOCTEXT("PHMenu", "GradeF", "[F]");
+	case EItemRarity::IR_GradeE:    return NSLOCTEXT("PHMenu", "GradeE", "[E]");
+	case EItemRarity::IR_GradeD:    return NSLOCTEXT("PHMenu", "GradeD", "[D]");
+	case EItemRarity::IR_GradeC:    return NSLOCTEXT("PHMenu", "GradeC", "[C]");
+	case EItemRarity::IR_GradeB:    return NSLOCTEXT("PHMenu", "GradeB", "[B]");
+	case EItemRarity::IR_GradeA:    return NSLOCTEXT("PHMenu", "GradeA", "[A]");
+	case EItemRarity::IR_GradeS:    return NSLOCTEXT("PHMenu", "GradeS", "[S]");
+	case EItemRarity::IR_GradeSS:   return NSLOCTEXT("PHMenu", "GradeSS", "[SS]");
+	// The system will not resolve either of these, and says so.
+	case EItemRarity::IR_Unknown:   return NSLOCTEXT("PHMenu", "GradeUnknown", "[?]");
+	case EItemRarity::IR_Corrupted: return NSLOCTEXT("PHMenu", "GradeCorrupted", "[X]");
+	default:                        return FText::GetEmpty();
+	}
 }

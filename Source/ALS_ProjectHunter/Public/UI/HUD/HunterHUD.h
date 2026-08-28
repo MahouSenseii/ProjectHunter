@@ -12,6 +12,7 @@ class APawn;
 class UHunterMainHUDWidget;
 class UItemInstance;
 class UItemTooltipWidget;
+class UPHMenuCameraComponent;
 class UPHMenuRootWidget;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogHunterHUD, Log, All);
@@ -45,6 +46,8 @@ class ALS_PROJECTHUNTER_API AHunterHUD : public AHUD
 	GENERATED_BODY()
 
 public:
+	AHunterHUD();
+
 	UFUNCTION(BlueprintCallable)
 	void ShowItemTooltip(
 		UItemInstance* Item,
@@ -126,6 +129,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "HUD|Menu")
 	UPHMenuRootWidget* GetMenuRootWidget() const { return MenuRootWidget; }
 
+	/**
+	 * Swings the view onto the character while the menu is open.
+	 * Lives here so the widget, the input mode, and the camera are switched by
+	 * the same two functions and cannot drift out of step.
+	 */
+	UFUNCTION(BlueprintPure, Category = "HUD|Menu")
+	UPHMenuCameraComponent* GetMenuCameraComponent() const { return MenuCamera; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -148,6 +159,45 @@ protected:
 	 */
 	UPROPERTY(EditDefaultsOnly, Category = "HUD|Menu")
 	bool bManageInputMode = true;
+
+	/**
+	 * Freezes character movement and look while the menu is up.
+	 *
+	 * GameAndUI keeps feeding ALS the movement and look axes, so without this
+	 * the character walks and the camera spins behind the open menu. Kept here
+	 * rather than on the menu camera so it still applies when the camera is
+	 * disabled or fails to find a character.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "HUD|Menu")
+	bool bBlockCharacterInputWhileMenuOpen = true;
+
+	/**
+	 * Switches the pawn's whole input component off, which is what actually
+	 * stops attacks, rolls and abilities firing from clicks aimed at the menu.
+	 * The ignore flags above only cover movement and look; a GAS ability bound
+	 * through Enhanced Input goes straight past them.
+	 *
+	 * Safe to leave on: UPHMenuRootWidget owns the close key itself, so
+	 * silencing every binding on the character cannot strand the menu open.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "HUD|Menu")
+	bool bDisablePawnInputWhileMenuOpen = true;
+
+	/**
+	 * UI-only input while the menu is up.
+	 *
+	 * Off by default: UI-only stops the player controller seeing input at all,
+	 * which also kills the binding that opens and closes the menu. GameAndUI
+	 * keeps controller bindings alive while bDisablePawnInputWhileMenuOpen
+	 * silences the pawn's - which is where attacks and abilities live - so the
+	 * combination blocks what should be blocked and keeps what must work.
+	 *
+	 * Turning this on also stops the menu camera's cursor and wheel polling,
+	 * since the controller no longer receives that input. Drag and zoom survive
+	 * because UPHCharacterPreviewWidget handles them through Slate directly.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "HUD|Menu")
+	bool bUseUIOnlyInputMode = false;
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UItemTooltipWidget> ItemTooltipWidgetClass;
@@ -183,15 +233,28 @@ private:
 	UPROPERTY()
 	TObjectPtr<UPHMenuRootWidget> MenuRootWidget;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "HUD|Menu", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UPHMenuCameraComponent> MenuCamera;
+
 	void CreateMainHUDWidget();
 	void BindWidgetsToCharacter(APHBaseCharacter* Character) const;
 
 	/** Lazily create the menu root and add it (hidden) to the player screen. */
 	bool EnsureMenuRootWidget();
 
-	/** Apply/restore input mode + cursor for menu open/close. */
-	void ApplyMenuInputMode(bool bMenuOpen) const;
+	/** Apply/restore input mode, cursor, and character input for menu open/close. */
+	void ApplyMenuInputMode(bool bMenuOpen);
+
+	/** SetIgnore*Input is reference counted, so track what we actually applied. */
+	bool bCharacterInputBlocked = false;
+
+	/** The pawn input was disabled by us, so only we re-enable it. */
+	bool bPawnInputDisabled = false;
 
 	UFUNCTION()
 	void HandlePawnChanged(APawn* OldPawn, APawn* NewPawn);
+
+	/** Re-frames the menu camera when the player switches tabs. */
+	UFUNCTION()
+	void HandleMenuPageChanged(EMenuType NewMenu, EMenuType OldMenu);
 };

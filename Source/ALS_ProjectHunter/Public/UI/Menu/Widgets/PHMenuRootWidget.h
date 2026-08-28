@@ -1,12 +1,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InputCoreTypes.h"
 #include "UI/HUD/HunterHUDBaseWidget.h"
 #include "UI/Menu/Library/Enums/MenuEnums.h"
 #include "UI/Menu/Library/Structs/MenuStructs.h"
 #include "PHMenuRootWidget.generated.h"
 
 class APHBaseCharacter;
+class UButton;
 class UDragDropOperation;
 class UPHItemDragDropOperation;
 class UPHMenuPageWidgetBase;
@@ -42,12 +44,29 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Menu|Events")
 	FOnMenuPageChanged OnMenuPageChanged;
 
+	/** Closes the menu through the owning HUD. Safe to call from Blueprint. */
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	void RequestCloseMenu();
+
 	/** True when the drag payload was consumed (dropped into the world). */
 	UFUNCTION(BlueprintCallable, Category = "Menu|Drag Drop")
 	bool DropOperationToWorld(UPHItemDragDropOperation* Operation);
 
 protected:
 	virtual void NativeConstruct() override;
+
+	/**
+	 * Closes the menu from the widget itself.
+	 *
+	 * Without this the menu can only be closed by whatever input binding opened
+	 * it, which stops existing the moment the pawn's input is switched off or
+	 * the mode goes UI-only - i.e. exactly when the menu is up. Owning the close
+	 * key here is what makes those two safe to turn on.
+	 */
+	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Menu|Input")
+	TArray<FKey> CloseMenuKeys;
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
 	/**
@@ -89,12 +108,19 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
 	TObjectPtr<UWidgetSwitcher> ContentSwitcher;
 
+	/** The window-chrome X. Bound here so it needs no Blueprint graph. */
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+	TObjectPtr<UButton> CloseButton;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Menu")
 	EMenuType ActiveMenuType = EMenuType::MT_None;
 
 private:
 	UFUNCTION()
 	void HandleTabSelected(EMenuType NewMenu, EMenuType OldMenu);
+
+	UFUNCTION()
+	void HandleCloseButtonClicked();
 
 	void ShowPage(EMenuType MenuType, EMenuType OldMenu);
 	UPHMenuPageWidgetBase* GetOrCreatePage(FMenuEntry& Entry);

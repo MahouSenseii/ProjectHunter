@@ -4,6 +4,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Item/ItemInstance.h"
 #include "Item/Library/Enums/ItemEnums.h"
+#include "UI/Library/PHUIStyle.h"
 #include "Item/Library/Structs/ItemTooltipStructs.h"
 #include "ItemTooltipWidget.generated.h"
 
@@ -80,34 +81,34 @@ protected:
 	TObjectPtr<UWidgetAnimation> OpenCloseAnimation;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-	FLinearColor Color_GradeF = FLinearColor(0.5f, 0.5f, 0.5f, 1.0f);
+	FLinearColor Color_GradeF = PHUIStyle::GradeF;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-	FLinearColor Color_GradeE = FLinearColor::White;
+	FLinearColor Color_GradeE = PHUIStyle::GradeE;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-	FLinearColor Color_GradeD = FLinearColor(0.3f, 0.9f, 0.3f, 1.0f);
+	FLinearColor Color_GradeD = PHUIStyle::GradeD;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-	FLinearColor Color_GradeC = FLinearColor(0.4f, 0.6f, 1.0f, 1.0f);
+	FLinearColor Color_GradeC = PHUIStyle::GradeC;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-	FLinearColor Color_GradeB = FLinearColor(0.7f, 0.3f, 0.9f, 1.0f);
+	FLinearColor Color_GradeB = PHUIStyle::GradeB;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-	FLinearColor Color_GradeA = FLinearColor(1.0f, 0.7f, 0.0f, 1.0f);
+	FLinearColor Color_GradeA = PHUIStyle::GradeA;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-	FLinearColor Color_GradeS = FLinearColor(1.0f, 0.3f, 0.0f, 1.0f);
+	FLinearColor Color_GradeS = PHUIStyle::GradeS;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-	FLinearColor Color_GradeSS = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f);
+	FLinearColor Color_GradeSS = PHUIStyle::GradeSS;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-	FLinearColor Color_GradeUnkown = FLinearColor(0.2f, 0.2f, 0.2f, 1.0f);
+	FLinearColor Color_GradeUnkown = PHUIStyle::GradeUnknown;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GradeColors")
-	FLinearColor Color_GradeCorrupted = FLinearColor(0.5f, 0.0f, 0.3f, 1.0f);
+	FLinearColor Color_GradeCorrupted = PHUIStyle::GradeCorrupted;
 
 private:
 	TWeakObjectPtr<UItemInstance> DisplayedItem;

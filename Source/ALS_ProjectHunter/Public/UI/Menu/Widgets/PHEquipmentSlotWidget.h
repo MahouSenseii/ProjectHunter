@@ -118,6 +118,13 @@ protected:
 	virtual void NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
+	/**
+	 * Hovering a slot drifts the menu camera towards the body part that wears
+	 * it - the helmet slot pans up to the head, boots pan down.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment Slot|Menu Camera")
+	bool bFocusMenuCameraOnHover = true;
+
 	/** Optional named children let one WBP render every EEquipmentSlot. */
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Equipment Slot|Widgets")
 	TObjectPtr<UButton> SlotButton;
@@ -211,6 +218,9 @@ private:
 
 	/** True when a change to ChangedSlot alters what this slot shows. */
 	bool IsAffectedByEquipmentChange(EEquipmentSlot ChangedSlot) const;
+
+	/** Pushes this slot (or ES_None on unhover) at the HUD's menu camera. */
+	void SetMenuCameraFocus(bool bFocused) const;
 
 	void BindManagerDelegates();
 	void UnbindManagerDelegates();

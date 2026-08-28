@@ -93,6 +93,16 @@ protected:
 	virtual void NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
+	/**
+	 * Hovering a bag item drifts the menu camera to the body part it would be
+	 * worn on, using the slot data's SuggestedEquipmentSlot.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Slot|Menu Camera")
+	bool bFocusMenuCameraOnHover = true;
+
+	/** Pushes the suggested slot (or ES_None on unhover) at the HUD's menu camera. */
+	void SetMenuCameraFocus(bool bFocused) const;
+
 	/** Optional named children make the generated grid cells data-driven. */
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Inventory Slot|Widgets")
 	TObjectPtr<UButton> SlotButton;

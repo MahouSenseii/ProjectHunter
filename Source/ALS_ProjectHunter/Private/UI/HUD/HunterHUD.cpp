@@ -4,6 +4,7 @@
 #include "Character/PHBaseCharacter.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "GameFramework/PlayerController.h"
+#include "UI/Menu/Camera/PHMenuCameraComponent.h"
 #include "UI/Menu/Widgets/PHMenuRootWidget.h"
 #include "TimerManager.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
@@ -31,6 +32,11 @@ namespace
 			return TEXT("Unknown");
 		}
 	}
+}
+
+AHunterHUD::AHunterHUD()
+{
+	MenuCamera = CreateDefaultSubobject<UPHMenuCameraComponent>(TEXT("MenuCamera"));
 }
 
 void AHunterHUD::BeginPlay()
@@ -95,6 +101,7 @@ void AHunterHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	if (MenuRootWidget)
 	{
+		MenuRootWidget->OnMenuPageChanged.RemoveDynamic(this, &AHunterHUD::HandleMenuPageChanged);
 		MenuRootWidget->ReleaseCharacter();
 		MenuRootWidget->RemoveFromParent();
 		MenuRootWidget = nullptr;
@@ -134,6 +141,13 @@ void AHunterHUD::OpenMenu(const EMenuType MenuType)
 	MenuRootWidget->OpenMenu(MenuType);
 	ApplyMenuInputMode(true);
 
+	if (MenuCamera)
+	{
+		// The root widget resolves MT_None to its configured default page, so
+		// ask it what actually opened rather than trusting the argument.
+		MenuCamera->ActivateMenuCamera(MenuRootWidget->GetActiveMenuType());
+	}
+
 	UE_LOG(LogHunterHUD, Log, TEXT("OpenMenu: menu opened on page %d."),
 		static_cast<int32>(MenuRootWidget->GetActiveMenuType()));
 }
@@ -147,6 +161,11 @@ void AHunterHUD::CloseMenu()
 
 	MenuRootWidget->SetVisibility(ESlateVisibility::Collapsed);
 	ApplyMenuInputMode(false);
+
+	if (MenuCamera)
+	{
+		MenuCamera->DeactivateMenuCamera();
+	}
 
 	// A slot may have been hovered at the moment the menu closed.
 	HideItemTooltip(EItemTooltipSource::ITS_None);
@@ -193,6 +212,7 @@ bool AHunterHUD::EnsureMenuRootWidget()
 	// for the lifetime of the HUD.
 	MenuRootWidget->SetVisibility(ESlateVisibility::Collapsed);
 	MenuRootWidget->AddToPlayerScreen(MenuZOrder);
+	MenuRootWidget->OnMenuPageChanged.AddDynamic(this, &AHunterHUD::HandleMenuPageChanged);
 
 	if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(PC->GetPawn()))
 	{
@@ -205,7 +225,7 @@ bool AHunterHUD::EnsureMenuRootWidget()
 	return true;
 }
 
-void AHunterHUD::ApplyMenuInputMode(const bool bMenuOpen) const
+void AHunterHUD::ApplyMenuInputMode(const bool bMenuOpen)
 {
 	if (!bManageInputMode)
 	{
@@ -218,17 +238,66 @@ void AHunterHUD::ApplyMenuInputMode(const bool bMenuOpen) const
 		return;
 	}
 
+	// Reference counted, so every true needs exactly one matching false.
+	if (bBlockCharacterInputWhileMenuOpen && bMenuOpen != bCharacterInputBlocked)
+	{
+		PC->SetIgnoreLookInput(bMenuOpen);
+		PC->SetIgnoreMoveInput(bMenuOpen);
+		bCharacterInputBlocked = bMenuOpen;
+	}
+	else if (!bMenuOpen && bCharacterInputBlocked)
+	{
+		PC->SetIgnoreLookInput(false);
+		PC->SetIgnoreMoveInput(false);
+		bCharacterInputBlocked = false;
+	}
+
+	if (APawn* Pawn = PC->GetPawn())
+	{
+		if (bMenuOpen && bDisablePawnInputWhileMenuOpen && !bPawnInputDisabled)
+		{
+			Pawn->DisableInput(PC);
+			bPawnInputDisabled = true;
+		}
+		else if (!bMenuOpen && bPawnInputDisabled)
+		{
+			Pawn->EnableInput(PC);
+			bPawnInputDisabled = false;
+		}
+	}
+
 	if (bMenuOpen)
 	{
-		FInputModeGameAndUI InputMode;
+		if (bUseUIOnlyInputMode)
+		{
+			FInputModeUIOnly InputMode;
+			if (MenuRootWidget)
+			{
+				InputMode.SetWidgetToFocus(MenuRootWidget->TakeWidget());
+			}
+			InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			PC->SetInputMode(InputMode);
+		}
+		else
+		{
+			FInputModeGameAndUI InputMode;
+			if (MenuRootWidget)
+			{
+				InputMode.SetWidgetToFocus(MenuRootWidget->TakeWidget());
+			}
+			InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			InputMode.SetHideCursorDuringCapture(false);
+			PC->SetInputMode(InputMode);
+		}
+
+		PC->bShowMouseCursor = true;
+
+		// SetWidgetToFocus is a request Slate can decline; asking the widget
+		// directly is what makes the key handler actually receive anything.
 		if (MenuRootWidget)
 		{
-			InputMode.SetWidgetToFocus(MenuRootWidget->TakeWidget());
+			MenuRootWidget->SetKeyboardFocus();
 		}
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-		InputMode.SetHideCursorDuringCapture(false);
-		PC->SetInputMode(InputMode);
-		PC->bShowMouseCursor = true;
 	}
 	else
 	{
@@ -472,4 +541,23 @@ void AHunterHUD::HandlePawnChanged(APawn* OldPawn, APawn* NewPawn)
 		*GetNameSafe(NewCharacter));
 
 	BindWidgetsToCharacter(NewCharacter);
+
+	// A menu left open across a possession change is still framing the old body.
+	if (MenuCamera && MenuCamera->IsMenuCameraActive())
+	{
+		MenuCamera->DeactivateMenuCamera();
+
+		if (NewCharacter && IsMenuOpen() && MenuRootWidget)
+		{
+			MenuCamera->ActivateMenuCamera(MenuRootWidget->GetActiveMenuType());
+		}
+	}
+}
+
+void AHunterHUD::HandleMenuPageChanged(const EMenuType NewMenu, const EMenuType OldMenu)
+{
+	if (MenuCamera && IsMenuOpen())
+	{
+		MenuCamera->SetMenuPage(NewMenu);
+	}
 }

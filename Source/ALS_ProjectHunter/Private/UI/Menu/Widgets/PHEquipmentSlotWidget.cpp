@@ -10,6 +10,7 @@
 #include "Inventory/Components/InventoryManager.h"
 #include "Item/ItemInstance.h"
 #include "UI/Menu/DragDrop/PHItemDragDropOperation.h"
+#include "UI/Menu/Camera/PHMenuCameraComponent.h"
 #include "UI/Menu/Helpers/MenuItemDragDropHelper.h"
 #include "UI/Menu/Helpers/MenuSlotTooltipHelper.h"
 #include "UI/Menu/Library/FunctionLibraries/MenuFunctionLibrary.h"
@@ -217,12 +218,39 @@ void UPHEquipmentSlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, con
 {
 	Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
 	SetHovered(true);
+	SetMenuCameraFocus(true);
 }
 
 void UPHEquipmentSlotWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
 {
 	Super::NativeOnMouseLeave(InMouseEvent);
 	SetHovered(false);
+	SetMenuCameraFocus(false);
+}
+
+void UPHEquipmentSlotWidget::SetMenuCameraFocus(const bool bFocused) const
+{
+	if (!bFocusMenuCameraOnHover)
+	{
+		return;
+	}
+
+	UPHMenuCameraComponent* MenuCamera = UPHMenuCameraComponent::GetForWidget(this);
+	if (!MenuCamera)
+	{
+		return;
+	}
+
+	if (bFocused)
+	{
+		MenuCamera->FocusEquipmentSlot(ConnectedEquipmentSlot);
+	}
+	else if (MenuCamera->GetFocusedEquipmentSlot() == ConnectedEquipmentSlot)
+	{
+		// Only release the focus this slot took - the cursor may already have
+		// entered the next slot and claimed it.
+		MenuCamera->ClearEquipmentSlotFocus();
+	}
 }
 
 FReply UPHEquipmentSlotWidget::NativeOnMouseMove(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)

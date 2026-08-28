@@ -6,6 +6,7 @@
 #include "Components/TextBlock.h"
 #include "Item/ItemInstance.h"
 #include "UI/Menu/DragDrop/PHItemDragDropOperation.h"
+#include "UI/Menu/Camera/PHMenuCameraComponent.h"
 #include "UI/Menu/Helpers/MenuItemDragDropHelper.h"
 #include "UI/Menu/Helpers/MenuSlotTooltipHelper.h"
 #include "UI/Menu/Interfaces/PHInventorySlotHost.h"
@@ -102,12 +103,40 @@ void UPHInventorySlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, con
 {
 	Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
 	SetHovered(true);
+	SetMenuCameraFocus(true);
 }
 
 void UPHInventorySlotWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
 {
 	Super::NativeOnMouseLeave(InMouseEvent);
 	SetHovered(false);
+	SetMenuCameraFocus(false);
+}
+
+void UPHInventorySlotWidget::SetMenuCameraFocus(const bool bFocused) const
+{
+	// An empty cell has nothing to preview, and no suggested slot to aim at.
+	if (!bFocusMenuCameraOnHover || SlotData.SuggestedEquipmentSlot == EEquipmentSlot::ES_None)
+	{
+		return;
+	}
+
+	UPHMenuCameraComponent* MenuCamera = UPHMenuCameraComponent::GetForWidget(this);
+	if (!MenuCamera)
+	{
+		return;
+	}
+
+	if (bFocused)
+	{
+		MenuCamera->FocusEquipmentSlot(SlotData.SuggestedEquipmentSlot);
+	}
+	else if (MenuCamera->GetFocusedEquipmentSlot() == SlotData.SuggestedEquipmentSlot)
+	{
+		// Only release the focus this cell took - the cursor may already have
+		// entered the next cell and claimed it.
+		MenuCamera->ClearEquipmentSlotFocus();
+	}
 }
 
 FReply UPHInventorySlotWidget::NativeOnMouseMove(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)

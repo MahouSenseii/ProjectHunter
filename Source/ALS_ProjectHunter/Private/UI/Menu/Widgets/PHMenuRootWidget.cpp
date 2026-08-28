@@ -1,5 +1,8 @@
 #include "UI/Menu/Widgets/PHMenuRootWidget.h"
 
+#include "Components/Button.h"
+#include "UI/HUD/HunterHUD.h"
+
 #include "Components/WidgetSwitcher.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
 #include "Character/PHBaseCharacter.h"
@@ -20,12 +23,26 @@ void UPHMenuRootWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	// UUserWidget is not focusable by default, so the HUD's SetWidgetToFocus is
+	// silently declined and keyboard focus stays on the game viewport.
+	SetIsFocusable(true);
+
+	if (CloseMenuKeys.IsEmpty())
+	{
+		CloseMenuKeys = { EKeys::Escape, EKeys::Tab };
+	}
+
 	if (bDropItemsToWorldOnMissedDrop)
 	{
 		// A UserWidget root is SelfHitTestInvisible by default, which keeps it out
 		// of the hit path entirely - drops on the menu background would never
 		// reach NativeOnDrop. Children still receive events first and bubble up.
 		SetVisibility(ESlateVisibility::Visible);
+	}
+
+	if (CloseButton)
+	{
+		CloseButton->OnClicked.AddUniqueDynamic(this, &UPHMenuRootWidget::HandleCloseButtonClicked);
 	}
 
 	BuildMenuEntriesFromEnum();
@@ -395,4 +412,31 @@ void UPHMenuRootWidget::BuildMenuEntriesFromEnum()
 	}
 
 	MenuEntries = MoveTemp(OrderedEntries);
+}
+
+FReply UPHMenuRootWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+	if (CloseMenuKeys.Contains(InKeyEvent.GetKey()))
+	{
+		RequestCloseMenu();
+		return FReply::Handled();
+	}
+
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+}
+
+void UPHMenuRootWidget::RequestCloseMenu()
+{
+	if (const APlayerController* PC = GetOwningPlayer())
+	{
+		if (AHunterHUD* HunterHUD = Cast<AHunterHUD>(PC->GetHUD()))
+		{
+			HunterHUD->CloseMenu();
+		}
+	}
+}
+
+void UPHMenuRootWidget::HandleCloseButtonClicked()
+{
+	RequestCloseMenu();
 }

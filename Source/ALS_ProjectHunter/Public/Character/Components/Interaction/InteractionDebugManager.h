@@ -192,7 +192,6 @@ public:
 
 private:
 	// CACHED REFERENCES (Not Blueprint-exposed)
-\
 	UPROPERTY()
 	AActor* OwnerActor = nullptr;
 	

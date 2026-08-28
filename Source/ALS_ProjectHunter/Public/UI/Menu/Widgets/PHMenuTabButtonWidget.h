@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "UI/Library/PHUIStyle.h"
 #include "UI/Menu/Library/Enums/MenuEnums.h"
 #include "UI/Menu/Library/Structs/MenuStructs.h"
 #include "PHMenuTabButtonWidget.generated.h"
@@ -64,20 +65,27 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Tab")
 	bool bIsSelected = false;
 
+	/**
+	 * System-window palette. The selected tab inverts to a near-white plate with
+	 * dark text, which is how the reference art marks the active window - the
+	 * unselected tabs stay as translucent glass so the inversion reads instantly.
+	 *
+	 * Linear values, not sRGB: the azure is #2E9BE0 converted.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab|Style")
-	FLinearColor NormalColor = FLinearColor(0.02f, 0.12f, 0.16f, 0.88f);
+	FLinearColor NormalColor = FLinearColor(PHUIStyle::AzureDeep.R, PHUIStyle::AzureDeep.G, PHUIStyle::AzureDeep.B, 0.55f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab|Style")
-	FLinearColor HoveredColor = FLinearColor(0.10f, 0.55f, 0.65f, 0.90f);
+	FLinearColor HoveredColor = FLinearColor(PHUIStyle::Azure.R, PHUIStyle::Azure.G, PHUIStyle::Azure.B, 0.85f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab|Style")
-	FLinearColor SelectedColor = FLinearColor(0.12f, 0.78f, 0.88f, 0.95f);
+	FLinearColor SelectedColor = FLinearColor(0.900f, 0.960f, 1.000f, 1.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab|Style")
-	FLinearColor NormalTextColor = FLinearColor(0.78f, 0.93f, 0.96f, 1.0f);
+	FLinearColor NormalTextColor = PHUIStyle::TextPrimary;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab|Style")
-	FLinearColor SelectedTextColor = FLinearColor::White;
+	FLinearColor SelectedTextColor = PHUIStyle::AzureDeep;
 
 private:
 	void ApplySelectionStyle();
