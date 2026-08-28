@@ -4,6 +4,7 @@
 #include "Item/Library/FunctionLibraries/ItemAffixFunctionLibrary.h"
 #include "Item/Library/FunctionLibraries/ItemTooltipLineFunctionLibrary.h"
 #include "Item/Library/Structs/ItemAttributeStructs.h"
+#include "Item/Library/Structs/ItemRequirementStructs.h"
 #include "Item/Library/Structs/ItemStructs.h"
 
 namespace ItemTooltipSection
@@ -69,6 +70,61 @@ namespace ItemTooltipSection
 				*UItemTooltipLineFunctionLibrary::FormatTooltipNumber(Durability.CurrentDurability),
 				*UItemTooltipLineFunctionLibrary::FormatTooltipNumber(Durability.MaxDurability))),
 			UItemTooltipLineFunctionLibrary::GetMutedTextColor());
+	}
+
+	const TCHAR* GetRequirementLabel(const EItemRequirementType RequirementType)
+	{
+		switch (RequirementType)
+		{
+		case EItemRequirementType::Level:        return TEXT("Level");
+		case EItemRequirementType::Strength:     return TEXT("Strength");
+		case EItemRequirementType::Dexterity:    return TEXT("Dexterity");
+		case EItemRequirementType::Intelligence: return TEXT("Intelligence");
+		case EItemRequirementType::Endurance:    return TEXT("Endurance");
+		case EItemRequirementType::Affliction:   return TEXT("Affliction");
+		case EItemRequirementType::Luck:         return TEXT("Luck");
+		case EItemRequirementType::Covenant:     return TEXT("Covenant");
+		default:                                 return TEXT("Requirement");
+		}
+	}
+
+	bool IsDisplayableRequirement(const FItemRequirementStatus& Status)
+	{
+		return Status.RequiredValue > 0.0f
+			&& (Status.RequirementType != EItemRequirementType::Level || Status.RequiredValue > 1.0f);
+	}
+
+	void AddEvaluatedRequirementLines(
+		FItemTooltipSection& Section,
+		const FItemRequirementCheckResult& RequirementResult)
+	{
+		for (const FItemRequirementStatus& Status : RequirementResult.Checks)
+		{
+			if (!IsDisplayableRequirement(Status))
+			{
+				continue;
+			}
+
+			const FString Current = UItemTooltipLineFunctionLibrary::FormatTooltipNumber(Status.CurrentValue);
+			const FString Required = UItemTooltipLineFunctionLibrary::FormatTooltipNumber(Status.RequiredValue);
+			const FString Value = Status.bMet
+				? FString::Printf(TEXT("%s / %s"), *Current, *Required)
+				: FString::Printf(
+					TEXT("%s / %s (%s missing)"),
+					*Current,
+					*Required,
+					*UItemTooltipLineFunctionLibrary::FormatTooltipNumber(Status.MissingValue));
+
+			Section.Lines.Add(UItemTooltipLineFunctionLibrary::MakeTooltipLine(
+				FText::FromString(GetRequirementLabel(Status.RequirementType)),
+				FText::FromString(Value),
+				Status.bMet
+					? UItemTooltipLineFunctionLibrary::GetPositiveTextColor()
+					: UItemTooltipLineFunctionLibrary::GetNegativeTextColor(),
+				Status.bMet ? EItemTooltipLineStyle::Property : EItemTooltipLineStyle::Warning,
+				true,
+				!Status.bMet));
+		}
 	}
 }
 
@@ -222,18 +278,28 @@ void UItemTooltipSectionFunctionLibrary::AddArmorStatsSection(
 	AddSectionIfAny(TooltipData, Section);
 }
 
-void UItemTooltipSectionFunctionLibrary::AddRequirementsSection(FItemTooltipData& TooltipData, const FItemStatRequirement& Requirements)
+void UItemTooltipSectionFunctionLibrary::AddRequirementsSection(
+	FItemTooltipData& TooltipData,
+	const FItemStatRequirement& Requirements,
+	const FItemRequirementCheckResult* RequirementResult)
 {
 	FItemTooltipSection Section = MakeTooltipSection(EItemTooltipSectionType::Requirements, FText::FromString(TEXT("Requirements")));
 
-	UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Level"), Requirements.RequiredLevel > 1 ? Requirements.RequiredLevel : 0);
-	UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Strength"), Requirements.RequiredStrength);
-	UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Dexterity"), Requirements.RequiredDexterity);
-	UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Intelligence"), Requirements.RequiredIntelligence);
-	UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Endurance"), Requirements.RequiredEndurance);
-	UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Affliction"), Requirements.RequiredAffliction);
-	UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Luck"), Requirements.RequiredLuck);
-	UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Covenant"), Requirements.RequiredCovenant);
+	if (RequirementResult && RequirementResult->bStatsAvailable)
+	{
+		ItemTooltipSection::AddEvaluatedRequirementLines(Section, *RequirementResult);
+	}
+	else
+	{
+		UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Level"), Requirements.RequiredLevel > 1 ? Requirements.RequiredLevel : 0);
+		UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Strength"), Requirements.RequiredStrength);
+		UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Dexterity"), Requirements.RequiredDexterity);
+		UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Intelligence"), Requirements.RequiredIntelligence);
+		UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Endurance"), Requirements.RequiredEndurance);
+		UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Affliction"), Requirements.RequiredAffliction);
+		UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Luck"), Requirements.RequiredLuck);
+		UItemTooltipLineFunctionLibrary::AddTooltipPositiveLine(Section.Lines, TEXT("Covenant"), Requirements.RequiredCovenant);
+	}
 
 	AddSectionIfAny(TooltipData, Section);
 }

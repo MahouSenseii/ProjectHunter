@@ -113,6 +113,30 @@ UItemInstance* FEquipmentMutationHelper::EquipItemInternal(UEquipmentManager& Ma
 		return nullptr;
 	}
 
+	const FItemRequirementCheckResult RequirementResult = Manager.EvaluateItemRequirements(Item);
+	if (!RequirementResult.bMeetsRequirements)
+	{
+		if (!RequirementResult.bStatsAvailable)
+		{
+			PH_LOG_WARNING(LogEquipmentManager,
+				"EquipItemInternal rejected Item=%s because the owner's live stats were unavailable.",
+				*GetNameSafe(Item));
+		}
+		else if (!RequirementResult.Failures.IsEmpty())
+		{
+			const FItemRequirementFailure& Failure = RequirementResult.Failures[0];
+			PH_LOG_WARNING(LogEquipmentManager,
+				"EquipItemInternal rejected Item=%s: Requirement=%d Current=%.2f Required=%.2f Missing=%.2f (%d total failures).",
+				*GetNameSafe(Item),
+				static_cast<int32>(Failure.RequirementType),
+				Failure.CurrentValue,
+				Failure.RequiredValue,
+				Failure.MissingValue,
+				RequirementResult.Failures.Num());
+		}
+		return nullptr;
+	}
+
 	if (Slot == EEquipmentSlot::ES_None && Manager.bAutoSlotSelection)
 	{
 		Slot = FEquipmentSlotResolver::DetermineEquipmentSlot(Manager, Item);

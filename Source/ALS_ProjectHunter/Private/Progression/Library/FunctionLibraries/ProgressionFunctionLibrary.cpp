@@ -2,7 +2,9 @@
 
 int64 UProgressionFunctionLibrary::GetXPForLevel(const int32 TargetLevel, const float BaseXPPerLevel, const float XPScalingExponent)
 {
-	if (TargetLevel <= 1)
+	// Level 0 is the starting level and costs nothing to be at. Level 1 onwards
+	// must cost something, or a level-0 character levels up on its first XP.
+	if (TargetLevel <= 0)
 	{
 		return 0;
 	}

@@ -6,6 +6,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Progression/Helpers/ProgressionAbilityHelper.h"
 #include "Progression/Helpers/ProgressionStatPointHelper.h"
+#include "Stats/Components/StatsManager.h"
+#include "Stats/Data/BaseStatsData.h"
 #include "Progression/Library/FunctionLibraries/ProgressionFunctionLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogCharacterProgressionManager);
@@ -37,12 +39,61 @@ void UCharacterProgressionManager::BeginPlay()
 
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
+		// Seed before syncing, or the component default is what reaches the
+		// attribute and the data asset's PlayerLevel never takes effect.
+		SeedStartingLevelFromStatsData();
 		FProgressionAbilityHelper::TrySyncPlayerLevelAttribute(CachedASC.Get(), Level);
 	}
 
 	RebuildSpentStatPointsCache();
 
 	XPToNextLevel = Level >= MaxLevel ? 0 : GetXPForLevel(Level + 1);
+}
+
+void UCharacterProgressionManager::SeedStartingLevelFromStatsData()
+{
+	if (!bSeedStartingLevelFromStatsData || bHasSeededStartingLevel)
+	{
+		return;
+	}
+
+	const AActor* Owner = GetOwner();
+	const UStatsManager* Stats = Owner ? Owner->FindComponentByClass<UStatsManager>() : nullptr;
+	const UBaseStatsData* Data = Stats ? Stats->GetStatsDataAsset() : nullptr;
+	if (!Data)
+	{
+		// Not fatal - stats may simply not be configured yet, and this runs again
+		// once initialization completes. Logged because a silent no-op here looks
+		// exactly like the feature being broken.
+		UE_LOG(LogCharacterProgressionManager, Verbose,
+			TEXT("SeedStartingLevelFromStatsData: %s has no stats data yet (StatsManager=%s); will retry after stats init."),
+			*GetNameSafe(Owner), *GetNameSafe(Stats));
+		return;
+	}
+
+	// GetStatValue only succeeds for an authored row, so a character whose data
+	// asset says nothing about level keeps whatever the component was set to.
+	float AuthoredLevel = 0.0f;
+	if (!Data->GetStatValue(TEXT("PlayerLevel"), AuthoredLevel))
+	{
+		UE_LOG(LogCharacterProgressionManager, Warning,
+			TEXT("SeedStartingLevelFromStatsData: %s does not author PlayerLevel, so %s keeps its component "
+			     "default of %d. Tick Override Value on PlayerLevel to control the starting level from data."),
+			*GetNameSafe(Data), *GetNameSafe(Owner), Level);
+		bHasSeededStartingLevel = true;
+		return;
+	}
+
+	const int32 SeededLevel = FMath::Clamp(FMath::RoundToInt(AuthoredLevel), MinLevel, MaxLevel);
+	if (SeededLevel != Level)
+	{
+		UE_LOG(LogCharacterProgressionManager, Log,
+			TEXT("SeedStartingLevelFromStatsData: %s starting at level %d from %s (component default was %d)."),
+			*GetNameSafe(Owner), SeededLevel, *GetNameSafe(Data), Level);
+	}
+
+	Level = SeededLevel;
+	bHasSeededStartingLevel = true;
 }
 
 void UCharacterProgressionManager::AwardExperienceFromKill(APHBaseCharacter* KilledCharacter)

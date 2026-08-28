@@ -14,6 +14,20 @@ class ALS_PROJECTHUNTER_API UItemRequirementFunctionLibrary : public UBlueprintF
 
 public:
 	UFUNCTION(BlueprintPure, Category = "Item|Requirements", meta = (
+		DisplayName = "Evaluate Item Requirements",
+		Keywords = "requirements meet stat check hunter failure missing"))
+	static FItemRequirementCheckResult EvaluateItemRequirements(
+		const FItemStatRequirement& Requirements,
+		float HunterLevel,
+		float Strength,
+		float Dexterity,
+		float Intelligence,
+		float Endurance,
+		float Affliction,
+		float Luck,
+		float Covenant);
+
+	UFUNCTION(BlueprintPure, Category = "Item|Requirements", meta = (
 		DisplayName = "Meets Item Requirements",
 		Keywords = "requirements meet stat check hunter"))
 	static bool MeetsItemRequirements(

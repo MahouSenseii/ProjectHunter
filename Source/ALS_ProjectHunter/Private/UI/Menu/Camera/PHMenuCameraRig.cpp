@@ -3,11 +3,14 @@
 #include "UI/Menu/Camera/PHMenuCameraRig.h"
 
 #include "Camera/CameraComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Scene.h"
+#include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
+#include "UI/Menu/Camera/PHMenuCameraBehavior.h"
 #include "UObject/ConstructorHelpers.h"
 
 namespace
@@ -66,6 +69,24 @@ APHMenuCameraRig::APHMenuCameraRig()
 	RimLight->SetupAttachment(PivotRoot);
 	RimLight->SetRelativeLocationAndRotation(RimLocation, MakeAimAtPivotRotation(RimLocation));
 
+	CameraBehavior = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CameraBehavior"));
+	CameraBehavior->SetupAttachment(PivotRoot);
+	CameraBehavior->bHiddenInGame = true;
+	CameraBehavior->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// The mesh is never rendered, so without this the pose - and therefore every
+	// curve the framing reads - would stop updating.
+	CameraBehavior->VisibilityBasedAnimTickOption =
+		EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+
+	// ALS ships a dummy skeleton for exactly this purpose; reusing it means the
+	// anim Blueprint can be created without any new art.
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> BehaviorMesh(
+		TEXT("/ALSV4_CPP/AdvancedLocomotionV4/Blueprints/CameraSystem/Camera.Camera"));
+	if (BehaviorMesh.Succeeded())
+	{
+		CameraBehavior->SetSkeletalMesh(BehaviorMesh.Object);
+	}
+
 	Backdrop = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Backdrop"));
 	Backdrop->SetupAttachment(PivotRoot);
 	// FRotator(90,0,0) maps the plane's +Z normal onto -X, which is where the camera is.
@@ -88,6 +109,11 @@ void APHMenuCameraRig::BeginPlay()
 	Super::BeginPlay();
 
 	ApplyLightingSettings();
+
+	if (CameraBehaviorClass && CameraBehavior)
+	{
+		CameraBehavior->SetAnimInstanceClass(CameraBehaviorClass);
+	}
 
 	Backdrop->SetRelativeLocation(FVector(BackdropDistance, 0.0f, 0.0f));
 	Backdrop->SetRelativeScale3D(FVector(BackdropScale));
@@ -204,4 +230,9 @@ void APHMenuCameraRig::SetRigVisible(const bool bNewVisible)
 	SetActorHiddenInGame(!bNewVisible);
 	SetStudioLightingVisible(bNewVisible);
 	SetBackdropVisible(bNewVisible);
+}
+
+UPHMenuCameraBehavior* APHMenuCameraRig::GetCameraBehavior() const
+{
+	return CameraBehavior ? Cast<UPHMenuCameraBehavior>(CameraBehavior->GetAnimInstance()) : nullptr;
 }

@@ -14,6 +14,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "UI/HUD/HunterHUD.h"
+#include "UI/Menu/Camera/PHMenuCameraBehavior.h"
 #include "UI/Menu/Camera/PHMenuCameraRig.h"
 
 DEFINE_LOG_CATEGORY(LogMenuCamera);
@@ -398,6 +399,10 @@ void UPHMenuCameraComponent::TickComponent(const float DeltaTime, const ELevelTi
 		PollCursorInput();
 	}
 
+	// Pushed before the framing is resolved so the curves read this frame's
+	// state rather than trailing it by one.
+	PushBehaviorState();
+
 	UpdateTurntable(UnscaledDelta);
 	UpdateFraming(UnscaledDelta);
 }
@@ -513,7 +518,7 @@ void UPHMenuCameraComponent::UpdateFraming(const float DeltaTime)
 		return;
 	}
 
-	const FPHMenuCameraView TargetView = ResolveTargetView();
+	const FPHMenuCameraView TargetView = ApplyBehaviorCurves(ResolveTargetView());
 
 	if (DeltaTime > 0.0f)
 	{
@@ -663,4 +668,51 @@ void UPHMenuCameraComponent::ReseedAlsCamera(APHBaseCharacter* Character) const
 	{
 		AlsCameraManager->OnPossess(Character);
 	}
+}
+
+void UPHMenuCameraComponent::PushBehaviorState() const
+{
+	if (UPHMenuCameraBehavior* Behavior = CameraRig ? CameraRig->GetCameraBehavior() : nullptr)
+	{
+		Behavior->UpdateMenuState(ActiveMenuType, FocusedEquipmentSlot, ZoomMultiplier,
+			TurntableYaw, bTurntableDragActive, bMenuCameraActive);
+	}
+}
+
+FPHMenuCameraView UPHMenuCameraComponent::ApplyBehaviorCurves(const FPHMenuCameraView& DataView) const
+{
+	const UPHMenuCameraBehavior* Behavior = CameraRig ? CameraRig->GetCameraBehavior() : nullptr;
+	if (!Behavior)
+	{
+		return DataView;
+	}
+
+	const float Weight = FMath::Clamp(Behavior->GetCurveValue(PHMenuCameraCurves::Override), 0.0f, 1.0f);
+	if (Weight <= KINDA_SMALL_NUMBER)
+	{
+		return DataView;
+	}
+
+	FPHMenuCameraView Result = DataView;
+
+	// A curve the anim Blueprint does not define is skipped, not read as zero -
+	// otherwise adding Menu_Distance to one state would silently collapse the
+	// FOV and every offset along with it.
+	const auto Blend = [Behavior, Weight](const FName CurveName, float& InOutValue)
+	{
+		float CurveValue = 0.0f;
+		if (Behavior->GetCurveValue(CurveName, CurveValue))
+		{
+			InOutValue = FMath::Lerp(InOutValue, CurveValue, Weight);
+		}
+	};
+
+	Blend(PHMenuCameraCurves::Distance, Result.Distance);
+	Blend(PHMenuCameraCurves::PivotHeight, Result.PivotHeightOffset);
+	Blend(PHMenuCameraCurves::YawOffset, Result.YawOffset);
+	Blend(PHMenuCameraCurves::Pitch, Result.Pitch);
+	Blend(PHMenuCameraCurves::LateralOffset, Result.LateralOffset);
+	Blend(PHMenuCameraCurves::FOV, Result.FOV);
+
+	return Result;
 }

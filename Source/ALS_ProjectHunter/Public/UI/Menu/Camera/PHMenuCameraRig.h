@@ -7,6 +7,8 @@
 #include "PHMenuCameraRig.generated.h"
 
 class UCameraComponent;
+class UPHMenuCameraBehavior;
+class USkeletalMeshComponent;
 class USpotLightComponent;
 class UStaticMesh;
 class UStaticMeshComponent;
@@ -36,6 +38,13 @@ public:
 	UCameraComponent* GetCameraComponent() const { return Camera; }
 
 	/**
+	 * The anim instance driving the framing curves, or null when no anim
+	 * Blueprint is assigned - in which case the camera stays fully data-driven.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Menu Camera Rig")
+	UPHMenuCameraBehavior* GetCameraBehavior() const;
+
+	/**
 	 * Places the camera relative to the pivot this actor sits on.
 	 * Distance runs backwards along -X, Lateral along +Y, Height along +Z.
 	 */
@@ -61,6 +70,17 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Menu Camera Rig")
 	TObjectPtr<UCameraComponent> Camera;
+
+	/**
+	 * Hidden mesh that exists only to run the camera anim graph, mirroring how
+	 * AALSPlayerCameraManager carries its own CameraBehavior component.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Menu Camera Rig|Behavior")
+	TObjectPtr<USkeletalMeshComponent> CameraBehavior;
+
+	/** Assign an anim Blueprint here to author the framing in a state machine. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Menu Camera Rig|Behavior")
+	TSubclassOf<UPHMenuCameraBehavior> CameraBehaviorClass;
 
 	/** Front-left and above. The light that describes the silhouette. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Menu Camera Rig|Lighting")

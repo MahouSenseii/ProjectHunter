@@ -7,16 +7,12 @@
 #include "GameFramework/Character.h"
 #include "Tags/PHGameplayTags.h"
 #include "Tags/Debug/TagDebugManager.h"
+#include "Tags/Helpers/TagConditionEvaluator.h"
 
 DEFINE_LOG_CATEGORY(LogTagManager);
 
 namespace TagManagerPrivate
 {
-	constexpr float LowResourceThreshold = 0.35f;
-	constexpr float MovementStartSpeedThresholdSq = 400.0f;
-	constexpr float MovementStopSpeedThresholdSq = 25.0f;
-	constexpr float ConditionRefreshInterval = 0.1f;
-
 	float GetEffectiveMaxValue(const float EffectiveMaxValue, const float RawMaxValue)
 	{
 		return EffectiveMaxValue > 0.0f ? EffectiveMaxValue : FMath::Max(RawMaxValue, 0.0f);
@@ -27,6 +23,20 @@ namespace TagManagerPrivate
 		return HunterCharacter
 			&& bMoving
 			&& HunterCharacter->GetDesiredGait() == EALSGait::Sprinting;
+	}
+
+	bool CanProjectAuthoritativeConditions(const UTagManager& Manager)
+	{
+		const AActor* Owner = Manager.GetOwner();
+		return !Owner || Owner->HasAuthority();
+	}
+
+	EGameplayTagReplicationState GetReplicationState(const UTagManager& Manager)
+	{
+		const AActor* Owner = Manager.GetOwner();
+		return Owner && Owner->HasAuthority()
+			? EGameplayTagReplicationState::TagOnly
+			: EGameplayTagReplicationState::None;
 	}
 
 	bool HasInitializedSiblingTagManager(AActor* Owner, const UTagManager* CurrentManager)
@@ -105,6 +115,8 @@ void UTagManager::BeginPlay()
 void UTagManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UnbindAttributeChangeDelegates();
+	ClearManagedTagStates(ASC);
+	ASC = nullptr;
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -131,7 +143,7 @@ void UTagManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComp
 	}
 
 	ConditionRefreshAccumulator += DeltaTime;
-	if (ConditionRefreshAccumulator >= TagManagerPrivate::ConditionRefreshInterval)
+	if (ConditionRefreshAccumulator >= FMath::Max(ConditionThresholds.MovementRefreshInterval, 0.01f))
 	{
 		ConditionRefreshAccumulator = 0.0f;
 		RefreshMovementConditionTags();
@@ -145,24 +157,33 @@ void UTagManager::Initialize(UAbilitySystemComponent* InASC)
 		return;
 	}
 
-	if (ASC)
+	if (ASC && ASC != InASC)
+	{
+		UnbindAttributeChangeDelegates();
+		ClearManagedTagStates(ASC);
+	}
+	else if (ASC)
 	{
 		UnbindAttributeChangeDelegates();
 	}
 
 	ASC = InASC;
+	const bool bProjectsConditions = TagManagerPrivate::CanProjectAuthoritativeConditions(*this);
 
 #if UE_BUILD_SHIPPING
-	SetComponentTickEnabled(ASC != nullptr);
+	SetComponentTickEnabled(ASC != nullptr && bProjectsConditions);
 #else
-	SetComponentTickEnabled(ASC != nullptr || DebugManager.bEnableDebug);
+	SetComponentTickEnabled((ASC != nullptr && bProjectsConditions) || DebugManager.bEnableDebug);
 #endif
 
 	UE_LOG(LogTagManager, Verbose, TEXT("Initialized TagManager for owner %s with ASC %s."), *GetNameSafe(GetOwner()), *GetNameSafe(ASC));
 
 	ApplyPendingStates();
-	BindAttributeChangeDelegates();
-	RefreshBaseConditionTags();
+	if (bProjectsConditions)
+	{
+		BindAttributeChangeDelegates();
+		RefreshBaseConditionTags();
+	}
 }
 
 void UTagManager::AddTag(const FGameplayTag& Tag)
@@ -180,12 +201,13 @@ void UTagManager::AddTag(const FGameplayTag& Tag)
 
 	PendingTagStates.Remove(Tag);
 
-	if (ASC->HasMatchingGameplayTag(Tag))
+	if (ManagedLooseTags.Contains(Tag))
 	{
 		return;
 	}
 
-	ASC->AddLooseGameplayTag(Tag);
+	ManagedLooseTags.Add(Tag);
+	ASC->AddLooseGameplayTag(Tag, 1, TagManagerPrivate::GetReplicationState(*this));
 	UE_LOG(LogTagManager, VeryVerbose, TEXT("Added tag %s to owner %s."), *Tag.ToString(), *GetNameSafe(GetOwner()));
 }
 
@@ -204,14 +226,16 @@ void UTagManager::RemoveTag(const FGameplayTag& Tag)
 
 	PendingTagStates.Remove(Tag);
 
-	const int32 ExistingCount = ASC->GetTagCount(Tag);
-	if (ExistingCount <= 0)
+	if (!ManagedLooseTags.Remove(Tag))
 	{
 		return;
 	}
 
-	ASC->RemoveLooseGameplayTag(Tag, ExistingCount);
-	UE_LOG(LogTagManager, VeryVerbose, TEXT("Removed tag %s from owner %s. ClearedCount=%d"), *Tag.ToString(), *GetNameSafe(GetOwner()), ExistingCount);
+	if (ASC->GetTagCount(Tag) > 0)
+	{
+		ASC->RemoveLooseGameplayTag(Tag, 1, TagManagerPrivate::GetReplicationState(*this));
+	}
+	UE_LOG(LogTagManager, VeryVerbose, TEXT("Removed managed tag %s from owner %s."), *Tag.ToString(), *GetNameSafe(GetOwner()));
 }
 
 void UTagManager::SetTagState(const FGameplayTag& Tag, const bool bEnabled)
@@ -286,7 +310,7 @@ bool UTagManager::HasAllTags(const FGameplayTagContainer& Tags) const
 
 void UTagManager::RefreshBaseConditionTags()
 {
-	if (!ASC)
+	if (!ASC || !TagManagerPrivate::CanProjectAuthoritativeConditions(*this))
 	{
 		return;
 	}
@@ -310,14 +334,14 @@ void UTagManager::RefreshBaseConditionTags()
 		const bool bDead = HasTag(Tags.Condition_Dead);
 		SetTagState(Tags.Condition_Alive, Health > 0.0f && !bDead);
 
-		SetTagState(Tags.Condition_OnFullHealth, ComputeFullResourceState(Health, MaxHealth));
-		SetTagState(Tags.Condition_OnLowHealth, ComputeLowResourceState(Health, MaxHealth));
-		SetTagState(Tags.Condition_OnFullMana, ComputeFullResourceState(Mana, MaxMana));
-		SetTagState(Tags.Condition_OnLowMana, ComputeLowResourceState(Mana, MaxMana));
-		SetTagState(Tags.Condition_OnFullStamina, ComputeFullResourceState(Stamina, MaxStamina));
-		SetTagState(Tags.Condition_OnLowStamina, ComputeLowResourceState(Stamina, MaxStamina));
-		SetTagState(Tags.Condition_OnFullArcaneShield, ComputeFullResourceState(ArcaneShield, MaxArcaneShield));
-		SetTagState(Tags.Condition_OnLowArcaneShield, ComputeLowResourceState(ArcaneShield, MaxArcaneShield));
+		RefreshResourceConditionTags(Tags.Condition_OnLowHealth, Tags.Condition_OnFullHealth, Health, MaxHealth);
+		RefreshResourceConditionTags(Tags.Condition_OnLowMana, Tags.Condition_OnFullMana, Mana, MaxMana);
+		RefreshResourceConditionTags(Tags.Condition_OnLowStamina, Tags.Condition_OnFullStamina, Stamina, MaxStamina);
+		RefreshResourceConditionTags(
+			Tags.Condition_OnLowArcaneShield,
+			Tags.Condition_OnFullArcaneShield,
+			ArcaneShield,
+			MaxArcaneShield);
 	}
 
 	const bool bMoving = ComputeMovementConditionState(CharacterOwner);
@@ -326,10 +350,10 @@ void UTagManager::RefreshBaseConditionTags()
 
 	const bool bActivelySprinting = HunterCharacter
 		? TagManagerPrivate::IsActivelySprinting(HunterCharacter, bMoving)
-		: HasTag(Tags.Condition_Sprinting);
+		: HasExternalTagSource(Tags.Condition_Sprinting);
 	SetTagState(Tags.Condition_Sprinting, bActivelySprinting);
 
-	const bool bInCombat = HasTag(Tags.Condition_InCombat)
+	const bool bInCombat = HasExternalTagSource(Tags.Condition_InCombat)
 		|| HasTag(Tags.Condition_TakingDamage)
 		|| HasTag(Tags.Condition_DealingDamage)
 		|| HasTag(Tags.Condition_RecentlyHit)
@@ -374,6 +398,37 @@ void UTagManager::ApplyPendingStates()
 	}
 }
 
+void UTagManager::ClearManagedTagStates(UAbilitySystemComponent* TargetASC)
+{
+	if (!TargetASC)
+	{
+		ManagedLooseTags.Reset();
+		return;
+	}
+
+	TArray<FGameplayTag> TagsToRemove = ManagedLooseTags.Array();
+	ManagedLooseTags.Reset();
+
+	for (const FGameplayTag& Tag : TagsToRemove)
+	{
+		if (Tag.IsValid() && TargetASC->GetTagCount(Tag) > 0)
+		{
+			TargetASC->RemoveLooseGameplayTag(Tag, 1, TagManagerPrivate::GetReplicationState(*this));
+		}
+	}
+}
+
+bool UTagManager::HasExternalTagSource(const FGameplayTag& Tag) const
+{
+	if (!ASC || !Tag.IsValid())
+	{
+		return false;
+	}
+
+	const int32 ManagedCount = ManagedLooseTags.Contains(Tag) ? 1 : 0;
+	return ASC->GetTagCount(Tag) > ManagedCount;
+}
+
 bool UTagManager::HasPendingEnabledTag(const FGameplayTag& Tag) const
 {
 	if (const bool* bPendingEnabled = PendingTagStates.Find(Tag))
@@ -394,25 +449,32 @@ bool UTagManager::ComputeMovementConditionState(const ACharacter* CharacterOwner
 	}
 
 	const float SpeedSq = CharacterOwner->GetVelocity().SizeSquared2D();
-	const bool bMoving = !bHasMovementConditionState
-		? SpeedSq > TagManagerPrivate::MovementStartSpeedThresholdSq
-		: (bLastMovementConditionMoving
-			? SpeedSq > TagManagerPrivate::MovementStopSpeedThresholdSq
-			: SpeedSq > TagManagerPrivate::MovementStartSpeedThresholdSq);
+	const bool bMoving = FTagConditionEvaluator::EvaluateMovement(
+		SpeedSq,
+		bHasMovementConditionState,
+		bLastMovementConditionMoving,
+		ConditionThresholds);
 
 	bHasMovementConditionState = true;
 	bLastMovementConditionMoving = bMoving;
 	return bMoving;
 }
 
-bool UTagManager::ComputeLowResourceState(const float CurrentValue, const float MaxValue) const
+void UTagManager::RefreshResourceConditionTags(
+	const FGameplayTag& LowTag,
+	const FGameplayTag& FullTag,
+	const float CurrentValue,
+	const float MaxValue)
 {
-	return MaxValue > 0.0f && (CurrentValue / MaxValue) <= TagManagerPrivate::LowResourceThreshold;
-}
+	const FTagResourceConditionState State = FTagConditionEvaluator::EvaluateResource(
+		CurrentValue,
+		MaxValue,
+		ManagedLooseTags.Contains(LowTag),
+		ManagedLooseTags.Contains(FullTag),
+		ConditionThresholds);
 
-bool UTagManager::ComputeFullResourceState(const float CurrentValue, const float MaxValue) const
-{
-	return MaxValue > 0.0f && CurrentValue >= (MaxValue - KINDA_SMALL_NUMBER);
+	SetTagState(LowTag, State.bLow);
+	SetTagState(FullTag, State.bFull);
 }
 
 const UHunterAttributeSet* UTagManager::GetHunterAttributeSet() const
@@ -429,7 +491,7 @@ void UTagManager::SetTagDebugEnabled(bool bEnable)
 	const bool bWasEnabled = DebugManager.bEnableDebug;
 	DebugManager.bEnableDebug = bEnable;
 
-	SetComponentTickEnabled(bEnable || ASC != nullptr);
+	SetComponentTickEnabled(bEnable || (ASC != nullptr && TagManagerPrivate::CanProjectAuthoritativeConditions(*this)));
 
 	if (bWasEnabled && !DebugManager.bEnableDebug)
 	{
@@ -451,7 +513,7 @@ bool UTagManager::GetOwnedTags(FGameplayTagContainer& OutTags) const
 
 void UTagManager::RefreshMovementConditionTags()
 {
-	if (!ASC)
+	if (!ASC || !TagManagerPrivate::CanProjectAuthoritativeConditions(*this))
 	{
 		return;
 	}
@@ -466,10 +528,11 @@ void UTagManager::RefreshMovementConditionTags()
 
 	const bool bActivelySprinting = HunterCharacter
 		? TagManagerPrivate::IsActivelySprinting(HunterCharacter, bMoving)
-		: HasTag(Tags.Condition_Sprinting);
+		: HasExternalTagSource(Tags.Condition_Sprinting);
 	SetTagState(Tags.Condition_Sprinting, bActivelySprinting);
 
-	const bool bInCombat = HasTag(Tags.Condition_TakingDamage)
+	const bool bInCombat = HasExternalTagSource(Tags.Condition_InCombat)
+		|| HasTag(Tags.Condition_TakingDamage)
 		|| HasTag(Tags.Condition_DealingDamage)
 		|| HasTag(Tags.Condition_RecentlyHit)
 		|| HasTag(Tags.Condition_RecentlyUsedSkill);

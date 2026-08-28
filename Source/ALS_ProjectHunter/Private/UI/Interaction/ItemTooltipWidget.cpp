@@ -2,10 +2,12 @@
 
 #include "Animation/WidgetAnimation.h"
 #include "Blueprint/WidgetTree.h"
+#include "Character/PHBaseCharacter.h"
 #include "Components/Border.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
+#include "Equipment/Components/EquipmentManager.h"
 #include "UI/Interaction/ItemTooltipSectionWidget.h"
 #include "Item/Library/FunctionLibraries/ItemTooltipFunctionLibrary.h"
 #include "Engine/Texture2D.h"
@@ -92,12 +94,15 @@ void UItemTooltipWidget::UpdateTooltip(UItemInstance* Item)
 		return;
 	}
 
-	if (DisplayedItem.Get() == Item && TooltipData.bHasItem)
-	{
-		return;
-	}
+	const APHBaseCharacter* ViewerCharacter = Cast<APHBaseCharacter>(GetOwningPlayerPawn());
+	UEquipmentManager* ViewerEquipmentManager = ViewerCharacter
+		? ViewerCharacter->GetEquipmentManager()
+		: nullptr;
 
-	if (!UItemTooltipFunctionLibrary::BuildItemTooltipData(Item, TooltipData))
+	if (!UItemTooltipFunctionLibrary::BuildItemTooltipDataForViewer(
+		Item,
+		ViewerEquipmentManager,
+		TooltipData))
 	{
 		ClearTooltip();
 		return;

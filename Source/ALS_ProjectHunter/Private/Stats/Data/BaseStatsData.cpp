@@ -1,5 +1,7 @@
 #include "Stats/Data/BaseStatsData.h"
 
+#include "GameplayEffect.h"
+
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AttributeSet.h"
 #include "UObject/Field.h"
@@ -538,7 +540,21 @@ namespace BaseStatsDataPrivate
 
 	static constexpr FRequiredStatDefault RequiredNonZeroDefaults[] =
 	{
-		{TEXT("PlayerLevel"), 1.0f},
+
+		// Regeneration and drain are Rate * Amount, so a zero rate silently
+		// disables the resource entirely no matter what the amount says. These
+		// were previously forced to 1 by an initialization effect; they are data
+		// now, which means they have to be defaulted here instead.
+		{TEXT("HealthRegenRate"), 1.0f},
+		{TEXT("ManaRegenRate"), 1.0f},
+		{TEXT("StaminaRegenRate"), 1.0f},
+		{TEXT("ArcaneShieldRegenRate"), 1.0f},
+		{TEXT("StaminaDegenRate"), 1.0f},
+		// Multiplicitive in HunterGE_DerivedPrimaryVitals: a zero base can never
+		// be scaled up, so stamina would never drain. The playable value lives in
+		// the baseline; this only guarantees it is never zero.
+		{TEXT("StaminaDegenAmount"), 1.0f},
+
 		{TEXT("XPGainMultiplier"), 1.0f},
 		{TEXT("XPPenalty"), 1.0f},
 		{TEXT("BlockStaminaCostMultiplier"), 1.0f},
@@ -1181,4 +1197,308 @@ void UBaseStatsData::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 		ValidateStats();
 	}
 }
+#endif
+
+#if WITH_EDITOR
+
+namespace BaseStatsDataEditorPrivate
+{
+	/**
+	 * Matches FStatsInitializer's own modifier walk exactly - if the two ever
+	 * disagree, the button would clear the wrong rows and the effect would stay
+	 * blocked with no indication why.
+	 */
+	FName GetModifierAttributeName(const FGameplayModifierInfo& Modifier)
+	{
+		if (!Modifier.Attribute.IsValid())
+		{
+			return NAME_None;
+		}
+
+		if (const FProperty* AttributeProperty = Modifier.Attribute.GetUProperty())
+		{
+			return AttributeProperty->GetFName();
+		}
+
+		const FString AttributeName = Modifier.Attribute.GetName();
+		return AttributeName.IsEmpty() ? NAME_None : FName(*AttributeName);
+	}
+
+	void GatherEffectAttributes(const TSubclassOf<UGameplayEffect>& EffectClass, TSet<FName>& OutNames)
+	{
+		if (!EffectClass)
+		{
+			return;
+		}
+
+		const UGameplayEffect* EffectCDO = EffectClass->GetDefaultObject<UGameplayEffect>();
+		if (!EffectCDO)
+		{
+			return;
+		}
+
+		for (const FGameplayModifierInfo& Modifier : EffectCDO->Modifiers)
+		{
+			// Override only: an Additive modifier composes with the authored base
+			// rather than replacing it, so that base must stay authored.
+			if (Modifier.ModifierOp != EGameplayModOp::Override)
+			{
+				continue;
+			}
+
+			const FName AttributeName = GetModifierAttributeName(Modifier);
+			if (AttributeName != NAME_None)
+			{
+				OutNames.Add(AttributeName);
+			}
+		}
+	}
+}
+
+void UBaseStatsData::ClearOverridesDrivenByInitializationEffects()
+{
+	TSet<FName> DrivenAttributes;
+	for (const TSubclassOf<UGameplayEffect>& EffectClass : InitializationEffects)
+	{
+		BaseStatsDataEditorPrivate::GatherEffectAttributes(EffectClass, DrivenAttributes);
+	}
+
+	if (DrivenAttributes.IsEmpty())
+	{
+		UE_LOG(LogBaseStatsData, Warning,
+			TEXT("ClearOverridesDrivenByInitializationEffects: %s has no InitializationEffects with attribute "
+			     "modifiers, so there is nothing a derived effect would drive."),
+			*GetName());
+		return;
+	}
+
+	Modify();
+
+	TArray<FName> Cleared;
+	for (FStatInitializationEntry& Entry : BaseAttributes)
+	{
+		if (Entry.bOverrideValue && DrivenAttributes.Contains(Entry.StatName))
+		{
+			Entry.bOverrideValue = false;
+			Cleared.Add(Entry.StatName);
+		}
+	}
+
+	Cleared.Sort(FNameLexicalLess());
+
+	UE_LOG(LogBaseStatsData, Log,
+		TEXT("ClearOverridesDrivenByInitializationEffects: %s - %d attribute(s) are effect-driven, cleared %d "
+		     "override(s): %s. Save the asset to persist."),
+		*GetName(), DrivenAttributes.Num(), Cleared.Num(),
+		Cleared.IsEmpty()
+			? TEXT("none")
+			: *FString::JoinBy(Cleared, TEXT(", "), [](const FName& N) { return N.ToString(); }));
+
+	if (!Cleared.IsEmpty())
+	{
+		MarkPackageDirty();
+	// Without this the details panel keeps showing the pre-click list.
+	PostEditChange();
+	}
+}
+
+namespace BaseStatsDataEditorPrivate
+{
+	struct FBaselineStat
+	{
+		const TCHAR* StatName;
+		float Value;
+	};
+
+	/**
+	 * The rows that are genuinely authored data. Everything else is either
+	 * derived by an effect, computed by the attribute set, or reflection noise.
+	 */
+	static constexpr FBaselineStat BaselineStats[] =
+	{
+		{TEXT("PlayerLevel"),       0.0f},
+		{TEXT("XPGainMultiplier"),  1.0f},
+		{TEXT("XPPenalty"),         1.0f},
+
+		// Characters start with nothing invested. Every primary contributes
+		// additively, so zero here means the vitals equal their authored base.
+		{TEXT("Strength"),          0.0f},
+		{TEXT("Intelligence"),      0.0f},
+		{TEXT("Dexterity"),         0.0f},
+		{TEXT("Endurance"),         0.0f},
+		{TEXT("Affliction"),        0.0f},
+		{TEXT("Luck"),              0.0f},
+		{TEXT("Covenant"),          0.0f},
+
+		{TEXT("MaxHealth"),       100.0f},
+		{TEXT("MaxMana"),         100.0f},
+		{TEXT("MaxStamina"),      100.0f},
+		{TEXT("MaxArcaneShield"),   0.0f},
+
+		// Rate * Amount: both halves have to be non-zero or the resource looks
+		// broken even though every rate is set correctly.
+		{TEXT("HealthRegenAmount"),        1.0f},
+		{TEXT("ManaRegenAmount"),          1.0f},
+		{TEXT("StaminaRegenAmount"),       5.0f},
+		// Must exceed StaminaRegenAmount, or a sprinting character nets stamina.
+		{TEXT("StaminaDegenAmount"),      20.0f},
+		{TEXT("ArcaneShieldRegenAmount"),  0.0f},
+
+		{TEXT("Health"),          100.0f},
+		{TEXT("Mana"),            100.0f},
+		{TEXT("Stamina"),         100.0f},
+	};
+
+	/**
+	 * Always recomputed by UHunterAttributeSet::Update*DerivedAttributes, so an
+	 * authored value here is overwritten before anyone sees it.
+	 */
+	static const TSet<FName>& GetComputedOutputs()
+	{
+		static const TSet<FName> Outputs = {
+			TEXT("MaxEffectiveHealth"),
+			TEXT("MaxEffectiveMana"),
+			TEXT("MaxEffectiveStamina"),
+			TEXT("MaxEffectiveArcaneShield"),
+		};
+		return Outputs;
+	}
+}
+
+bool UBaseStatsData::GetBaselineValueForStat(const FName StatName, float& OutValue)
+{
+	for (const BaseStatsDataEditorPrivate::FBaselineStat& Baseline : BaseStatsDataEditorPrivate::BaselineStats)
+	{
+		if (StatName == FName(Baseline.StatName))
+		{
+			OutValue = Baseline.Value;
+			return true;
+		}
+	}
+
+	for (const BaseStatsDataPrivate::FRequiredStatDefault& Default : BaseStatsDataPrivate::RequiredNonZeroDefaults)
+	{
+		if (StatName == FName(Default.StatName))
+		{
+			OutValue = Default.Value;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void UBaseStatsData::ResetToBaseline()
+{
+	Modify();
+
+	TSet<FName> EffectDriven;
+	for (const TSubclassOf<UGameplayEffect>& EffectClass : InitializationEffects)
+	{
+		BaseStatsDataEditorPrivate::GatherEffectAttributes(EffectClass, EffectDriven);
+	}
+
+	int32 ClearedCount = 0;
+	for (FStatInitializationEntry& Entry : BaseAttributes)
+	{
+		if (Entry.bOverrideValue)
+		{
+			Entry.bOverrideValue = false;
+			++ClearedCount;
+		}
+	}
+
+	// Neutral multipliers first: a zero here silently breaks combat maths, and
+	// they are never driven by an effect.
+	BaseStatsDataPrivate::ApplyRequiredNonZeroDefaults(BaseAttributes);
+
+	TArray<FName> Skipped;
+	int32 AuthoredCount = 0;
+	for (const BaseStatsDataEditorPrivate::FBaselineStat& Baseline : BaseStatsDataEditorPrivate::BaselineStats)
+	{
+		const FName StatName(Baseline.StatName);
+
+		if (EffectDriven.Contains(StatName)
+			|| BaseStatsDataEditorPrivate::GetComputedOutputs().Contains(StatName))
+		{
+			Skipped.Add(StatName);
+			continue;
+		}
+
+		BaseStatsDataPrivate::ApplyStarterOverride(BaseAttributes, StatName, Baseline.Value);
+		++AuthoredCount;
+	}
+
+	// The multipliers above are counted by walking the result rather than
+	// guessing, so the number reported matches what the panel will show.
+	int32 FinalAuthored = 0;
+	for (const FStatInitializationEntry& Entry : BaseAttributes)
+	{
+		FinalAuthored += Entry.bOverrideValue ? 1 : 0;
+	}
+
+	UE_LOG(LogBaseStatsData, Log,
+		TEXT("ResetToBaseline: %s - cleared %d override(s), re-authored %d baseline row(s), "
+		     "%d row(s) authored in total. Save the asset to persist."),
+		*GetName(), ClearedCount, AuthoredCount, FinalAuthored);
+
+	if (!Skipped.IsEmpty())
+	{
+		Skipped.Sort(FNameLexicalLess());
+		UE_LOG(LogBaseStatsData, Log,
+			TEXT("ResetToBaseline: left %d baseline row(s) unauthored because an initialization effect or the "
+			     "attribute set already drives them: %s"),
+			Skipped.Num(),
+			*FString::JoinBy(Skipped, TEXT(", "), [](const FName& N) { return N.ToString(); }));
+	}
+
+	MarkPackageDirty();
+	// Without this the details panel keeps showing the pre-click list.
+	PostEditChange();
+}
+
+void UBaseStatsData::LogInitializationEffectConflicts()
+{
+	const TMap<FName, float> AuthoredStats = GetAllStatsAsMap();
+
+	UE_LOG(LogBaseStatsData, Log,
+		TEXT("LogInitializationEffectConflicts: %s has %d authored row(s) of %d total, and %d "
+		     "InitializationEffect(s)."),
+		*GetName(), AuthoredStats.Num(), BaseAttributes.Num(), InitializationEffects.Num());
+
+	for (const TSubclassOf<UGameplayEffect>& EffectClass : InitializationEffects)
+	{
+		if (!EffectClass)
+		{
+			continue;
+		}
+
+		TSet<FName> DrivenAttributes;
+		BaseStatsDataEditorPrivate::GatherEffectAttributes(EffectClass, DrivenAttributes);
+
+		TArray<FName> Conflicts;
+		for (const FName& Name : DrivenAttributes)
+		{
+			if (AuthoredStats.Contains(Name))
+			{
+				Conflicts.Add(Name);
+			}
+		}
+		Conflicts.Sort(FNameLexicalLess());
+
+		if (Conflicts.IsEmpty())
+		{
+			UE_LOG(LogBaseStatsData, Log, TEXT("  %s: will APPLY (no authored conflicts)."),
+				*GetNameSafe(EffectClass));
+		}
+		else
+		{
+			UE_LOG(LogBaseStatsData, Warning,
+				TEXT("  %s: will be SKIPPED - blocked by %d authored row(s): %s"),
+				*GetNameSafe(EffectClass), Conflicts.Num(),
+				*FString::JoinBy(Conflicts, TEXT(", "), [](const FName& N) { return N.ToString(); }));
+		}
+	}
+}
+
 #endif

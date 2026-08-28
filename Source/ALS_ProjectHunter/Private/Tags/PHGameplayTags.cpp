@@ -441,9 +441,9 @@ void FPHGameplayTags::InitRegister()
 	RegisterDamageConversionTags();
 	RegisterStatusEffectAliases();
 	RegisterSetByCallerDamageTags();
-	RegisterAttributeToTagMappings();
 	RegisterAllAttribute();
 	RegisterTagToAttributeMappings();
+	RegisterAttributeToTagMappings();
 	RegisterSkillKeywordTags();
 	RegisterMinionTags();
 }
@@ -605,6 +605,7 @@ void FPHGameplayTags::RegisterMiscAttributes()
 	Attributes_Secondary_Misc_LifeLeech        = T.AddNativeGameplayTag("Attributes.Secondary.Misc.LifeLeech",        TEXT("Life leech."));
 	Attributes_Secondary_Misc_ManaLeech        = T.AddNativeGameplayTag("Attributes.Secondary.Misc.ManaLeech",        TEXT("Mana leech."));
 	Attributes_Secondary_Misc_MovementSpeed    = T.AddNativeGameplayTag("Attributes.Secondary.Misc.MovementSpeed",    TEXT("Movement speed."));
+	Attributes_Secondary_Misc_Weight           = T.AddNativeGameplayTag("Attributes.Secondary.Misc.Weight",           TEXT("Carried weight."));
 	Attributes_Secondary_Misc_LifeOnHit        = T.AddNativeGameplayTag("Attributes.Secondary.Misc.LifeOnHit",        TEXT("Life on hit."));
 	Attributes_Secondary_Misc_ManaOnHit        = T.AddNativeGameplayTag("Attributes.Secondary.Misc.ManaOnHit",        TEXT("Mana on hit."));
 	Attributes_Secondary_Misc_StaminaOnHit     = T.AddNativeGameplayTag("Attributes.Secondary.Misc.StaminaOnHit",     TEXT("Stamina on hit."));
@@ -934,167 +935,84 @@ void FPHGameplayTags::RegisterSetByCallerDamageTags()
 
 void FPHGameplayTags::RegisterAttributeToTagMappings()
 {
-    AttributeToTagMap.Empty();
+	AttributeToTagMap.Empty(TagToAttributeMap.Num());
 
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMinPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MinPhysicalDamage);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxPhysicalDamageAttribute(),   Attributes_Secondary_Damages_MaxPhysicalDamage);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMinFireDamageAttribute(),       Attributes_Secondary_Damages_MinFireDamage);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxFireDamageAttribute(),       Attributes_Secondary_Damages_MaxFireDamage);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMinIceDamageAttribute(),        Attributes_Secondary_Damages_MinIceDamage);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxIceDamageAttribute(),        Attributes_Secondary_Damages_MaxIceDamage);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMinLightningDamageAttribute(),  Attributes_Secondary_Damages_MinLightningDamage);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxLightningDamageAttribute(),  Attributes_Secondary_Damages_MaxLightningDamage);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMinLightDamageAttribute(),      Attributes_Secondary_Damages_MinLightDamage);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxLightDamageAttribute(),      Attributes_Secondary_Damages_MaxLightDamage);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMinCorruptionDamageAttribute(), Attributes_Secondary_Damages_MinCorruptionDamage);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetMaxCorruptionDamageAttribute(), Attributes_Secondary_Damages_MaxCorruptionDamage);
-    
-    AttributeToTagMap.Add(UHunterAttributeSet::GetStrengthAttribute(),     Attributes_Primary_Strength);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetIntelligenceAttribute(), Attributes_Primary_Intelligence);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetDexterityAttribute(),    Attributes_Primary_Dexterity);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetEnduranceAttribute(),    Attributes_Primary_Endurance);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetAfflictionAttribute(),   Attributes_Primary_Affliction);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetLuckAttribute(),         Attributes_Primary_Luck);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetCovenantAttribute(),     Attributes_Primary_Covenant);
-    
-    AttributeToTagMap.Add(UHunterAttributeSet::GetArmourAttribute(),    Attributes_Secondary_Resistances_Armour);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetPoiseAttribute(),     Attributes_Secondary_Misc_Poise);
-    
-    AttributeToTagMap.Add(UHunterAttributeSet::GetFireResistanceFlatBonusAttribute(),       Attributes_Secondary_Resistances_FireResistanceFlat);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetIceResistanceFlatBonusAttribute(),        Attributes_Secondary_Resistances_IceResistanceFlat);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetLightningResistanceFlatBonusAttribute(),  Attributes_Secondary_Resistances_LightningResistanceFlat);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetLightResistanceFlatBonusAttribute(),      Attributes_Secondary_Resistances_LightResistanceFlat);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetCorruptionResistanceFlatBonusAttribute(), Attributes_Secondary_Resistances_CorruptionResistanceFlat);
-    
-    AttributeToTagMap.Add(UHunterAttributeSet::GetCritChanceAttribute(),    Attributes_Secondary_Offensive_CritChance);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetCritMultiplierAttribute(), Attributes_Secondary_Offensive_CritMultiplier);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetAttackSpeedAttribute(),   Attributes_Secondary_Offensive_AttackSpeed);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetCastSpeedAttribute(),     Attributes_Secondary_Offensive_CastSpeed);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetAttackRangeAttribute(),   Attributes_Secondary_Offensive_AttackRange);
-    
-    AttributeToTagMap.Add(UHunterAttributeSet::GetManaCostChangesAttribute(),    Attributes_Secondary_Misc_ManaCostChanges);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetHealthCostChangesAttribute(),  Attributes_Secondary_Misc_HealthCostChanges);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetStaminaCostChangesAttribute(), Attributes_Secondary_Misc_StaminaCostChanges);
-    
-    AttributeToTagMap.Add(UHunterAttributeSet::GetPhysicalFlatDamageAttribute(),   Attributes_Secondary_BonusDamage_PhysicalFlatBonus);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetFireFlatDamageAttribute(),       Attributes_Secondary_BonusDamage_FireFlatBonus);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetIceFlatDamageAttribute(),        Attributes_Secondary_BonusDamage_IceFlatBonus);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetLightningFlatDamageAttribute(),  Attributes_Secondary_BonusDamage_LightningFlatBonus);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetLightFlatDamageAttribute(),      Attributes_Secondary_BonusDamage_LightFlatBonus);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetCorruptionFlatDamageAttribute(), Attributes_Secondary_BonusDamage_CorruptionFlatBonus);
-    
-    AttributeToTagMap.Add(UHunterAttributeSet::GetPhysicalPercentDamageAttribute(),   Attributes_Secondary_BonusDamage_PhysicalPercentBonus);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetFirePercentDamageAttribute(),       Attributes_Secondary_BonusDamage_FirePercentBonus);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetIcePercentDamageAttribute(),        Attributes_Secondary_BonusDamage_IcePercentBonus);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetLightningPercentDamageAttribute(),  Attributes_Secondary_BonusDamage_LightningPercentBonus);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetLightPercentDamageAttribute(),      Attributes_Secondary_BonusDamage_LightPercentBonus);
-    AttributeToTagMap.Add(UHunterAttributeSet::GetCorruptionPercentDamageAttribute(), Attributes_Secondary_BonusDamage_CorruptionPercentBonus);
+	TArray<FGameplayTag> Tags;
+	TagToAttributeMap.GetKeys(Tags);
+	Tags.Sort([](const FGameplayTag& Left, const FGameplayTag& Right)
+	{
+		return Left.ToString() < Right.ToString();
+	});
+
+	for (const FGameplayTag& Tag : Tags)
+	{
+		const FGameplayAttribute* Attribute = TagToAttributeMap.Find(Tag);
+		if (!Attribute || !Attribute->IsValid())
+		{
+			continue;
+		}
+
+		if (const FGameplayTag* ExistingTag = AttributeToTagMap.Find(*Attribute))
+		{
+			UE_LOG(
+				LogPHGameplayTags,
+				Warning,
+				TEXT("Attribute '%s' is registered by both '%s' and '%s'; '%s' remains the canonical reverse mapping."),
+				*Attribute->GetName(),
+				*ExistingTag->ToString(),
+				*Tag.ToString(),
+				*ExistingTag->ToString());
+			continue;
+		}
+
+		AttributeToTagMap.Add(*Attribute, Tag);
+	}
+
+	UE_LOG(
+		LogPHGameplayTags,
+		Log,
+		TEXT("Attribute-to-tag mappings initialized with %d canonical attributes from %d tag mappings."),
+		AttributeToTagMap.Num(),
+		TagToAttributeMap.Num());
 }
 
 
 void FPHGameplayTags::RegisterTagToAttributeMappings()
 {
-    TagToAttributeMap.Empty();
+	TagToAttributeMap.Empty(AllAttributesMap.Num());
 
-    if (!UHunterAttributeSet::GetHealthAttribute().IsValid())
-    {
-        UE_LOG(LogPHGameplayTags, Error, TEXT(" AttributeSet not ready - skipping tag mappings"));
-        return;
-    }
+	TArray<FString> AttributeTagNames;
+	AllAttributesMap.GetKeys(AttributeTagNames);
+	AttributeTagNames.Sort();
 
-    UE_LOG(LogPHGameplayTags, Warning, TEXT("Registering tag-to-attribute mappings"));
+	TArray<FString> MissingTags;
+	for (const FString& AttributeTagName : AttributeTagNames)
+	{
+		const FGameplayAttribute* Attribute = AllAttributesMap.Find(AttributeTagName);
+		const FGameplayTag Tag = FGameplayTag::RequestGameplayTag(FName(*AttributeTagName), false);
+		if (!Tag.IsValid() || !Attribute || !Attribute->IsValid())
+		{
+			MissingTags.Add(AttributeTagName);
+			continue;
+		}
 
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Health")), UHunterAttributeSet::GetHealthAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Mana")), UHunterAttributeSet::GetManaAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Vital.Stamina")), UHunterAttributeSet::GetStaminaAttribute());
+		TagToAttributeMap.Add(Tag, *Attribute);
+	}
 
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxHealth")), UHunterAttributeSet::GetMaxHealthAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxMana")), UHunterAttributeSet::GetMaxManaAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxStamina")), UHunterAttributeSet::GetMaxStaminaAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ArcaneShield")), UHunterAttributeSet::GetArcaneShieldAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.MaxArcaneShield")), UHunterAttributeSet::GetMaxArcaneShieldAttribute());
+	MissingTags.Sort();
+	for (const FString& MissingTag : MissingTags)
+	{
+		UE_LOG(LogPHGameplayTags, Error, TEXT("Attribute registry entry '%s' has no valid native gameplay tag or GAS attribute."), *MissingTag);
+	}
 
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.GlobalBonus")), UHunterAttributeSet::GetGlobalDamagesAttribute());
-    
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Physical")), UHunterAttributeSet::GetMaxPhysicalDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Fire")), UHunterAttributeSet::GetMaxFireDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Ice")), UHunterAttributeSet::GetMaxIceDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Lightning")), UHunterAttributeSet::GetMaxLightningDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Light")), UHunterAttributeSet::GetMaxLightDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Max.Corruption")), UHunterAttributeSet::GetMaxCorruptionDamageAttribute());
-
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Physical")), UHunterAttributeSet::GetMinPhysicalDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Fire")), UHunterAttributeSet::GetMinFireDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Ice")), UHunterAttributeSet::GetMinIceDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Lightning")), UHunterAttributeSet::GetMinLightningDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Light")), UHunterAttributeSet::GetMinLightDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Min.Corruption")), UHunterAttributeSet::GetMinCorruptionDamageAttribute());
-
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Physical")), UHunterAttributeSet::GetPhysicalFlatDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Fire")), UHunterAttributeSet::GetFireFlatDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Ice")), UHunterAttributeSet::GetIceFlatDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Lightning")), UHunterAttributeSet::GetLightningFlatDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Light")), UHunterAttributeSet::GetLightFlatDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Flat.Corruption")), UHunterAttributeSet::GetCorruptionFlatDamageAttribute());
-
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Physical")), UHunterAttributeSet::GetPhysicalPercentDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Fire")), UHunterAttributeSet::GetFirePercentDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Ice")), UHunterAttributeSet::GetIcePercentDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Lightning")), UHunterAttributeSet::GetLightningPercentDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Light")), UHunterAttributeSet::GetLightPercentDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Damage.Percent.Corruption")), UHunterAttributeSet::GetCorruptionPercentDamageAttribute());
-
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.GlobalDefenses")), UHunterAttributeSet::GetGlobalDefensesAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Defenses.Armor")), UHunterAttributeSet::GetArmourAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour")), UHunterAttributeSet::GetArmourAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armor")), UHunterAttributeSet::GetArmourAttribute());
-    
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour.Flat")), UHunterAttributeSet::GetArmourFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armor.Flat")), UHunterAttributeSet::GetArmourFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Fire.Flat")), UHunterAttributeSet::GetFireResistanceFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Ice.Flat")), UHunterAttributeSet::GetIceResistanceFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Lightning.Flat")), UHunterAttributeSet::GetLightningResistanceFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Light.Flat")), UHunterAttributeSet::GetLightResistanceFlatBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Corruption.Flat")), UHunterAttributeSet::GetCorruptionResistanceFlatBonusAttribute());
-
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armour.Percent")), UHunterAttributeSet::GetArmourPercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Armor.Percent")), UHunterAttributeSet::GetArmourPercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Fire.Percent")), UHunterAttributeSet::GetFireResistancePercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Ice.Percent")), UHunterAttributeSet::GetIceResistancePercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Lightning.Percent")), UHunterAttributeSet::GetLightningResistancePercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Light.Percent")), UHunterAttributeSet::GetLightResistancePercentBonusAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Resistance.Corruption.Percent")), UHunterAttributeSet::GetCorruptionResistancePercentBonusAttribute());
-
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Strength")), UHunterAttributeSet::GetStrengthAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Intelligence")), UHunterAttributeSet::GetIntelligenceAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Dexterity")), UHunterAttributeSet::GetDexterityAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Endurance")), UHunterAttributeSet::GetEnduranceAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Affliction")), UHunterAttributeSet::GetAfflictionAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Luck")), UHunterAttributeSet::GetLuckAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Primary.Covenant")), UHunterAttributeSet::GetCovenantAttribute());
-
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.HealthRegenAmount")), UHunterAttributeSet::GetHealthRegenAmountAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.HealthRegenRate")), UHunterAttributeSet::GetHealthRegenRateAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ManaRegenAmount")), UHunterAttributeSet::GetManaRegenAmountAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.ManaRegenRate")), UHunterAttributeSet::GetManaRegenRateAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaRegenAmount")), UHunterAttributeSet::GetStaminaRegenAmountAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaRegenRate")), UHunterAttributeSet::GetStaminaRegenRateAttribute());
-
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaDegenAmount")), UHunterAttributeSet::GetStaminaDegenAmountAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Vital.StaminaDegenRate")), UHunterAttributeSet::GetStaminaDegenRateAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Offensive.CritChance")), UHunterAttributeSet::GetCritChanceAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Offensive.CritMultiplier")), UHunterAttributeSet::GetCritMultiplierAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Misc.CritChance")), UHunterAttributeSet::GetCritChanceAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Misc.CritMultiplier")), UHunterAttributeSet::GetCritMultiplierAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Misc.ManaCostChanges")), UHunterAttributeSet::GetManaCostChangesAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Misc.HealthCostChanges")), UHunterAttributeSet::GetHealthCostChangesAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Misc.StaminaCostChanges")), UHunterAttributeSet::GetStaminaCostChangesAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Offensive.SpellDamage")), UHunterAttributeSet::GetSpellDamageAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Piercing.Armour")), UHunterAttributeSet::GetArmourPiercingAttribute());
-    TagToAttributeMap.Add(FGameplayTag::RequestGameplayTag(FName("Attributes.Secondary.Piercing.Armor")), UHunterAttributeSet::GetArmourPiercingAttribute());
-
-    UE_LOG(LogPHGameplayTags, Log, TEXT(" Tag-to-Attribute mappings initialized with %d entries"), TagToAttributeMap.Num());
+	UE_LOG(
+		LogPHGameplayTags,
+		Log,
+		TEXT("Tag-to-attribute mappings initialized with %d of %d registered attribute entries."),
+		TagToAttributeMap.Num(),
+		AllAttributesMap.Num());
 }
+
 
 FGameplayAttribute FPHGameplayTags::GetAttributeFromTag(const FGameplayTag& Tag)
 {
@@ -1104,6 +1022,16 @@ FGameplayAttribute FPHGameplayTags::GetAttributeFromTag(const FGameplayTag& Tag)
 	}
 
 	return FGameplayAttribute();
+}
+
+FGameplayTag FPHGameplayTags::GetTagFromAttribute(const FGameplayAttribute& Attribute)
+{
+	if (const FGameplayTag* Tag = AttributeToTagMap.Find(Attribute))
+	{
+		return *Tag;
+	}
+
+	return FGameplayTag();
 }
 
 void FPHGameplayTags::RegisterStatusEffectAttributes()

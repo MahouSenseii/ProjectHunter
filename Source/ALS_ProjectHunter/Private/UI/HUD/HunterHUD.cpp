@@ -43,9 +43,10 @@ void AHunterHUD::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (ItemTooltipWidgetClass && GetWorld())
+	APlayerController* OwningPC = GetOwningPlayerController();
+	if (ItemTooltipWidgetClass && OwningPC)
 	{
-		ItemTooltipWidget = CreateWidget<UItemTooltipWidget>(GetWorld(), ItemTooltipWidgetClass);
+		ItemTooltipWidget = CreateWidget<UItemTooltipWidget>(OwningPC, ItemTooltipWidgetClass);
 		if (ItemTooltipWidget)
 		{
 			ItemTooltipWidget->AddToViewport(100);
@@ -55,11 +56,11 @@ void AHunterHUD::BeginPlay()
 
 	CreateMainHUDWidget();
 
-	if (APlayerController* PC = GetOwningPlayerController())
+	if (OwningPC)
 	{
-		PC->OnPossessedPawnChanged.AddDynamic(this, &AHunterHUD::HandlePawnChanged);
+		OwningPC->OnPossessedPawnChanged.AddDynamic(this, &AHunterHUD::HandlePawnChanged);
 
-		if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(PC->GetPawn()))
+		if (APHBaseCharacter* Character = Cast<APHBaseCharacter>(OwningPC->GetPawn()))
 		{
 			BindWidgetsToCharacter(Character);
 		}
@@ -551,6 +552,16 @@ void AHunterHUD::HandlePawnChanged(APawn* OldPawn, APawn* NewPawn)
 		*GetNameSafe(NewCharacter));
 
 	BindWidgetsToCharacter(NewCharacter);
+
+	if (IsMenuOpen())
+	{
+		// bPawnInputDisabled refers to the pawn we just stopped possessing. A new
+		// pawn arrives with its own input component live, so without clearing the
+		// flag first the re-apply below is skipped and the player can act with the
+		// menu still open.
+		bPawnInputDisabled = false;
+		ApplyMenuInputMode(true);
+	}
 
 	// A menu left open across a possession change is still framing the old body.
 	if (MenuCamera && MenuCamera->IsMenuCameraActive())

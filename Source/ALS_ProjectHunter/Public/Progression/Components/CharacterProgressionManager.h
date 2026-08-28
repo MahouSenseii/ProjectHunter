@@ -35,8 +35,45 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
 
+	/**
+	 * Pulls the starting level out of the owner's stats data asset.
+	 *
+	 * Called from BeginPlay and again once stats finish initializing, because
+	 * component BeginPlay order is not guaranteed and whichever runs first
+	 * should win. Seeds at most once so a levelled-up character is never reset
+	 * by a later re-initialization.
+	 */
+	void SeedStartingLevelFromStatsData();
+
+	/** True once the starting level has been taken from the data asset. */
+	bool HasSeededStartingLevel() const { return bHasSeededStartingLevel; }
+
+private:
+	bool bHasSeededStartingLevel = false;
+
+public:
+
+	/**
+	 * Starting level. Zero means an unlevelled character, whose vitals are
+	 * exactly the base authored in its stats data asset - the first level-up is
+	 * the first time PerLevelBonus applies.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_Level, Category = "Progression")
-	int32 Level = 1;
+	int32 Level = 0;
+
+	/**
+	 * Takes the starting level from the character's stats data asset instead of
+	 * the Level default above, so one asset describes the whole starting state.
+	 *
+	 * Only applies when that asset actually authors PlayerLevel; an unauthored
+	 * row leaves Level alone rather than silently resetting it to zero.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression")
+	bool bSeedStartingLevelFromStatsData = true;
+
+	/** Lowest level a character may hold. Zero when levels start unspent. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression")
+	int32 MinLevel = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_CurrentXP, Category = "Progression")
 	int64 CurrentXP = 0;

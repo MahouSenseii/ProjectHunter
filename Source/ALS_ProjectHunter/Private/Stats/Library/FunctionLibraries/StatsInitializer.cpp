@@ -3,6 +3,7 @@
 #include "AbilitySystem/HunterAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "Core/Logging/ProjectHunterLogMacros.h"
+#include "Progression/Components/CharacterProgressionManager.h"
 #include "Stats/Data/BaseStatsData.h"
 #include "GameplayEffect.h"
 #include "Stats/Components/StatsManager.h"
@@ -55,6 +56,15 @@ namespace StatsInitializerPrivate
 
 		for (const FGameplayModifierInfo& Modifier : EffectCDO->Modifiers)
 		{
+			// Only Override discards the authored value. An Additive or
+			// Multiplicitive modifier stacks on top of it, which is exactly how a
+			// per-character base plus stat scaling is meant to combine - treating
+			// those as conflicts would block every effect that scales anything.
+			if (Modifier.ModifierOp != EGameplayModOp::Override)
+			{
+				continue;
+			}
+
 			const FName AttributeName = GetGameplayModifierAttributeName(Modifier);
 			if (AttributeName != NAME_None && AuthoredStats.Contains(AttributeName))
 			{
@@ -209,6 +219,15 @@ void FStatsInitializer::InitializeFromDataAsset(UStatsManager& Manager, UBaseSta
 		return;
 	}
 
+	// Component BeginPlay order is not guaranteed, so the progression manager may
+	// have run before StatsData was reachable. Seeding here as well means the
+	// data asset's PlayerLevel wins whichever order they happen to start in; the
+	// seed is once-only, so a levelled-up character is not reset.
+	if (UCharacterProgressionManager* Progression = Owner->FindComponentByClass<UCharacterProgressionManager>())
+	{
+		Progression->SeedStartingLevelFromStatsData();
+	}
+
 	const TMap<FName, float> StatsMap = InStatsData->GetAllStatsAsMap();
 
 	TArray<FStatInitializationEntry> ReflectedDefinitions;
@@ -325,6 +344,13 @@ void FStatsInitializer::InitializeFromDataAsset(UStatsManager& Manager, UBaseSta
 				*StatsInitializerPrivate::JoinStatNames(ConflictingAuthoredStats));
 			continue;
 		}
+
+		// Initialization runs more than once - NotifyAbilitySystemReady re-runs it
+		// after the ASC comes up, and possession can too. These effects are
+		// Infinite and Additive, so a second application stacks a second copy of
+		// every bonus instead of replacing it. Clearing any previous instance
+		// first keeps initialization idempotent.
+		ASC->RemoveActiveGameplayEffectBySourceEffect(EffectClass, ASC);
 
 		FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, EffectContext);
 		if (SpecHandle.IsValid())

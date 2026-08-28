@@ -6,8 +6,13 @@
 
 namespace HunterMMCStrengthMaxHealthPrivate
 {
-	constexpr float BaseMaxValue = 100.0f;
-	constexpr float BasePrimaryBonus = 5.0f;
+	// The base value is authored per-character in DA_BaseStats and applied as the
+	// attribute's base, so this contributes the stat scaling only. A non-zero base
+	// here would give every pawn - player, trash, boss - the same starting pool.
+	constexpr float BaseMaxValue = 0.0f;
+	// Zero so a primary of 0 contributes nothing. A flat bonus here would be a
+	// second hidden base on top of the one DA_BaseStats authors.
+	constexpr float BasePrimaryBonus = 0.0f;
 	constexpr float PerLevelBonus = 12.0f;
 
 	struct FCaptureDefinitions

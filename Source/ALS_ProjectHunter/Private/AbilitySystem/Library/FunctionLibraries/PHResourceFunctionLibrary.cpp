@@ -73,11 +73,15 @@ float UPHResourceFunctionLibrary::CalculateResourceDrainAmount(const float RateV
 float UPHResourceFunctionLibrary::CalculatePrimaryDerivedMaxValue(const FPHPrimaryDerivedResourceInput& Input)
 {
 	const float SafePrimaryValue = FMath::Max(Input.PrimaryValue, 0.0f);
-	const float SafePlayerLevel = FMath::Max(Input.PlayerLevel, 1.0f);
+
+	// Level 0 is a valid starting level, so it is the floor and it contributes
+	// nothing. The old form clamped to 1 and paid (Level - 1), which quietly
+	// treated level 0 and level 1 as the same thing.
+	const float SafePlayerLevel = FMath::Max(Input.PlayerLevel, 0.0f);
 	const float CalculatedMaxValue =
 		Input.BaseMaxValue +
 		(Input.BasePrimaryBonus + SafePrimaryValue) +
-		(Input.PerLevelBonus * (SafePlayerLevel - 1.0f));
+		(Input.PerLevelBonus * SafePlayerLevel);
 
 	return FMath::Max(CalculatedMaxValue, 0.0f);
 }

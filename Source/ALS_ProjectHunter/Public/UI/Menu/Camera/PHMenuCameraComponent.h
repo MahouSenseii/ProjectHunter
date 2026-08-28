@@ -242,6 +242,16 @@ private:
 	/** DefaultView, overridden by PageViews, with the focus delta folded in. */
 	FPHMenuCameraView ResolveTargetView() const;
 
+	/** Feeds the anim graph the menu state its transitions are built on. */
+	void PushBehaviorState() const;
+
+	/**
+	 * Blends the anim graph's framing curves over the data-driven view by the
+	 * Menu_Override curve. Absent curves are left alone rather than read as
+	 * zero, so a state can override only what it cares about.
+	 */
+	FPHMenuCameraView ApplyBehaviorCurves(const FPHMenuCameraView& DataView) const;
+
 	void UpdateFraming(float DeltaTime);
 	void UpdateTurntable(float DeltaTime);
 	void PollCursorInput();

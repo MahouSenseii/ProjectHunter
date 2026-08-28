@@ -49,7 +49,9 @@ void FProgressionAbilityHelper::TrySyncPlayerLevelAttribute(UAbilitySystemCompon
 		return;
 	}
 
+	// Floor of 0, not 1: an unspent character legitimately sits at level 0, and
+	// the old clamp made the data asset's 0 indistinguishable from 1.
 	ASC->SetNumericAttributeBase(
 		UHunterAttributeSet::GetPlayerLevelAttribute(),
-		static_cast<float>(FMath::Max(Level, 1)));
+		static_cast<float>(FMath::Max(Level, 0)));
 }

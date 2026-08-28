@@ -25,6 +25,7 @@ public:
 	static void RegisterAttributeToTagMappings();
 	static void RegisterTagToAttributeMappings();
 	static FGameplayAttribute GetAttributeFromTag(const FGameplayTag& Tag);
+	static FGameplayTag GetTagFromAttribute(const FGameplayAttribute& Attribute);
 
 	static void RegisterStatusEffectAttributes();
 	static void RegisterMinMaxTagMap();

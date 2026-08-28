@@ -115,6 +115,50 @@ public:
 	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Stats|Editor")
 	void RefreshFromAttributeSetDefinition();
 
+
+#if WITH_EDITOR
+	/**
+	 * Unticks Override Value on every stat an InitializationEffect modifies.
+	 *
+	 * An authored row blocks the entire effect that would drive it - the guard
+	 * is per-effect, not per-attribute - so one stray override silently stops a
+	 * whole set of derived values from being calculated. Reads the effects'
+	 * modifiers rather than a hardcoded list, so adding a derived effect and
+	 * pressing this again is all that is needed.
+	 */
+	UFUNCTION(CallInEditor, Category = "Stats|Editor")
+	void ClearOverridesDrivenByInitializationEffects();
+
+	/** Reports which authored rows are blocking which effects, without changing anything. */
+	UFUNCTION(CallInEditor, Category = "Stats|Editor")
+	void LogInitializationEffectConflicts();
+
+	/**
+	 * Throws away every override and re-authors only the rows that are actually
+	 * data: progression, primaries, the neutral combat multipliers that break
+	 * the game at zero, and the vital inputs nothing else drives.
+	 *
+	 * Deliberately leaves alone anything an InitializationEffect modifies (that
+	 * effect should own it) and the MaxEffective* outputs the attribute set
+	 * recomputes (authoring them does nothing). Add either back through the
+	 * picker if a specific test needs a flat value.
+	 *
+	 * Destructive: authored values not in the baseline are lost.
+	 */
+	UFUNCTION(CallInEditor, Category = "Stats|Editor")
+	void ResetToBaseline();
+
+	/**
+	 * The value ResetToBaseline would give this stat, if it has one.
+	 *
+	 * Lets the details panel tell "authored because I changed it" apart from
+	 * "authored because the tool stamped a required default" - bOverrideValue
+	 * alone cannot distinguish the two, and the defaults outnumber real edits
+	 * roughly three to one.
+	 */
+	static bool GetBaselineValueForStat(FName StatName, float& OutValue);
+#endif
+
 	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Stats|Editor")
 	void SortStats();
 

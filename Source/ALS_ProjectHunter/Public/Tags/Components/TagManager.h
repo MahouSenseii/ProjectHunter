@@ -64,16 +64,24 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Tags")
 	bool IsInitialized() const { return ASC != nullptr; }
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tags|Conditions")
+	FTagConditionThresholds ConditionThresholds;
+
 	UPROPERTY(EditAnywhere, Category = "Debug")
 	FTagDebugManager DebugManager;
 
 private:
 	void ApplyPendingStates();
+	void ClearManagedTagStates(UAbilitySystemComponent* TargetASC);
+	bool HasExternalTagSource(const FGameplayTag& Tag) const;
 	bool HasPendingEnabledTag(const FGameplayTag& Tag) const;
 	bool ComputeMovementConditionState(const ACharacter* CharacterOwner);
-	bool ComputeLowResourceState(float CurrentValue, float MaxValue) const;
-	bool ComputeFullResourceState(float CurrentValue, float MaxValue) const;
 	const UHunterAttributeSet* GetHunterAttributeSet() const;
+	void RefreshResourceConditionTags(
+		const FGameplayTag& LowTag,
+		const FGameplayTag& FullTag,
+		float CurrentValue,
+		float MaxValue);
 	void RefreshMovementConditionTags();
 	void BindAttributeChangeDelegates();
 	void UnbindAttributeChangeDelegates();
@@ -82,6 +90,7 @@ private:
 	TObjectPtr<UAbilitySystemComponent> ASC;
 
 	TArray<FTagAttributeDelegateBinding> AttributeDelegateBindings;
+	TSet<FGameplayTag> ManagedLooseTags;
 	TMap<FGameplayTag, bool> PendingTagStates;
 	bool bBaseConditionsDirty = false;
 	bool bHasMovementConditionState = false;

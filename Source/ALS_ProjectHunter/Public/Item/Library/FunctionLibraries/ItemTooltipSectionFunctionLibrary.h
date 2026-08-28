@@ -11,6 +11,7 @@ struct FBaseWeaponStats;
 struct FConsumableData;
 struct FItemBase;
 struct FItemDurability;
+struct FItemRequirementCheckResult;
 struct FItemStatRequirement;
 struct FPHAttributeData;
 
@@ -35,7 +36,10 @@ public:
 		FItemTooltipData& TooltipData,
 		const FBaseArmorStats& Stats,
 		const FItemDurability& Durability);
-	static void AddRequirementsSection(FItemTooltipData& TooltipData, const FItemStatRequirement& Requirements);
+	static void AddRequirementsSection(
+		FItemTooltipData& TooltipData,
+		const FItemStatRequirement& Requirements,
+		const FItemRequirementCheckResult* RequirementResult = nullptr);
 	static void AddRunesSection(FItemTooltipData& TooltipData, const UItemInstance* Item, const FItemBase& Base);
 	static void AddConsumableSection(FItemTooltipData& TooltipData, const UItemInstance* Item, const FConsumableData& ConsumableData);
 	static void AddDetailsSection(FItemTooltipData& TooltipData, const UItemInstance* Item);

@@ -1,11 +1,17 @@
 #include "Item/Library/FunctionLibraries/ItemTooltipFunctionLibrary.h"
 
+#include "Equipment/Components/EquipmentManager.h"
 #include "Item/ItemInstance.h"
 #include "Item/Library/FunctionLibraries/ItemEnumFunctionLibrary.h"
 #include "Item/Library/FunctionLibraries/ItemTooltipSectionFunctionLibrary.h"
 #include "Item/Library/Structs/ItemStructs.h"
 
-bool UItemTooltipFunctionLibrary::BuildItemTooltipData(UItemInstance* Item, FItemTooltipData& OutTooltipData)
+namespace ItemTooltipBuilder
+{
+bool Build(
+	UItemInstance* Item,
+	const FItemRequirementCheckResult* RequirementResult,
+	FItemTooltipData& OutTooltipData)
 {
 	OutTooltipData = FItemTooltipData();
 
@@ -58,7 +64,10 @@ bool UItemTooltipFunctionLibrary::BuildItemTooltipData(UItemInstance* Item, FIte
 
 	if (Item->IsEquipment())
 	{
-		UItemTooltipSectionFunctionLibrary::AddRequirementsSection(OutTooltipData, Base->StatRequirements);
+		UItemTooltipSectionFunctionLibrary::AddRequirementsSection(
+			OutTooltipData,
+			Base->StatRequirements,
+			RequirementResult);
 		UItemTooltipSectionFunctionLibrary::AddRunesSection(OutTooltipData, Item, *Base);
 	}
 
@@ -85,6 +94,26 @@ bool UItemTooltipFunctionLibrary::BuildItemTooltipData(UItemInstance* Item, FIte
 	UItemTooltipSectionFunctionLibrary::AddDescriptionSection(OutTooltipData, *Base);
 
 	return true;
+}
+}
+
+bool UItemTooltipFunctionLibrary::BuildItemTooltipData(UItemInstance* Item, FItemTooltipData& OutTooltipData)
+{
+	return ItemTooltipBuilder::Build(Item, nullptr, OutTooltipData);
+}
+
+bool UItemTooltipFunctionLibrary::BuildItemTooltipDataForViewer(
+	UItemInstance* Item,
+	UEquipmentManager* ViewerEquipmentManager,
+	FItemTooltipData& OutTooltipData)
+{
+	if (!ViewerEquipmentManager)
+	{
+		return BuildItemTooltipData(Item, OutTooltipData);
+	}
+
+	const FItemRequirementCheckResult RequirementResult = ViewerEquipmentManager->EvaluateItemRequirements(Item);
+	return ItemTooltipBuilder::Build(Item, &RequirementResult, OutTooltipData);
 }
 
 FItemTooltipData UItemTooltipFunctionLibrary::GetItemTooltipData(UItemInstance* Item)

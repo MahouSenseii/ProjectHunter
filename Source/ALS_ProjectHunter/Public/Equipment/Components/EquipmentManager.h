@@ -6,6 +6,7 @@
 #include "Equipment/Library/Enums/EquipmentEnums.h"
 #include "Equipment/Library/Structs/EquipmentStructs.h"
 #include "Item/Library/Enums/ItemEnums.h"
+#include "Item/Library/Structs/ItemRequirementStructs.h"
 #include "EquipmentManager.generated.h"
 
 class AEquippedItemRuntimeActor;
@@ -68,6 +69,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	bool CanEquipToSlot(UItemInstance* Item, EEquipmentSlot Slot) const;
+
+	UFUNCTION(BlueprintPure, Category = "Equipment|Requirements")
+	FItemRequirementCheckResult EvaluateItemRequirements(UItemInstance* Item) const;
 
 	/**
 	 * Slot that backs what Slot shows. A two-handed weapon fills both hands, so

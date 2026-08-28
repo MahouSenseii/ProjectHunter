@@ -23,6 +23,7 @@ public class ALS_ProjectHunterEditor : ModuleRules
 			"SlateCore",
 			"PropertyEditor",
 			"UnrealEd",
+			"LevelEditor",
 			"EditorFramework",
 			"DetailCustomizations",
 			"InputCore"

@@ -4,6 +4,7 @@
 #include "Equipment/Helpers/EquipmentDebugItemFactory.h"
 #include "Equipment/Helpers/EquipmentMutationHelper.h"
 #include "Equipment/Helpers/EquipmentReplicationHelper.h"
+#include "Equipment/Helpers/EquipmentRequirementEvaluator.h"
 #include "Equipment/Helpers/EquipmentSlotResolver.h"
 #include "Equipment/Library/EquipmentLog.h"
 #include "Equipment/Library/FunctionLibraries/EquipmentFunctionLibrary.h"
@@ -116,7 +117,13 @@ EEquipmentSlot UEquipmentManager::DetermineEquipmentSlot(UItemInstance* Item) co
 
 bool UEquipmentManager::CanEquipToSlot(UItemInstance* Item, EEquipmentSlot Slot) const
 {
-	return FEquipmentSlotResolver::CanEquipToSlot(*this, Item, Slot);
+	return EvaluateItemRequirements(Item).bMeetsRequirements
+		&& FEquipmentSlotResolver::CanEquipToSlot(*this, Item, Slot);
+}
+
+FItemRequirementCheckResult UEquipmentManager::EvaluateItemRequirements(UItemInstance* Item) const
+{
+	return FEquipmentRequirementEvaluator::Evaluate(*this, Item);
 }
 
 EEquipmentSlot UEquipmentManager::ResolveOccupyingSlot(EEquipmentSlot Slot) const
