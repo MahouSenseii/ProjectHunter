@@ -25,7 +25,7 @@ struct ALS_PROJECTHUNTER_API FPHMenuCameraView
 	/** Raises the point the camera looks at. Positive frames the upper body. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Camera",
 		meta = (UIMin = "-100.0", UIMax = "150.0"))
-	float PivotHeightOffset = 55.0f;
+	float PivotHeightOffset = 60.0f;
 
 	/**
 	 * Degrees around the character, measured from directly in front of them.
