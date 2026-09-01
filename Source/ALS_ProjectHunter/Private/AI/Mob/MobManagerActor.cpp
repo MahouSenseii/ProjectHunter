@@ -428,7 +428,7 @@ bool AMobManagerActor::TrySpawnMob()
 
 		SpawnLoc.Z += CollisionCapsuleHalfHeight + 2.0f;
 
-		const FRotator SpawnRot(0.0f, FMath::RandRange(0.0f, 360.0f), 0.0f);
+		const FRotator SpawnRot(0.0, GetPlacementStream().FRandRange(0.0, 360.0), 0.0);
 		APHBaseCharacter* HiddenMob = HiddenSpawn(MobClass, SpawnLoc, SpawnRot);
 		if (!HiddenMob)
 		{
@@ -615,8 +615,9 @@ APHBaseCharacter* AMobManagerActor::TrySpawnAtLocation(
 
 		if (JitterRadius > 0.0f)
 		{
-			const float Angle = FMath::FRandRange(0.0f, 2.0f * PI);
-			const float Dist  = FMath::FRandRange(0.0f, JitterRadius);
+			FRandomStream& Placement = GetPlacementStream();
+			const double Angle = Placement.FRandRange(0.0, 2.0 * UE_DOUBLE_PI);
+			const double Dist  = Placement.FRandRange(0.0, JitterRadius);
 			SpawnLoc.X += Dist * FMath::Cos(Angle);
 			SpawnLoc.Y += Dist * FMath::Sin(Angle);
 
@@ -661,7 +662,7 @@ APHBaseCharacter* AMobManagerActor::TrySpawnAtLocation(
 	
 		SpawnLoc.Z += CollisionCapsuleHalfHeight + 2.0f;
 
-		const FRotator SpawnRot(0.0f, FMath::RandRange(0.0f, 360.0f), 0.0f);
+		const FRotator SpawnRot(0.0, GetPlacementStream().FRandRange(0.0, 360.0), 0.0);
 		APHBaseCharacter* Mob = HiddenSpawn(MobClass, SpawnLoc, SpawnRot);
 		if (!Mob) { continue; }
 
@@ -679,10 +680,15 @@ bool AMobManagerActor::GetRandomSpawnLocation(FVector& OutLocation)
 	const FTransform& BoxXform = CachedBoxXform;
 
 
-	const FVector LocalOffset(
-		FMath::RandRange(-BoxExtent.X, BoxExtent.X),
-		FMath::RandRange(-BoxExtent.Y, BoxExtent.Y),
-		FMath::RandRange(-BoxExtent.Z, BoxExtent.Z));
+	// Drawn into named locals first: constructor arguments are unsequenced, so
+	// taking three rolls inline would let the compiler decide which axis gets
+	// which value and break replay across toolchains.
+	FRandomStream& Placement = GetPlacementStream();
+	const double OffsetX = Placement.FRandRange(-BoxExtent.X, BoxExtent.X);
+	const double OffsetY = Placement.FRandRange(-BoxExtent.Y, BoxExtent.Y);
+	const double OffsetZ = Placement.FRandRange(-BoxExtent.Z, BoxExtent.Z);
+
+	const FVector LocalOffset(OffsetX, OffsetY, OffsetZ);
 
 	FVector Candidate = BoxXform.TransformPosition(LocalOffset);
 
@@ -814,15 +820,20 @@ bool AMobManagerActor::GetSmartSpawnLocation(FVector& OutLocation)
 	const FTransform& BoxXform = CachedBoxXform;
 	const FVector BoxOrigin = BoxXform.GetLocation();
 
+	// Player positions are live gameplay state, so this path is only as
+	// reproducible as where the players are standing. The rolls still come from
+	// the placement stream so the ring sample itself replays.
+	FRandomStream& Placement = GetPlacementStream();
+
 	const FVector& PlayerLoc =
-		CachedPlayerLocations[FMath::RandRange(0, CachedPlayerLocations.Num() - 1)];
+		CachedPlayerLocations[Placement.RandRange(0, CachedPlayerLocations.Num() - 1)];
 
 	const float InnerR = FMath::Max(MinDistanceFromPlayer, 1.0f);
 	const float OuterR = (MaxDistanceFromPlayer > InnerR) ? MaxDistanceFromPlayer
 	                     : InnerR + BoxExtent.Size2D();
 
-	const float Angle  = FMath::FRandRange(0.0f, 2.0f * PI);
-	const float RandT  = FMath::FRand();
+	const double Angle = Placement.FRandRange(0.0, 2.0 * UE_DOUBLE_PI);
+	const float RandT  = Placement.FRand();
 	const float Radius = FMath::Sqrt(FMath::Lerp(InnerR * InnerR, OuterR * OuterR, RandT));
 
 	FVector Candidate;
@@ -1103,6 +1114,26 @@ FRandomStream& AMobManagerActor::GetEncounterStream() const
 	return EncounterStream;
 }
 
+FRandomStream& AMobManagerActor::GetPlacementStream() const
+{
+	if (bPlacementStreamInitialized)
+	{
+		return PlacementStream;
+	}
+
+	bPlacementStreamInitialized = true;
+
+	// Derived from the encounter seed rather than sharing the stream, so the
+	// same encounter puts its mobs in the same places without placement retries
+	// consuming the composition rolls. GetInitialSeed does not advance the
+	// encounter stream. Outside a run the encounter seed is itself random, so
+	// level-placed managers keep varying between sessions.
+	PlacementStream.Initialize(URunSeedFunctionLibrary::DeriveSeed(
+		GetEncounterStream().GetInitialSeed(), FName(TEXT("Placement"))));
+
+	return PlacementStream;
+}
+
 void AMobManagerActor::ResetEncounterStream()
 {
 	if (!HasAuthority())
@@ -1111,8 +1142,10 @@ void AMobManagerActor::ResetEncounterStream()
 	}
 
 	bEncounterStreamInitialized = false;
+	bPlacementStreamInitialized = false;
 	NextMonsterIndex = 0;
 	GetEncounterStream();
+	GetPlacementStream();
 }
 
 void AMobManagerActor::ApplyModifierComponent(APHBaseCharacter* Mob)
@@ -1383,7 +1416,7 @@ void AMobManagerActor::EvaluateSpecialSpawnRules()
 				continue;
 			}
 
-			const FRotator Rotation(0.0f, FMath::FRandRange(0.0f, 360.0f), 0.0f);
+			const FRotator Rotation(0.0, GetPlacementStream().FRandRange(0.0, 360.0), 0.0);
 			SpawnedMob = HiddenSpawn(Rule.SpecialMobClass, Location, Rotation);
 			if (!SpawnedMob)
 			{
@@ -1462,7 +1495,7 @@ bool AMobManagerActor::ForceSpawnSpecial(FName RuleId)
 				return false;
 			}
 
-			const FRotator Rotation(0.0f, FMath::FRandRange(0.0f, 360.0f), 0.0f);
+			const FRotator Rotation(0.0, GetPlacementStream().FRandRange(0.0, 360.0), 0.0);
 			SpawnedMob = HiddenSpawn(Rule.SpecialMobClass, Location, Rotation);
 			if (!SpawnedMob)
 			{

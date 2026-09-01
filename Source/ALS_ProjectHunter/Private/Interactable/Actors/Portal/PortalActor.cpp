@@ -264,6 +264,21 @@ void APortalActor::ExecuteTravel(APawn* Traveller)
 	Multicast_PlayTravelFeedback();
 	OnPortalActivated.Broadcast(this, Traveller);
 
+	// A listener owning the destination has already been told; resolving a destination portal
+	// here would only log a failure for a link that was never meant to exist.
+	if (bDestinationHandledByListener)
+	{
+		if (bSingleUse)
+		{
+			SetStateInternal(EPortalState::PS_Disabled);
+		}
+		else if (UseCooldown > 0.0f)
+		{
+			StartCooldown();
+		}
+		return;
+	}
+
 	if (DestinationLevelName != NAME_None)
 	{
 		if (UGameInstance* GameInstance = GetGameInstance())

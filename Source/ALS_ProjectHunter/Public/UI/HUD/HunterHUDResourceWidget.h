@@ -1,3 +1,6 @@
+// Copyright:   Copyright (C) 2022 Quentin Davis
+// Source Code: https://github.com/MahouSenseii/ProjectHunter
+
 // Author: Quentin Davis
 
 #pragma once
@@ -16,6 +19,57 @@ class UProgressBar;
 class USizeBox;
 class UTextBlock;
 class UAbilitySystemComponent;
+
+/**
+ * Presentation-only defaults for one player HUD resource.
+ *
+ * The values are applied to an existing UHunterHUDResourceWidget. They never
+ * replace the widget's attribute bindings or alter the authoritative gameplay
+ * values. Apply explicitly when a caller wants a shared preset; the root HUD
+ * leaves each resource widget's designer settings intact.
+ */
+USTRUCT(BlueprintType)
+struct ALS_PROJECTHUNTER_API FPHHUDResourceVisualStyle
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD|Resource|Style")
+	FLinearColor CurrentFillColor = FLinearColor::White;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD|Resource|Style", meta = (ClampMin = "0.0"))
+	float FillInterpSpeed = 12.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD|Resource|Style", meta = (ClampMin = "0.0"))
+	float DamageLagDelay = 0.4f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD|Resource|Style", meta = (ClampMin = "0.0"))
+	float DamageLagInterpSpeed = 6.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD|Resource|Style")
+	TEnumAsByte<EProgressBarFillType::Type> BarFillType = EProgressBarFillType::LeftToRight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD|Resource|Style", meta = (ClampMin = "0.0"))
+	float BarWidthOverride = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD|Resource|Style", meta = (ClampMin = "0.0"))
+	float BarHeightOverride = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD|Resource|Style")
+	bool bApplyProgressBarImageStyle = false;
+
+	/**
+	 * Keeps the track on the bottom damage-lag layer and makes upper overlay
+	 * layers transparent. This is required when the three bars are stacked in
+	 * one Overlay; leave it off to preserve the legacy all-layer behavior.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD|Resource|Style",
+		meta = (EditCondition = "bApplyProgressBarImageStyle"))
+	bool bUseLayeredBarBackgrounds = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD|Resource|Style",
+		meta = (EditCondition = "bApplyProgressBarImageStyle"))
+	FProgressBarStyle ProgressBarImageStyle;
+};
 
 /**
  * HUD widget that tracks a three-part resource: Current, Max, and Reserved.
@@ -85,6 +139,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HUD|Resource|Bar")
 	bool bApplyProgressBarImageStyle = false;
 
+	/** Keeps the track on the bottom damage-lag layer when the resource bars are overlaid. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HUD|Resource|Bar",
+		meta = (EditCondition = "bApplyProgressBarImageStyle"))
+	bool bUseLayeredBarBackgrounds = false;
+
 	/** Optional image style source. SetImage uses only BackgroundImage and FillImage from this struct. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HUD|Resource|Bar", meta = (EditCondition = "bApplyProgressBarImageStyle"))
 	FProgressBarStyle ProgressBarImageStyle;
@@ -143,6 +202,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
 	float GetReservedValue() const { return CachedReserved; }
 
+	/** True once the cached values belong to the currently bound character's ASC. */
+	bool HasResourceState() const;
+
+	DECLARE_EVENT(UHunterHUDResourceWidget, FResourceStateChangedEvent);
+	/** Notifies native presentation listeners after resource updates or binding release. */
+	FResourceStateChangedEvent& OnResourceStateChanged() { return ResourceStateChangedEvent; }
+
 	/** Localized resource label generated from ResourceType. */
 	UFUNCTION(BlueprintPure, Category = "HUD|Resource")
 	FText GetResourceDisplayName() const;
@@ -193,6 +259,10 @@ public:
 	/** Applies SizeBox width/height overrides. Values <= 0 clear the matching override. */
 	UFUNCTION(BlueprintCallable, Category = "HUD|Resource|Bar")
 	void SetSize(float InWidthOverride, float InHeightOverride);
+
+	/** Applies presentation values only; gameplay attributes and delegates are untouched. */
+	UFUNCTION(BlueprintCallable, Category = "HUD|Resource|Bar")
+	void ApplyVisualStyle(const FPHHUDResourceVisualStyle& InStyle);
 
 protected:
 	// HunterHUDBaseWidget overrides
@@ -275,7 +345,8 @@ private:
 	void BroadcastResourceState();
 
 	void ApplyConfiguredBarAppearance();
-	void ApplyProgressBarImages(const FProgressBarStyle& InProgressBarStyle);
+	void ApplyProgressBarImages(const FProgressBarStyle& InProgressBarStyle,
+		bool bInUseLayeredBarBackgrounds = false);
 	void ApplyDesignerPreview();
 	void ApplyBarPercents() const;
 	void UpdateResourceText() const;
@@ -313,4 +384,5 @@ private:
 	FDelegateHandle CurrentHandle;
 	FDelegateHandle MaxHandle;
 	FDelegateHandle ReservedHandle;
+	FResourceStateChangedEvent ResourceStateChangedEvent;
 };

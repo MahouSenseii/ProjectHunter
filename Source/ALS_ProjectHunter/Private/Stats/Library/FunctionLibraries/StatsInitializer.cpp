@@ -219,15 +219,7 @@ void FStatsInitializer::InitializeFromDataAsset(UStatsManager& Manager, UBaseSta
 		return;
 	}
 
-	// Component BeginPlay order is not guaranteed, so the progression manager may
-	// have run before StatsData was reachable. Seeding here as well means the
-	// data asset's PlayerLevel wins whichever order they happen to start in; the
-	// seed is once-only, so a levelled-up character is not reset.
-	if (UCharacterProgressionManager* Progression = Owner->FindComponentByClass<UCharacterProgressionManager>())
-	{
-		Progression->SeedStartingLevelFromStatsData();
-	}
-
+	UCharacterProgressionManager* Progression = Owner->FindComponentByClass<UCharacterProgressionManager>();
 	const TMap<FName, float> StatsMap = InStatsData->GetAllStatsAsMap();
 
 	TArray<FStatInitializationEntry> ReflectedDefinitions;
@@ -294,7 +286,8 @@ void FStatsInitializer::InitializeFromDataAsset(UStatsManager& Manager, UBaseSta
 
 	for (const TPair<FName, float>& Pair : StatsMap)
 	{
-		if (StatsInitializerPrivate::IsHandledByOrderedInitialization(Pair.Key))
+		if (StatsInitializerPrivate::IsHandledByOrderedInitialization(Pair.Key) ||
+			(Progression && Pair.Key == TEXT("PlayerLevel")))
 		{
 			continue;
 		}
@@ -307,6 +300,14 @@ void FStatsInitializer::InitializeFromDataAsset(UStatsManager& Manager, UBaseSta
 		{
 			++SkippedCount;
 		}
+	}
+
+	// Progression normalizes the optional starting level once and owns it afterward.
+	// Sync inside the initialization batch so repeated stats setup cannot replace
+	// an earned level or bypass the component's seeding option and level bounds.
+	if (Progression)
+	{
+		Progression->SeedStartingLevelFromStatsData();
 	}
 
 	ApplyCurrent(TEXT("Health"), TEXT("MaxHealth"));

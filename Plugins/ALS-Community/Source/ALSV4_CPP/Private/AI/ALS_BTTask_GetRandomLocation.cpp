@@ -16,34 +16,41 @@ UALS_BTTask_GetRandomLocation::UALS_BTTask_GetRandomLocation()
 
 EBTNodeResult::Type UALS_BTTask_GetRandomLocation::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	UWorld* World = GetWorld();
-	UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
-	APawn* Pawn = OwnerComp.GetAIOwner()->GetPawn();
-
-	if (NavSys && Pawn)
+	AAIController* AIController = OwnerComp.GetAIOwner();
+	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
+	if (!IsValid(AIController) || !IsValid(Blackboard))
 	{
-		FSharedConstNavQueryFilter SharedFilter = nullptr;
-
-		if (Filter)
-		{
-			const ANavigationData* NavData = NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate);
-			if (NavData)
-			{
-				SharedFilter = UNavigationQueryFilter::GetQueryFilter(*NavData, World, Filter);
-			}
-		}
-
-		const FVector Origin = Pawn->GetActorLocation();
-		FNavLocation Destination;
-
-		if (NavSys->GetRandomReachablePointInRadius(Origin, MaxDistance, Destination, nullptr, SharedFilter))
-		{
-			OwnerComp.GetBlackboardComponent()->SetValueAsVector(BlackboardKey.SelectedKeyName, Destination.Location);
-			return EBTNodeResult::Succeeded;
-		}
+		return EBTNodeResult::Failed;
 	}
 
-	return EBTNodeResult::Failed;
+	APawn* Pawn = AIController->GetPawn();
+	UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(OwnerComp.GetWorld());
+	if (!IsValid(Pawn) || !IsValid(NavSys))
+	{
+		return EBTNodeResult::Failed;
+	}
+
+	ANavigationData* NavData = NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate);
+	if (!IsValid(NavData))
+	{
+		return EBTNodeResult::Failed;
+	}
+
+	FSharedConstNavQueryFilter SharedFilter = nullptr;
+	if (Filter)
+	{
+		// Controller-dependent meta filters require the querying agent, not the world.
+		SharedFilter = UNavigationQueryFilter::GetQueryFilter(*NavData, AIController, Filter);
+	}
+
+	FNavLocation Destination;
+	if (!NavSys->GetRandomReachablePointInRadius(Pawn->GetActorLocation(), MaxDistance, Destination, NavData, SharedFilter))
+	{
+		return EBTNodeResult::Failed;
+	}
+
+	return Blackboard->SetValue<UBlackboardKeyType_Vector>(BlackboardKey.SelectedKeyName, Destination.Location)
+		? EBTNodeResult::Succeeded : EBTNodeResult::Failed;
 }
 
 FString UALS_BTTask_GetRandomLocation::GetStaticDescription() const

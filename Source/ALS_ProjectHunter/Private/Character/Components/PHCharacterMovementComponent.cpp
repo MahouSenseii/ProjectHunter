@@ -235,7 +235,7 @@ bool UPHCharacterMovementComponent::TryStartWallTraversal(
 		return false;
 	}
 
-	UpdateWallSurface(WallHit, true);
+	UpdateWallSurface(WallHit, true, 0.0f);
 	WallTransitionData = FALSWallTransitionData();
 
 	const EPHCustomMovementMode NewMode =
@@ -587,6 +587,25 @@ void UPHCharacterMovementComponent::HandleImpact(
 	}
 }
 
+void UPHCharacterMovementComponent::OnMovementModeChanged(
+	const EMovementMode PreviousMovementMode,
+	const uint8 PreviousCustomMode)
+{
+	const bool bWasWallTraversing = PreviousMovementMode == MOVE_Custom &&
+		(PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallRunning) ||
+			PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallClimbing) ||
+			PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallToGround));
+	if (bWasWallTraversing && !IsWallTraversing())
+	{
+		// Ragdoll, mantle and external mode changes can bypass StopWallTraversal.
+		// Restore the capsule before the new mode probes its floor or notifies listeners.
+		RestoreWorldUpRotation();
+		ClearWallTraversalState();
+	}
+
+	Super::OnMovementModeChanged(PreviousMovementMode, PreviousCustomMode);
+}
+
 void UPHCharacterMovementComponent::PhysCustom(const float DeltaTime, const int32 Iterations)
 {
 	const EPHCustomMovementMode Mode = static_cast<EPHCustomMovementMode>(CustomMovementMode);
@@ -668,7 +687,7 @@ bool UPHCharacterMovementComponent::WallTraversalStep(const float DeltaTime)
 	if (bHasWall)
 	{
 		WallLostFrames = 0;
-		UpdateWallSurface(WallHit, false);
+		UpdateWallSurface(WallHit, false, DeltaTime);
 	}
 	else
 	{
@@ -692,8 +711,11 @@ bool UPHCharacterMovementComponent::WallTraversalStep(const float DeltaTime)
 	const bool bUsingRootMotion =
 		HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity();
 
-	Acceleration = FVector::VectorPlaneProject(Acceleration, WallNormal);
-	Acceleration = Acceleration.GetClampedToMaxSize(GetMaxAcceleration()) * CombatMovementScale;
+	// Each substep starts from the same input; scaling the stored acceleration
+	// would compound a combat slowdown whenever a long frame is subdivided.
+	TGuardValue<FVector> RestoreAcceleration(Acceleration,
+		FVector::VectorPlaneProject(Acceleration, WallNormal)
+			.GetClampedToMaxSize(GetMaxAcceleration()) * CombatMovementScale);
 	if (!bUsingRootMotion)
 	{
 		CalcVelocity(DeltaTime, WallMovementFriction, false, GetMaxBrakingDeceleration());
@@ -785,7 +807,7 @@ bool UPHCharacterMovementComponent::WallTraversalStep(const float DeltaTime)
 	if (TraceWallSurfaces(-WallNormal, PostMoveWallHits, false) &&
 		BuildAveragedWallHit(PostMoveWallHits, PostMoveWallHit))
 	{
-		UpdateWallSurface(PostMoveWallHit, false);
+		UpdateWallSurface(PostMoveWallHit, false, DeltaTime);
 		SnapToWall(PostMoveWallHit);
 	}
 	else if (bHasWall)
@@ -962,6 +984,10 @@ bool UPHCharacterMovementComponent::FindAttachableWall(
 		{
 			continue;
 		}
+		if (bRequireInitialWall && !IsApproachingWall(CandidateHit))
+		{
+			continue;
+		}
 
 		const float DistanceSquared = FVector::DistSquared(
 			UpdatedComponent->GetComponentLocation(),
@@ -1009,9 +1035,10 @@ bool UPHCharacterMovementComponent::FindGroundBelow(
 	const FVector Start = UpdatedComponent->GetComponentLocation();
 	const float GroundSupport =
 		GetCapsuleSupportDistance(FVector::UpVector, UpdatedComponent->GetUpVector());
-	const FVector End =
-		Start - FVector::UpVector * (GroundSupport + ExtraDistance);
 	const float ProbeRadius = FMath::Max(Capsule->GetScaledCapsuleRadius() * 0.5f, 5.0f);
+	// The sweep's leading edge, rather than its center, must stop at the contact margin.
+	const FVector End = Start - FVector::UpVector *
+		FMath::Max(GroundSupport + ExtraDistance - ProbeRadius, 0.0f);
 
 	const bool bHit = GetWorld()->SweepSingleByChannel(
 		OutGroundHit,
@@ -1364,7 +1391,8 @@ bool UPHCharacterMovementComponent::IsUsableGroundTransitionHit(
 
 void UPHCharacterMovementComponent::UpdateWallSurface(
 	const FHitResult& WallHit,
-	const bool bInitialAttach)
+	const bool bInitialAttach,
+	const float DeltaTime)
 {
 	FVector NewNormal = bInitialAttach
 		? WallHit.ImpactNormal.GetSafeNormal()
@@ -1392,11 +1420,10 @@ void UPHCharacterMovementComponent::UpdateWallSurface(
 		}
 	}
 
-	if (!bInitialAttach && !WallNormal.IsNearlyZero() && GetWorld())
+	if (!bInitialAttach && !WallNormal.IsNearlyZero())
 	{
 		const float NormalAlpha =
-			1.0f - FMath::Exp(
-				-WallSurfaceNormalInterpSpeed * GetWorld()->GetDeltaSeconds());
+			1.0f - FMath::Exp(-WallSurfaceNormalInterpSpeed * DeltaTime);
 		const FQuat NormalDelta = FQuat::FindBetweenNormals(
 			FVector(WallNormal).GetSafeNormal(),
 			NewNormal);
@@ -1880,6 +1907,7 @@ void UPHCharacterMovementComponent::ClearWallTraversalState()
 	WallLostFrames = 0;
 	WallTraversalElapsed = 0.0f;
 	WallAttachRetryAccumulator = 0.0f;
+	WallToGroundElapsed = 0.0f;
 	ClearWallTraversalCombatMovementScale();
 
 	// The wall basis is read by GetWallNormal/GetWallUp/GetWallTraversalRotation,

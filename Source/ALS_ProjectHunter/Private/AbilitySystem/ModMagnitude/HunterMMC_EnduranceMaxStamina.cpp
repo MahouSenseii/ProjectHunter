@@ -57,9 +57,9 @@ float UHunterMMC_EnduranceMaxStamina::CalculateBaseMagnitude_Implementation(cons
 	GetCapturedAttributeMagnitude(CaptureDefinitions.EnduranceDef, Spec, EvaluationParameters, Endurance);
 	Endurance = FMath::Max(Endurance, 0.0f);
 
-	float PlayerLevel = 1.0f;
+	float PlayerLevel = 0.0f;
 	GetCapturedAttributeMagnitude(CaptureDefinitions.PlayerLevelDef, Spec, EvaluationParameters, PlayerLevel);
-	PlayerLevel = FMath::Max(PlayerLevel, 1.0f);
+	PlayerLevel = FMath::Max(PlayerLevel, 0.0f);
 
 	return UPHResourceFunctionLibrary::CalculatePrimaryDerivedMaxValue(FPHPrimaryDerivedResourceInput(
 		HunterMMCEnduranceMaxStaminaPrivate::BaseMaxValue,

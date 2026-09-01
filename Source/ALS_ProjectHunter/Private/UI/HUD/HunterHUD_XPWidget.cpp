@@ -14,10 +14,11 @@ void UHunterHUD_XPWidget::NativeInitializeForCharacter(APHBaseCharacter* Charact
 
 	PM->OnXPGained.AddDynamic(this, &UHunterHUD_XPWidget::HandleXPGained);
 	PM->OnLevelUp.AddDynamic(this,  &UHunterHUD_XPWidget::HandleLevelUp);
+	PM->OnProgressionChanged.AddDynamic(this, &UHunterHUD_XPWidget::HandleProgressionChanged);
 
 	CachedLevel         = PM->Level;
 	CachedCurrentXP     = PM->CurrentXP;
-	CachedXPToNextLevel = FMath::Max(PM->XPToNextLevel, static_cast<int64>(1));
+	CachedXPToNextLevel = FMath::Max(PM->XPToNextLevel, static_cast<int64>(0));
 
 	BroadcastXPState();
 }
@@ -33,6 +34,7 @@ void UHunterHUD_XPWidget::NativeReleaseCharacter()
 
 	PM->OnXPGained.RemoveDynamic(this, &UHunterHUD_XPWidget::HandleXPGained);
 	PM->OnLevelUp.RemoveDynamic(this,  &UHunterHUD_XPWidget::HandleLevelUp);
+	PM->OnProgressionChanged.RemoveDynamic(this, &UHunterHUD_XPWidget::HandleProgressionChanged);
 
 	BoundProgressionManager.Reset();
 }
@@ -57,7 +59,7 @@ void UHunterHUD_XPWidget::HandleXPGained(int64 FinalXP, int64 BaseXP, float Tota
 	// The delegate fires AFTER the manager has already updated its properties.
 	CachedLevel         = PM->Level;
 	CachedCurrentXP     = PM->CurrentXP;
-	CachedXPToNextLevel = FMath::Max(PM->XPToNextLevel, static_cast<int64>(1));
+	CachedXPToNextLevel = FMath::Max(PM->XPToNextLevel, static_cast<int64>(0));
 
 	BroadcastXPState();
 }
@@ -72,10 +74,31 @@ void UHunterHUD_XPWidget::HandleLevelUp(int32 NewLevel, int32 StatPointsAwarded,
 
 	CachedLevel         = NewLevel;
 	CachedCurrentXP     = PM->CurrentXP;
-	CachedXPToNextLevel = FMath::Max(PM->XPToNextLevel, static_cast<int64>(1));
+	CachedXPToNextLevel = FMath::Max(PM->XPToNextLevel, static_cast<int64>(0));
 
 	// Fire the level-up event first so BP plays the fanfare while the bar reflects XP at the start of the new level.
 	OnLevelUpEffect(NewLevel, StatPointsAwarded, SkillPointsAwarded);
+	BroadcastXPState();
+}
+
+void UHunterHUD_XPWidget::HandleProgressionChanged()
+{
+	const UCharacterProgressionManager* PM = BoundProgressionManager.Get();
+	if (!PM)
+	{
+		return;
+	}
+
+	const int64 NewXPToNextLevel = FMath::Max(PM->XPToNextLevel, static_cast<int64>(0));
+	if (CachedLevel == PM->Level && CachedCurrentXP == PM->CurrentXP &&
+		CachedXPToNextLevel == NewXPToNextLevel)
+	{
+		return;
+	}
+
+	CachedLevel = PM->Level;
+	CachedCurrentXP = PM->CurrentXP;
+	CachedXPToNextLevel = NewXPToNextLevel;
 	BroadcastXPState();
 }
 

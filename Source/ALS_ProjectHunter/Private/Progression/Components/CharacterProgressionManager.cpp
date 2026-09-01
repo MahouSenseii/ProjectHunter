@@ -27,6 +27,8 @@ void UCharacterProgressionManager::GetLifetimeReplicatedProps(TArray<FLifetimePr
 	DOREPLIFETIME(UCharacterProgressionManager, UnspentStatPoints);
 	DOREPLIFETIME(UCharacterProgressionManager, TotalStatPoints);
 	DOREPLIFETIME(UCharacterProgressionManager, UnspentSkillPoints);
+	DOREPLIFETIME(UCharacterProgressionManager, UnspentPassivePoints);
+	DOREPLIFETIME(UCharacterProgressionManager, TotalPassivePoints);
 	DOREPLIFETIME_CONDITION(UCharacterProgressionManager, SpentStatPoints, COND_OwnerOnly);
 }
 
@@ -39,61 +41,77 @@ void UCharacterProgressionManager::BeginPlay()
 
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
-		// Seed before syncing, or the component default is what reaches the
-		// attribute and the data asset's PlayerLevel never takes effect.
 		SeedStartingLevelFromStatsData();
-		FProgressionAbilityHelper::TrySyncPlayerLevelAttribute(CachedASC.Get(), Level);
 	}
 
 	RebuildSpentStatPointsCache();
 
-	XPToNextLevel = Level >= MaxLevel ? 0 : GetXPForLevel(Level + 1);
+	XPToNextLevel = IsAtMaxLevel() ? 0 : GetXPForLevel(Level + 1);
 }
 
 void UCharacterProgressionManager::SeedStartingLevelFromStatsData()
 {
-	if (!bSeedStartingLevelFromStatsData || bHasSeededStartingLevel)
-	{
-		return;
-	}
-
 	const AActor* Owner = GetOwner();
-	const UStatsManager* Stats = Owner ? Owner->FindComponentByClass<UStatsManager>() : nullptr;
-	const UBaseStatsData* Data = Stats ? Stats->GetStatsDataAsset() : nullptr;
-	if (!Data)
+	if (!Owner || !Owner->HasAuthority())
 	{
-		// Not fatal - stats may simply not be configured yet, and this runs again
-		// once initialization completes. Logged because a silent no-op here looks
-		// exactly like the feature being broken.
-		UE_LOG(LogCharacterProgressionManager, Verbose,
-			TEXT("SeedStartingLevelFromStatsData: %s has no stats data yet (StatsManager=%s); will retry after stats init."),
-			*GetNameSafe(Owner), *GetNameSafe(Stats));
 		return;
 	}
 
-	// GetStatValue only succeeds for an authored row, so a character whose data
-	// asset says nothing about level keeps whatever the component was set to.
-	float AuthoredLevel = 0.0f;
-	if (!Data->GetStatValue(TEXT("PlayerLevel"), AuthoredLevel))
+	const int32 PreviousLevel = Level;
+	const int64 PreviousXPToNextLevel = XPToNextLevel;
+	if (bSeedStartingLevelFromStatsData && !bHasSeededStartingLevel)
 	{
-		UE_LOG(LogCharacterProgressionManager, Warning,
-			TEXT("SeedStartingLevelFromStatsData: %s does not author PlayerLevel, so %s keeps its component "
-			     "default of %d. Tick Override Value on PlayerLevel to control the starting level from data."),
-			*GetNameSafe(Data), *GetNameSafe(Owner), Level);
-		bHasSeededStartingLevel = true;
-		return;
+		const UStatsManager* Stats = Owner->FindComponentByClass<UStatsManager>();
+		const UBaseStatsData* Data = Stats ? Stats->GetStatsDataAsset() : nullptr;
+		if (Data)
+		{
+			float AuthoredLevel = 0.0f;
+			if (Data->GetStatValue(TEXT("PlayerLevel"), AuthoredLevel))
+			{
+				const int32 SeededLevel = HasLevelCap()
+				? FMath::Clamp(FMath::RoundToInt(AuthoredLevel), MinLevel, MaxLevel)
+				: FMath::Max(FMath::RoundToInt(AuthoredLevel), MinLevel);
+				if (SeededLevel != Level)
+				{
+					UE_LOG(LogCharacterProgressionManager, Log,
+						TEXT("SeedStartingLevelFromStatsData: %s starting at level %d from %s (component default was %d)."),
+						*GetNameSafe(Owner), SeededLevel, *GetNameSafe(Data), Level);
+				}
+				Level = SeededLevel;
+			}
+			else
+			{
+				UE_LOG(LogCharacterProgressionManager, Warning,
+					TEXT("SeedStartingLevelFromStatsData: %s does not author PlayerLevel, so %s keeps its component "
+					     "default of %d. Tick Override Value on PlayerLevel to control the starting level from data."),
+					*GetNameSafe(Data), *GetNameSafe(Owner), Level);
+			}
+			bHasSeededStartingLevel = true;
+		}
+		else
+		{
+			UE_LOG(LogCharacterProgressionManager, Verbose,
+				TEXT("SeedStartingLevelFromStatsData: %s has no stats data yet (StatsManager=%s); will retry after stats init."),
+				*GetNameSafe(Owner), *GetNameSafe(Stats));
+		}
 	}
 
-	const int32 SeededLevel = FMath::Clamp(FMath::RoundToInt(AuthoredLevel), MinLevel, MaxLevel);
-	if (SeededLevel != Level)
+	// Stats can initialize after BeginPlay or again after a level-up. Keep both
+	// consumers current even when data seeding is disabled or already complete.
+	RefreshLevelState();
+	if (PreviousLevel != Level || PreviousXPToNextLevel != XPToNextLevel)
 	{
-		UE_LOG(LogCharacterProgressionManager, Log,
-			TEXT("SeedStartingLevelFromStatsData: %s starting at level %d from %s (component default was %d)."),
-			*GetNameSafe(Owner), SeededLevel, *GetNameSafe(Data), Level);
+		OnProgressionChanged.Broadcast();
 	}
+}
 
-	Level = SeededLevel;
-	bHasSeededStartingLevel = true;
+void UCharacterProgressionManager::RefreshLevelState()
+{
+	XPToNextLevel = IsAtMaxLevel() ? 0 : GetXPForLevel(Level + 1);
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		FProgressionAbilityHelper::TrySyncPlayerLevelAttribute(GetAbilitySystemComponent(), Level);
+	}
 }
 
 void UCharacterProgressionManager::AwardExperienceFromKill(APHBaseCharacter* KilledCharacter)
@@ -203,7 +221,7 @@ void UCharacterProgressionManager::LevelUp()
 		return;
 	}
 
-	if (Level >= MaxLevel)
+	if (IsAtMaxLevel())
 	{
 		UE_LOG(LogCharacterProgressionManager, Warning, TEXT("LevelUp: Already at max level (%d)"), MaxLevel);
 		return;
@@ -224,7 +242,9 @@ void UCharacterProgressionManager::CheckForLevelUp()
 		return;
 	}
 
-	while (CurrentXP >= XPToNextLevel && Level < MaxLevel)
+	// XPToNextLevel guards this loop as much as the cap does: with no cap, a curve that returns
+	// zero or less for the next level would spin here forever instead of levelling once.
+	while (XPToNextLevel > 0 && CurrentXP >= XPToNextLevel && !IsAtMaxLevel())
 	{
 		CurrentXP -= XPToNextLevel;
 		Level++;
@@ -234,7 +254,7 @@ void UCharacterProgressionManager::CheckForLevelUp()
 		UE_LOG(LogCharacterProgressionManager, Log, TEXT("Level Up! New Level: %d, XP to next: %lld"), Level, XPToNextLevel);
 	}
 
-	if (Level >= MaxLevel)
+	if (IsAtMaxLevel())
 	{
 		CurrentXP = 0;
 		XPToNextLevel = 0;
@@ -379,6 +399,19 @@ bool UCharacterProgressionManager::SpendSkillPoints(const int32 Amount)
 	return true;
 }
 
+bool UCharacterProgressionManager::SpendPassivePoints(const int32 Amount)
+{
+	const AActor* Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority() || Amount <= 0 || UnspentPassivePoints < Amount)
+	{
+		return false;
+	}
+
+	UnspentPassivePoints -= Amount;
+	OnProgressionChanged.Broadcast();
+	return true;
+}
+
 int32 UCharacterProgressionManager::GetStatPointsSpentOn(const FName AttributeName) const
 {
 	if (const int32* Found = SpentStatPointsCache.Find(AttributeName))
@@ -391,6 +424,9 @@ int32 UCharacterProgressionManager::GetStatPointsSpentOn(const FName AttributeNa
 
 void UCharacterProgressionManager::OnLevelUpInternal()
 {
+	// A delayed stats asset must not replace levels earned before it arrived.
+	bHasSeededStartingLevel = true;
+
 	const int32 StatPointsAwarded = StatPointsPerLevel;
 	UnspentStatPoints += StatPointsAwarded;
 	TotalStatPoints += StatPointsAwarded;
@@ -398,9 +434,13 @@ void UCharacterProgressionManager::OnLevelUpInternal()
 	const int32 SkillPointsAwarded = SkillPointsPerLevel;
 	UnspentSkillPoints += SkillPointsAwarded;
 
-	XPToNextLevel = Level >= MaxLevel ? 0 : GetXPForLevel(Level + 1);
+	// Not carried on OnLevelUp: that delegate is a Blueprint contract with three parameters and
+	// widening it would break every existing binding. Listeners read the counter, or take
+	// OnProgressionChanged.
+	UnspentPassivePoints += PassivePointsPerLevel;
+	TotalPassivePoints += PassivePointsPerLevel;
 
-	FProgressionAbilityHelper::TrySyncPlayerLevelAttribute(GetAbilitySystemComponent(), Level);
+	RefreshLevelState();
 
 	OnLevelUp.Broadcast(Level, StatPointsAwarded, SkillPointsAwarded);
 	OnProgressionChanged.Broadcast();
@@ -433,7 +473,7 @@ UHunterAttributeSet* UCharacterProgressionManager::GetAttributeSet() const
 
 void UCharacterProgressionManager::OnRep_Level(const int32 OldLevel)
 {
-	XPToNextLevel = Level >= MaxLevel ? 0 : GetXPForLevel(Level + 1);
+	XPToNextLevel = IsAtMaxLevel() ? 0 : GetXPForLevel(Level + 1);
 	if (Level > OldLevel)
 	{
 		const int32 LevelsGained = Level - OldLevel;

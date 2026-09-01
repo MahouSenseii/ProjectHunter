@@ -108,6 +108,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Behaviour")
 	bool bActiveOnBeginPlay = true;
 
+	/**
+	 * True when something else decides where this portal leads - a generated floor rebuilding
+	 * itself in place, for instance. OnPortalActivated still fires; the built-in destination
+	 * lookup is skipped, so an unset destination is a configuration choice rather than a fault.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Destination")
+	bool bDestinationHandledByListener = false;
+
 	/** True if this portal can only be used once (e.g., one-way dungeon entrance). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Behaviour")
 	bool bSingleUse = false;

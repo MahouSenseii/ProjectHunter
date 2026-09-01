@@ -57,9 +57,9 @@ float UHunterMMC_StrengthMaxHealth::CalculateBaseMagnitude_Implementation(const 
 	GetCapturedAttributeMagnitude(CaptureDefinitions.StrengthDef, Spec, EvaluationParameters, Strength);
 	Strength = FMath::Max(Strength, 0.0f);
 
-	float PlayerLevel = 1.0f;
+	float PlayerLevel = 0.0f;
 	GetCapturedAttributeMagnitude(CaptureDefinitions.PlayerLevelDef, Spec, EvaluationParameters, PlayerLevel);
-	PlayerLevel = FMath::Max(PlayerLevel, 1.0f);
+	PlayerLevel = FMath::Max(PlayerLevel, 0.0f);
 
 	return UPHResourceFunctionLibrary::CalculatePrimaryDerivedMaxValue(FPHPrimaryDerivedResourceInput(
 		HunterMMCStrengthMaxHealthPrivate::BaseMaxValue,

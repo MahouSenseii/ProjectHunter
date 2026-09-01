@@ -233,7 +233,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mob Manager|Determinism")
 	int32 EncounterSeedOverride = 0;
 
-	/** Re-derives the encounter stream from the current run/floor. Server-only. */
+	/**
+	 * Re-derives the encounter and placement streams from the current run/floor.
+	 * Server-only.
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Mob Manager|Determinism")
 	void ResetEncounterStream();
 
@@ -608,8 +611,23 @@ private:
 	mutable bool bEncounterStreamInitialized = false;
 	mutable int32 NextMonsterIndex = 0;
 
+	// Placement stream: spawn positions, pack jitter and spawn rotations.
+	// Kept apart from EncounterStream so a placement retry - which happens a
+	// variable number of times depending on navmesh, collision and player
+	// distance - cannot shift the pack size or mob type the composition stream
+	// would have rolled.
+	mutable FRandomStream PlacementStream;
+	mutable bool bPlacementStreamInitialized = false;
+
 	/** Lazily initialises and returns the composition stream. */
 	FRandomStream& GetEncounterStream() const;
+
+	/**
+	 * Lazily initialises and returns the placement stream, derived from the
+	 * encounter seed so one run seed reproduces where a pack stands, not only
+	 * what it is made of.
+	 */
+	FRandomStream& GetPlacementStream() const;
 
 	FTimerHandle SpawnTimerHandle;
 

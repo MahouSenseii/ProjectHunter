@@ -1,3 +1,6 @@
+// Copyright:   Copyright (C) 2022 Quentin Davis
+// Source Code: https://github.com/MahouSenseii/ProjectHunter
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -187,6 +190,7 @@ public:
 		const FVector& MoveDelta = FVector::ZeroVector) override;
 
 protected:
+	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 	virtual void PhysCustom(float DeltaTime, int32 Iterations) override;
 
 	void PhysWallTraversal(float DeltaTime, int32 Iterations);
@@ -213,7 +217,7 @@ protected:
 	bool ShouldTransitionToGround(const FHitResult& Hit) const;
 	bool IsUsableGroundTransitionHit(const FHitResult& Hit) const;
 	bool FindGroundBelow(FHitResult& OutGroundHit, float ExtraDistance) const;
-	void UpdateWallSurface(const FHitResult& WallHit, bool bInitialAttach);
+	void UpdateWallSurface(const FHitResult& WallHit, bool bInitialAttach, float DeltaTime);
 	void SnapToWall(const FHitResult& WallHit, bool bSnapRotation = false);
 	void SnapToCurrentWall(bool bSnapRotation = false);
 	void SnapToWallPlane(

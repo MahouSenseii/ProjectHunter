@@ -1,3 +1,6 @@
+// Copyright:   Copyright (C) 2022 Quentin Davis
+// Source Code: https://github.com/MahouSenseii/ProjectHunter
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -36,16 +39,19 @@ public:
 	virtual void BeginPlay() override;
 
 	/**
-	 * Pulls the starting level out of the owner's stats data asset.
+	 * Applies the optional starting level from the owner's stats data asset and
+	 * refreshes the XP requirement and live PlayerLevel attribute.
 	 *
-	 * Called from BeginPlay and again once stats finish initializing, because
-	 * component BeginPlay order is not guaranteed and whichever runs first
-	 * should win. Seeds at most once so a levelled-up character is never reset
-	 * by a later re-initialization.
+	 * Called from BeginPlay and stats initialization so either startup order
+	 * works. Seeds at most once; later calls synchronize the owned level without
+	 * resetting earned progression. Disabled or unauthored seeding keeps Level.
 	 */
 	void SeedStartingLevelFromStatsData();
 
-	/** True once the starting level has been taken from the data asset. */
+	/** Refreshes XP and authoritative GAS state without seeding, rewards, or events. */
+	void RefreshLevelState();
+
+	/** True once data seeding is complete or earned progression has started. */
 	bool HasSeededStartingLevel() const { return bHasSeededStartingLevel; }
 
 private:
@@ -81,8 +87,22 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Progression")
 	int64 XPToNextLevel = 100;
 
+	/**
+	 * Highest level a character may reach. Zero or negative means no ceiling: levels keep coming as
+	 * long as XP does and the curve simply gets steeper, which is the endless mode.
+	 *
+	 * The default stays 100 on purpose. Endless is a per-character choice - set it to zero on the
+	 * player - and changing the default here silently re-levels every existing character instead.
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression")
 	int32 MaxLevel = 100;
+
+	/** False when MaxLevel is zero or negative, so nothing has to repeat that test. */
+	UFUNCTION(BlueprintPure, Category = "Progression")
+	bool HasLevelCap() const { return MaxLevel > 0; }
+
+	UFUNCTION(BlueprintPure, Category = "Progression")
+	bool IsAtMaxLevel() const { return HasLevelCap() && Level >= MaxLevel; }
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression|XP Curve")
 	float BaseXPPerLevel = 5.0f;
@@ -118,6 +138,25 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression|Skills")
 	int32 SkillPointsPerLevel = 1;
+
+	/**
+	 * Points spent on the passive tree, granted per level alongside stat and skill points.
+	 *
+	 * A currency of its own rather than a rename of skill points: skill points are already a
+	 * Blueprint-visible contract, and the two are spent on different things.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_ProgressionValue, Category = "Progression|Passives")
+	int32 UnspentPassivePoints = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_ProgressionValue, Category = "Progression|Passives")
+	int32 TotalPassivePoints = 0;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progression|Passives")
+	int32 PassivePointsPerLevel = 1;
+
+	/** Spends passive points if enough are unspent. Returns false and spends nothing otherwise. */
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Progression|Passives")
+	bool SpendPassivePoints(int32 Amount = 1);
 
 	UFUNCTION(BlueprintCallable, Category = "Progression", BlueprintAuthorityOnly)
 	void AwardExperienceFromKill(APHBaseCharacter* KilledCharacter);

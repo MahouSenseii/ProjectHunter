@@ -298,10 +298,13 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FPHTagManagerReplicationPIETest::RunTest(const FString&)
 {
-	AddExpectedErrorPlain(
-		TEXT("Using CommonUI without a CommonGameViewportClient derived game viewport client."),
-		EAutomationExpectedErrorFlags::Contains,
-		0);
+	// The CommonUI viewport-client notice this used to suppress is an incidental
+	// engine log: CommonUI is not a project plugin and the only reference to it in
+	// this repository was the suppression itself. It is emitted at Verbose from
+	// LogUIActionRouter, so it can never fail a test, and requiring it made this
+	// case fail the moment PIE package load order shifted - which is exactly what
+	// TASK-PH-20260831-37's content reorganization did, with nothing else broken.
+	// Pin assertions to this project's behaviour, not to an unrelated plugin's log.
 	ADD_LATENT_AUTOMATION_COMMAND(PHTagManagerReplicationPIETest::FRunNetworkPIECommand(this));
 	return true;
 }

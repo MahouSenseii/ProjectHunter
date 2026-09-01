@@ -82,7 +82,7 @@ bool FPHCombatBaseStatsNeutralMultiplierTest::RunTest(const FString&)
 {
 	UBaseStatsData* BaseStats = LoadObject<UBaseStatsData>(
 		nullptr,
-		TEXT("/Game/ProjectHunter/Data/Stats/DA_BaseStats.DA_BaseStats"));
+		TEXT("/Game/ProjectHunter/Gameplay/Stats/DA_BaseStats.DA_BaseStats"));
 	if (!TestNotNull(TEXT("DA_BaseStats loads"), BaseStats))
 	{
 		return false;

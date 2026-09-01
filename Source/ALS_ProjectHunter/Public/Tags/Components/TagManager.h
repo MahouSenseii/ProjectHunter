@@ -13,6 +13,8 @@ class UHunterAttributeSet;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTagManager, Log, All);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDeadStateChanged, bool, bDead);
+
 UCLASS(ClassGroup = (Managers), meta = (BlueprintSpawnableComponent))
 class ALS_PROJECTHUNTER_API UTagManager : public UActorComponent
 {
@@ -39,6 +41,17 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Tags|Conditions")
 	void SetDeadState(bool bDead);
+
+	/**
+	 * Fires whenever SetDeadState is called, with the state it was set to.
+	 *
+	 * A death marked only as a tag is invisible to everything that needs to know one happened -
+	 * kill counts, encounter progress, loot. The owning character listens to this so a Blueprint
+	 * that marks the tag is reporting the death whether or not it also remembers to call
+	 * NotifyDeath.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Tags|Conditions")
+	FOnDeadStateChanged OnDeadStateChanged;
 
 	UFUNCTION(BlueprintPure, Category = "Tags")
 	bool HasTag(const FGameplayTag& Tag) const;

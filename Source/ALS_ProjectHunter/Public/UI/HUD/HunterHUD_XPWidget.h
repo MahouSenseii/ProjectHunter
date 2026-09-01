@@ -1,3 +1,6 @@
+// Copyright:   Copyright (C) 2022 Quentin Davis
+// Source Code: https://github.com/MahouSenseii/ProjectHunter
+
 // Author: Quentin Davis
 
 #pragma once
@@ -20,7 +23,7 @@ class ALS_PROJECTHUNTER_API UHunterHUD_XPWidget : public UHunterHUDBaseWidget
 public:
 	// Accessors - safe to poll from Blueprint at any time
 
-	/** Current character level (1-based). */
+	/** Current character level, including an unlevelled starting value of zero. */
 	UFUNCTION(BlueprintPure, Category = "HUD|XP")
 	int32 GetCurrentLevel() const { return CachedLevel; }
 
@@ -77,12 +80,15 @@ private:
 	UFUNCTION()
 	void HandleLevelUp(int32 NewLevel, int32 StatPointsAwarded, int32 SkillPointsAwarded);
 
-	/** Snapshots the current state from the manager and broadcasts OnXPBarUpdated. */
+	UFUNCTION()
+	void HandleProgressionChanged();
+
+	/** Broadcasts the cached state through OnXPBarUpdated. */
 	void BroadcastXPState();
 
 	// State
 
-	int32 CachedLevel         = 1;
+	int32 CachedLevel         = 0;
 	int64 CachedCurrentXP     = 0;
 	int64 CachedXPToNextLevel = 100;  // sane default; overwritten on init
 

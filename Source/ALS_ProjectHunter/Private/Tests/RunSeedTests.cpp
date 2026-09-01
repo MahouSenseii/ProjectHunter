@@ -1,9 +1,5 @@
-// Automation coverage for the run seed chain and positional damage.
-//
-// The seed chain is pure math, so it tests without a world. Floor lifecycle and
-// party state live on URunSubsystem, which needs a game instance and a world -
-// those are covered by the seed-determinism properties here plus manual PIE
-// verification, and are called out as such in the report.
+// Pure seed-chain and positional-damage coverage. Run/floor lifecycle checks
+// live in RunFloorSeedIntegrationTests.cpp and require a transient test world.
 
 #include "CoreMinimal.h"
 #include "Misc/AutomationTest.h"
@@ -105,9 +101,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FPHRunSeedNeverZeroTest::RunTest(const FString&)
 {
-	// FRandomStream(0) reseeds itself from the global RNG, which would silently
-	// break determinism at exactly the point the chain is supposed to guarantee
-	// it. No derivation may ever hand back zero.
+	// ProjectHunter spawn/modifier callers reserve zero for unseeded behavior.
 	for (int32 Parent = -50; Parent <= 50; ++Parent)
 	{
 		for (int32 Index = 0; Index < 20; ++Index)

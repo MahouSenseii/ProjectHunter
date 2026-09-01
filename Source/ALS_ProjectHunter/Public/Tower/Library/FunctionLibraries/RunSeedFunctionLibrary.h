@@ -1,21 +1,6 @@
-// Deterministic seed derivation for a tower run.
-//
-// One RunSeed must reproduce an entire run's procedural structure: floor
-// layouts, encounter composition, monster tiers, monster modifiers, and reward
-// or loot rolls. Every one of those decisions derives its stream from this
-// chain rather than calling the global FMath RNG, so the same RunSeed plus the
-// same inputs always produces the same run.
-//
-//   RunSeed
-//     -> FloorSeed(Floor)
-//          -> EncounterSeed(EncounterIndex)
-//               -> MonsterSeed(MonsterIndex)
-//                    -> ModifierSeed
-//          -> RewardSeed
-//               -> LootSeed(DropIndex)
-//
-// Moment-to-moment AI (pathing jitter, attack selection) deliberately does NOT
-// use this - only decisions that define the shape of the run.
+// Copyright:   Copyright (C) 2022 Quentin Davis
+// Source Code: https://github.com/MahouSenseii/ProjectHunter
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -34,12 +19,9 @@ class ALS_PROJECTHUNTER_API URunSeedFunctionLibrary : public UBlueprintFunctionL
 
 public:
 	/**
-	 * Folds a label and an index into a parent seed.
-	 *
-	 * The label keeps sibling streams apart: without it, EncounterSeed(S, 1) and
-	 * MonsterSeed(S, 1) would collide and two unrelated systems would draw the
-	 * same numbers. Result is always non-zero, because FRandomStream treats 0 as
-	 * "seed me from the global RNG" and would silently become non-deterministic.
+	 * Derives a stable seed from a parent, case-insensitive label, and index.
+	 * Label text is hashed instead of process-local FName IDs so results survive
+	 * restarts. Returns 1..MAX_int32; run/spawn callers reserve zero for unseeded use.
 	 */
 	UFUNCTION(BlueprintPure, Category = "Run|Seed")
 	static int32 DeriveSeed(int32 ParentSeed, const FName Label, int32 Index = 0);
@@ -47,6 +29,10 @@ public:
 	/** Seed for one floor's layout, biome, and modifier roll. */
 	UFUNCTION(BlueprintPure, Category = "Run|Seed")
 	static int32 DeriveFloorSeed(int32 RunSeed, int32 FloorNumber);
+
+	/** Seed for one floor's layout geometry, kept apart from encounter and loot draws. */
+	UFUNCTION(BlueprintPure, Category = "Run|Seed")
+	static int32 DeriveLayoutSeed(int32 FloorSeed);
 
 	/** Seed for one encounter/spawn group on a floor. */
 	UFUNCTION(BlueprintPure, Category = "Run|Seed")
@@ -67,6 +53,9 @@ public:
 	/** Seed for one loot drop produced by a reward. */
 	UFUNCTION(BlueprintPure, Category = "Run|Seed")
 	static int32 DeriveLootSeed(int32 RewardSeed, int32 DropIndex);
+
+	/** Convenience: a ready-to-use stream for one floor's layout generation. */
+	static FRandomStream MakeLayoutStream(int32 FloorSeed);
 
 	/** Convenience: a ready-to-use stream for one floor. */
 	static FRandomStream MakeFloorStream(int32 RunSeed, int32 FloorNumber);

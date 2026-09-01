@@ -5,6 +5,7 @@
 #include "AbilitySystem/Effects/HunterGE_DerivedPrimaryVitals.h"
 #include "AbilitySystemComponent.h"
 #include "Progression/Components/CharacterProgressionManager.h"
+#include "Progression/Components/PHPassiveTreeComponent.h"
 #include "Stats/Components/StatsManager.h"
 #include "Tags/Components/TagManager.h"
 #include "Combat/Components/CombatManager.h"
@@ -55,6 +56,7 @@ APHBaseCharacter::APHBaseCharacter(const FObjectInitializer& ObjectInitializer)
 	AttributeSet = CreateDefaultSubobject<UHunterAttributeSet>(TEXT("AttributeSet"));
 
 	ProgressionManager = CreateDefaultSubobject<UCharacterProgressionManager>(TEXT("ProgressionManager"));
+	PassiveTreeComponent = CreateDefaultSubobject<UPHPassiveTreeComponent>(TEXT("PassiveTreeComponent"));
 
 	EquipmentManager = CreateDefaultSubobject<UEquipmentManager>(TEXT("EquipmentComponent"));
 
@@ -123,6 +125,7 @@ void APHBaseCharacter::PostInitializeComponents()
 
 	PH_RECOVER_COMPONENT(AbilitySystemComponent, UHunterAbilitySystemComponent)
 	PH_RECOVER_COMPONENT(ProgressionManager,     UCharacterProgressionManager)
+	PH_RECOVER_COMPONENT(PassiveTreeComponent,   UPHPassiveTreeComponent)
 	PH_RECOVER_COMPONENT(EquipmentManager,       UEquipmentManager)
 	PH_RECOVER_COMPONENT(StatsManager,           UStatsManager)
 	PH_RECOVER_COMPONENT(TagManager,             UTagManager)
@@ -177,7 +180,28 @@ void APHBaseCharacter::BeginPlay()
 		InitializeAbilitySystem();
 	}
 
+	// Listening to this character's own tag component, so a death that is only ever marked as a
+	// condition tag still reaches every listener that counts kills or clears floors.
+	if (TagManager)
+	{
+		TagManager->OnDeadStateChanged.AddUniqueDynamic(this, &APHBaseCharacter::HandleDeadStateChanged);
+	}
+
 	Super::BeginPlay();
+}
+
+void APHBaseCharacter::HandleDeadStateChanged(const bool bDead)
+{
+	// Only the transition into death matters; clearing the tag is a revive or a pooled reuse, and
+	// ResetDeathState is what re-arms the latch for those.
+	if (!bDead || !HasAuthority())
+	{
+		return;
+	}
+
+	// NotifyDeath is latched, so a Blueprint that calls it as well costs nothing and keeps the
+	// killer it credits.
+	NotifyDeath(nullptr);
 }
 
 void APHBaseCharacter::Tick(float DeltaSeconds)
@@ -242,10 +266,22 @@ void APHBaseCharacter::SprintAction_Implementation(bool bValue)
 
 void APHBaseCharacter::ApplyStaminaMovementInput(const bool bHeld, const bool bSendServerRpc)
 {
+	const bool bPreviouslyRequestedTraversal = WantsWallTraversal();
 	const bool bAccepted = bHeld && CanUseStaminaMovement();
 	Super::SprintAction_Implementation(bAccepted);
 
 	bWallTraversalHeld = bAccepted;
+	if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent())
+	{
+		Movement->SetWantsWallTraversalInput(bAccepted);
+		// Release only a held request. Explicit Blueprint starts remain valid, and
+		// a ground transfer already in progress is allowed to finish.
+		if (bPreviouslyRequestedTraversal && !bAccepted &&
+			(Movement->IsWallRunning() || Movement->IsWallClimbing()))
+		{
+			Movement->StopWallTraversal();
+		}
+	}
 	if (bSendServerRpc && GetLocalRole() == ROLE_AutonomousProxy)
 	{
 		ServerSetWallTraversalHeld(bHeld);
@@ -501,18 +537,6 @@ void APHBaseCharacter::OnMovementModeChanged(
 	const EMovementMode PrevMovementMode,
 	const uint8 PreviousCustomMode)
 {
-	if (PrevMovementMode == MOVE_Custom &&
-		(PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallRunning) ||
-			PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallClimbing) ||
-			PreviousCustomMode == static_cast<uint8>(EPHCustomMovementMode::WallToGround)))
-	{
-		if (UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
-			Movement && !Movement->IsWallTraversing())
-		{
-			Movement->RestoreWorldUpRotation();
-		}
-	}
-
 	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
 
 	const UPHCharacterMovementComponent* Movement = GetPHMovementComponent();
@@ -690,13 +714,20 @@ void APHBaseCharacter::InitializeAbilitySystem()
 		HunterASC->AbilityActorInfoSet();
 	}
 
-	CachedLevel = FMath::Max(GetCharacterLevel(), 1);
+	CachedLevel = FMath::Max(GetCharacterLevel(), 0);
 
 	if (HasAuthority())
 	{
-		AbilitySystemComponent->SetNumericAttributeBase(
-			UHunterAttributeSet::GetPlayerLevelAttribute(),
-			static_cast<float>(CachedLevel));
+		if (ProgressionManager)
+		{
+			ProgressionManager->RefreshLevelState();
+		}
+		else
+		{
+			AbilitySystemComponent->SetNumericAttributeBase(
+				UHunterAttributeSet::GetPlayerLevelAttribute(),
+				static_cast<float>(CachedLevel));
+		}
 	}
 
 
@@ -833,6 +864,46 @@ void APHBaseCharacter::NotifyDeath(AActor* Killer)
 		*GetName(), *GetNameSafe(Killer));
 
 	OnDeath.Broadcast(this, Killer);
+	AwardKillExperience(Killer);
+}
+
+void APHBaseCharacter::AwardKillExperience(AActor* Killer)
+{
+	// A player dying is not a kill reward, whatever killed them.
+	if (!bAwardExperienceOnDeath || IsPlayerControlled())
+	{
+		return;
+	}
+
+	// The credited killer is preferred: it is the only attribution that survives co-op, and the
+	// killer's own XP attributes are what the reward is scaled by.
+	if (APHBaseCharacter* KillerCharacter = Cast<APHBaseCharacter>(Killer))
+	{
+		if (KillerCharacter != this && KillerCharacter->IsPlayerControlled())
+		{
+			KillerCharacter->AwardExperienceFromKill(this);
+			return;
+		}
+	}
+
+	// A death reported through the dead condition tag carries no killer, and most deaths take that
+	// route today. Paying every player keeps kills counting rather than silently dropping the
+	// reward; in co-op that means everyone is paid in full, which is a design choice to revisit
+	// once damage attribution reaches NotifyDeath.
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		const APlayerController* PlayerController = It->Get();
+		if (APHBaseCharacter* Player = PlayerController ? Cast<APHBaseCharacter>(PlayerController->GetPawn()) : nullptr)
+		{
+			Player->AwardExperienceFromKill(this);
+		}
+	}
 }
 
 float APHBaseCharacter::GetHealth() const

@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
+#include "Tower/Library/Structs/RunStructs.h"
 #include "PHGameMode.generated.h"
 
 class APHBaseCharacter;
@@ -70,7 +71,38 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Game|Respawn")
 	bool bAutoRespawn = false;
 
+	// Run flow -------------------------------------------------------
+
+	/**
+	 * Starts a tower run as soon as the level begins. The run owner holds floor state; deciding
+	 * that a run is now underway is match flow, which is this class's job. Off by default so the
+	 * hub and test maps are unaffected.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Game|Run")
+	bool bStartRunOnBeginPlay = false;
+
+	/** 0 rolls a fresh seed. Set it to replay one specific tower. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Game|Run")
+	int32 StartingRunSeed = 0;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Game|Run", meta = (ClampMin = "1"))
+	int32 StartingDifficulty = 1;
+
+	/**
+	 * Completes the floor's reward step the moment its objective is met.
+	 *
+	 * A stub, and deliberately visible as one: the run owner will not open the exit until rewards
+	 * have been granted, and no reward system exists yet. Turn this off the day one does, rather
+	 * than discovering the exit opens for free.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Game|Run")
+	bool bGrantRewardImmediately = true;
+
 protected:
 	/** Internal: perform the actual respawn for a controller. */
 	void RespawnPlayer(AController* Controller);
+
+	/** Stands in for the unbuilt reward step so the exit can open. See bGrantRewardImmediately. */
+	UFUNCTION()
+	void HandleFloorObjectiveComplete(FRunFloorData FloorData);
 };

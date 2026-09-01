@@ -57,13 +57,13 @@ float UHunterMMC_IntelligenceMaxMana::CalculateBaseMagnitude_Implementation(cons
 	float Intelligence = 0.f;
 	GetCapturedAttributeMagnitude(Definitions.IntelligenceDef, Spec, EvaluationParameters, Intelligence);
 
-	float PlayerLevel = 1.f;
+	float PlayerLevel = 0.f;
 	GetCapturedAttributeMagnitude(Definitions.PlayerLevelDef, Spec, EvaluationParameters, PlayerLevel);
 
 	return UPHResourceFunctionLibrary::CalculatePrimaryDerivedMaxValue(FPHPrimaryDerivedResourceInput(
 		HunterMMCIntelligenceMaxManaPrivate::BaseMaxValue,
 		HunterMMCIntelligenceMaxManaPrivate::BasePrimaryBonus,
 		FMath::Max(Intelligence, 0.f),
-		FMath::Max(PlayerLevel, 1.f),
+		FMath::Max(PlayerLevel, 0.f),
 		HunterMMCIntelligenceMaxManaPrivate::PerLevelBonus));
 }

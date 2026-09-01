@@ -1,10 +1,14 @@
 #include "Tower/Library/FunctionLibraries/RunSeedFunctionLibrary.h"
 
+#include "Hash/Fnv.h"
+#include "Templates/TypeHash.h"
+
 namespace RunSeedPrivate
 {
 	// Stream labels. Distinct labels stop sibling streams at the same index from
 	// drawing identical numbers.
 	const FName FloorLabel(TEXT("Floor"));
+	const FName LayoutLabel(TEXT("Layout"));
 	const FName EncounterLabel(TEXT("Encounter"));
 	const FName MonsterLabel(TEXT("Monster"));
 	const FName ModifierLabel(TEXT("Modifier"));
@@ -14,12 +18,15 @@ namespace RunSeedPrivate
 
 int32 URunSeedFunctionLibrary::DeriveSeed(const int32 ParentSeed, const FName Label, const int32 Index)
 {
+	// FName IDs depend on load order. Hash canonical text with a persistent hash
+	// and combine function so a saved run seed also works in another process.
+	const FString LabelText = Label.ToString().ToLower();
+	const uint32 LabelHash = UE::HashStringFNV1a32(FStringView(LabelText));
 	uint32 Hash = static_cast<uint32>(ParentSeed);
-	Hash = HashCombineFast(Hash, GetTypeHash(Label));
-	Hash = HashCombineFast(Hash, static_cast<uint32>(Index));
+	Hash = HashCombine(Hash, LabelHash);
+	Hash = HashCombine(Hash, static_cast<uint32>(Index));
 
-	// FRandomStream(0) reseeds itself from the global RNG, which would silently
-	// break determinism. Never hand back zero.
+	// ProjectHunter spawn/modifier callers use zero to request an unseeded roll.
 	const int32 Result = static_cast<int32>(Hash & MAX_int32);
 	return Result != 0 ? Result : 1;
 }
@@ -27,6 +34,11 @@ int32 URunSeedFunctionLibrary::DeriveSeed(const int32 ParentSeed, const FName La
 int32 URunSeedFunctionLibrary::DeriveFloorSeed(const int32 RunSeed, const int32 FloorNumber)
 {
 	return DeriveSeed(RunSeed, RunSeedPrivate::FloorLabel, FloorNumber);
+}
+
+int32 URunSeedFunctionLibrary::DeriveLayoutSeed(const int32 FloorSeed)
+{
+	return DeriveSeed(FloorSeed, RunSeedPrivate::LayoutLabel, 0);
 }
 
 int32 URunSeedFunctionLibrary::DeriveEncounterSeed(const int32 FloorSeed, const int32 EncounterIndex)
@@ -57,6 +69,11 @@ int32 URunSeedFunctionLibrary::DeriveLootSeed(const int32 RewardSeed, const int3
 FRandomStream URunSeedFunctionLibrary::MakeFloorStream(const int32 RunSeed, const int32 FloorNumber)
 {
 	return FRandomStream(DeriveFloorSeed(RunSeed, FloorNumber));
+}
+
+FRandomStream URunSeedFunctionLibrary::MakeLayoutStream(const int32 FloorSeed)
+{
+	return FRandomStream(DeriveLayoutSeed(FloorSeed));
 }
 
 FRandomStream URunSeedFunctionLibrary::MakeModifierStream(const int32 MonsterSeed)

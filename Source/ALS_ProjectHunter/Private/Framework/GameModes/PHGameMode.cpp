@@ -25,6 +25,36 @@ void APHGameMode::BeginPlay()
 		if (URunSubsystem* RunSubsystem = GameInstance->GetSubsystem<URunSubsystem>())
 		{
 			RunSubsystem->SyncToGameState();
+
+			if (bStartRunOnBeginPlay && !RunSubsystem->IsRunActive())
+			{
+				if (bGrantRewardImmediately)
+				{
+					RunSubsystem->OnFloorObjectiveComplete.AddUniqueDynamic(
+						this, &APHGameMode::HandleFloorObjectiveComplete);
+				}
+
+				// Started after the listener is bound: StartRun begins floor one immediately, and a
+				// one-room floor could finish its objective inside that call.
+				RunSubsystem->StartRun(StartingRunSeed, StartingDifficulty);
+				UE_LOG(LogPHGameMode, Log, TEXT("Run started: seed %d, difficulty %d."),
+					RunSubsystem->GetSessionData().RunSeed, StartingDifficulty);
+			}
+		}
+	}
+}
+
+void APHGameMode::HandleFloorObjectiveComplete(FRunFloorData FloorData)
+{
+	// No reward system exists yet, so the reward step is acknowledged immediately to let the exit
+	// open. This is the one place that shortcut lives; when rewards are built, this goes.
+	if (const UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (URunSubsystem* RunSubsystem = GameInstance->GetSubsystem<URunSubsystem>())
+		{
+			UE_LOG(LogPHGameMode, Log, TEXT("Floor %d objective complete; granting the placeholder reward."),
+				FloorData.FloorNumber);
+			RunSubsystem->NotifyRewardGranted();
 		}
 	}
 }

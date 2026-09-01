@@ -1,10 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright:   Copyright (C) 2022 Quentin Davis
+// Source Code: https://github.com/MahouSenseii/ProjectHunter
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/HUD.h"
 #include "UI/Menu/Library/Enums/MenuEnums.h"
+#include "Tower/Library/Structs/RunStructs.h"
 #include "HunterHUD.generated.h"
 
 class APHBaseCharacter;
@@ -14,6 +16,9 @@ class UItemInstance;
 class UItemTooltipWidget;
 class UPHMenuCameraComponent;
 class UPHMenuRootWidget;
+class UPHFloorBannerWidget;
+class APHGameState;
+class AGameStateBase;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogHunterHUD, Log, All);
 
@@ -137,9 +142,50 @@ public:
 	UFUNCTION(BlueprintPure, Category = "HUD|Menu")
 	UPHMenuCameraComponent* GetMenuCameraComponent() const { return MenuCamera; }
 
+public:
+	/**
+	 * Draws the floor number and how many enemies are left, plus a banner when a floor changes.
+	 *
+	 * Deliberately canvas text rather than a UMG widget: it is the readout needed to test the climb
+	 * loop, and it works with no authored asset. A real floor and objective HUD belongs in UMG, and
+	 * this should come out the day one exists rather than being left to fight it.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HUD|Run")
+	bool bShowRunOverlay = true;
+
+	virtual void DrawHUD() override;
+
+	/**
+	 * Console: forces the current floor objective complete, opening the exit.
+	 *
+	 * A test escape hatch, not a cheat to keep. If an encounter fails to spawn its full budget the
+	 * counter simply stops short and the floor can never be cleared; this makes that recoverable
+	 * without restarting, and the overlay still shows the count it stalled at.
+	 */
+	UFUNCTION(Exec)
+	void PHClearFloor();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	/** Starts the floor banner after a ready floor arrives through the existing run snapshot. */
+	UFUNCTION()
+	void HandleFloorAdvanced(int32 NewFloor);
+
+	/**
+	 * The floor announcement widget. Assign a Blueprint deriving UPHFloorBannerWidget and it is
+	 * created once and shown on every floor change.
+	 *
+	 * Left unset, the HUD falls back to drawing the floor name on the canvas. That fallback is debug
+	 * output, not a design - it exists so the climb is testable before the widget is authored.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HUD|Run")
+	TSubclassOf<UPHFloorBannerWidget> FloorBannerWidgetClass;
+
+	/** Seconds the canvas fallback stays up. The widget decides its own lifetime. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HUD|Run", meta = (ClampMin = "0.0"))
+	float FloorBannerSeconds = 3.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "HUD|Widget Classes")
 	TSubclassOf<UHunterMainHUDWidget> MainHUDWidgetClass;
@@ -226,6 +272,24 @@ protected:
 	TObjectPtr<UItemTooltipWidget> ItemTooltipWidget;
 
 private:
+	void BindRunGameState(AGameStateBase* GameState);
+	void UnbindRunGameState();
+
+	UFUNCTION()
+	void HandleRunSnapshot(ERunState State, FRunSessionData Session);
+
+	TWeakObjectPtr<APHGameState> PresentationGameState;
+	FDelegateHandle GameStateSetHandle;
+	FGuid AnnouncedRunID;
+	int32 AnnouncedFloor = INDEX_NONE;
+
+	/** World time the floor banner stops drawing; zero when no banner is up. */
+	UPROPERTY()
+	TObjectPtr<UPHFloorBannerWidget> FloorBannerWidget;
+
+	double FloorBannerEndsAt = 0.0;
+	int32 BannerFloor = 0;
+
 	/** Clamps a cursor-anchored tooltip so it never leaves the viewport. */
 	FVector2D ClampTooltipToViewport(FVector2D DesiredPosition) const;
 

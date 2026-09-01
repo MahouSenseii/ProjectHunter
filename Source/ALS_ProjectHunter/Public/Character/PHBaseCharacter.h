@@ -17,6 +17,7 @@ class UAbilitySystemComponent;
 class UHunterAttributeSet;
 class UHunterAbilitySystemComponent;
 class UCharacterProgressionManager;
+class UPHPassiveTreeComponent;
 class UCombatManager;
 class UEquipmentManager;
 class UInventoryManager;
@@ -139,6 +140,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Progression", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCharacterProgressionManager> ProgressionManager;
 
+	/** Passive Tree - owns allocated nodes and their GAS effects. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Progression", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UPHPassiveTreeComponent> PassiveTreeComponent;
+
 	/** Equipment Component - Items, gear, inventory */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UEquipmentManager> EquipmentManager;
@@ -222,6 +227,12 @@ public:
 	UCharacterProgressionManager* GetProgressionManager() const
 	{
 		return ProgressionManager;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Progression")
+	UPHPassiveTreeComponent* GetPassiveTreeComponent() const
+	{
+		return PassiveTreeComponent;
 	}
 
 	UFUNCTION(BlueprintPure, Category = "Equipment")
@@ -338,6 +349,17 @@ public:
 	 * Clears the death latch so a pooled/recycled actor can die again.
 	 * Called by AMobManagerActor::FinalizeSpawn and UMobPoolSubsystem::ResetMobState.
 	 */
+	/**
+	 * Treats the dead condition tag being set as a death report.
+	 *
+	 * Death flows are authored in Blueprint and NotifyDeath is easy to leave out - the AI death
+	 * graph ragdolled, destroyed its controller and set the tag without ever calling it, so nothing
+	 * counted the kill and floors could not be cleared. Marking the tag now reports the death.
+	 * Calling NotifyDeath directly is still preferred: it is the only path that credits a killer.
+	 */
+	UFUNCTION()
+	void HandleDeadStateChanged(bool bDead);
+
 	UFUNCTION(BlueprintCallable, Category = "Character|Death")
 	virtual void ResetDeathState() { bHasDied = false; }
 
@@ -357,6 +379,15 @@ public:
 	/** Award XP to this character from killing another character */
 	UFUNCTION(BlueprintCallable, Category = "Progression", BlueprintAuthorityOnly)
 	void AwardExperienceFromKill(APHBaseCharacter* KilledCharacter);
+
+	/**
+	 * Hands this character's XP reward to the player who killed it, on death.
+	 *
+	 * Off for anything that should not be farmable - a summoned add, a scripted corpse. A player
+	 * dying never awards anything regardless of this flag.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Progression")
+	bool bAwardExperienceOnDeath = true;
 
 	/** Get current health (delegates to StatsManager) */
 	UFUNCTION(BlueprintPure, Category = "Combat")
@@ -414,6 +445,12 @@ protected:
 
 	UPROPERTY()
 	bool bAbilitySystemInitialized = false;
+
+	/**
+	 * Pays out this character's kill reward. Prefers the credited killer; falls back to every
+	 * player when the death came in through the condition tag, which carries no killer.
+	 */
+	void AwardKillExperience(AActor* Killer);
 
 	/** Death latch - set by NotifyDeath, cleared by ResetDeathState. */
 	UPROPERTY(Transient)

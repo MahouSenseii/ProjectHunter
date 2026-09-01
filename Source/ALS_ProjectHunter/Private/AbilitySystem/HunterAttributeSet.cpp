@@ -2162,7 +2162,7 @@ void UHunterAttributeSet::ClampPrimaryAttributes(const FGameplayAttribute& Attri
     }
     else if (Attribute == GetPlayerLevelAttribute())
     {
-        NewValue = FMath::Clamp(NewValue, 1.0f, 9999.0f);
+        NewValue = FMath::Clamp(NewValue, 0.0f, 9999.0f);
     }
 }
 

@@ -255,6 +255,7 @@ void UTagManager::SetDeadState(const bool bDead)
 	const FPHGameplayTags& Tags = FPHGameplayTags::Get();
 	SetTagState(Tags.Condition_Alive, !bDead);
 	SetTagState(Tags.Condition_Dead, bDead);
+	OnDeadStateChanged.Broadcast(bDead);
 }
 
 bool UTagManager::HasTag(const FGameplayTag& Tag) const

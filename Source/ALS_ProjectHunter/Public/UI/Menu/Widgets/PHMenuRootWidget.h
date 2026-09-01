@@ -9,6 +9,9 @@
 
 class APHBaseCharacter;
 class UButton;
+class UImage;
+class UMaterialInstanceDynamic;
+class UTexture;
 class UDragDropOperation;
 class UPHItemDragDropOperation;
 class UPHMenuPageWidgetBase;
@@ -65,6 +68,9 @@ protected:
 	 */
 	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 
+	/** Only recomputes the accent aspect when the widget actually resizes. */
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Menu|Input")
 	TArray<FKey> CloseMenuKeys;
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
@@ -108,6 +114,41 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
 	TObjectPtr<UWidgetSwitcher> ContentSwitcher;
 
+	/**
+	 * Decorative overlay carrying the corner-accent material.
+	 *
+	 * Its material needs two things UMG cannot give it on its own: the panel's
+	 * silhouette, so the accents stay inside the chamfered window, and the
+	 * widget's real aspect, or its squares render as rectangles. Both are pushed
+	 * through a dynamic instance below.
+	 */
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+	TObjectPtr<UImage> ScanlineSweep;
+
+	/** Silhouette handed to the accent material's MaskValue parameter. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Menu|Accents")
+	TSoftObjectPtr<UTexture> AccentMaskTexture = TSoftObjectPtr<UTexture>(FSoftObjectPath(
+		TEXT("/Game/ProjectHunter/UI/Widgets/Menus/System/T_SystemPanel_Mask.T_SystemPanel_Mask")));
+
+	/**
+	 * Material scalar fed the widget's aspect.
+	 *
+	 * Named rather than hardcoded so a different accent material can be dropped
+	 * in without a code change.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Menu|Accents")
+	FName AccentAspectParameter = FName(TEXT("AspectRatio"));
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Menu|Accents")
+	FName AccentMaskParameter = FName(TEXT("MaskValue"));
+
+	/**
+	 * True when the material expects height/width; false for width/height.
+	 * Exposed because the convention belongs to the material, not to this widget.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Menu|Accents")
+	bool bAccentAspectIsHeightOverWidth = true;
+
 	/** The window-chrome X. Bound here so it needs no Blueprint graph. */
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
 	TObjectPtr<UButton> CloseButton;
@@ -116,6 +157,14 @@ protected:
 	EMenuType ActiveMenuType = EMenuType::MT_None;
 
 private:
+	void SetUpAccentMaterial();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> AccentMaterial = nullptr;
+
+	/** Last size pushed at the material, so Tick is a comparison and nothing more. */
+	FVector2D CachedAccentSize = FVector2D::ZeroVector;
+
 	UFUNCTION()
 	void HandleTabSelected(EMenuType NewMenu, EMenuType OldMenu);
 

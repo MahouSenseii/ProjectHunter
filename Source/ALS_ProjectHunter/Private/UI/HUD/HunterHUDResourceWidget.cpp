@@ -116,6 +116,7 @@ void UHunterHUDResourceWidget::NativeReleaseCharacter()
 	}
 
 	UnbindAttributeDelegates();
+	ResourceStateChangedEvent.Broadcast();
 }
 
 bool UHunterHUDResourceWidget::TryBindToAbilitySystem(APHBaseCharacter* Character)
@@ -282,6 +283,13 @@ float UHunterHUDResourceWidget::GetReservedPercent() const
 	return (CachedMax > 0.f) ? FMath::Clamp(CachedReserved / CachedMax, 0.f, 1.f) : 0.f;
 }
 
+bool UHunterHUDResourceWidget::HasResourceState() const
+{
+	const APHBaseCharacter* Character = GetBoundCharacter();
+	return Character && BoundASC.IsValid() &&
+		Character->GetAbilitySystemComponent() == BoundASC.Get();
+}
+
 FText UHunterHUDResourceWidget::GetResourceDisplayName() const
 {
 	const UEnum* ResourceEnum = StaticEnum<EHunterResourceType>();
@@ -351,7 +359,7 @@ void UHunterHUDResourceWidget::SetImage(const FProgressBarStyle& InProgressBarSt
 {
 	bApplyProgressBarImageStyle = true;
 	ProgressBarImageStyle = InProgressBarStyle;
-	ApplyProgressBarImages(ProgressBarImageStyle);
+	ApplyProgressBarImages(ProgressBarImageStyle, bUseLayeredBarBackgrounds);
 }
 
 void UHunterHUDResourceWidget::SetSize(const float InWidthOverride, const float InHeightOverride)
@@ -380,6 +388,28 @@ void UHunterHUDResourceWidget::SetSize(const float InWidthOverride, const float 
 	else
 	{
 		BarSize->ClearHeightOverride();
+	}
+}
+
+void UHunterHUDResourceWidget::ApplyVisualStyle(const FPHHUDResourceVisualStyle& InStyle)
+{
+	// This helper intentionally only changes presentation properties. The
+	// authoritative attributes remain owned by the character's ASC and the
+	// existing change delegates continue to drive the cached values.
+	FillInterpSpeed = FMath::Max(InStyle.FillInterpSpeed, 0.0f);
+	DamageLagDelay = FMath::Max(InStyle.DamageLagDelay, 0.0f);
+	DamageLagInterpSpeed = FMath::Max(InStyle.DamageLagInterpSpeed, 0.0f);
+
+	SetBarFillType(InStyle.BarFillType);
+	SetColor(InStyle.CurrentFillColor);
+	SetSize(InStyle.BarWidthOverride, InStyle.BarHeightOverride);
+
+	bApplyProgressBarImageStyle = InStyle.bApplyProgressBarImageStyle;
+	if (bApplyProgressBarImageStyle)
+	{
+		bUseLayeredBarBackgrounds = InStyle.bUseLayeredBarBackgrounds;
+		ProgressBarImageStyle = InStyle.ProgressBarImageStyle;
+		ApplyProgressBarImages(ProgressBarImageStyle, bUseLayeredBarBackgrounds);
 	}
 }
 
@@ -412,6 +442,7 @@ void UHunterHUDResourceWidget::BroadcastResourceState()
 	UpdateResourceText();
 	OnResourceUpdated(CachedCurrent, CachedMax, CachedReserved,
 	                  GetFillPercent(), GetReservedPercent());
+	ResourceStateChangedEvent.Broadcast();
 }
 
 void UHunterHUDResourceWidget::ApplyConfiguredBarAppearance()
@@ -422,13 +453,15 @@ void UHunterHUDResourceWidget::ApplyConfiguredBarAppearance()
 
 	if (bApplyProgressBarImageStyle)
 	{
-		ApplyProgressBarImages(ProgressBarImageStyle);
+		ApplyProgressBarImages(ProgressBarImageStyle, bUseLayeredBarBackgrounds);
 	}
 }
 
-void UHunterHUDResourceWidget::ApplyProgressBarImages(const FProgressBarStyle& InProgressBarStyle)
+void UHunterHUDResourceWidget::ApplyProgressBarImages(
+	const FProgressBarStyle& InProgressBarStyle, const bool bInUseLayeredBarBackgrounds)
 {
-	auto ApplyImages = [&InProgressBarStyle](UProgressBar* ProgressBar)
+	auto ApplyImages = [&InProgressBarStyle, bInUseLayeredBarBackgrounds](
+		UProgressBar* ProgressBar, const bool bApplyBackground)
 	{
 		if (!ProgressBar)
 		{
@@ -436,14 +469,21 @@ void UHunterHUDResourceWidget::ApplyProgressBarImages(const FProgressBarStyle& I
 		}
 
 		FProgressBarStyle UpdatedStyle = ProgressBar->GetWidgetStyle();
-		UpdatedStyle.SetBackgroundImage(InProgressBarStyle.BackgroundImage);
+		FSlateBrush TransparentBackground;
+		TransparentBackground.DrawAs = ESlateBrushDrawType::NoDrawType;
+		UpdatedStyle.SetBackgroundImage(
+			bInUseLayeredBarBackgrounds && !bApplyBackground
+				? TransparentBackground
+				: InProgressBarStyle.BackgroundImage);
 		UpdatedStyle.SetFillImage(InProgressBarStyle.FillImage);
 		ProgressBar->SetWidgetStyle(UpdatedStyle);
 	};
 
-	ApplyImages(Bar_DamageLag);
-	ApplyImages(Bar_Current);
-	ApplyImages(Bar_Reserved);
+	// Bar_DamageLag is the bottom track. Current and Reserved render over it
+	// with transparent backgrounds so the layered fill percentages remain visible.
+	ApplyImages(Bar_DamageLag, true);
+	ApplyImages(Bar_Current, !bInUseLayeredBarBackgrounds);
+	ApplyImages(Bar_Reserved, !bInUseLayeredBarBackgrounds);
 }
 
 void UHunterHUDResourceWidget::ApplyDesignerPreview()

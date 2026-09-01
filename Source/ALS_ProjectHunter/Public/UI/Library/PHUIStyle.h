@@ -31,6 +31,13 @@ namespace PHUIStyle
 	inline constexpr FLinearColor TextPrimary{1.0f, 1.0f, 1.0f, 1.0f};
 	inline constexpr FLinearColor TextDim{0.78f, 0.92f, 1.0f, 1.0f};
 
+	/**
+	 * #8FE3DC - section headers. Teal-leaning cyan: green and blue equal with red
+	 * low, so it separates from the azure body instead of reading as a paler
+	 * shade of it, which is what TextDim does.
+	 */
+	inline constexpr FLinearColor HeaderTeal{0.2747f, 0.7682f, 0.7157f, 1.0f};
+
 	// ITEM GRADES
 	//
 	// F through SS is the manhwa grading ladder, so the ramp has to be readable

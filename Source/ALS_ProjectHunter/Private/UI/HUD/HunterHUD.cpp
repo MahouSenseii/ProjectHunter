@@ -9,6 +9,12 @@
 #include "TimerManager.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "UI/Interaction/ItemTooltipWidget.h"
+#include "Tower/Subsystems/RunSubsystem.h"
+#include "UI/HUD/PHFloorBannerWidget.h"
+#include "UI/HUD/PHRunStatusWidget.h"
+#include "Framework/GameModes/PHGameState.h"
+#include "Engine/Canvas.h"
+#include "Engine/Engine.h"
 
 DEFINE_LOG_CATEGORY(LogHunterHUD);
 
@@ -55,6 +61,11 @@ void AHunterHUD::BeginPlay()
 	}
 
 	CreateMainHUDWidget();
+	if (UWorld* World = GetWorld())
+	{
+		GameStateSetHandle = World->GameStateSetEvent.AddUObject(this, &AHunterHUD::BindRunGameState);
+		BindRunGameState(World->GetGameState());
+	}
 
 	if (OwningPC)
 	{
@@ -80,6 +91,19 @@ void AHunterHUD::BeginPlay()
 
 void AHunterHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UnbindRunGameState();
+	if (UWorld* World = GetWorld())
+	{
+		World->GameStateSetEvent.Remove(GameStateSetHandle);
+	}
+	GameStateSetHandle.Reset();
+	if (FloorBannerWidget)
+	{
+		FloorBannerWidget->HideBanner();
+		FloorBannerWidget->RemoveFromParent();
+		FloorBannerWidget = nullptr;
+	}
+
 	const APlayerController* PC = GetOwningPlayerController();
 	PH_LOG(LogHunterHUD, Log, "EndPlay: HUD=%s Reason=%s OwnerPC=%s CurrentPCHUD=%s MainHUDWidget=%s IsInViewport=%s",
 		*GetNameSafe(this),
@@ -581,4 +605,190 @@ void AHunterHUD::HandleMenuPageChanged(const EMenuType NewMenu, const EMenuType 
 	{
 		MenuCamera->SetMenuPage(NewMenu);
 	}
+}
+
+void AHunterHUD::HandleFloorAdvanced(const int32 NewFloor)
+{
+	BannerFloor = NewFloor;
+	if (UPHFloorBannerWidget* EmbeddedBanner = MainHUDWidget ? MainHUDWidget->GetFloorBannerWidget() : nullptr)
+	{
+		FloorBannerEndsAt = 0.0;
+		EmbeddedBanner->ShowFloor(NewFloor);
+		return;
+	}
+
+	// The widget owns the announcement when one is authored. Created once and reused so a Blueprint
+	// can run an entry animation without being rebuilt on every floor.
+	if (FloorBannerWidgetClass)
+	{
+		if (!FloorBannerWidget)
+		{
+			if (APlayerController* OwningPC = GetOwningPlayerController())
+			{
+				FloorBannerWidget = CreateWidget<UPHFloorBannerWidget>(OwningPC, FloorBannerWidgetClass);
+				if (FloorBannerWidget)
+				{
+					FloorBannerWidget->AddToPlayerScreen(20);
+				}
+			}
+		}
+
+		if (FloorBannerWidget)
+		{
+			FloorBannerWidget->ShowFloor(NewFloor);
+			return;
+		}
+	}
+
+	// Fallback: canvas text, so the climb stays testable before the widget is authored.
+	FloorBannerEndsAt = GetWorld() ? GetWorld()->GetTimeSeconds() + FloorBannerSeconds : 0.0;
+}
+
+void AHunterHUD::UnbindRunGameState()
+{
+	if (APHGameState* GameState = PresentationGameState.Get())
+	{
+		GameState->OnReplicatedRunChanged.RemoveDynamic(this, &AHunterHUD::HandleRunSnapshot);
+	}
+	PresentationGameState.Reset();
+}
+
+void AHunterHUD::BindRunGameState(AGameStateBase* GameState)
+{
+	UnbindRunGameState();
+	PresentationGameState = Cast<APHGameState>(GameState);
+	if (APHGameState* HunterState = PresentationGameState.Get())
+	{
+		HunterState->OnReplicatedRunChanged.AddUniqueDynamic(this, &AHunterHUD::HandleRunSnapshot);
+		// The HUD may appear after floor one was generated, or after a client joins.
+		HandleRunSnapshot(HunterState->RunState, HunterState->RunSession);
+	}
+	else
+	{
+		HandleRunSnapshot(ERunState::Inactive, FRunSessionData());
+	}
+}
+
+void AHunterHUD::HandleRunSnapshot(const ERunState State, FRunSessionData Session)
+{
+	if (UPHRunStatusWidget* Status = MainHUDWidget ? MainHUDWidget->GetRunStatusWidget() : nullptr)
+	{
+		Status->ApplyRunSnapshot(State, Session);
+		Status->SetVisibility(bShowRunOverlay ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
+	if (State != ERunState::Active)
+	{
+		AnnouncedRunID.Invalidate();
+		AnnouncedFloor = INDEX_NONE;
+		FloorBannerEndsAt = 0.0;
+		if (UPHFloorBannerWidget* EmbeddedBanner = MainHUDWidget ? MainHUDWidget->GetFloorBannerWidget() : nullptr)
+		{
+			EmbeddedBanner->HideBanner();
+		}
+		if (FloorBannerWidget)
+		{
+			FloorBannerWidget->HideBanner();
+		}
+		return;
+	}
+	const EFloorPhase Phase = Session.Floor.Phase;
+	if (Phase == EFloorPhase::Generating || Phase == EFloorPhase::Transitioning)
+	{
+		FloorBannerEndsAt = 0.0;
+		if (UPHFloorBannerWidget* EmbeddedBanner = MainHUDWidget ? MainHUDWidget->GetFloorBannerWidget() : nullptr)
+		{
+			EmbeddedBanner->HideBanner();
+		}
+		if (FloorBannerWidget)
+		{
+			FloorBannerWidget->HideBanner();
+		}
+	}
+	const bool bReady = Phase == EFloorPhase::InProgress || Phase == EFloorPhase::ObjectiveComplete || Phase == EFloorPhase::RewardReady;
+	if (bShowRunOverlay && bReady && Session.Floor.FloorNumber > 0 &&
+		(AnnouncedRunID != Session.RunID || AnnouncedFloor != Session.Floor.FloorNumber))
+	{
+		AnnouncedRunID = Session.RunID;
+		AnnouncedFloor = Session.Floor.FloorNumber;
+		HandleFloorAdvanced(Session.Floor.FloorNumber);
+	}
+}
+
+void AHunterHUD::DrawHUD()
+{
+	Super::DrawHUD();
+
+	if (!bShowRunOverlay || !Canvas)
+	{
+		return;
+	}
+	const bool bDrawLegacyStatus = !MainHUDWidget || !MainHUDWidget->GetRunStatusWidget();
+	const bool bDrawLegacyBanner = GetWorld() && GetWorld()->GetTimeSeconds() < FloorBannerEndsAt;
+	if (!bDrawLegacyStatus && !bDrawLegacyBanner)
+	{
+		return;
+	}
+
+	const UGameInstance* GameInstance = GetGameInstance();
+	const URunSubsystem* Run = GameInstance ? GameInstance->GetSubsystem<URunSubsystem>() : nullptr;
+	if (!Run || !Run->IsRunActive())
+	{
+		return;
+	}
+
+	const FRunFloorData Floor = Run->GetCurrentFloorData();
+	const int32 Remaining = FMath::Max(0, Floor.ObjectiveTarget - Floor.ObjectiveProgress);
+
+	UFont* Body = GEngine ? GEngine->GetMediumFont() : nullptr;
+	UFont* Large = GEngine ? GEngine->GetLargeFont() : nullptr;
+
+	// Phase is on screen because a stalled floor is otherwise indistinguishable from a hard one:
+	// if the last enemy fails to spawn, the counter simply stops and nothing says why.
+	const TCHAR* PhaseText = TEXT("");
+	switch (Floor.Phase)
+	{
+	case EFloorPhase::Generating:       PhaseText = TEXT("building"); break;
+	case EFloorPhase::InProgress:       PhaseText = TEXT("clear the floor"); break;
+	case EFloorPhase::ObjectiveComplete: PhaseText = TEXT("floor clear"); break;
+	case EFloorPhase::RewardReady:      PhaseText = TEXT("exit open"); break;
+	default: break;
+	}
+
+	// Keep legacy canvas diagnostics only for HUDs that have no authored status widget.
+	if (bDrawLegacyStatus)
+	{
+		DrawText(FString::Printf(TEXT("FLOOR %d"), Floor.FloorNumber),
+			FLinearColor(1.0f, 0.86f, 0.4f), 40.0f, 40.0f, Body, 1.4f);
+		DrawText(FString::Printf(TEXT("Enemies remaining: %d / %d"), Remaining, Floor.ObjectiveTarget),
+			Remaining > 0 ? FLinearColor::White : FLinearColor(0.4f, 1.0f, 0.4f), 40.0f, 78.0f, Body, 1.2f);
+		DrawText(FString::Printf(TEXT("%s"), PhaseText),
+			FLinearColor(0.7f, 0.8f, 1.0f), 40.0f, 108.0f, Body, 1.0f);
+	}
+
+	if (bDrawLegacyBanner)
+	{
+		const FString Banner = FString::Printf(TEXT("FLOOR %d"), BannerFloor);
+		float Width = 0.0f;
+		float Height = 0.0f;
+		GetTextSize(Banner, Width, Height, Large, 2.0f);
+		DrawText(Banner, FLinearColor(1.0f, 0.9f, 0.5f),
+			(Canvas->SizeX - Width) * 0.5f, Canvas->SizeY * 0.22f, Large, 2.0f);
+	}
+}
+
+void AHunterHUD::PHClearFloor()
+{
+	const UGameInstance* GameInstance = GetGameInstance();
+	URunSubsystem* Run = GameInstance ? GameInstance->GetSubsystem<URunSubsystem>() : nullptr;
+	if (!Run || !Run->IsRunActive())
+	{
+		UE_LOG(LogHunterHUD, Warning, TEXT("PHClearFloor: no run is active."));
+		return;
+	}
+
+	const FRunFloorData Floor = Run->GetCurrentFloorData();
+	UE_LOG(LogHunterHUD, Warning,
+		TEXT("PHClearFloor: forcing floor %d complete at %d of %d enemies."),
+		Floor.FloorNumber, Floor.ObjectiveProgress, Floor.ObjectiveTarget);
+	Run->CompleteFloorObjective();
 }

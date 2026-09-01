@@ -1,4 +1,7 @@
 #include "UI/Menu/Widgets/PHMenuRootWidget.h"
+#include "Components/Image.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Engine/Texture.h"
 
 #include "Components/Button.h"
 #include "UI/HUD/HunterHUD.h"
@@ -31,6 +34,8 @@ void UPHMenuRootWidget::NativeConstruct()
 	{
 		CloseMenuKeys = { EKeys::Escape, EKeys::Tab };
 	}
+
+	SetUpAccentMaterial();
 
 	if (bDropItemsToWorldOnMissedDrop)
 	{
@@ -439,4 +444,58 @@ void UPHMenuRootWidget::RequestCloseMenu()
 void UPHMenuRootWidget::HandleCloseButtonClicked()
 {
 	RequestCloseMenu();
+}
+
+
+void UPHMenuRootWidget::SetUpAccentMaterial()
+{
+	if (!ScanlineSweep)
+	{
+		return;
+	}
+
+	// A dynamic instance is the only way to give a UMG material per-widget
+	// values; the shared material asset cannot know which panel it is drawing.
+	AccentMaterial = ScanlineSweep->GetDynamicMaterial();
+	if (!AccentMaterial)
+	{
+		return;
+	}
+
+	if (UTexture* Mask = AccentMaskTexture.LoadSynchronous())
+	{
+		// Confines the accents to the window silhouette. Without it the material
+		// samples whatever texture it was authored against and the accents do
+		// not follow the panel's shape.
+		AccentMaterial->SetTextureParameterValue(AccentMaskParameter, Mask);
+	}
+
+	// Seed the aspect immediately so the first frame is not stretched; Tick only
+	// corrects it afterwards if the widget resizes.
+	CachedAccentSize = FVector2D::ZeroVector;
+}
+
+void UPHMenuRootWidget::NativeTick(const FGeometry& MyGeometry, const float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	if (!AccentMaterial)
+	{
+		return;
+	}
+
+	// A UI material has no access to its widget's pixel size, so a square in UV
+	// space renders as a rectangle on any non-square panel. Pushing the real
+	// aspect is what makes the accents square.
+	const FVector2D Size = MyGeometry.GetLocalSize();
+	if (Size.Equals(CachedAccentSize, 0.5) || Size.X <= 0.0 || Size.Y <= 0.0)
+	{
+		return;
+	}
+	CachedAccentSize = Size;
+
+	const float Aspect = bAccentAspectIsHeightOverWidth
+		? static_cast<float>(Size.Y / Size.X)
+		: static_cast<float>(Size.X / Size.Y);
+	AccentMaterial->SetScalarParameterValue(AccentAspectParameter, Aspect);
 }
