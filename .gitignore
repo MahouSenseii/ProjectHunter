@@ -71,3 +71,10 @@ Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+# Automation tests.
+# Kept out of the repository by choice. They already cost nothing in a packaged game - every one is
+# wrapped in WITH_DEV_AUTOMATION_TESTS, and the editor-module ones are in a module that never ships -
+# so this is purely about what lands on GitHub. The files stay on disk and still run locally via
+# "Automation RunTests ProjectHunter".
+Source/ALS_ProjectHunter/Private/Tests/
+Source/ALS_ProjectHunterEditor/Private/Tests/
