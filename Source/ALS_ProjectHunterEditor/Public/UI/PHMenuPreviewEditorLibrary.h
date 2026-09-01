@@ -36,4 +36,12 @@ public:
 	static bool RenderSystemMenu(const FString& OutputPNGPath, int32 Width = 1920, int32 Height = 1080,
 		EMenuType PageToShow = EMenuType::MT_Equipment,
 		EPHSettingsSection SettingsSection = EPHSettingsSection::SS_Gameplay);
+
+	/**
+	 * Renders the passive tree as it appears in the graph editor, framed to fit the whole tree.
+	 * Uses the same node visuals the asset editor uses, so this is a check on the editor's own look
+	 * rather than a separate drawing of the data. Requires a real RHI.
+	 */
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Project Hunter|Menu Editor")
+	static bool RenderPassiveTreeGraph(const FString& OutputPNGPath, int32 Width = 1920, int32 Height = 1080);
 };

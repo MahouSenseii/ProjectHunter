@@ -37,6 +37,11 @@
 #include "Progression/Components/CharacterProgressionManager.h"
 #include "Progression/Components/PHPassiveTreeComponent.h"
 #include "Progression/Data/PHPassiveTreeDataAsset.h"
+#include "Progression/Settings/PHPassiveTreeSettings.h"
+#include "GraphEditor.h"
+#include "SGraphPanel.h"
+#include "Passive/PHPassiveTreeGraphNode.h"
+#include "Passive/PHPassiveTreeGraphSchema.h"
 #include "RenderingThread.h"
 #include "RHIGlobals.h"
 #include "Serialization/BufferArchive.h"
@@ -677,5 +682,142 @@ bool UPHMenuPreviewEditorLibrary::RenderSystemMenu(const FString& OutputPNGPath,
 	if (!WriteJSON(FPaths::ChangeExtension(FullPath, TEXT("json")), Metadata)) { return Fail(TEXT("PNG was written but preview metadata could not be saved.")); }
 	UE_LOG(LogPHMenuPreviewEditor, Display, TEXT("Rendered actual system menu UI-only at %dx%d, viewport DPI %.3f, %d inventory/%d equipment cells: %s"),
 		Width, Height, DPIScale, InventoryCells, EquipmentCells, *FullPath);
+	return true;
+}
+
+bool UPHMenuPreviewEditorLibrary::RenderPassiveTreeGraph(
+	const FString& OutputPNGPath, const int32 Width, const int32 Height)
+{
+	using namespace PHMenuPreviewEditor;
+	if (OutputPNGPath.IsEmpty() || !FApp::CanEverRender() || !FSlateApplication::IsInitialized() ||
+		!GIsRHIInitialized || GUsingNullRHI || Width <= 0 || Height <= 0 || Width > 8192 || Height > 8192)
+	{
+		return Fail(TEXT("Graph PNG rendering requires an output path, initialized Slate, a real RHI (omit -NullRHI), and dimensions from 1 to 8192."));
+	}
+
+	UPHPassiveTreeDataAsset* Tree = GetDefault<UPHPassiveTreeSettings>()->DefaultTree.LoadSynchronous();
+	if (!Tree || Tree->Nodes.IsEmpty()) { return Fail(TEXT("No default passive tree is configured to preview.")); }
+
+	// Built the same way the asset editor builds it, so the capture shows the real editor visuals.
+	TStrongObjectPtr<UEdGraph> Graph(NewObject<UEdGraph>(
+		GetTransientPackage(), UEdGraph::StaticClass(), NAME_None, RF_Transactional));
+	Graph->Schema = UPHPassiveTreeGraphSchema::StaticClass();
+
+	TMap<FName, UPHPassiveTreeGraphNode*> ByID;
+	for (const FPHPassiveNodeDefinition& Definition : Tree->Nodes)
+	{
+		UPHPassiveTreeGraphNode* Node = NewObject<UPHPassiveTreeGraphNode>(Graph.Get());
+		Node->CreateNewGuid();
+		Node->Definition = Definition;
+		Node->ApplyGraphPosition();
+		Node->AllocateDefaultPins();
+		Graph->Nodes.Add(Node);
+		ByID.FindOrAdd(Definition.NodeID, Node);
+	}
+	for (UEdGraphNode* RawNode : Graph->Nodes)
+	{
+		UPHPassiveTreeGraphNode* Node = CastChecked<UPHPassiveTreeGraphNode>(RawNode);
+		UEdGraphPin* ParentPin = Node->GetParentPin();
+		if (!ParentPin) { continue; }
+		for (const FName ParentID : Node->Definition.RequiredNodeIDs)
+		{
+			UPHPassiveTreeGraphNode* const* Parent = ByID.Find(ParentID);
+			if (Parent && *Parent != Node)
+			{
+				if (UEdGraphPin* ChildPin = (*Parent)->GetChildPin()) { ParentPin->MakeLinkTo(ChildPin); }
+			}
+		}
+	}
+
+	// Without this the capture can catch placeholder mips and the chamfer reads as a blurry blob.
+	TArray<UTexture*> Textures;
+	for (const TCHAR* TexturePath : {
+		TEXT("/Game/ProjectHunter/UI/Widgets/Menus/System/T_SystemPanel_Fill.T_SystemPanel_Fill"),
+		TEXT("/Game/ProjectHunter/UI/Widgets/Menus/System/T_SystemPanel_Frame.T_SystemPanel_Frame")})
+	{
+		if (UTexture* Texture = LoadObject<UTexture>(nullptr, TexturePath)) { Textures.AddUnique(Texture); }
+	}
+	FTextureCompilingManager::Get().FinishCompilation(Textures);
+
+	// Editable, not read-only: a read-only panel stamps a large READ-ONLY watermark over the capture.
+	const TSharedRef<SGraphEditor> GraphEditor = SNew(SGraphEditor)
+		.IsEditable(true)
+		.GraphToEdit(Graph.Get());
+
+	TStrongObjectPtr<UTextureRenderTarget2D> Target(
+		FWidgetRenderer::CreateTargetFor(FVector2D(Width, Height), TF_Bilinear, false));
+	if (!Target.IsValid()) { return Fail(TEXT("Could not create the graph preview render target.")); }
+	FWidgetRenderer* Renderer = new FWidgetRenderer(true, true);
+	if (!Renderer->GetSlateRenderer())
+	{
+		BeginCleanup(Renderer);
+		return Fail(TEXT("Slate did not supply the graph preview renderer."));
+	}
+
+	// The panel frames itself rather than being positioned by hand: it only learns its own node
+	// extents once it has a geometry and has spawned node widgets, and ZoomToFit is deferred to a
+	// later tick and then eased, so the view needs several ticks to settle before the capture.
+	GraphEditor->NotifyGraphChanged();
+	Renderer->DrawWidget(Target.Get(), GraphEditor, 1.0f, FVector2D(Width, Height), 0.1f);
+	FlushRenderingCommands();
+
+	// The panel builds its node widgets from an active timer, and active timers only fire for widgets
+	// living in a real Slate window - a render target's virtual window never ticks them. Driving
+	// Update() by hand is what makes an offline capture of a graph possible at all.
+	if (SGraphPanel* Panel = GraphEditor->GetGraphPanel())
+	{
+		Panel->Update();
+	}
+	Renderer->DrawWidget(Target.Get(), GraphEditor, 1.0f, FVector2D(Width, Height), 0.1f);
+	FlushRenderingCommands();
+
+	// ZoomToFit is deferred to a tick this virtual window never delivers, so the view is set
+	// directly. RestoreViewSettings applies immediately, unlike SetViewLocation.
+	FBox2D Bounds(ForceInit);
+	for (const FPHPassiveNodeDefinition& Definition : Tree->Nodes)
+	{
+		if (FMath::IsFinite(Definition.Position.X) && FMath::IsFinite(Definition.Position.Y))
+		{
+			Bounds += Definition.Position;
+		}
+	}
+	// Padded by a node footprint so edge nodes are not clipped by their own width, then asked for
+	// less zoom than would exactly fit: the panel snaps to discrete levels and can snap upward, which
+	// would crop the outermost nodes.
+	const FVector2D Extent = Bounds.GetSize() + FVector2D(560.0, 320.0);
+	const float Zoom = static_cast<float>(FMath::Clamp(
+		FMath::Min(Width / FMath::Max(Extent.X, 1.0), Height / FMath::Max(Extent.Y, 1.0)) * 0.75, 0.05, 1.0));
+	if (SGraphPanel* Panel = GraphEditor->GetGraphPanel())
+	{
+		// The panel snaps to its own discrete zoom levels, so the requested zoom is rarely the one
+		// applied. Centring against the requested value would offset the whole tree; the applied value
+		// is read back and the offset recomputed from that.
+		Panel->RestoreViewSettings(FVector2f::ZeroVector, Zoom);
+		const float AppliedZoom = FMath::Max(Panel->GetZoomAmount(), UE_KINDA_SMALL_NUMBER);
+		Panel->RestoreViewSettings(
+			FVector2f(Bounds.GetCenter() - FVector2D(Width, Height) * 0.5 / AppliedZoom), AppliedZoom);
+	}
+
+	for (int32 Settle = 0; Settle < 4; ++Settle)
+	{
+		Renderer->DrawWidget(Target.Get(), GraphEditor, 1.0f, FVector2D(Width, Height), 0.1f);
+		FlushRenderingCommands();
+	}
+
+	FBufferArchive PNG;
+	const bool bExported = FImageUtils::ExportRenderTarget2DAsPNG(Target.Get(), PNG);
+	BeginCleanup(Renderer);
+	FlushRenderingCommands();
+
+	const FString FullPath = FPaths::ConvertRelativePathToFull(OutputPNGPath);
+	if (!bExported || !IFileManager::Get().MakeDirectory(*FPaths::GetPath(FullPath), true) ||
+		!FFileHelper::SaveArrayToFile(PNG, *FullPath))
+	{
+		return Fail(TEXT("Could not export the passive graph as a PNG."));
+	}
+
+	UE_LOG(LogPHMenuPreviewEditor, Display,
+		TEXT("Rendered the passive graph editor at %dx%d, %d nodes: %s"),
+		Width, Height, Graph->Nodes.Num(), *FullPath);
 	return true;
 }
