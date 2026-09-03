@@ -120,6 +120,26 @@ struct ALS_PROJECTHUNTER_API FPHGeneratedLayout
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation", meta = (ClampMin = "0"))
 	int32 ExitAnchorID = INDEX_NONE;
 
+	/**
+	 * Walkable tiles, for a strategy whose floor is not a set of rectangles.
+	 *
+	 * A cave's region is an envelope for anchors, encounters and navigation only; the shape a player
+	 * can stand on is this mask, and construction builds walls on whatever tile edges it leaves
+	 * exposed. Empty for a rooms-and-links layout, whose regions describe their own floor.
+	 *
+	 * Published sorted so the same seed yields a byte-for-byte identical mask - flood fill order is
+	 * an implementation detail and must not leak into the layout.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation")
+	TArray<FIntPoint> FloorMask;
+
+	/**
+	 * Units per mask tile. Meaningless with an empty mask, and it does not have to match the grid a
+	 * later stage tiles at - which is why it travels with the mask rather than being assumed.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation", meta = (ClampMin = "0.0"))
+	double MaskTileSize = 0.0;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation")
 	FGameplayTagContainer Tags;
 };

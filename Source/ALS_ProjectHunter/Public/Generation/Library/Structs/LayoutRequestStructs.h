@@ -184,6 +184,15 @@ struct ALS_PROJECTHUNTER_API FPHLayoutRequest
 	TArray<FPHAnchorRule> AnchorRules;
 
 	/** Copied onto the produced layout, letting callers tag a floor's biome or role. */
+	/**
+	 * Modules kept clear around the entry and exit poses when seating rule anchors.
+	 *
+	 * A radius rather than a single tile, because the pose has to stay usable: a chest exactly one
+	 * module from the entry is not on top of the player, but they still arrive inside it.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation|Request", meta = (ClampMin = "0.0"))
+	double EndpointClearanceModules = 2.0;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation|Request")
 	FGameplayTagContainer Tags;
 };
